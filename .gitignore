@@ -1,0 +1,24 @@
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Gemini directory
+.gemini/
+
+# Database dumps / Backups
+*.sql
+*.zip
+*.tar.gz
+*.rar
+
+# Uploaded files
+uploads/
+assets/images/user_photos/
+
+# Configuration files with sensitive data (Optional but recommended)
+# config/database.php
