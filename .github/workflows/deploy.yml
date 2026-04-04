@@ -7,7 +7,7 @@
 #   1. Checkout โค้ดจาก repo
 #   2. สร้างไฟล์ config/ ใหม่จาก GitHub Secrets (ทับของเดิม)
 #   3. ลบไฟล์ test/debug ที่ไม่ต้องการใน production
-#   4. FTP sync ขึ้น hosting (upload เฉพาะไฟล์ที่เปลี่ยน)
+#   4. FTP upload ขึ้น hosting ด้วย lftp (รองรับ passive mode)
 #
 # Secrets ที่ต้องตั้งค่าใน GitHub → Settings → Secrets → Actions:
 #   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD, FTP_SERVER_DIR
@@ -128,29 +128,28 @@ jobs:
       - name: Remove test/debug files
         run: |
           rm -f test_*.php fix_*.php md.txt
-          echo "✅ Removed test/debug files"
-          echo "📁 Files to deploy:"
-          find . -name "*.php" | head -30
+          rm -rf .git .github .gitignore
+          rm -f *.md
+          echo "✅ Removed test/debug files and git metadata"
 
-      # ─── 6. FTP Deploy ──────────────────────────────────────
-      - name: Deploy to FTP server
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}
-          protocol: ftp
-          # Upload เฉพาะไฟล์ที่เปลี่ยน (incremental sync)
-          # ไม่ลบไฟล์ uploads/ บน server
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github/**
-            **/node_modules/**
-            **/.env
-            **/md.txt
-            **/*.md
-            **/test_*.php
-            **/fix_*.php
+      # ─── 6. Install lftp ────────────────────────────────────
+      - name: Install lftp
+        run: sudo apt-get install -y lftp
+
+      # ─── 7. FTP Deploy ด้วย lftp (รองรับ passive mode) ──────
+      - name: Deploy via FTP
+        run: |
+          lftp -e "
+            set ftp:passive-mode yes;
+            set ftp:ssl-allow no;
+            set net:timeout 30;
+            set net:max-retries 3;
+            set net:reconnect-interval-base 5;
+            open ftp://${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}@${{ secrets.FTP_SERVER }};
+            mirror --reverse --delete --verbose --parallel=4 \
+              --exclude ^\.git/ \
+              --exclude ^\.github/ \
+              ./ ${{ secrets.FTP_SERVER_DIR }};
+            bye
+          "
+          echo "✅ Deploy completed successfully!"

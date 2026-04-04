@@ -141,28 +141,35 @@ jobs:
       - name: Remove test/debug files
         run: |
           rm -f test_*.php fix_*.php md.txt
+          rm -rf .git .github .gitignore
+          rm -f *.md
           echo "✅ Cleaned up test/debug files"
 
-      # ─── FTP Deploy ─────────────────────────────────────────
-      - name: Deploy to FTP server
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}
-          protocol: ftp
-          dangerous-clean-slate: ${{ github.event.inputs.clean_slate }}
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github/**
-            **/node_modules/**
-            **/.env
-            **/md.txt
-            **/*.md
-            **/test_*.php
-            **/fix_*.php
+      # ─── Install lftp ───────────────────────────────────────
+      - name: Install lftp
+        run: sudo apt-get install -y lftp
+
+      # ─── FTP Deploy ด้วย lftp ───────────────────────────────
+      - name: Deploy via FTP
+        run: |
+          DELETE_FLAG=""
+          if [ "${{ github.event.inputs.clean_slate }}" = "true" ]; then
+            DELETE_FLAG="--delete"
+          fi
+
+          lftp -e "
+            set ftp:passive-mode yes;
+            set ftp:ssl-allow no;
+            set net:timeout 30;
+            set net:max-retries 3;
+            set net:reconnect-interval-base 5;
+            open ftp://${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}@${{ secrets.FTP_SERVER }};
+            mirror --reverse ${DELETE_FLAG} --verbose --parallel=4 \
+              --exclude ^\.git/ \
+              --exclude ^\.github/ \
+              ./ ${{ secrets.FTP_SERVER_DIR }};
+            bye
+          "
 
       # ─── สรุปผลลัพธ์ ─────────────────────────────────────
       - name: Deploy summary
