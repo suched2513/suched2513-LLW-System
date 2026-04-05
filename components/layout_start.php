@@ -7,7 +7,7 @@ require_once 'sidebar.php';
 
 // Breadcrumb data
 $breadcrumbs = [];
-$breadcrumbs[] = ['label' => 'LLW', 'url' => '/llw/index.php', 'icon' => 'bi-house-fill'];
+$breadcrumbs[] = ['label' => 'LLW', 'url' => '/index.php', 'icon' => 'bi-house-fill'];
 $systemLabels = [
     'attendance' => 'เช็คชื่อนักเ���ียน',
     'chromebook' => 'Chromebook',

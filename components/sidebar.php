@@ -6,7 +6,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 $current_dir  = basename(dirname($_SERVER['PHP_SELF']));
 
 // Determine active system
-$base_path = '/llw';
+$base_path = '';
 $activeSystem = $activeSystem ?? 'portal';
 if ($current_dir === 'attendance_system') $activeSystem = 'attendance';
 if ($current_dir === 'chromebook')        $activeSystem = 'chromebook';
