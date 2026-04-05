@@ -7,7 +7,15 @@ require_once '../config/database.php';
 require_once '../includes/telegram_bot.php';
 
 if (!isset($_SESSION['user_id'])) {
+    http_response_code(401);
     echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบก่อน']);
+    exit;
+}
+
+// Role guard: เฉพาะ super_admin หรือ wfh_admin เท่านั้นที่อนุมัติได้
+if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+    http_response_code(403);
+    echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์อนุมัติคำขอ']);
     exit;
 }
 

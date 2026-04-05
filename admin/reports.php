@@ -2,8 +2,8 @@
 session_start();
 require_once '../config.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: ../index.php"); exit();
+if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+    header("Location: ../login.php"); exit();
 }
 
 // ฟิลเตอร์

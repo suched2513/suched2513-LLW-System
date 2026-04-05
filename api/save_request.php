@@ -6,8 +6,9 @@ session_start();
 require_once '../config/database.php';
 require_once '../includes/telegram_bot.php';
 
-// Check Authentication
-if (!isset($_SESSION['user_id'])) {
+// Auth guard
+if (!isset($_SESSION['llw_role'])) {
+    http_response_code(401);
     echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบก่อน']);
     exit;
 }

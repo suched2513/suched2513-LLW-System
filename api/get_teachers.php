@@ -5,6 +5,13 @@ session_start();
 
 require_once '../config/database.php';
 
+// Auth guard
+if (!isset($_SESSION['user_id'])) {
+    http_response_code(401);
+    echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบก่อน']);
+    exit;
+}
+
 try {
     $pdo = getPdo();
     // ดึงครูจาก llw_users ที่มีสิทธิ์ att_teacher หรือ super_admin (คนที่สอนได้)

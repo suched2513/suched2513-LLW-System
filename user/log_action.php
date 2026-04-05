@@ -5,7 +5,8 @@ require_once '../includes/telegram_bot.php';
 
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['llw_role'])) {
+    http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบก่อน']);
     exit();
 }

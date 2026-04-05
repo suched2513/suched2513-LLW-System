@@ -127,7 +127,7 @@ jobs:
       # ─── 5. ลบไฟล์ที่ไม่ต้องการใน production ────────────────
       - name: Remove test/debug files
         run: |
-          rm -f test_*.php fix_*.php md.txt
+          rm -f test_*.php fix_*.php debug_*.php reset_*.php temp_*.php check_*.php md.txt
           rm -rf .git .github .gitignore
           rm -f *.md
           echo "✅ Removed test/debug files and git metadata"

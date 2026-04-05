@@ -2,8 +2,8 @@
 session_start();
 require_once '../config.php';
 
-// Auth Check
-if (!isset($_SESSION['user_id'])) {
+// Auth Check: ต้อง login + เป็น staff/admin เท่านั้น
+if (!isset($_SESSION['llw_role'])) {
     header("Location: ../login.php");
     exit();
 }
