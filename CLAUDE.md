@@ -483,6 +483,73 @@ GitHub Actions สร้าง `config/database.php`, `config/db_central.php`, `
 
 ---
 
+## Database Migration System
+
+### โครงสร้าง
+```
+database/
+├── migrate.php              → CLI runner (ห้ามเรียกผ่าน browser)
+├── .htaccess                → Deny from all (ป้องกัน browser)
+├── migrations/
+│   ├── 2026_04_05_000001_create_initial_schema.php
+│   ├── 2026_04_05_000002_add_indexes.php
+│   └── (ไฟล์ใหม่เพิ่มที่นี่)
+└── seeds/
+    ├── 01_admin_user.php
+    ├── 02_system_settings.php
+    └── (seed ใหม่เพิ่มที่นี่)
+```
+
+### คำสั่ง CLI
+```bash
+php database/migrate.php                # Run pending migrations
+php database/migrate.php --seed         # Migrate + run seeds
+php database/migrate.php --seed-only    # Run seeds only
+php database/migrate.php --status       # Show migration status
+php database/migrate.php --rollback     # Rollback last migration
+php database/migrate.php --rollback=3   # Rollback last 3
+php database/migrate.php --fresh        # Drop all + re-migrate + seed
+php database/migrate.php --make=name    # Create new migration file
+```
+
+### Migration File Format
+```php
+<?php
+return [
+    'up' => function (PDO $pdo) {
+        $pdo->exec("CREATE TABLE ...");
+        // หรือ ALTER TABLE, CREATE INDEX, etc.
+    },
+    'down' => function (PDO $pdo) {
+        $pdo->exec("DROP TABLE IF EXISTS ...");
+    },
+];
+```
+
+### Seed File Format
+```php
+<?php
+return [
+    'run' => function (PDO $pdo) {
+        $check = $pdo->prepare("SELECT COUNT(*) FROM table WHERE ...");
+        // insert ถ้ายังไม่มี (idempotent)
+    },
+];
+```
+
+### Naming Convention
+- Migration: `YYYY_MM_DD_HHMMSS_description.php` เช่น `2026_04_05_143000_add_email_to_users.php`
+- Seed: `NN_description.php` เรียงตามลำดับ เช่น `01_admin_user.php`, `02_departments.php`
+
+### กฎสำคัญ
+- Migration ต้อง **idempotent** — ใช้ `IF NOT EXISTS`, `IF EXISTS` เสมอ
+- Seed ต้อง **safe to re-run** — ตรวจก่อน insert เสมอ
+- ห้ามแก้ไข migration ที่ run ไปแล้ว — สร้างไฟล์ใหม่แทน
+- ใส่ทั้ง `up` และ `down` ทุกครั้ง เพื่อ rollback ได้
+- State tracking อยู่ในตาราง `_migrations`
+
+---
+
 ## Quick Reference
 
 ### สร้างหน้าใหม่ใน module (checklist)
@@ -504,8 +571,18 @@ GitHub Actions สร้าง `config/database.php`, `config/db_central.php`, `
 7. `error_log()` สำหรับ exceptions — ห้าม expose ให้ client
 
 ### สร้างตารางใหม่ (checklist)
-1. ตั้งชื่อ: `{module}_{entity}` เช่น `att_grades`
-2. ใช้ `INT AUTO_INCREMENT PRIMARY KEY`
-3. Charset: `utf8mb4_unicode_ci`
-4. เพิ่ม `created_at DATETIME DEFAULT CURRENT_TIMESTAMP`
-5. อย่าลืม import SQL บน production ผ่าน phpMyAdmin
+1. สร้าง migration: `php database/migrate.php --make=create_xxx_table`
+2. เขียน SQL ใน `up()` ด้วย `CREATE TABLE IF NOT EXISTS`
+3. เขียน `down()` ด้วย `DROP TABLE IF EXISTS`
+4. ตั้งชื่อตาราง: `{module}_{entity}` เช่น `att_grades`
+5. ใช้ `INT AUTO_INCREMENT PRIMARY KEY` + `utf8mb4_unicode_ci`
+6. เพิ่ม `created_at DATETIME DEFAULT CURRENT_TIMESTAMP`
+7. Run: `php database/migrate.php`
+8. ถ้าต้องการ seed data → สร้างไฟล์ใน `database/seeds/`
+
+### แก้ไข schema ตารางที่มีอยู่ (checklist)
+1. สร้าง migration ใหม่: `php database/migrate.php --make=add_email_to_users`
+2. เขียน `ALTER TABLE` ใน `up()`
+3. เขียน reverse `ALTER TABLE` ใน `down()`
+4. Run: `php database/migrate.php`
+5. ห้ามแก้ migration เก่าที่ run ไปแล้ว
