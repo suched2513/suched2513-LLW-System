@@ -298,6 +298,8 @@ Sidebar แสดง sub-menu อัตโนมัติตาม `$activeSyste
 - ห้ามใช้ `Access-Control-Allow-Origin: *` — จำกัด origin ให้เฉพาะที่จำเป็น
 - ห้ามใช้ `echo $e->getMessage()` ใน production response — ใช้ `error_log()` แทน
 - ห้ามใส่ base path `/llw/` ใน URL links — ใช้ `/` เริ่มต้นตรงๆ
+- **ห้ามเขียน CREATE TABLE / ALTER TABLE / DROP TABLE ในไฟล์ PHP ทั่วไป** — ต้องใช้ migration system เท่านั้น (ดูหัวข้อ "Database Migration Rules")
+- ห้ามแก้ไข migration file ที่ run ไปแล้ว — สร้างไฟล์ใหม่เสมอ
 
 ### PHP Standards
 
@@ -483,7 +485,33 @@ GitHub Actions สร้าง `config/database.php`, `config/db_central.php`, `
 
 ---
 
-## Database Migration System
+## Database Migration Rules (กฎบังคับ)
+
+> **ทุกการเปลี่ยนแปลง Database schema ต้องผ่าน migration system เท่านั้น**
+> ห้ามเขียน CREATE/ALTER/DROP TABLE ในไฟล์ PHP อื่นใดนอกจาก `database/migrations/*.php`
+
+### เมื่อไหร่ต้องสร้าง Migration
+
+| สถานการณ์ | ต้องสร้าง migration? | ตัวอย่าง |
+|---|---|---|
+| สร้างตารางใหม่ | **ใช่** | `--make=create_att_grades` |
+| เพิ่ม/ลบ column | **ใช่** | `--make=add_email_to_users` |
+| เปลี่ยน column type | **ใช่** | `--make=change_status_type_in_users` |
+| เพิ่ม/ลบ index | **ใช่** | `--make=add_index_on_log_date` |
+| เพิ่ม foreign key | **ใช่** | `--make=add_fk_timelogs_users` |
+| Insert ข้อมูลเริ่มต้น | **ใช้ Seed** | `database/seeds/03_departments.php` |
+| Insert ข้อมูลจาก user input | **ไม่ใช่** | ใช้ prepared statement ในโค้ดปกติ |
+| SELECT / UPDATE / DELETE ข้อมูล | **ไม่ใช่** | ใช้ prepared statement ในโค้ดปกติ |
+
+### กฎเหล็ก 7 ข้อ
+
+1. **ห้ามเขียน DDL (CREATE/ALTER/DROP) ในไฟล์ PHP อื่น** — ยกเว้นใน `database/migrations/` เท่านั้น
+2. **ห้ามแก้ไข migration ที่ run ไปแล้ว** — สร้างไฟล์ใหม่เสมอ ถ้าต้องการเปลี่ยน schema
+3. **ทุก migration ต้องมี `up()` และ `down()`** — เพื่อ rollback ได้
+4. **ใช้ `IF NOT EXISTS` / `IF EXISTS` เสมอ** — ทำให้ migration idempotent
+5. **Seed ต้อง safe to re-run** — ตรวจว่ามีข้อมูลอยู่แล้วหรือไม่ก่อน insert
+6. **1 migration = 1 การเปลี่ยนแปลง** — อย่ายัดหลาย feature ใน migration เดียว
+7. **ตั้งชื่อ migration ให้สื่อความหมาย** — อ่านชื่อแล้วรู้ว่าทำอะไร
 
 ### โครงสร้าง
 ```
@@ -491,13 +519,13 @@ database/
 ├── migrate.php              → CLI runner (ห้ามเรียกผ่าน browser)
 ├── .htaccess                → Deny from all (ป้องกัน browser)
 ├── migrations/
-│   ├── 2026_04_05_000001_create_initial_schema.php
-│   ├── 2026_04_05_000002_add_indexes.php
-│   └── (ไฟล์ใหม่เพิ่มที่นี่)
+│   ├── 2026_04_05_000001_create_initial_schema.php   ← ตารางทั้งหมด
+│   ├── 2026_04_05_000002_add_indexes.php             ← Indexes
+│   └── YYYY_MM_DD_HHMMSS_description.php             ← ไฟล์ใหม่เพิ่มที่นี่
 └── seeds/
-    ├── 01_admin_user.php
-    ├── 02_system_settings.php
-    └── (seed ใหม่เพิ่มที่นี่)
+    ├── 01_admin_user.php                              ← Super Admin
+    ├── 02_system_settings.php                         ← ค่าเริ่มต้น WFH
+    └── NN_description.php                             ← Seed ใหม่เพิ่มที่นี่
 ```
 
 ### คำสั่ง CLI
@@ -508,45 +536,109 @@ php database/migrate.php --seed-only    # Run seeds only
 php database/migrate.php --status       # Show migration status
 php database/migrate.php --rollback     # Rollback last migration
 php database/migrate.php --rollback=3   # Rollback last 3
-php database/migrate.php --fresh        # Drop all + re-migrate + seed
+php database/migrate.php --fresh        # Drop all + re-migrate + seed (ระวัง!)
 php database/migrate.php --make=name    # Create new migration file
 ```
 
-### Migration File Format
+### Workflow: เพิ่มตารางใหม่
+
+```bash
+# 1. สร้าง migration file
+php database/migrate.php --make=create_att_grades
+
+# 2. แก้ไขไฟล์ที่สร้างขึ้นมา
+```
 ```php
 <?php
 return [
     'up' => function (PDO $pdo) {
-        $pdo->exec("CREATE TABLE ...");
-        // หรือ ALTER TABLE, CREATE INDEX, etc.
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS att_grades (
+                id          INT AUTO_INCREMENT PRIMARY KEY,
+                student_id  VARCHAR(50) NOT NULL,
+                subject_id  INT NOT NULL,
+                score       DECIMAL(5,2) NOT NULL DEFAULT 0,
+                grade       VARCHAR(10) DEFAULT '',
+                semester    TINYINT NOT NULL DEFAULT 1,
+                year        INT NOT NULL,
+                teacher_id  INT NOT NULL,
+                created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_student (student_id),
+                INDEX idx_subject (subject_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
     },
     'down' => function (PDO $pdo) {
-        $pdo->exec("DROP TABLE IF EXISTS ...");
+        $pdo->exec("DROP TABLE IF EXISTS att_grades");
+    },
+];
+```
+```bash
+# 3. Run migration
+php database/migrate.php
+
+# 4. ตรวจสอบ
+php database/migrate.php --status
+```
+
+### Workflow: เพิ่ม column ในตารางที่มีอยู่
+
+```bash
+php database/migrate.php --make=add_phone_to_llw_users
+```
+```php
+<?php
+return [
+    'up' => function (PDO $pdo) {
+        // ตรวจว่ามี column อยู่แล้วหรือไม่
+        $cols = $pdo->query("SHOW COLUMNS FROM llw_users LIKE 'phone'")->fetchAll();
+        if (empty($cols)) {
+            $pdo->exec("ALTER TABLE llw_users ADD COLUMN phone VARCHAR(20) NULL AFTER lastname");
+        }
+    },
+    'down' => function (PDO $pdo) {
+        $cols = $pdo->query("SHOW COLUMNS FROM llw_users LIKE 'phone'")->fetchAll();
+        if (!empty($cols)) {
+            $pdo->exec("ALTER TABLE llw_users DROP COLUMN phone");
+        }
     },
 ];
 ```
 
-### Seed File Format
+### Workflow: เพิ่ม Seed Data
+
+สร้างไฟล์ `database/seeds/03_sample_departments.php`:
 ```php
 <?php
 return [
     'run' => function (PDO $pdo) {
-        $check = $pdo->prepare("SELECT COUNT(*) FROM table WHERE ...");
-        // insert ถ้ายังไม่มี (idempotent)
+        $departments = ['ฝ่ายวิชาการ', 'ฝ่ายบริหาร', 'ฝ่ายปกครอง', 'ฝ่ายบริการ'];
+        $stmt = $pdo->prepare("INSERT IGNORE INTO wfh_departments (dept_name) VALUES (?)");
+        foreach ($departments as $d) {
+            $stmt->execute([$d]);
+        }
     },
 ];
 ```
+```bash
+php database/migrate.php --seed-only
+```
 
-### Naming Convention
-- Migration: `YYYY_MM_DD_HHMMSS_description.php` เช่น `2026_04_05_143000_add_email_to_users.php`
-- Seed: `NN_description.php` เรียงตามลำดับ เช่น `01_admin_user.php`, `02_departments.php`
+### State Tracking
+- ตาราง `_migrations` เก็บรายการ migration ที่ run แล้ว
+- แต่ละ batch คือ 1 ครั้งที่รัน `migrate.php` (อาจ run หลาย file)
+- Rollback จะลบ record ออกจาก `_migrations` + เรียก `down()`
+- `--fresh` จะ drop ทุกตารางรวม `_migrations` แล้วเริ่มใหม่
 
-### กฎสำคัญ
-- Migration ต้อง **idempotent** — ใช้ `IF NOT EXISTS`, `IF EXISTS` เสมอ
-- Seed ต้อง **safe to re-run** — ตรวจก่อน insert เสมอ
-- ห้ามแก้ไข migration ที่ run ไปแล้ว — สร้างไฟล์ใหม่แทน
-- ใส่ทั้ง `up` และ `down` ทุกครั้ง เพื่อ rollback ได้
-- State tracking อยู่ในตาราง `_migrations`
+### Production Workflow
+```
+1. สร้าง migration file บน local
+2. ทดสอบ: php database/migrate.php (local)
+3. git push origin main → auto deploy ขึ้น production
+4. SSH เข้า production server
+5. cd /path/to/llw && php database/migrate.php
+```
+**หมายเหตุ**: migration ไม่ได้ run อัตโนมัติตอน deploy — ต้อง SSH เข้าไป run เอง เพื่อความปลอดภัย
 
 ---
 
