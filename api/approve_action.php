@@ -1,80 +1,95 @@
 <?php
-// api/approve_action.php
+// api/approve_action.php — อนุมัติ/ปฏิเสธคำขอออกนอกบริเวณ
 header('Content-Type: application/json; charset=utf-8');
 session_start();
 
-require_once '../config/db_central.php';
-require_once '../config/db_project.php';
+require_once '../config/database.php';
+require_once '../includes/telegram_bot.php';
 
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Unauthorized.']);
+    echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบก่อน']);
     exit;
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
 
 if (!$input || !isset($input['r_id']) || !isset($input['status'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Invalid data.']);
+    echo json_encode(['status' => 'error', 'message' => 'ข้อมูลไม่สมบูรณ์']);
     exit;
 }
 
-function sendTelegram($msg, $chatId) {
-    $url = "https://api.telegram.org/bot" . TELEGRAM_TOKEN . "/sendMessage";
-    $data = [
-        'chat_id' => $chatId,
-        'text' => $msg,
-        'parse_mode' => 'HTML'
-    ];
-    $options = [
-        'http' => [
-            'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
-            'method'  => 'POST',
-            'content' => http_build_query($data),
-        ],
-    ];
-    $context  = stream_context_create($options);
-    @file_get_contents($url, false, $context);
-}
-
 try {
-    $r_id = (int)$input['r_id'];
-    $status = (int)$input['status'];
-    
-    // Update status based on who approves (boss 1 or boss 2)
-    $stmt = $pdo_project->prepare("UPDATE requests SET status_boss1 = ? WHERE r_id = ?");
+    $pdo = getPdo();
+    $r_id   = (int)$input['r_id'];
+    $status = (int)$input['status']; // 1=อนุมัติ, 2=ปฏิเสธ
+
+    // อัปเดตสถานะ
+    $stmt = $pdo->prepare("UPDATE leave_requests SET status_boss1 = ? WHERE r_id = ?");
     $stmt->execute([$status, $r_id]);
 
-    // Fetch requester and substitutes to notify
-    $stmt_req = $pdo_project->prepare("SELECT r.*, t.t_telegram_id, t.t_name FROM requests r JOIN school_central_db.teachers t ON r.teacher_id = t.t_id WHERE r.r_id = ?");
+    // ดึงข้อมูลผู้ขอพร้อม telegram_chat_id
+    $stmt_req = $pdo->prepare("
+        SELECT r.*, 
+               CONCAT(u.firstname,' ',u.lastname) AS t_name,
+               t.telegram_chat_id
+        FROM leave_requests r 
+        JOIN llw_users u ON r.teacher_id = u.user_id
+        LEFT JOIN wfh_users t ON t.username = u.username
+        WHERE r.r_id = ?
+    ");
     $stmt_req->execute([$r_id]);
     $request = $stmt_req->fetch();
 
-    if ($request && $status == 1) { // Approved
-        // Notify Requester
-        if ($request['t_telegram_id']) {
-            $msg = "✅ <b>คำขอออกนอกบริเวณได้รับอนุมัติแล้ว</b>\n";
-            $msg .= "👤 ผู้ขอ: " . $request['t_name'] . "\n";
-            $msg .= "⏰ เวลา: " . $request['time_start'] . " - " . $request['time_end'] . "\n";
-            sendTelegram($msg, $request['t_telegram_id']);
-        }
+    // ส่ง Telegram แจ้งผู้ขอ
+    if ($request) {
+        try {
+            $sStmt = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
+            $settings = $sStmt->fetch();
 
-        // Notify Substitutes
-        $stmt_sub = $pdo_project->prepare("SELECT rd.*, t.t_telegram_id, t.t_name FROM request_details rd JOIN school_central_db.teachers t ON rd.sub_teacher_id = t.t_id WHERE rd.r_id = ?");
-        $stmt_sub->execute([$r_id]);
-        $substitutes = $stmt_sub->fetchAll();
+            if ($settings && $settings['telegram_token']) {
+                // แจ้งผู้ขอ (ถ้ามี chat_id)
+                if (!empty($request['telegram_chat_id'])) {
+                    if ($status == 1) {
+                        $msg = "✅ <b>คำขอออกนอกบริเวณได้รับอนุมัติแล้ว</b>\n";
+                    } else {
+                        $msg = "❌ <b>คำขอออกนอกบริเวณไม่ได้รับอนุมัติ</b>\n";
+                    }
+                    $msg .= "📝 เหตุผล: " . $request['reason'] . "\n";
+                    $msg .= "⏰ เวลา: " . $request['time_start'] . " - " . $request['time_end'];
+                    sendTelegramMessage($settings['telegram_token'], $request['telegram_chat_id'], $msg);
+                }
 
-        foreach ($substitutes as $sub) {
-            if ($sub['t_telegram_id']) {
-                $msg_sub = "📢 <b>แจ้งเตือนการสอนแทน</b>\n";
-                $msg_sub .= "👤 " . $request['t_name'] . " ฝากสอนแทน\n";
-                $msg_sub .= "🗓 คาบที่: " . $sub['period'] . " วิชา: " . $sub['subject'] . "\n";
-                $msg_sub .= "📍 ชั้น: " . $sub['class_level'] . "\n";
-                sendTelegram($msg_sub, $sub['t_telegram_id']);
+                // แจ้งครูสอนแทน (กรณีอนุมัติและมีคาบการสอน)
+                if ($status == 1 && $request['has_class']) {
+                    $stmt_sub = $pdo->prepare("
+                        SELECT rd.*, 
+                               CONCAT(u.firstname,' ',u.lastname) AS sub_name,
+                               w.telegram_chat_id AS sub_telegram
+                        FROM leave_request_details rd
+                        JOIN llw_users u ON rd.sub_teacher_id = u.user_id
+                        LEFT JOIN wfh_users w ON w.username = u.username
+                        WHERE rd.r_id = ?
+                    ");
+                    $stmt_sub->execute([$r_id]);
+                    $substitutes = $stmt_sub->fetchAll();
+
+                    foreach ($substitutes as $sub) {
+                        if (!empty($sub['sub_telegram'])) {
+                            $msg_sub  = "📢 <b>แจ้งเตือนการสอนแทน</b>\n";
+                            $msg_sub .= "👤 " . $request['t_name'] . " ฝากสอนแทน\n";
+                            $msg_sub .= "🗓 คาบที่: " . $sub['period'] . " วิชา: " . $sub['subject'] . "\n";
+                            $msg_sub .= "📍 ชั้น: " . $sub['class_level'];
+                            sendTelegramMessage($settings['telegram_token'], $sub['sub_telegram'], $msg_sub);
+                        }
+                    }
+                }
             }
+        } catch (Exception $e) {
+            // ไม่ให้ Telegram error หยุดระบบ
         }
     }
 
-    echo json_encode(['status' => 'success', 'message' => 'อัปเดตสถานะการอนุมัติเรียบร้อยแล้ว']);
+    echo json_encode(['status' => 'success', 'message' => 'อัปเดตสถานะเรียบร้อยแล้ว']);
 
 } catch (Exception $e) {
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);

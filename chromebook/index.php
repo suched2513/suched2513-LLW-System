@@ -23,6 +23,7 @@ require_once '../components/layout_start.php';
 </style>
 
 <div class="flex flex-col gap-8">
+
     <!-- Summary Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-6" id="dashboard-cards">
         <div class="col-span-full text-center py-10 text-slate-400 font-bold"><div class="loader mr-2"></div> กำลังดึงข้อมูลสถิติ...</div>
@@ -30,69 +31,55 @@ require_once '../components/layout_start.php';
 
     <!-- Main Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Forms area -->
+        <!-- Left: Borrow Form -->
         <div class="lg:col-span-1 space-y-6">
             <div id="borrow-form-card" class="cb-card bg-white sticky top-28">
                 <h3 class="text-lg font-black text-slate-800 mb-6 flex items-center gap-3">
                     <i class="bi bi-file-earmark-plus-fill text-blue-600"></i> บันทึกรายการยืมใหม่
                 </h3>
-
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8" id="dashboard-cards">
-            <div class="col-span-full text-center py-4 text-gray-400"><div class="loader mr-2"></div> กำลังโหลดข้อมูล...</div>
+                <form id="borrow-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">ประเภทผู้ยืม</label>
+                        <select id="borrower-type" class="w-full border border-slate-200 bg-slate-50 p-2.5 rounded-xl text-sm" required>
+                            <option value="" disabled selected>-- เลือก --</option>
+                            <option value="Teacher">ครู</option>
+                            <option value="Student">นักเรียน</option>
+                        </select>
+                    </div>
+                    <div id="dynamic-borrower-fields" class="space-y-4 hidden">
+                        <div id="class-select-wrapper" class="hidden">
+                            <label class="block text-sm font-medium text-slate-600 mb-1">ชั้นเรียน</label>
+                            <select id="class-select" class="w-full border border-slate-200 bg-slate-50 p-2.5 rounded-xl text-sm"></select>
+                        </div>
+                        <div>
+                            <label id="borrower-name-label" class="block text-sm font-medium text-slate-600 mb-1">ชื่อผู้ยืม</label>
+                            <select id="borrower-id" class="w-full border border-slate-200 bg-slate-50 p-2.5 rounded-xl text-sm" required></select>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-sm font-medium text-slate-600">Chromebook</label>
+                            <button type="button" onclick="openScanner()" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full flex items-center gap-1 transition">
+                                <i class="bi bi-qr-code-scan"></i> สแกน QR
+                            </button>
+                        </div>
+                        <select id="chromebook-id" class="w-full border border-slate-200 bg-slate-50 p-2.5 rounded-xl text-sm" required><option>รอข้อมูล...</option></select>
+                    </div>
+                    <div class="border-2 border-dashed border-slate-200 p-4 rounded-xl text-center cursor-pointer hover:bg-slate-50 transition" onclick="document.getElementById('images').click()">
+                        <input type="file" id="images" accept="image/*" multiple class="hidden" onchange="previewImages(this, 'preview-container')" />
+                        <i class="bi bi-camera text-slate-400 text-xl mb-1"></i>
+                        <p class="text-sm text-slate-400">ถ่ายรูปหลักฐาน (Max 3)</p>
+                        <div id="preview-container" class="flex justify-center gap-2 mt-2 flex-wrap"></div>
+                    </div>
+                    <button type="submit" id="btn-submit-borrow" class="w-full bg-emerald-600 text-white py-3 rounded-xl hover:bg-emerald-700 font-bold shadow-lg shadow-emerald-100 transition-all">บันทึกข้อมูล</button>
+                </form>
+            </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="lg:col-span-1">
-                <div id="borrow-form-card" class="card sticky top-6 hidden">
-                    <h3 class="text-lg font-bold text-gray-700 mb-4 border-b pb-3"><i class="fa-solid fa-file-circle-plus text-blue-600 mr-2"></i>บันทึกการยืม</h3>
-                    <form id="borrow-form" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">ประเภทผู้ยืม</label>
-                            <select id="borrower-type" class="w-full border p-2 rounded-lg" required>
-                                <option value="" disabled selected>-- เลือก --</option>
-                                <option value="Teacher">ครู</option>
-                                <option value="Student">นักเรียน</option>
-                            </select>
-                        </div>
-                        <div id="dynamic-borrower-fields" class="space-y-4 hidden">
-                            <div id="class-select-wrapper" class="hidden">
-                                <label class="block text-sm font-medium mb-1">ชั้นเรียน</label>
-                                <select id="class-select" class="w-full border p-2 rounded-lg"></select>
-                            </div>
-                            <div>
-                                <label id="borrower-name-label" class="block text-sm font-medium mb-1">ชื่อผู้ยืม (แสดงเฉพาะคนที่ยังไม่ยืม)</label>
-                                <select id="borrower-id" class="w-full border p-2 rounded-lg" required></select>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between items-center mb-1">
-                                <label class="block text-sm font-medium">Chromebook</label>
-                                <button type="button" onclick="openScanner()" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full flex items-center gap-1 transition">
-                                    <i class="fa-solid fa-qrcode"></i> สแกน QR/Barcode
-                                </button>
-                            </div>
-                            <select id="chromebook-id" class="w-full border p-2 rounded-lg" required><option>รอข้อมูล...</option></select>
-                        </div>
-                        <div class="border-2 border-dashed p-4 rounded-lg text-center cursor-pointer hover:bg-gray-50" onclick="document.getElementById('images').click()">
-                            <input type="file" id="images" accept="image/*" multiple class="hidden" onchange="previewImages(this, 'preview-container')" />
-                            <i class="fa-solid fa-camera text-gray-400 mb-1"></i> <span class="text-sm text-gray-500">ถ่ายรูป (Max 3)</span>
-                            <div id="preview-container" class="flex justify-center gap-2 mt-2 flex-wrap"></div>
-                        </div>
-                        <button type="submit" id="btn-submit-borrow" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">บันทึกข้อมูล</button>
-                    </form>
-                </div>
-                
-                <div id="guest-welcome" class="card bg-blue-50 text-center py-8 border border-blue-100">
-                    <i class="fa-solid fa-school text-4xl text-blue-300 mb-3"></i>
-                    <h3 class="text-lg font-semibold text-blue-800">ยินดีต้อนรับ</h3>
-                    <p class="text-sm text-blue-600">กรุณาเข้าสู่ระบบเพื่อทำรายการ</p>
-                </div>
-            </div>
-
-        <!-- Table area -->
+        <!-- Right: Table -->
         <div class="lg:col-span-2 space-y-6">
             <div class="flex flex-col sm:flex-row gap-4 justify-between items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
-                <div class="flex gap-2 overflow-x-auto hide-scroll w-full sm:w-auto" id="borrow-tabs">
+                <div class="flex gap-2 overflow-x-auto w-full sm:w-auto" id="borrow-tabs">
                     <!-- Dynamic Tabs -->
                 </div>
                 <div class="relative w-full sm:w-72 flex-shrink-0">
@@ -124,14 +111,13 @@ require_once '../components/layout_start.php';
                     <div class="flex gap-2" id="pagination"></div>
                 </div>
             </div>
-            
-            <!-- Link to Analytics -->
+
             <a href="dashboard.php" class="flex items-center justify-between p-6 bg-blue-600 rounded-[2rem] text-white shadow-xl shadow-blue-100 hover:scale-[1.01] transition-all">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-xl"><i class="bi bi-pie-chart-fill"></i></div>
                     <div>
                         <h4 class="font-black">สถิติและแดชบอร์ด</h4>
-                        <p class="text-[10px] text-blue-100 uppercase tracking-widest font-bold">View full device analytics & reports</p>
+                        <p class="text-[10px] text-blue-100 uppercase tracking-widest font-bold">View full device analytics &amp; reports</p>
                     </div>
                 </div>
                 <i class="bi bi-chevron-right text-2xl"></i>
@@ -139,7 +125,7 @@ require_once '../components/layout_start.php';
         </div>
     </div>
 </div>
-<?php require_once '../components/layout_end.php'; ?>
+
 
     <div id="master-data-modal" class="modal-bg z-[1100]">
         <div class="modal-content relative max-w-2xl">
@@ -312,7 +298,8 @@ require_once '../components/layout_start.php';
 
     <script>
         console.log("App Starting...");
-        let state = { isAdmin: false, adminId: '', data: [], students: [], teachers: [], chromebooks: [], page: 1, limit: 10, tab: 'all' };
+        // Auth ผ่าน PHP session แล้ว ถ้ามาถึงหน้านี้ได้แสดงว่าเป็น admin
+        let state = { isAdmin: true, adminId: '<?= htmlspecialchars($_SESSION['username'] ?? 'admin') ?>', data: [], students: [], teachers: [], chromebooks: [], page: 1, limit: 10, tab: 'all' };
         
         function run(action, payload) {
             if (!payload) payload = {};
@@ -845,5 +832,4 @@ require_once '../components/layout_start.php';
             document.getElementById('scan-result').classList.remove('hidden');
         }
     </script>
-</body>
-</html>
+<?php require_once '../components/layout_end.php'; ?>

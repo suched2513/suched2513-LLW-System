@@ -49,7 +49,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'csv' && $selected_subject_id) 
     fclose($output); exit();
 }
 
-require_once 'components/layout_start.php';
+require_once '../components/layout_start.php';
 ?>
 
 <div class="flex flex-col gap-8">
@@ -139,4 +139,4 @@ require_once 'components/layout_start.php';
     <?php endif; ?>
 </div>
 
-<?php require_once 'components/layout_end.php'; ?>
+<?php require_once '../components/layout_end.php'; ?>

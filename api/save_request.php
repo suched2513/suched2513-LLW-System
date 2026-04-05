@@ -1,99 +1,95 @@
 <?php
-// api/save_request.php
+// api/save_request.php — บันทึกคำขอออกนอกบริเวณ ใช้ llw_db
 header('Content-Type: application/json; charset=utf-8');
 session_start();
 
-require_once '../config/db_central.php';
-require_once '../config/db_project.php';
+require_once '../config/database.php';
+require_once '../includes/telegram_bot.php';
 
 // Check Authentication
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Unauthorized access.']);
+    echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบก่อน']);
     exit;
 }
 
+$pdo = getPdo();
 $teacher_id = $_SESSION['user_id'];
 $input = json_decode(file_get_contents('php://input'), true);
 
 if (!$input) {
-    echo json_encode(['status' => 'error', 'message' => 'Invalid data format.']);
+    echo json_encode(['status' => 'error', 'message' => 'ข้อมูลไม่ถูกต้อง']);
     exit;
 }
 
-function sendTelegram($msg, $chatId) {
-    $url = "https://api.telegram.org/bot" . TELEGRAM_TOKEN . "/sendMessage";
-    $data = [
-        'chat_id' => $chatId,
-        'text' => $msg,
-        'parse_mode' => 'HTML'
-    ];
-    $options = [
-        'http' => [
-            'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
-            'method'  => 'POST',
-            'content' => http_build_query($data),
-        ],
-    ];
-    $context  = stream_context_create($options);
-    @file_get_contents($url, false, $context);
-}
-
 try {
-    $pdo_project->beginTransaction();
+    $pdo->beginTransaction();
 
-    // 1. Save to `requests` table
-    $stmt = $pdo_project->prepare("INSERT INTO requests 
-        (teacher_id, req_date, reason, detail, time_start, time_end, total_hr, has_class, status_boss1, status_boss2) 
-        VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, 0, 0)");
+    // 1. บันทึกลง leave_requests
+    $stmt = $pdo->prepare("INSERT INTO leave_requests 
+        (teacher_id, req_date, reason, detail, time_start, time_end, total_hr, has_class, status_boss1) 
+        VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, 0)");
     
     $stmt->execute([
         $teacher_id,
-        $input['reason'],
-        $input['detail'],
-        $input['time_start'],
-        $input['time_end'],
-        $input['total_hr'],
-        $input['has_class'] ? 1 : 0
+        $input['reason'] ?? '',
+        $input['detail'] ?? '',
+        $input['time_start'] ?? '',
+        $input['time_end'] ?? '',
+        $input['total_hr'] ?? 0,
+        ($input['has_class'] ?? false) ? 1 : 0
     ]);
 
-    $request_id = $pdo_project->lastInsertId();
+    $request_id = $pdo->lastInsertId();
 
-    // 2. Save substitution items if `has_class` is true
-    if ($input['has_class'] && !empty($input['cart'])) {
-        $stmt_detail = $pdo_project->prepare("INSERT INTO request_details 
+    // 2. บันทึก request_details ถ้ามีคาบการสอน
+    if (!empty($input['has_class']) && !empty($input['cart'])) {
+        $stmt_detail = $pdo->prepare("INSERT INTO leave_request_details 
             (r_id, period, subject, class_level, sub_teacher_id) 
             VALUES (?, ?, ?, ?, ?)");
         
         foreach ($input['cart'] as $item) {
             $stmt_detail->execute([
                 $request_id,
-                $item['period'],
-                $item['subject'],
-                $item['class_level'],
-                $item['sub_teacher_id']
+                $item['period'] ?? '',
+                $item['subject'] ?? '',
+                $item['class_level'] ?? '',
+                $item['sub_teacher_id'] ?? null
             ]);
         }
     }
 
-    $pdo_project->commit();
+    $pdo->commit();
 
-    // 3. Telegram Notification to Boss (ผอ.)
-    $teacher_name = $_SESSION['user_name'] ?? 'อาจารย์';
-    $msg = "🔔 <b>มีคำขอออกนอกบริเวณใหม่</b>\n";
-    $msg .= "👤 ผู้ขอ: " . $teacher_name . "\n";
-    $msg .= "📝 เหตุผล: " . $input['reason'] . "\n";
-    $msg .= "⏰ เวลา: " . $input['time_start'] . " - " . $input['time_end'] . "\n";
-    $msg .= "📅 วันที่: " . date('d/m/Y') . "\n";
-    $msg .= "🔗 กรุณาตรวจสอบในระบบ";
+    // 3. ส่ง Telegram แจ้ง ผอ.
+    $teacher_name = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : 
+                    (isset($_SESSION['firstname']) ? $_SESSION['firstname'] : 'อาจารย์');
+    
+    // ดึง settings จาก wfh_system_settings
+    try {
+        $sStmt = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
+        $settings = $sStmt->fetch();
+        
+        if ($settings && $settings['telegram_token'] && $settings['admin_chat_id']) {
+            $msg  = "🔔 <b>มีคำขอออกนอกบริเวณใหม่</b>\n";
+            $msg .= "👤 ผู้ขอ: " . $teacher_name . "\n";
+            $msg .= "📝 เหตุผล: " . ($input['reason'] ?? '') . "\n";
+            $msg .= "⏰ เวลา: " . ($input['time_start'] ?? '') . " - " . ($input['time_end'] ?? '') . "\n";
+            $msg .= "📅 วันที่: " . date('d/m/Y') . "\n";
+            if (!empty($input['has_class'])) {
+                $msg .= "📚 มีคาบการสอน: " . count($input['cart'] ?? []) . " คาบ\n";
+            }
+            $msg .= "🔗 กรุณาตรวจสอบในระบบ LLW";
 
-    sendTelegram($msg, BOSS1_CHAT_ID);
+            sendTelegramMessage($settings['telegram_token'], $settings['admin_chat_id'], $msg);
+        }
+    } catch (Exception $e) {
+        // ไม่ให้ Telegram error หยุดระบบ
+    }
 
-    echo json_encode(['status' => 'success', 'message' => 'บันทึกข้อมูลเรียบร้อยแล้ว']);
+    echo json_encode(['status' => 'success', 'message' => 'บันทึกคำขอเรียบร้อยแล้ว']);
 
 } catch (Exception $e) {
-    if ($pdo_project->inTransaction()) {
-        $pdo_project->rollBack();
-    }
+    if ($pdo->inTransaction()) $pdo->rollBack();
     echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()]);
 }
 ?>

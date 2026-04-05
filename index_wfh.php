@@ -6,7 +6,7 @@ require_once 'config.php';
 if (isset($_SESSION['llw_role'])) {
     if (in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
         header("Location: admin/dashboard.php"); exit();
-    } elseif ($_SESSION['llw_role'] === 'staff') {
+    } elseif ($_SESSION['llw_role'] === 'wfh_staff') {
         header("Location: user/dashboard.php"); exit();
     }
 }

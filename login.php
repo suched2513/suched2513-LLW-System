@@ -1,6 +1,6 @@
 <?php
 /**
- * login.php — Unified Login for LLW Platform
+ * login.php — Enhanced Premium Login for LLW Platform
  */
 session_start();
 require_once 'config.php';
@@ -62,84 +62,126 @@ function _redirect_by_role(string $role): void {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เข้าสู่ระบบ | LLW Premium</title>
+    <title>เข้าสู่ระบบ | LLW Modern System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         body { font-family: 'Prompt', sans-serif; }
-        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .glass { 
+            background: rgba(255, 255, 255, 0.7); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .bg-mesh {
+            background-color: #eef2ff;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            background-image: radial-gradient(circle at 10% 20%, rgb(226, 240, 254) 0%, rgb(255, 255, 255) 90.2%);
+        }
+        .animated-blob {
+            position: absolute;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            filter: blur(80px);
+            opacity: 0.15;
+            z-index: 0;
+            border-radius: 50%;
+            animation: move 25s infinite alternate;
+        }
+        @keyframes move {
+            from { transform: translate(0, 0); }
+            to { transform: translate(100px, 100px); }
+        }
     </style>
 </head>
-<body class="h-full bg-slate-100 flex items-center justify-center p-4">
-    <!-- Blobs -->
-    <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/20 rounded-full blur-[120px]"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-400/20 rounded-full blur-[120px]"></div>
-    </div>
+<body class="h-full bg-mesh flex items-center justify-center p-4 relative overflow-hidden">
+    <!-- Animated Background Blobs -->
+    <div class="animated-blob w-[500px] h-[500px] -top-20 -left-20"></div>
+    <div class="animated-blob w-[400px] h-[400px] -bottom-20 -right-20" style="animation-delay: -5s;"></div>
 
-    <div class="w-full max-w-md z-10">
-        <div class="text-center mb-10">
-            <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-3xl shadow-2xl shadow-blue-200 mb-6 text-white text-4xl">
-                <i class="bi bi-shield-lock-fill"></i>
+    <div class="w-full max-w-[450px] z-10">
+        <div class="text-center mb-12">
+            <div class="inline-block p-4 rounded-[40px] bg-white shadow-2xl mb-6">
+                <div class="w-16 h-16 bg-blue-600 rounded-[28px] flex items-center justify-center text-white text-3xl shadow-lg">
+                    <i class="bi bi-shield-check"></i>
+                </div>
             </div>
-            <h1 class="text-3xl font-black text-slate-800 tracking-tight">LLW Premium</h1>
-            <p class="text-slate-400 font-medium mt-2">โรงเรียนละลมวิทยา — ระบบบริหารจัดการสถานศึกษา</p>
+            <h1 class="text-3xl font-black text-blue-900 tracking-tight leading-tight">ระบบบริหารจัดการการเรียน<br>การสอนออนไลน์</h1>
+            <p class="text-slate-500 font-medium mt-3">กรอกข้อมูลเพื่อเข้าสู่ระบบ</p>
         </div>
 
-        <div class="glass p-10 rounded-[32px] shadow-2xl border border-white/50">
-            <h2 class="text-xl font-bold text-slate-700 mb-8 flex items-center gap-2">
-                <span class="w-1.5 h-6 bg-blue-600 rounded-full"></span>
-                เข้าสู่ระบบรวมศูนย์
-            </h2>
+        <div class="glass p-10 rounded-[48px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] relative overflow-hidden">
+            <!-- Role Tabs -->
+            <div class="flex items-center justify-between gap-1 p-1.5 bg-slate-100/80 rounded-2xl mb-8">
+                <button type="button" class="flex-1 py-2.5 px-4 text-xs font-bold rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-200 transition-all">นักเรียน</button>
+                <button type="button" class="flex-1 py-2.5 px-4 text-xs font-bold rounded-xl text-slate-500 hover:bg-white/50 transition-all">ครู</button>
+                <button type="button" class="flex-1 py-2.5 px-4 text-xs font-bold rounded-xl text-slate-500 hover:bg-white/50 transition-all">แอดมิน</button>
+                <button type="button" class="flex-1 py-2.5 px-4 text-xs font-bold rounded-xl text-slate-500 hover:bg-white/50 transition-all">ซุปเปอร์</button>
+            </div>
 
             <form method="POST" class="space-y-6">
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">ชื่อผู้ใช้งาน (User ID)</label>
-                    <div class="relative">
-                        <i class="bi bi-person absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <label class="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 ml-1">ชื่อผู้ใช้</label>
+                    <div class="relative group">
+                        <i class="bi bi-person absolute left-5 group-focus-within:text-blue-500 transition-colors top-1/2 -translate-y-1/2 text-slate-300"></i>
                         <input type="text" name="username" required placeholder="User ID" 
-                               class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                               class="w-full bg-white border-0 rounded-2xl pl-14 pr-5 py-4 text-sm font-medium shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-300">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">รหัสผ่าน (Password)</label>
-                    <div class="relative">
-                        <i class="bi bi-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <div class="flex justify-between items-center mb-2.5 ml-1">
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">รหัสผ่าน</label>
+                        <a href="#" class="text-[10px] font-bold text-blue-500 hover:underline">ลืมรหัสผ่าน?</a>
+                    </div>
+                    <div class="relative group">
+                        <i class="bi bi-lock absolute left-5 group-focus-within:text-blue-500 transition-colors top-1/2 -translate-y-1/2 text-slate-300"></i>
                         <input type="password" name="password" required placeholder="••••••••" 
-                               class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                               class="w-full bg-white border-0 rounded-2xl pl-14 pr-14 py-4 text-sm font-medium shadow-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-300">
+                        <button type="button" class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+                            <i class="bi bi-eye"></i>
+                        </button>
                     </div>
                 </div>
 
-                <div class="pt-4">
-                    <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] transition-all">
-                        ยืนยันการเข้าใช้
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-md shadow-2xl shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
+                        เข้าสู่ระบบ <i class="bi bi-arrow-right"></i>
                     </button>
                 </div>
             </form>
 
-            <div class="mt-8 pt-8 border-t border-slate-100 flex flex-wrap justify-center gap-2">
-                <span class="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-wider">Super Admin</span>
-                <span class="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-wider">WFH Admin</span>
-                <span class="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-600 text-[9px] font-black uppercase tracking-wider">CB Manager</span>
-                <span class="px-2 py-0.5 rounded-lg bg-rose-50 text-rose-600 text-[9px] font-black uppercase tracking-wider">Academic Teacher</span>
+            <div class="mt-10 flex flex-col items-center gap-4">
+                <div class="w-full h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+                <p class="text-xs font-bold text-slate-400">ยังไม่มีบัญชี? <a href="#" class="text-blue-600 font-black">ลงทะเบียนโรงเรียน</a></p>
             </div>
         </div>
         
-        <div class="mt-10 flex items-center justify-center gap-4">
-            <a href="index.php" class="text-xs font-bold text-slate-500 hover:text-blue-600 transition tracking-widest uppercase">หน้าแรก</a>
-            <span class="text-slate-300">|</span>
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">© 2026 Lalom Wittaya School.</p>
+        <div class="mt-12 flex items-center justify-center gap-6">
+            <a href="#" class="text-[10px] font-black text-slate-400 hover:text-blue-600 transition tracking-widest uppercase">นโยบายความเป็นส่วนตัว</a>
+            <a href="#" class="text-[10px] font-black text-slate-400 hover:text-blue-600 transition tracking-widest uppercase">เงื่อนไขการใช้งาน</a>
+            <a href="index.php" class="text-[10px] font-black text-slate-400 hover:text-blue-600 transition tracking-widest uppercase">หน้าหลัก</a>
         </div>
     </div>
 
     <?php if ($error): ?>
     <script>
-        Swal.fire({ icon: 'error', title: 'เข้าสู่ระบบไม่สำเร็จ', text: '<?= $error ?>', confirmButtonColor: '#2563eb' });
+        Swal.fire({ 
+            icon: 'error', 
+            title: 'เข้าสู่ระบบไม่สำเร็จ', 
+            text: '<?= $error ?>', 
+            confirmButtonColor: '#2563eb',
+            background: '#ffffff',
+            customClass: {
+                popup: 'rounded-[32px]',
+                confirmButton: 'rounded-xl px-10 py-3 font-bold'
+            }
+        });
     </script>
     <?php endif; ?>
 </body>

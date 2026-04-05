@@ -1,34 +1,29 @@
 <?php
-class TelegramBot {
-    private $token;
-    private $chat_id;
+/**
+ * includes/telegram_bot.php
+ * ฟังก์ชันกลางสำหรับส่งข้อความ Telegram
+ */
 
-    public function __construct($token, $chat_id) {
-        $this->token = $token;
-        $this->chat_id = $chat_id;
-    }
+function sendTelegramMessage(string $token, string $chatId, string $message): bool
+{
+    if (empty($token) || empty($chatId)) return false;
 
-    public function sendMessage($message) {
-        if (empty($this->token) || empty($this->chat_id)) return false;
-
-        $url = "https://api.telegram.org/bot" . $this->token . "/sendMessage";
-        $data = [
-            'chat_id' => $this->chat_id,
-            'text' => $message,
-            'parse_mode' => 'HTML'
-        ];
-
-        $options = [
-            'http' => [
-                'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
-                'method'  => 'POST',
-                'content' => http_build_query($data),
-            ],
-        ];
-
-        $context  = stream_context_create($options);
-        $result = file_get_contents($url, false, $context);
-        return $result;
-    }
+    $url  = "https://api.telegram.org/bot{$token}/sendMessage";
+    $data = [
+        'chat_id'    => $chatId,
+        'text'       => $message,
+        'parse_mode' => 'HTML',
+    ];
+    $opts = [
+        'http' => [
+            'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+            'method'  => 'POST',
+            'content' => http_build_query($data),
+            'timeout' => 5,
+        ],
+    ];
+    $ctx = stream_context_create($opts);
+    $result = @file_get_contents($url, false, $ctx);
+    return $result !== false;
 }
 ?>
