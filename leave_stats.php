@@ -15,16 +15,27 @@ $myId    = (int)$_SESSION['user_id'];
 $pdo = getPdo();
 
 // ─── Filter ──────────────────────────────────────────────
-$filterYear  = (int)($_GET['year']  ?? date('Y'));
-$filterMonth = (int)($_GET['month'] ?? 0); // 0 = ทั้งปี
+$filterYear   = (int)($_GET['year']   ?? date('Y'));
+$filterMonth  = (int)($_GET['month']  ?? 0);
+$filterPerson = (int)($_GET['person'] ?? 0); // 0 = ทุกคน
+
+// ─── ดึงรายชื่อสำหรับ dropdown (admin เท่านั้น) ──────────────────
+$personList = [];
+if ($isAdmin) {
+    $personList = $pdo->query("
+        SELECT DISTINCT r.teacher_id, CONCAT(u.firstname,' ',u.lastname) as name
+        FROM leave_requests r
+        JOIN llw_users u ON r.teacher_id = u.user_id
+        ORDER BY name
+    ")->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // ─── KPI ─────────────────────────────────────────────────
-$whereBase = $isAdmin ? "WHERE YEAR(req_date) = ?" : "WHERE teacher_id = ? AND YEAR(req_date) = ?";
-$paramsKpi = $isAdmin ? [$filterYear] : [$myId, $filterYear];
-if ($filterMonth > 0) {
-    $whereBase .= " AND MONTH(req_date) = ?";
-    $paramsKpi[] = $filterMonth;
-}
+$whereBase  = $isAdmin ? "WHERE YEAR(req_date) = ?" : "WHERE teacher_id = ? AND YEAR(req_date) = ?";
+$paramsKpi  = $isAdmin ? [$filterYear] : [$myId, $filterYear];
+if ($filterMonth  > 0 && $isAdmin) { $whereBase .= " AND MONTH(req_date) = ?";  $paramsKpi[] = $filterMonth; }
+elseif ($filterMonth > 0)          { $whereBase .= " AND MONTH(req_date) = ?";  $paramsKpi[] = $filterMonth; }
+if ($isAdmin && $filterPerson > 0) { $whereBase .= " AND teacher_id = ?"; $paramsKpi[] = $filterPerson; }
 
 $stmt = $pdo->prepare("SELECT
     COUNT(*) as total,
@@ -37,8 +48,9 @@ $stmt->execute($paramsKpi);
 $kpi = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // ─── แนวโน้มรายเดือน ──────────────────────────────────────
-$whereMonthly = $isAdmin ? "" : "AND teacher_id = ?";
+$whereMonthly  = $isAdmin ? "" : "AND teacher_id = ?";
 $paramsMonthly = $isAdmin ? [$filterYear] : [$filterYear, $myId];
+if ($isAdmin && $filterPerson > 0) { $whereMonthly .= " AND teacher_id = ?"; $paramsMonthly[] = $filterPerson; }
 $stmtMonthly = $pdo->prepare("SELECT
     MONTH(req_date) as m,
     COUNT(*) as cnt,
@@ -57,9 +69,10 @@ foreach ($monthlyRaw as $row) {
 }
 
 // ─── แยกตามประเภทเหตุผล ────────────────────────────────────
-$whereType = $isAdmin ? "WHERE YEAR(req_date) = ?" : "WHERE teacher_id = ? AND YEAR(req_date) = ?";
+$whereType  = $isAdmin ? "WHERE YEAR(req_date) = ?" : "WHERE teacher_id = ? AND YEAR(req_date) = ?";
 $paramsType = $isAdmin ? [$filterYear] : [$myId, $filterYear];
-if ($filterMonth > 0) { $whereType .= " AND MONTH(req_date) = ?"; $paramsType[] = $filterMonth; }
+if ($filterMonth  > 0) { $whereType .= " AND MONTH(req_date) = ?"; $paramsType[] = $filterMonth; }
+if ($isAdmin && $filterPerson > 0) { $whereType .= " AND teacher_id = ?"; $paramsType[] = $filterPerson; }
 $stmtType = $pdo->prepare("SELECT reason_type, COUNT(*) as cnt FROM leave_requests $whereType GROUP BY reason_type ORDER BY cnt DESC");
 $stmtType->execute($paramsType);
 $typeData = $stmtType->fetchAll(PDO::FETCH_ASSOC);
@@ -67,9 +80,10 @@ $typeData = $stmtType->fetchAll(PDO::FETCH_ASSOC);
 // ─── รายบุคคล (admin เท่านั้น) ────────────────────────────
 $perPerson = [];
 if ($isAdmin) {
-    $whereP = "WHERE YEAR(r.req_date) = ?";
+    $whereP  = "WHERE YEAR(r.req_date) = ?";
     $paramsP = [$filterYear];
-    if ($filterMonth > 0) { $whereP .= " AND MONTH(r.req_date) = ?"; $paramsP[] = $filterMonth; }
+    if ($filterMonth  > 0) { $whereP .= " AND MONTH(r.req_date) = ?"; $paramsP[] = $filterMonth; }
+    if ($filterPerson > 0) { $whereP .= " AND r.teacher_id = ?";      $paramsP[] = $filterPerson; }
     $stmtP = $pdo->prepare("SELECT
         CONCAT(u.firstname,' ',u.lastname) as name,
         COUNT(*) as cnt,
@@ -86,9 +100,10 @@ if ($isAdmin) {
 }
 
 // ─── ตารางย้อนหลัง ─────────────────────────────────────────
-$whereList = $isAdmin ? "WHERE YEAR(r.req_date) = ?" : "WHERE r.teacher_id = ? AND YEAR(r.req_date) = ?";
+$whereList  = $isAdmin ? "WHERE YEAR(r.req_date) = ?" : "WHERE r.teacher_id = ? AND YEAR(r.req_date) = ?";
 $paramsList = $isAdmin ? [$filterYear] : [$myId, $filterYear];
-if ($filterMonth > 0) { $whereList .= " AND MONTH(r.req_date) = ?"; $paramsList[] = $filterMonth; }
+if ($filterMonth  > 0) { $whereList .= " AND MONTH(r.req_date) = ?";  $paramsList[] = $filterMonth; }
+if ($isAdmin && $filterPerson > 0) { $whereList .= " AND r.teacher_id = ?"; $paramsList[] = $filterPerson; }
 $stmtList = $pdo->prepare("SELECT r.*,
     CONCAT(u.firstname,' ',u.lastname) as t_name
     FROM leave_requests r
@@ -128,7 +143,6 @@ $personCounts = json_encode(array_column($perPerson, 'cnt'));
 $personHrs    = json_encode(array_column($perPerson, 'hrs'));
 ?>
 
-<!-- Filter Bar -->
 <div class="flex flex-wrap items-center gap-3 mb-8 bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
     <i class="bi bi-funnel-fill text-indigo-500 text-lg"></i>
     <span class="text-sm font-black text-slate-600">ตัวกรอง:</span>
@@ -146,7 +160,18 @@ $personHrs    = json_encode(array_column($perPerson, 'hrs'));
             <option value="<?= $n ?>" <?= $n==$filterMonth ? 'selected' : '' ?>><?= $lbl ?></option>
             <?php endforeach; ?>
         </select>
-        <?php if ($filterMonth || $filterYear != date('Y')): ?>
+        <?php if ($isAdmin && !empty($personList)): ?>
+        <select name="person" onchange="this.form.submit()"
+            class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold focus:ring-2 focus:ring-indigo-400 outline-none min-w-[180px]">
+            <option value="0" <?= $filterPerson===0 ? 'selected' : '' ?>><i class="bi bi-people"></i> ทุกคน</option>
+            <?php foreach ($personList as $pl): ?>
+            <option value="<?= $pl['teacher_id'] ?>" <?= $pl['teacher_id']==$filterPerson ? 'selected' : '' ?>>
+                <?= htmlspecialchars($pl['name'], ENT_QUOTES) ?>
+            </option>
+            <?php endforeach; ?>
+        </select>
+        <?php endif; ?>
+        <?php if ($filterMonth || $filterYear != date('Y') || $filterPerson): ?>
         <a href="leave_stats.php" class="text-xs font-bold text-slate-400 hover:text-rose-500 transition-all">✕ ล้างตัวกรอง</a>
         <?php endif; ?>
     </form>
