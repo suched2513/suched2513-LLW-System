@@ -409,7 +409,6 @@ function renderTable() {
             : (isBorrowed
                 ? `<span class="text-[9px] text-amber-500 font-black"><i class="bi bi-shield-exclamation"></i> ยังไม่ตรวจ</span>`
                 : `<span class="text-[9px] text-slate-300 font-bold">—</span>`);
-        const overdue = isBorrowed && daysAgo>2;
         return `<tr class="hover:bg-slate-50/50 transition ${overdue?'bg-rose-50/30':''}">
             <td class="px-5 py-4">
                 <span class="px-2.5 py-1 rounded-full text-[10px] font-black ${isBorrowed?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700'}">${isBorrowed?'ยืมอยู่':'คืนแล้ว'}</span>
