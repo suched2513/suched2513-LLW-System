@@ -68,7 +68,7 @@ $timeStart  = htmlspecialchars($req['time_start'] ?? '');
 $timeEnd    = htmlspecialchars($req['time_end'] ?? '');
 $totalHr    = htmlspecialchars($req['total_hr'] ?? '');
 $statusText = match((int)($req['status_boss1'] ?? 0)) {
-    1 => 'อนุมัติ', 2 => 'ไม่อนุมัติ', default => 'รออนุมัติ'
+    1 => 'อนุญาต', 2 => 'ไม่อนุญาต', default => 'รออนุญาต'
 };
 ?>
 <!DOCTYPE html>
@@ -376,7 +376,7 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
   <?php endif; ?>
 
   <div class="body-text">
-    จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติ จักเป็นพระคุณยิ่ง
+    จึงเรียนมาเพื่อโปรดพิจารณาอนุญาต จักเป็นพระคุณยิ่ง
   </div>
 
   <!-- Signature (requester) -->
@@ -409,30 +409,34 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
       </div>
     </div>
 
-    <!-- ผอ. -->
+    <!-- ผอ. / ผู้อนุญาต -->
     <div class="approval-box">
       <h4><i>ความเห็นผู้บริหาร</i></h4>
       <?php if ((int)($req['status_boss1'] ?? 0) === 1): ?>
-        <div style="text-align:center; margin:8pt 0;">
-          <span class="approved-stamp">✓ อนุมัติ</span>
+        <div style="text-align:center; margin:4pt 0;">
+          <span class="approved-stamp">✓ อนุญาต</span>
         </div>
       <?php elseif ((int)($req['status_boss1'] ?? 0) === 2): ?>
-        <div style="text-align:center; margin:8pt 0;">
-          <span class="rejected-stamp">✗ ไม่อนุมัติ</span>
+        <div style="text-align:center; margin:4pt 0;">
+          <span class="rejected-stamp">✗ ไม่อนุญาต</span>
         </div>
       <?php else: ?>
       <div class="checkbox-row">
-        <span class="checkbox-box"></span> อนุมัติ
+        <span class="checkbox-box"></span> อนุญาต
       </div>
       <div class="checkbox-row">
-        <span class="checkbox-box"></span> ไม่อนุมัติ
+        <span class="checkbox-box"></span> ไม่อนุญาต
       </div>
       <?php endif; ?>
       <div class="remark-line"></div>
-      <div class="remark-line"></div>
-      <div style="margin-top:10pt; text-align:center;">
+      <div style="margin-top:8pt; text-align:center;">
+        <?php if ($bossName): ?>
+        <div class="sig-name" style="margin-bottom:2pt;">(<?= $bossName ?>)</div>
+        <?php endif; ?>
         <div class="sig-line" style="width:130pt; margin:0 auto;"></div>
-        <div class="sig-name">(<?= $bossName ?: '.............................' ?>)</div>
+        <?php if (!$bossName): ?>
+        <div class="sig-name">(.............................)</div>
+        <?php endif; ?>
         <div class="sig-role">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
       </div>
     </div>
