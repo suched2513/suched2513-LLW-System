@@ -28,7 +28,7 @@ try {
     // 1. บันทึกลง leave_requests
     $stmt = $pdo->prepare("INSERT INTO leave_requests 
         (teacher_id, req_date, reason, detail, time_start, time_end, total_hr, has_class, status_boss1) 
-        VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, 0)");
+        VALUES (?, CURDATE(), ?, ?, ?, ?, ?, ?, 0)");
     
     $stmt->execute([
         $teacher_id,
@@ -91,6 +91,8 @@ try {
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
-    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()]);
+    error_log('[LLW] save_request error: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด กรุณาลองใหม่']);
 }
 ?>

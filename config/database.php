@@ -24,7 +24,8 @@ function getWfhConn(): mysqli
 {
     $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
     if ($conn->connect_error) {
-        die('เชื่อมต่อฐานข้อมูลล้มเหลว: ' . $conn->connect_error);
+        error_log('[LLW] DB connect error: ' . $conn->connect_error);
+        die('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาติดต่อผู้ดูแลระบบ');
     }
     $conn->set_charset('utf8mb4');
     return $conn;
@@ -40,6 +41,7 @@ function getPdo(): PDO
         $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         return $pdo;
     } catch (PDOException $e) {
-        die('เชื่อมต่อฐานข้อมูลล้มเหลว: ' . $e->getMessage());
+        error_log('[LLW] PDO connect error: ' . $e->getMessage());
+        die('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ กรุณาติดต่อผู้ดูแลระบบ');
     }
 }

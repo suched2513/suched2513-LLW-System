@@ -1,835 +1,708 @@
 <?php
 session_start();
-// Auth: super_admin or cb_admin
 if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'cb_admin'])) {
-    header('Location: ../login.php'); exit();
+    header('Location: /login.php?redirect=/chromebook/index.php'); exit();
 }
-
 $pageTitle = 'จัดการ Chromebook';
 $pageSubtitle = 'ระบบยืม-คืนและตรวจสอบสภาพอุปกรณ์';
 $activeSystem = 'chromebook';
-
 require_once '../components/layout_start.php';
 ?>
 
 <style>
-    .cb-card { background: #fff; border-radius: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03); padding: 1.5rem; border: 1px solid rgba(0,0,0,0.05); }
-    .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #3b82f6; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .modal-bg { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: all 0.3s ease; }
-    .modal-bg.active { opacity: 1; pointer-events: auto; }
-    .modal-content { background: #fff; border-radius: 2.5rem; padding: 2.5rem; max-width: 32rem; width: 90%; transform: scale(0.9) translateY(20px); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); border: 1px solid rgba(255,255,255,0.5); }
-    .modal-bg.active .modal-content { transform: scale(1) translateY(0); }
+    .modal-bg { position:fixed; inset:0; background:rgba(15,23,42,0.5); backdrop-filter:blur(12px); display:flex; align-items:center; justify-content:center; z-index:1000; opacity:0; pointer-events:none; transition:all .3s ease; }
+    .modal-bg.active { opacity:1; pointer-events:auto; }
+    .modal-box { background:#fff; border-radius:2rem; padding:2rem; width:90%; transform:scale(0.92) translateY(16px); transition:all .3s cubic-bezier(.34,1.56,.64,1); max-height:90vh; overflow-y:auto; box-shadow:0 25px 60px -12px rgba(0,0,0,0.25); }
+    .modal-bg.active .modal-box { transform:scale(1) translateY(0); }
+    .spin { animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .kpi-card { position:relative; overflow:hidden; border-radius:1.5rem; padding:1.5rem; color:#fff; transition:all .3s ease; cursor:default; }
+    .kpi-card:hover { transform:translateY(-3px); }
+    .kpi-card .kpi-icon { position:absolute; right:-0.5rem; bottom:-0.75rem; font-size:4.5rem; opacity:0.15; transition:all .4s ease; }
+    .kpi-card:hover .kpi-icon { opacity:0.25; transform:scale(1.1) rotate(-5deg); }
+    .inp { width:100%; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:0.875rem; padding:0.75rem 1rem; font-size:0.875rem; font-weight:700; outline:none; transition:all .2s; color:#1e293b; }
+    .inp:focus { border-color:#06b6d4; box-shadow:0 0 0 3px rgba(6,182,212,0.15); background:#fff; }
+    .form-label { display:block; font-size:0.625rem; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem; }
+    tr.row-item:hover td { background:rgba(6,182,212,0.04); }
 </style>
 
-<div class="flex flex-col gap-8">
+<div class="flex flex-col gap-6">
 
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-6" id="dashboard-cards">
-        <div class="col-span-full text-center py-10 text-slate-400 font-bold"><div class="loader mr-2"></div> กำลังดึงข้อมูลสถิติ...</div>
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4" id="kpi-cards">
+        <div class="col-span-full">
+            <div class="bg-gradient-to-r from-cyan-600 to-blue-600 rounded-2xl p-8 flex items-center justify-center gap-3">
+                <i class="bi bi-arrow-repeat spin text-white text-xl"></i>
+                <span class="text-white font-black">กำลังโหลดข้อมูล...</span>
+            </div>
+        </div>
     </div>
 
-    <!-- Main Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Left: Borrow Form -->
-        <div class="lg:col-span-1 space-y-6">
-            <div id="borrow-form-card" class="cb-card bg-white sticky top-28">
-                <h3 class="text-lg font-black text-slate-800 mb-6 flex items-center gap-3">
-                    <i class="bi bi-file-earmark-plus-fill text-blue-600"></i> บันทึกรายการยืมใหม่
-                </h3>
-                <form id="borrow-form" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">ประเภทผู้ยืม</label>
-                        <select id="borrower-type" class="w-full border border-slate-200 bg-slate-50 p-2.5 rounded-xl text-sm" required>
-                            <option value="" disabled selected>-- เลือก --</option>
-                            <option value="Teacher">ครู</option>
-                            <option value="Student">นักเรียน</option>
-                        </select>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Borrow Form -->
+        <div class="lg:col-span-1">
+            <div class="rounded-2xl overflow-hidden shadow-xl shadow-cyan-100/50 sticky top-28">
+                <!-- Card Header Gradient -->
+                <div class="bg-gradient-to-br from-cyan-500 to-blue-600 px-6 pt-6 pb-10 relative overflow-hidden">
+                    <div class="absolute inset-0 opacity-10" style="background-image:radial-gradient(circle at 80% 20%, white 1px, transparent 1px); background-size:20px 20px;"></div>
+                    <div class="relative z-10">
+                        <div class="w-11 h-11 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-white text-xl mb-3">
+                            <i class="bi bi-laptop"></i>
+                        </div>
+                        <h3 class="font-black text-white text-lg leading-tight">บันทึกการยืม</h3>
+                        <p class="text-cyan-100 text-xs font-bold mt-0.5">กรอกข้อมูลผู้ยืม Chromebook</p>
                     </div>
-                    <div id="dynamic-borrower-fields" class="space-y-4 hidden">
-                        <div id="class-select-wrapper" class="hidden">
-                            <label class="block text-sm font-medium text-slate-600 mb-1">ชั้นเรียน</label>
-                            <select id="class-select" class="w-full border border-slate-200 bg-slate-50 p-2.5 rounded-xl text-sm"></select>
+                </div>
+                <!-- Form Body -->
+                <div class="bg-white px-6 pb-6 -mt-4 rounded-t-3xl relative z-10">
+                    <form id="borrow-form" class="space-y-4 pt-5">
+                        <div>
+                            <label class="form-label">ประเภทผู้ยืม</label>
+                            <select id="borrower-type" class="inp" required>
+                                <option value="" disabled selected>— เลือก —</option>
+                                <option value="Teacher">👤 ครู</option>
+                                <option value="Student">🎓 นักเรียน</option>
+                            </select>
+                        </div>
+                        <div id="cls-wrap" class="hidden">
+                            <label class="form-label">ชั้นเรียน</label>
+                            <select id="class-select" class="inp"></select>
+                        </div>
+                        <div id="borrower-wrap" class="hidden">
+                            <label class="form-label" id="borrower-label">ชื่อผู้ยืม</label>
+                            <select id="borrower-id" class="inp" required></select>
                         </div>
                         <div>
-                            <label id="borrower-name-label" class="block text-sm font-medium text-slate-600 mb-1">ชื่อผู้ยืม</label>
-                            <select id="borrower-id" class="w-full border border-slate-200 bg-slate-50 p-2.5 rounded-xl text-sm" required></select>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="form-label mb-0">Chromebook</label>
+                                <button type="button" onclick="openScanner()" class="text-[10px] font-black text-cyan-600 bg-cyan-50 border border-cyan-100 px-3 py-1.5 rounded-lg hover:bg-cyan-100 transition flex items-center gap-1.5">
+                                    <i class="bi bi-qr-code-scan"></i> สแกน QR
+                                </button>
+                            </div>
+                            <select id="chromebook-id" class="inp" required>
+                                <option>รอข้อมูล...</option>
+                            </select>
                         </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="block text-sm font-medium text-slate-600">Chromebook</label>
-                            <button type="button" onclick="openScanner()" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full flex items-center gap-1 transition">
-                                <i class="bi bi-qr-code-scan"></i> สแกน QR
-                            </button>
+                        <div class="border-2 border-dashed border-cyan-200 bg-cyan-50/50 rounded-2xl p-5 text-center cursor-pointer hover:bg-cyan-50 transition-all group" onclick="document.getElementById('borrow-imgs').click()">
+                            <input type="file" id="borrow-imgs" accept="image/*" multiple class="hidden" onchange="previewImgs(this,'borrow-preview')">
+                            <i class="bi bi-camera-fill text-cyan-300 text-2xl group-hover:text-cyan-400 transition"></i>
+                            <p class="text-xs text-cyan-500 font-black mt-1">ถ่ายรูปหลักฐาน <span class="opacity-60">(Max 3)</span></p>
+                            <div id="borrow-preview" class="flex flex-wrap gap-2 justify-center mt-2"></div>
                         </div>
-                        <select id="chromebook-id" class="w-full border border-slate-200 bg-slate-50 p-2.5 rounded-xl text-sm" required><option>รอข้อมูล...</option></select>
-                    </div>
-                    <div class="border-2 border-dashed border-slate-200 p-4 rounded-xl text-center cursor-pointer hover:bg-slate-50 transition" onclick="document.getElementById('images').click()">
-                        <input type="file" id="images" accept="image/*" multiple class="hidden" onchange="previewImages(this, 'preview-container')" />
-                        <i class="bi bi-camera text-slate-400 text-xl mb-1"></i>
-                        <p class="text-sm text-slate-400">ถ่ายรูปหลักฐาน (Max 3)</p>
-                        <div id="preview-container" class="flex justify-center gap-2 mt-2 flex-wrap"></div>
-                    </div>
-                    <button type="submit" id="btn-submit-borrow" class="w-full bg-emerald-600 text-white py-3 rounded-xl hover:bg-emerald-700 font-bold shadow-lg shadow-emerald-100 transition-all">บันทึกข้อมูล</button>
-                </form>
+                        <button type="submit" id="btn-borrow" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg shadow-cyan-200/50 hover:shadow-cyan-300/50 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+                            <i class="bi bi-check-circle-fill"></i> บันทึกข้อมูล
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
 
-        <!-- Right: Table -->
-        <div class="lg:col-span-2 space-y-6">
-            <div class="flex flex-col sm:flex-row gap-4 justify-between items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
-                <div class="flex gap-2 overflow-x-auto w-full sm:w-auto" id="borrow-tabs">
-                    <!-- Dynamic Tabs -->
-                </div>
-                <div class="relative w-full sm:w-72 flex-shrink-0">
-                    <i class="bi bi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                    <input type="text" id="search-input" placeholder="ค้นหา Serial, ชื่อ..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-bold" />
+        <!-- Borrow Log Table -->
+        <div class="lg:col-span-2 space-y-4">
+
+            <!-- Toolbar -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex flex-wrap gap-3 items-center justify-between">
+                <div class="flex gap-1.5 flex-wrap" id="tabs-row"></div>
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <i class="bi bi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm"></i>
+                        <input type="text" id="search-inp" placeholder="ค้นหา Serial, ชื่อ..." class="w-44 bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2 text-sm font-bold outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 transition">
+                    </div>
+                    <button onclick="openMaster()" class="bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-black hover:bg-slate-900 transition flex items-center gap-1.5 shadow-sm">
+                        <i class="bi bi-database-gear"></i> ข้อมูลพื้นฐาน
+                    </button>
+                    <a href="dashboard.php" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-black hover:opacity-90 transition flex items-center gap-1.5 shadow-sm shadow-blue-200">
+                        <i class="bi bi-bar-chart-fill"></i> รายงาน
+                    </a>
                 </div>
             </div>
 
-            <div class="cb-card !p-0 overflow-hidden">
+            <!-- Table -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm text-left">
-                        <thead class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                             <tr>
-                                <th class="px-6 py-5">สถานะ</th>
-                                <th class="px-6 py-5">ผู้ยืม / ระดับชั้น</th>
-                                <th class="px-6 py-5">เครื่อง (ID/Serial)</th>
-                                <th class="px-6 py-5">วันยืม / ตรวจสภาพ</th>
-                                <th class="px-6 py-5 text-center">หลักฐาน</th>
-                                <th class="px-6 py-5 text-right"></th>
+                                <th class="px-5 py-4 text-left">สถานะ</th>
+                                <th class="px-5 py-4 text-left">ผู้ยืม / ห้อง</th>
+                                <th class="px-5 py-4 text-left">เครื่อง</th>
+                                <th class="px-5 py-4 text-left">วันที่</th>
+                                <th class="px-5 py-4 text-center">รูป</th>
+                                <th class="px-5 py-4 text-right"></th>
                             </tr>
                         </thead>
-                        <tbody id="table-body" class="divide-y divide-slate-50 text-slate-600">
-                            <tr><td colspan="6" class="text-center py-20 text-slate-400 font-bold">กำลังประมวลผลตารางยืม...</td></tr>
+                        <tbody id="table-body" class="divide-y divide-slate-50">
+                            <tr><td colspan="6" class="text-center py-16 text-slate-400 font-bold"><i class="bi bi-arrow-repeat spin mr-1"></i> กำลังโหลด...</td></tr>
                         </tbody>
                     </table>
                 </div>
-                <div class="bg-slate-50/80 px-6 py-4 flex justify-between items-center border-t border-slate-100">
-                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest" id="page-info">0 รายการ</span>
-                    <div class="flex gap-2" id="pagination"></div>
+                <div class="px-5 py-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest" id="page-info">–</span>
+                    <div class="flex gap-1" id="pagination"></div>
                 </div>
             </div>
-
-            <a href="dashboard.php" class="flex items-center justify-between p-6 bg-blue-600 rounded-[2rem] text-white shadow-xl shadow-blue-100 hover:scale-[1.01] transition-all">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-xl"><i class="bi bi-pie-chart-fill"></i></div>
-                    <div>
-                        <h4 class="font-black">สถิติและแดชบอร์ด</h4>
-                        <p class="text-[10px] text-blue-100 uppercase tracking-widest font-bold">View full device analytics &amp; reports</p>
-                    </div>
-                </div>
-                <i class="bi bi-chevron-right text-2xl"></i>
-            </a>
         </div>
     </div>
 </div>
 
+<!-- ═══ MODALS ═══════════════════════════════════════════════ -->
 
-    <div id="master-data-modal" class="modal-bg z-[1100]">
-        <div class="modal-content relative max-w-2xl">
-            <button onclick="document.getElementById('master-data-modal').classList.remove('active')" class="absolute top-4 right-4 text-gray-400"><i class="fa-solid fa-times"></i></button>
-            <h3 class="text-xl font-bold mb-4">จัดการข้อมูลพื้นฐาน</h3>
-            
-            <div class="flex border-b mb-4">
-                <button class="px-4 py-2 border-b-2 border-blue-600 text-blue-600 font-semibold master-tab" onclick="switchMasterTab('teacher')">ครู</button>
-                <button class="px-4 py-2 text-gray-500 hover:text-blue-600 master-tab" onclick="switchMasterTab('student')">นักเรียน</button>
-                <button class="px-4 py-2 text-gray-500 hover:text-blue-600 master-tab" onclick="switchMasterTab('chromebook')">Chromebook</button>
-            </div>
-
-            <!-- Teacher Tab -->
-            <div id="tab-teacher" class="master-tab-content">
-                <form onsubmit="submitMasterData(event, 'teacher')" class="flex gap-2 items-end mb-4">
-                    <div class="flex-1">
-                        <label class="block text-sm mb-1">รหัสครู</label>
-                        <input type="text" id="md-teacher-id" class="w-full border p-2 rounded" required />
-                    </div>
-                    <div class="flex-1">
-                        <label class="block text-sm mb-1">ชื่อ-สกุล</label>
-                        <input type="text" id="md-teacher-name" class="w-full border p-2 rounded" required />
-                    </div>
-                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">บันทึก</button>
-                </form>
-            </div>
-
-            <!-- Student Tab -->
-            <div id="tab-student" class="master-tab-content hidden">
-                <form onsubmit="submitMasterData(event, 'student')" class="flex gap-2 items-end mb-4">
-                    <div class="flex-1">
-                        <label class="block text-sm mb-1">รหัสนักเรียน</label>
-                        <input type="text" id="md-student-id" class="w-full border p-2 rounded" required />
-                    </div>
-                    <div class="flex-1">
-                        <label class="block text-sm mb-1">ชื่อ-สกุล</label>
-                        <input type="text" id="md-student-name" class="w-full border p-2 rounded" required />
-                    </div>
-                    <div class="w-24">
-                        <label class="block text-sm mb-1">ชั้นเรียน</label>
-                        <input type="text" id="md-student-class" placeholder="ม.4/1" class="w-full border p-2 rounded" required />
-                    </div>
-                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">บันทึก</button>
-                </form>
-            </div>
-
-            <!-- Chromebook Tab -->
-            <div id="tab-chromebook" class="master-tab-content hidden">
-                <form onsubmit="submitMasterData(event, 'chromebook')" class="flex gap-2 items-end mb-4">
-                    <div class="flex-1">
-                        <label class="block text-sm mb-1">รหัสเครื่อง</label>
-                        <input type="text" id="md-cb-id" placeholder="CB-001" class="w-full border p-2 rounded" required />
-                    </div>
-                    <div class="flex-1">
-                        <label class="block text-sm mb-1">รุ่น</label>
-                        <input type="text" id="md-cb-model" class="w-full border p-2 rounded" required />
-                    </div>
-                    <div class="flex-1">
-                        <label class="block text-sm mb-1">Serial Number</label>
-                        <input type="text" id="md-cb-serial" class="w-full border p-2 rounded" required />
-                    </div>
-                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">บันทึก</button>
-                </form>
-            </div>
-
-            <p class="text-xs text-gray-500 mt-4">* เมื่อเพิ่มหรือแก้ไขข้อมูลแล้ว ระบบจะอัปเดตข้อมูลอัตโนมัติ</p>
-        </div>
+<!-- Master Data -->
+<div id="modal-master" class="modal-bg">
+  <div class="modal-box max-w-2xl">
+    <div class="flex items-center justify-between mb-5">
+        <h3 class="font-black text-slate-800 text-lg flex items-center gap-2"><i class="bi bi-database-gear text-slate-600"></i> ข้อมูลพื้นฐาน</h3>
+        <button onclick="closeModal('modal-master')" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition"><i class="bi bi-x-lg text-sm"></i></button>
+    </div>
+    <div class="flex gap-1 mb-5 bg-slate-100 p-1 rounded-xl">
+        <button class="master-tab flex-1 py-2 rounded-lg text-xs font-black transition active-tab" data-tab="teacher" onclick="switchMasterTab(this,'teacher')">👤 ครู</button>
+        <button class="master-tab flex-1 py-2 rounded-lg text-xs font-black transition" data-tab="student" onclick="switchMasterTab(this,'student')">🎓 นักเรียน</button>
+        <button class="master-tab flex-1 py-2 rounded-lg text-xs font-black transition" data-tab="chromebook" onclick="switchMasterTab(this,'chromebook')">💻 Chromebook</button>
     </div>
 
-    <div id="login-modal" class="modal-bg">
-        <div class="modal-content relative">
-            <button onclick="hideLogin()" class="absolute top-4 right-4 text-gray-400"><i class="fa-solid fa-times"></i></button>
-            <h3 class="text-xl font-bold text-center mb-4">เข้าสู่ระบบ Admin</h3>
-            <form id="login-form" class="space-y-4">
-                <input type="text" id="admin-id" placeholder="Admin ID" class="w-full border p-2 rounded-lg" required />
-                <input type="password" id="admin-pass" placeholder="Password" class="w-full border p-2 rounded-lg" required />
-                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg">เข้าสู่ระบบ</button>
-            </form>
+    <!-- Teacher Tab -->
+    <div id="mtab-teacher">
+        <form onsubmit="saveMaster(event,'teacher')" class="grid grid-cols-3 gap-2 mb-3">
+            <input id="m-t-id"   placeholder="รหัสครู"  class="col-span-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-cyan-400" required>
+            <input id="m-t-name" placeholder="ชื่อ-สกุล" class="col-span-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-cyan-400" required>
+            <button type="submit" class="bg-cyan-600 text-white rounded-xl font-black text-sm hover:bg-cyan-700 transition">+ เพิ่ม</button>
+        </form>
+        <div class="flex items-center gap-2 mb-3">
+            <label class="flex items-center gap-2 cursor-pointer bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-black px-4 py-2 rounded-xl transition">
+                <i class="bi bi-file-earmark-spreadsheet-fill"></i> นำเข้า CSV
+                <input type="file" accept=".csv,.txt" class="hidden" onchange="importCSV(this,'teacher')">
+            </label>
+            <a href="data:text/csv;charset=utf-8,%EF%BB%BF%E0%B8%A3%E0%B8%AB%E0%B8%B1%E0%B8%AA%E0%B8%84%E0%B8%A3%E0%B8%B9,%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD-%E0%B8%AA%E0%B8%81%E0%B8%B8%E0%B8%A5%0AT001,%E0%B8%99%E0%B8%B2%E0%B8%A2%20%E0%B8%AA%E0%B8%A1%E0%B8%84%E0%B8%A3" download="template_teacher.csv" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1">
+                <i class="bi bi-download"></i> ดาวน์โหลด Template
+            </a>
         </div>
+        <div id="list-teacher" class="space-y-2 max-h-52 overflow-y-auto"></div>
     </div>
 
-    <div id="edit-modal" class="modal-bg z-[1050]">
-        <div class="modal-content relative">
-            <button onclick="document.getElementById('edit-modal').classList.remove('active')" class="absolute top-4 right-4 text-gray-400"><i class="fa-solid fa-times"></i></button>
-            <h3 class="text-xl font-bold mb-4">แก้ไขข้อมูล / เพิ่มรูปภาพ</h3>
-            <form id="edit-form" class="space-y-4">
-                <input type="hidden" id="edit-entry-id">
-                <input type="hidden" id="edit-borrower-type">
-                <input type="hidden" id="edit-borrower-id">
-                <input type="hidden" id="edit-class-name">
-                <div class="bg-gray-50 p-3 rounded">
-                    <p class="text-sm text-gray-500">ผู้ยืม: <span id="edit-show-name" class="font-bold text-gray-800"></span></p>
-                    <p class="text-sm text-gray-500">สถานะ: <span id="edit-show-status" class="font-bold"></span></p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">เพิ่มรูปภาพใหม่ (อัปโหลดเข้าโฟลเดอร์เดิม)</label>
-                    <div class="border-2 border-dashed p-4 rounded-lg text-center cursor-pointer hover:bg-gray-50" onclick="document.getElementById('edit-images').click()">
-                        <input type="file" id="edit-images" accept="image/*" multiple class="hidden" onchange="previewImages(this, 'edit-preview-container')" />
-                        <i class="fa-solid fa-plus-circle text-blue-500 mb-1"></i> <span class="text-sm text-blue-600">เลือกรูปเพิ่ม</span>
-                        <div id="edit-preview-container" class="flex justify-center gap-2 mt-2 flex-wrap"></div>
-                    </div>
-                </div>
-                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">บันทึกการแก้ไข</button>
-            </form>
+    <!-- Student Tab -->
+    <div id="mtab-student" class="hidden">
+        <form onsubmit="saveMaster(event,'student')" class="grid grid-cols-4 gap-2 mb-3">
+            <input id="m-s-id"    placeholder="รหัส"     class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-cyan-400" required>
+            <input id="m-s-name"  placeholder="ชื่อ-สกุล" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-cyan-400" required>
+            <input id="m-s-cls"   placeholder="ห้อง เช่น ม.4/1" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-cyan-400" required>
+            <button type="submit" class="bg-cyan-600 text-white rounded-xl font-black text-sm hover:bg-cyan-700 transition">+ เพิ่ม</button>
+        </form>
+        <div class="flex items-center gap-2 mb-3">
+            <label class="flex items-center gap-2 cursor-pointer bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-black px-4 py-2 rounded-xl transition">
+                <i class="bi bi-file-earmark-spreadsheet-fill"></i> นำเข้า CSV
+                <input type="file" accept=".csv,.txt" class="hidden" onchange="importCSV(this,'student')">
+            </label>
+            <a href="data:text/csv;charset=utf-8,%EF%BB%BF%E0%B8%A3%E0%B8%AB%E0%B8%B1%E0%B8%AA,%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD-%E0%B8%AA%E0%B8%81%E0%B8%B8%E0%B8%A5,%E0%B8%AB%E0%B9%89%E0%B8%AD%E0%B8%87%0A4100,%E0%B8%99%E0%B8%B2%E0%B8%A2%20%E0%B8%AA%E0%B8%A1%E0%B8%84%E0%B8%A3,%E0%B8%A1.4%2F1" download="template_student.csv" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1">
+                <i class="bi bi-download"></i> ดาวน์โหลด Template
+            </a>
         </div>
+        <div id="list-student" class="space-y-2 max-h-52 overflow-y-auto"></div>
     </div>
 
-    <div id="inspect-modal" class="modal-bg z-[1050]">
-        <div class="modal-content relative">
-            <button onclick="document.getElementById('inspect-modal').classList.remove('active')" class="absolute top-4 right-4 text-gray-400"><i class="fa-solid fa-times"></i></button>
-            <h3 class="text-xl font-bold mb-4 text-indigo-700"><i class="fa-solid fa-magnifying-glass-chart"></i> ตรวจสอบสภาพเครื่อง (Audit)</h3>
-            <form id="inspect-form" class="space-y-4">
-                <input type="hidden" id="inspect-entry-id">
-                <div class="bg-indigo-50 p-3 rounded border border-indigo-100">
-                    <p class="text-sm text-gray-600">ผู้ยืม: <span id="inspect-show-name" class="font-bold text-gray-800"></span></p>
-                    <p class="text-sm text-gray-600">เครื่องรหัส: <span id="inspect-show-cb" class="font-bold text-gray-800"></span></p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">สภาพเครื่องปัจจุบัน</label>
-                    <select id="inspect-condition" class="w-full border p-2 rounded-lg" required>
-                        <option value="Normal">สภาพปกติ (Normal)</option>
-                        <option value="Damaged">ชำรุด / เสียหาย (Damaged)</option>
-                        <option value="Lost">สูญหาย (Lost)</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">หมายเหตุ (ถ้ามีระบุจุดที่เสียหาย)</label>
-                    <textarea id="inspect-notes" class="w-full border p-2 rounded-lg" rows="2" placeholder="เช่น หน้าจอร้าว, สายชาร์จหาย..."></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">อัปโหลดรูปภาพหลักฐาน</label>
-                    <div class="border-2 border-dashed border-indigo-200 bg-indigo-50/30 p-4 rounded-lg text-center cursor-pointer hover:bg-indigo-50" onclick="document.getElementById('inspect-images').click()">
-                        <input type="file" id="inspect-images" accept="image/*" multiple class="hidden" onchange="previewImages(this, 'inspect-preview-container')" />
-                        <i class="fa-solid fa-camera text-indigo-400 mb-1"></i> <span class="text-sm text-indigo-600">ถ่ายรูปเครื่องล่าสุด</span>
-                        <div id="inspect-preview-container" class="flex justify-center gap-2 mt-2 flex-wrap"></div>
-                    </div>
-                </div>
-                <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">บันทึกผลการตรวจสอบ</button>
-            </form>
+    <!-- Chromebook Tab -->
+    <div id="mtab-chromebook" class="hidden">
+        <form onsubmit="saveMaster(event,'chromebook')" class="grid grid-cols-4 gap-2 mb-3">
+            <input id="m-c-id"     placeholder="รหัส CB-001" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-cyan-400" required>
+            <input id="m-c-model"  placeholder="รุ่น"        class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-cyan-400" required>
+            <input id="m-c-serial" placeholder="Serial No."  class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-cyan-400" required>
+            <button type="submit" class="bg-cyan-600 text-white rounded-xl font-black text-sm hover:bg-cyan-700 transition">+ เพิ่ม</button>
+        </form>
+        <div class="flex items-center gap-2 mb-3">
+            <label class="flex items-center gap-2 cursor-pointer bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-black px-4 py-2 rounded-xl transition">
+                <i class="bi bi-file-earmark-spreadsheet-fill"></i> นำเข้า CSV
+                <input type="file" accept=".csv,.txt" class="hidden" onchange="importCSV(this,'chromebook')">
+            </label>
+            <a href="data:text/csv;charset=utf-8,%EF%BB%BF%E0%B8%A3%E0%B8%AB%E0%B8%B1%E0%B8%AA%E0%B9%80%E0%B8%84%E0%B8%A3%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%87,%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99,Serial%0ACB-001,Acer%20C933,SN123456" download="template_chromebook.csv" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1">
+                <i class="bi bi-download"></i> ดาวน์โหลด Template
+            </a>
         </div>
+        <div id="list-chromebook" class="space-y-2 max-h-52 overflow-y-auto"></div>
     </div>
+  </div>
+</div>
 
-    <!-- QR Scanner Modal -->
-    <div id="scanner-modal" class="modal-bg z-[1200]">
-        <div class="modal-content relative w-full max-w-sm">
-            <button onclick="closeScanner()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700 z-10"><i class="fa-solid fa-times text-lg"></i></button>
-            <h3 class="text-lg font-bold text-indigo-700 mb-1"><i class="fa-solid fa-qrcode mr-2"></i>สแกน QR Code / Barcode</h3>
-            <p class="text-xs text-gray-500 mb-3">สแกนรหัสนักเรียน/ครู หรือรหัสเครื่อง Chromebook</p>
-            <div id="qr-reader" class="w-full rounded-lg overflow-hidden border-2 border-indigo-200" style="min-height:220px"></div>
-            <div id="scan-result" class="mt-3 hidden">
-                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm">
-                    <div class="flex items-start gap-2">
-                        <i class="fa-solid fa-circle-check text-indigo-500 mt-0.5"></i>
-                        <div>
-                            <p class="font-bold text-indigo-800" id="scan-result-text"></p>
-                            <p class="text-indigo-600 text-xs" id="scan-result-desc"></p>
-                        </div>
-                    </div>
+<!-- Edit (add image) -->
+<div id="modal-edit" class="modal-bg">
+  <div class="modal-box max-w-md">
+    <div class="flex items-center justify-between mb-5">
+        <h3 class="font-black text-slate-800 text-lg"><i class="bi bi-pencil-square text-blue-500 mr-2"></i>แก้ไขรายการ</h3>
+        <button onclick="closeModal('modal-edit')" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition"><i class="bi bi-x-lg text-sm"></i></button>
+    </div>
+    <form id="edit-form" class="space-y-4">
+        <input type="hidden" id="edit-id">
+        <div class="bg-slate-50 rounded-xl p-4 text-sm">
+            <p class="font-black text-slate-700" id="edit-show-name">–</p>
+            <p class="text-slate-400 text-xs font-bold mt-1" id="edit-show-status">–</p>
+        </div>
+        <div class="border-2 border-dashed border-blue-200 rounded-2xl p-4 text-center cursor-pointer hover:bg-blue-50 transition" onclick="document.getElementById('edit-imgs').click()">
+            <input type="file" id="edit-imgs" accept="image/*" multiple class="hidden" onchange="previewImgs(this,'edit-preview')">
+            <i class="bi bi-plus-circle text-blue-400 text-2xl"></i>
+            <p class="text-xs text-blue-500 font-bold mt-1">เพิ่มรูปหลักฐาน</p>
+            <div id="edit-preview" class="flex flex-wrap gap-2 justify-center mt-2"></div>
+        </div>
+        <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-black hover:bg-blue-700 transition">บันทึก</button>
+    </form>
+  </div>
+</div>
+
+<!-- Inspect -->
+<div id="modal-inspect" class="modal-bg">
+  <div class="modal-box max-w-md">
+    <div class="flex items-center justify-between mb-5">
+        <h3 class="font-black text-slate-800 text-lg"><i class="bi bi-shield-check text-indigo-500 mr-2"></i>ตรวจสภาพเครื่อง</h3>
+        <button onclick="closeModal('modal-inspect')" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition"><i class="bi bi-x-lg text-sm"></i></button>
+    </div>
+    <form id="inspect-form" class="space-y-4">
+        <input type="hidden" id="inspect-id">
+        <div class="bg-indigo-50 rounded-xl p-4 text-sm border border-indigo-100">
+            <p class="font-black text-slate-700" id="inspect-show-name">–</p>
+            <p class="text-indigo-500 text-xs font-bold mt-1" id="inspect-show-cb">–</p>
+        </div>
+        <div>
+            <label class="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2">สภาพเครื่อง</label>
+            <select id="inspect-cond" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-400" required>
+                <option value="Normal">✅ สภาพปกติ</option>
+                <option value="Damaged">⚠️ ชำรุด/เสียหาย</option>
+                <option value="Lost">🚨 สูญหาย</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2">หมายเหตุ</label>
+            <textarea id="inspect-notes" rows="2" placeholder="เช่น หน้าจอร้าว, สายชาร์จหาย..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-400"></textarea>
+        </div>
+        <div class="border-2 border-dashed border-indigo-200 rounded-2xl p-4 text-center cursor-pointer hover:bg-indigo-50 transition" onclick="document.getElementById('inspect-imgs').click()">
+            <input type="file" id="inspect-imgs" accept="image/*" multiple class="hidden" onchange="previewImgs(this,'inspect-preview')">
+            <i class="bi bi-camera text-indigo-300 text-2xl"></i>
+            <p class="text-xs text-indigo-400 font-bold mt-1">ถ่ายรูปสภาพเครื่อง</p>
+            <div id="inspect-preview" class="flex flex-wrap gap-2 justify-center mt-2"></div>
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-black hover:bg-indigo-700 transition">บันทึกผลตรวจสอบ</button>
+    </form>
+  </div>
+</div>
+
+<!-- QR Scanner -->
+<div id="modal-scanner" class="modal-bg z-[1200]">
+  <div class="modal-box max-w-sm">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="font-black text-slate-800"><i class="bi bi-qr-code-scan text-cyan-600 mr-2"></i>สแกน QR / Barcode</h3>
+        <button onclick="closeScanner()" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition"><i class="bi bi-x-lg text-sm"></i></button>
+    </div>
+    <div id="qr-reader" class="w-full rounded-2xl overflow-hidden border-2 border-cyan-200" style="min-height:220px"></div>
+    <div id="scan-result" class="hidden mt-3 bg-cyan-50 border border-cyan-200 rounded-xl p-3 text-sm font-bold text-cyan-700"></div>
+    <p class="text-[10px] text-slate-400 text-center mt-3 font-bold">สแกนรหัสนักเรียน/ครู → แล้วสแกนรหัสเครื่อง</p>
+  </div>
+</div>
+
+<!-- Image Viewer -->
+<div id="modal-img" class="modal-bg z-[1300]" onclick="closeModal('modal-img')">
+  <div class="relative max-w-4xl mx-4" onclick="event.stopPropagation()">
+    <img id="modal-img-src" src="" class="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl">
+  </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+// ── State ───────────────────────────────────────────────────────
+const S = { logs:[], teachers:[], students:[], chromebooks:[], page:1, limit:15, tab:'all' };
+let qrScanner = null;
+
+// ── API ─────────────────────────────────────────────────────────
+async function api(action, payload={}) {
+    const r = await fetch('api.php?action=' + action, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({action, payload})
+    });
+    return r.json();
+}
+
+async function loadAll() {
+    const [logs, teachers, students, chromebooks] = await Promise.all([
+        api('getData',{sheetName:'BorrowLog'}),
+        api('getData',{sheetName:'Teachers'}),
+        api('getData',{sheetName:'Students'}),
+        api('getData',{sheetName:'Chromebooks'})
+    ]);
+    if (logs.success)        S.logs        = logs.data;
+    if (teachers.success)    S.teachers    = teachers.data;
+    if (students.success)    S.students    = students.data;
+    if (chromebooks.success) S.chromebooks = chromebooks.data;
+    renderKPI(); renderTabs(); renderTable(); renderDropdowns();
+}
+
+// ── Helpers ─────────────────────────────────────────────────────
+function getName(row) {
+    if (row[1]==='Teacher') { const t=S.teachers.find(x=>String(x[0])===String(row[2])); return t?t[1]:row[2]; }
+    const s=S.students.find(x=>String(x[0])===String(row[2])); return s?s[1]:row[2];
+}
+function fmtDate(d) { try{ return new Date(d).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch{return d||'–'; } }
+async function blobsFrom(fileInput) {
+    return Promise.all(Array.from(fileInput.files).slice(0,3).map(f=>new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(f);})));
+}
+
+// ── KPI ─────────────────────────────────────────────────────────
+function renderKPI() {
+    const borrowed  = S.logs.filter(r=>r[7]==='Borrowed').length;
+    const available = S.chromebooks.length - borrowed;
+    const now = new Date();
+    const overdue = S.logs.filter(r=>r[7]==='Borrowed'&&(now-new Date(r[8]))/(864e5)>2).length;
+    const cards = [
+        {label:'อุปกรณ์ทั้งหมด', val:S.chromebooks.length, icon:'bi-laptop',                  grad:'from-cyan-500 to-blue-600',    shadow:'shadow-cyan-200/50'},
+        {label:'กำลังยืมอยู่',   val:borrowed,              icon:'bi-hand-index-thumb-fill',   grad:'from-amber-400 to-orange-500', shadow:'shadow-amber-200/50'},
+        {label:'ว่างพร้อมใช้',   val:available,             icon:'bi-check-circle-fill',        grad:'from-emerald-500 to-teal-500', shadow:'shadow-emerald-200/50'},
+        {label:'ค้างคืน >2 วัน', val:overdue,               icon:'bi-exclamation-triangle-fill', grad:'from-rose-500 to-pink-600',    shadow:'shadow-rose-200/50'},
+        {label:'ครูในระบบ',      val:S.teachers.length,     icon:'bi-person-badge-fill',        grad:'from-violet-500 to-purple-600',shadow:'shadow-violet-200/50'},
+    ];
+    document.getElementById('kpi-cards').innerHTML = cards.map(c=>`
+        <div class="kpi-card bg-gradient-to-br ${c.grad} shadow-xl ${c.shadow}">
+            <p class="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">${c.label}</p>
+            <p class="text-4xl font-black tracking-tight">${c.val}</p>
+            <i class="bi ${c.icon} kpi-icon"></i>
+        </div>`).join('');
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────
+function renderTabs() {
+    const classes = [...new Set(S.logs.filter(r=>r[1]==='Student').map(r=>r[3]).filter(Boolean))].sort();
+    const tabs = [{key:'all',label:'🗂 ทั้งหมด'},{key:'Teacher',label:'👤 ครู'},...classes.map(c=>({key:c,label:c}))];
+    document.getElementById('tabs-row').innerHTML = tabs.map(t=>`
+        <button onclick="setTab('${t.key}')" data-tab="${t.key}"
+            class="tab-btn px-3 py-1.5 rounded-xl text-[11px] font-black transition-all ${
+                S.tab===t.key
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-200/50 scale-105'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }">${t.label}</button>
+    `).join('');
+}
+function setTab(t) { S.tab=t; S.page=1; renderTabs(); renderTable(); }
+
+// ── Table ────────────────────────────────────────────────────────
+function renderTable() {
+    const q = document.getElementById('search-inp').value.toLowerCase();
+    const data = S.logs.filter(r=>{
+        const matchTab = S.tab==='all'||r[1]==='Teacher'&&S.tab==='Teacher'||r[3]===S.tab;
+        const matchQ   = !q || [getName(r),r[4],r[5],r[3]||''].some(v=>String(v).toLowerCase().includes(q));
+        return matchTab && matchQ;
+    });
+    const total      = data.length;
+    const totalPages = Math.max(1,Math.ceil(total/S.limit));
+    S.page = Math.min(S.page, totalPages);
+    const slice = data.slice((S.page-1)*S.limit, S.page*S.limit);
+
+    document.getElementById('page-info').textContent = `${total} รายการ`;
+    document.getElementById('table-body').innerHTML = slice.length ? slice.map(r=>{
+        const isBorrowed = r[7]==='Borrowed';
+        const name       = getName(r);
+        const dateStr    = fmtDate(r[8]);
+        const imgs = r[6]?r[6].split(',').filter(Boolean):[];
+        const imgHtml = imgs.length
+            ? `<div class="flex -space-x-2">${imgs.slice(0,3).map(i=>`<img src="uploads/${i}" class="w-9 h-9 rounded-xl ring-2 ring-white object-cover cursor-pointer hover:z-10 hover:scale-110 transition" onclick="viewImg('uploads/${i}')">`).join('')}${imgs.length>3?`<div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 text-[10px] font-black flex items-center justify-center ring-2 ring-white">+${imgs.length-3}</div>`:''}</div>`
+            : `<span class="text-slate-300 text-[10px] font-bold">—</span>`;
+        const nowD = new Date(), daysAgo = (nowD-new Date(r[8]))/(864e5);
+        const overdue = isBorrowed && daysAgo>2;
+        const statusBadge = isBorrowed
+            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-sm"><i class="bi bi-hand-index-thumb-fill text-[8px]"></i>ยืมอยู่</span>`
+            : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-sm"><i class="bi bi-check-lg text-[8px]"></i>คืนแล้ว</span>`;
+        return `<tr class="hover:bg-slate-50/50 transition ${overdue?'bg-rose-50/30':''}">
+            <td class="px-5 py-4">
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-black ${isBorrowed?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700'}">${isBorrowed?'ยืมอยู่':'คืนแล้ว'}</span>
+                ${overdue?`<div class="text-[9px] font-black text-rose-500 mt-0.5"><i class="bi bi-exclamation-triangle-fill"></i> ค้าง ${Math.floor(daysAgo)} วัน</div>`:''}
+            </td>
+            <td class="px-5 py-4"><p class="font-bold text-slate-700">${name}</p><p class="text-[10px] text-slate-400 font-bold">${r[3]||r[1]}</p></td>
+            <td class="px-5 py-4"><p class="font-mono font-black text-xs text-cyan-600">${r[4]}</p><p class="text-[9px] text-slate-300 font-bold">${r[5]}</p></td>
+            <td class="px-5 py-4 text-xs text-slate-400 font-bold">${dateStr}</td>
+            <td class="px-5 py-4 text-center">${imgHtml}</td>
+            <td class="px-5 py-4 text-right">
+                <div class="flex items-center justify-end gap-1">
+                    <button onclick="openEdit('${r[0]}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition" title="แก้ไข/เพิ่มรูป"><i class="bi bi-pencil-square"></i></button>
+                    ${isBorrowed?`<button onclick="openInspect('${r[0]}')" class="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition" title="ตรวจสภาพ"><i class="bi bi-shield-check"></i></button>
+                    <button onclick="doReturn('${r[0]}')" class="p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition" title="คืนเครื่อง"><i class="bi bi-box-arrow-in-left"></i></button>`:''}
+                    <button onclick="doDelete('${r[0]}')" class="p-2 text-rose-400 hover:bg-rose-50 rounded-xl transition" title="ลบ"><i class="bi bi-trash3"></i></button>
                 </div>
-            </div>
-            <p class="text-xs text-slate-400 text-center mt-3"><i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i>ยิงรหัสนักเรียน แล้วยิงรหัสเครื่อง ระบบจะเติมข้อมูลอัตโนมัติ</p>
-        </div>
-    </div>
+            </td>
+        </tr>`;
+    }).join('') : `<tr><td colspan="6" class="text-center py-16 text-slate-400 font-bold">ไม่พบข้อมูล</td></tr>`;
 
-    <div id="image-modal" class="modal-bg z-[1100]" onclick="this.classList.remove('active')">
-        <div class="relative max-w-4xl mx-4">
-            <img src="" id="modal-full-img" class="w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" onclick="event.stopPropagation()" />
-        </div>
-    </div>
+    // Pagination
+    let pg = '';
+    const tp = Math.ceil(data.length/S.limit);
+    for(let i=1;i<=tp;i++){
+        if(tp>8&&i!==1&&i!==tp&&Math.abs(i-S.page)>2){if(!pg.endsWith('</span>'))pg+=`<span class="px-1 text-slate-200">…</span>`;continue;}
+        pg+=`<button onclick="S.page=${i};renderTable()" class="w-8 h-8 rounded-xl text-xs font-black transition-all ${i===S.page?'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md':'bg-slate-100 text-slate-500 hover:bg-slate-200'}">${i}</button>`;
+    }
+    document.getElementById('pagination').innerHTML = pg;
+}
 
-    <script>
-        console.log("App Starting...");
-        // Auth ผ่าน PHP session แล้ว ถ้ามาถึงหน้านี้ได้แสดงว่าเป็น admin
-        let state = { isAdmin: true, adminId: '<?= htmlspecialchars($_SESSION['username'] ?? 'admin') ?>', data: [], students: [], teachers: [], chromebooks: [], page: 1, limit: 10, tab: 'all' };
-        
-        function run(action, payload) {
-            if (!payload) payload = {};
-            return new Promise((resolve, reject) => {
-                if (localStorage.getItem('adminToken')) payload.token = localStorage.getItem('adminToken');
-                
-                fetch('api.php?action=' + action, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: action, payload: payload })
-                })
-                .then(res => res.json())
-                .then(res => {
-             function renderDash() {
-            const active = state.data.filter(r => r[7] === 'Borrowed');
-            const teachers = active.filter(r => r[1] === 'Teacher').length;
-            const m4 = active.filter(r => String(r[3]).startsWith('ม.4')).length;
-            const m5_6 = active.filter(r => String(r[3]).startsWith('ม.5') || String(r[3]).startsWith('ม.6')).length;
-            const total = state.chromebooks.length;
-            const remaining = total - active.length;
+// ── Borrow Form ───────────────────────────────────────────────────
+function renderDropdowns() {
+    const borrowed = S.logs.filter(r=>r[7]==='Borrowed').map(r=>String(r[4]));
+    const avail    = S.chromebooks.filter(c=>!borrowed.includes(String(c[0])));
+    document.getElementById('chromebook-id').innerHTML =
+        `<option value="" disabled selected>— ว่าง ${avail.length} เครื่อง —</option>`+
+        avail.map(c=>`<option value="${c[0]}">${c[0]} – ${c[1]} (${c[2]})</option>`).join('');
+}
 
-            const cards = [
-                {t: 'Teacher Borrowed', v: teachers, c: 'text-purple-600', b: 'bg-white', i: 'bi-person-badge', bg: 'bg-purple-50'},
-                {t: 'M.4 Borrowed', v: m4, c: 'text-indigo-600', b: 'bg-white', i: 'bi-mortarboard-fill', bg: 'bg-indigo-50'},
-                {t: 'M.5-M.6 Borrowed', v: m5_6, c: 'text-blue-600', b: 'bg-white', i: 'bi-mortarboard-fill', bg: 'bg-blue-50'},
-                {t: 'Available', v: remaining, c: 'text-emerald-600', b: 'bg-white', i: 'bi-check-circle-fill', bg: 'bg-emerald-50 text-emerald-600'},
-                {t: 'Total Devices', v: total, c: 'text-slate-600', b: 'bg-white', i: 'bi-laptop', bg: 'bg-slate-50'}
-            ];
-            
-            document.getElementById('dashboard-cards').innerHTML = cards.map(c => 
-                `<div class="cb-card flex items-center gap-6 group hover:shadow-xl hover:shadow-blue-50 transition-all duration-500">
-                    <div class="w-14 h-14 ${c.bg} rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-all"><i class="bi ${c.i}"></i></div>
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${c.t}</p>
-                        <h4 class="text-3xl font-black text-slate-800 tracking-tight">${c.v}</h4>
-                    </div>
-                </div>`
-            ).join('');
+document.getElementById('borrower-type').addEventListener('change', function(){
+    const type = this.value;
+    const activeIds = S.logs.filter(r=>r[7]==='Borrowed').map(r=>String(r[2]));
+    document.getElementById('cls-wrap').classList.toggle('hidden', type==='Teacher');
+    document.getElementById('borrower-wrap').classList.remove('hidden');
+    document.getElementById('borrower-label').textContent = type==='Teacher'?'เลือกครู':'เลือกนักเรียน';
+    const sel = document.getElementById('borrower-id');
+    if (type==='Teacher') {
+        const avail = S.teachers.filter(t=>!activeIds.includes(String(t[0])));
+        sel.innerHTML = `<option value="" disabled selected>— เลือกครู —</option>`+avail.map(t=>`<option value="${t[0]}">${t[1]}</option>`).join('');
+    } else {
+        const classes = [...new Set(S.students.map(s=>s[2]))].sort();
+        document.getElementById('class-select').innerHTML = `<option value="" disabled selected>— เลือกชั้น —</option>`+classes.map(c=>`<option value="${c}">${c}</option>`).join('');
+        sel.innerHTML = `<option value="" disabled selected>— เลือกชั้นก่อน —</option>`;
+        document.getElementById('class-select').onchange = function(){
+            const cls = this.value;
+            const avail = S.students.filter(s=>s[2]===cls&&!activeIds.includes(String(s[0])));
+            sel.innerHTML = `<option value="" disabled selected>— เลือกนักเรียน —</option>`+avail.map(s=>`<option value="${s[0]}">${s[1]}</option>`).join('');
+        };
+    }
+});
+
+document.getElementById('borrow-form').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const btn = document.getElementById('btn-borrow');
+    btn.disabled=true; btn.innerHTML='<i class="bi bi-arrow-repeat spin mr-1"></i> กำลังบันทึก...';
+    const blobs = await blobsFrom(document.getElementById('borrow-imgs'));
+    const res = await api('addBorrow',{
+        borrowerType: document.getElementById('borrower-type').value,
+        borrowerId:   document.getElementById('borrower-id').value,
+        className:    document.getElementById('class-select').value||null,
+        chromebookId: document.getElementById('chromebook-id').value,
+        imageBlobs:   blobs
+    });
+    if (res.success) {
+        Swal.fire({icon:'success',title:'บันทึกสำเร็จ',timer:1500,showConfirmButton:false});
+        e.target.reset();
+        document.getElementById('cls-wrap').classList.add('hidden');
+        document.getElementById('borrower-wrap').classList.add('hidden');
+        document.getElementById('borrow-preview').innerHTML='';
+        await loadAll();
+    } else Swal.fire('ผิดพลาด', res.error, 'error');
+    btn.disabled=false; btn.innerHTML='<i class="bi bi-check-lg"></i> บันทึกข้อมูล';
+});
+
+// ── Actions ───────────────────────────────────────────────────────
+async function doReturn(id) {
+    const r = await Swal.fire({title:'ยืนยันการคืน?',icon:'question',showCancelButton:true,confirmButtonColor:'#059669',confirmButtonText:'ยืนยัน',cancelButtonText:'ยกเลิก'});
+    if(!r.isConfirmed) return;
+    const res = await api('returnBorrow',{entryId:id});
+    res.success ? (Swal.fire({icon:'success',title:'คืนเครื่องแล้ว',timer:1500,showConfirmButton:false}), loadAll()) : Swal.fire('ผิดพลาด',res.error,'error');
+}
+async function doDelete(id) {
+    const r = await Swal.fire({title:'ลบรายการนี้?',text:'ข้อมูลจะหายถาวร',icon:'warning',showCancelButton:true,confirmButtonColor:'#e11d48',confirmButtonText:'ลบเลย',cancelButtonText:'ยกเลิก'});
+    if(!r.isConfirmed) return;
+    const res = await api('deleteBorrow',{entryId:id});
+    res.success ? (Swal.fire({icon:'success',title:'ลบแล้ว',timer:1200,showConfirmButton:false}), loadAll()) : Swal.fire('ผิดพลาด',res.error,'error');
+}
+
+// ── Edit modal ────────────────────────────────────────────────────
+function openEdit(id) {
+    const row = S.logs.find(r=>String(r[0])===String(id)); if(!row) return;
+    document.getElementById('edit-id').value = id;
+    document.getElementById('edit-show-name').textContent = getName(row)+' '+(row[3]?`(${row[3]})`:'');
+    document.getElementById('edit-show-status').textContent = row[7]==='Borrowed'?'กำลังยืม':'คืนแล้ว';
+    document.getElementById('edit-preview').innerHTML='';
+    document.getElementById('edit-imgs').value='';
+    openModal('modal-edit');
+}
+document.getElementById('edit-form').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const btn=e.target.querySelector('button[type=submit]'); btn.disabled=true; btn.textContent='กำลังบันทึก...';
+    const blobs = await blobsFrom(document.getElementById('edit-imgs'));
+    const res = await api('editBorrow',{entryId:document.getElementById('edit-id').value, newImageBlobs:blobs});
+    if(res.success){ Swal.fire({icon:'success',title:'อัปเดตแล้ว',timer:1200,showConfirmButton:false}); closeModal('modal-edit'); loadAll(); }
+    else Swal.fire('ผิดพลาด',res.error,'error');
+    btn.disabled=false; btn.textContent='บันทึก';
+});
+
+// ── Inspect modal ─────────────────────────────────────────────────
+function openInspect(id) {
+    const row = S.logs.find(r=>String(r[0])===String(id)); if(!row) return;
+    document.getElementById('inspect-id').value = id;
+    document.getElementById('inspect-show-name').textContent = getName(row)+' '+(row[3]?`(${row[3]})`:'');
+    document.getElementById('inspect-show-cb').textContent = `${row[4]} (${row[5]})`;
+    document.getElementById('inspect-cond').value='Normal';
+    document.getElementById('inspect-notes').value='';
+    document.getElementById('inspect-preview').innerHTML='';
+    document.getElementById('inspect-imgs').value='';
+    openModal('modal-inspect');
+}
+document.getElementById('inspect-form').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const btn=e.target.querySelector('button[type=submit]'); btn.disabled=true; btn.textContent='กำลังบันทึก...';
+    const blobs = await blobsFrom(document.getElementById('inspect-imgs'));
+    const res = await api('addInspection',{
+        entryId: document.getElementById('inspect-id').value,
+        condition: document.getElementById('inspect-cond').value,
+        notes: document.getElementById('inspect-notes').value,
+        imageBlobs: blobs
+    });
+    if(res.success){ Swal.fire({icon:'success',title:'บันทึกการตรวจสอบแล้ว',timer:1400,showConfirmButton:false}); closeModal('modal-inspect'); loadAll(); }
+    else Swal.fire('ผิดพลาด',res.error,'error');
+    btn.disabled=false; btn.textContent='บันทึกผลตรวจสอบ';
+});
+
+// ── Master Data ───────────────────────────────────────────────────
+function openMaster() { renderMasterList(); openModal('modal-master'); }
+function switchMasterTab(btn, tab) {
+    document.querySelectorAll('.master-tab').forEach(b=>{b.classList.remove('active-tab','bg-white','text-slate-800','shadow-sm');b.classList.add('text-slate-500');});
+    btn.classList.add('active-tab','bg-white','text-slate-800','shadow-sm'); btn.classList.remove('text-slate-500');
+    ['teacher','student','chromebook'].forEach(t=>document.getElementById('mtab-'+t).classList.toggle('hidden',t!==tab));
+    renderMasterList(tab);
+}
+function renderMasterList(tab) {
+    // Teachers
+    document.getElementById('list-teacher').innerHTML = S.teachers.length
+        ? S.teachers.map(t=>`<div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5">
+            <div><p class="font-bold text-sm text-slate-700">${t[1]}</p><p class="font-mono text-[10px] text-slate-400">${t[0]}</p></div>
+            <button onclick="delMaster('teacher','${t[0]}')" class="text-rose-400 hover:text-rose-600 transition p-1"><i class="bi bi-trash3 text-sm"></i></button>
+        </div>`).join('')
+        : '<p class="text-center text-slate-400 text-sm py-4 font-bold">ยังไม่มีข้อมูลครู</p>';
+    // Students
+    document.getElementById('list-student').innerHTML = S.students.length
+        ? S.students.map(s=>`<div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5">
+            <div><p class="font-bold text-sm text-slate-700">${s[1]} <span class="text-[10px] text-emerald-600 font-black bg-emerald-50 px-2 py-0.5 rounded-lg">${s[2]}</span></p><p class="font-mono text-[10px] text-slate-400">${s[0]}</p></div>
+            <button onclick="delMaster('student','${s[0]}')" class="text-rose-400 hover:text-rose-600 transition p-1"><i class="bi bi-trash3 text-sm"></i></button>
+        </div>`).join('')
+        : '<p class="text-center text-slate-400 text-sm py-4 font-bold">ยังไม่มีข้อมูลนักเรียน</p>';
+    // Chromebooks
+    document.getElementById('list-chromebook').innerHTML = S.chromebooks.length
+        ? S.chromebooks.map(c=>`<div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5">
+            <div><p class="font-bold text-sm text-slate-700">${c[0]} – ${c[1]}</p><p class="font-mono text-[10px] text-slate-400">${c[2]}</p></div>
+            <button onclick="delMaster('chromebook','${c[0]}')" class="text-rose-400 hover:text-rose-600 transition p-1"><i class="bi bi-trash3 text-sm"></i></button>
+        </div>`).join('')
+        : '<p class="text-center text-slate-400 text-sm py-4 font-bold">ยังไม่มีข้อมูลอุปกรณ์</p>';
+}
+async function saveMaster(e, type) {
+    e.preventDefault();
+    let payload = {};
+    if (type==='teacher')    payload = {teacher_id:document.getElementById('m-t-id').value, name:document.getElementById('m-t-name').value};
+    else if (type==='student') payload = {student_id:document.getElementById('m-s-id').value, name:document.getElementById('m-s-name').value, class_name:document.getElementById('m-s-cls').value};
+    else payload = {chromebook_id:document.getElementById('m-c-id').value, model:document.getElementById('m-c-model').value, serial_number:document.getElementById('m-c-serial').value};
+
+    const action = type==='teacher'?'addTeacher':type==='student'?'addStudent':'addChromebook';
+    const res = await api(action, payload);
+    if (res.success) { e.target.reset(); await loadAll(); renderMasterList(type); Swal.fire({icon:'success',title:'บันทึกแล้ว',timer:1000,showConfirmButton:false}); }
+    else Swal.fire('ผิดพลาด', res.error, 'error');
+}
+async function delMaster(type, id) {
+    const r = await Swal.fire({title:'ลบข้อมูล?',icon:'warning',showCancelButton:true,confirmButtonColor:'#e11d48',confirmButtonText:'ลบ',cancelButtonText:'ยกเลิก'});
+    if(!r.isConfirmed) return;
+    const action = type==='teacher'?'deleteTeacher':type==='student'?'deleteStudent':'deleteChromebook';
+    const key    = type==='teacher'?'teacher_id':type==='student'?'student_id':'chromebook_id';
+    const res = await api(action, {[key]:id});
+    if(res.success){ await loadAll(); renderMasterList(type); }
+    else Swal.fire('ผิดพลาด',res.error,'error');
+}
+
+// ── QR Scanner ────────────────────────────────────────────────────
+function openScanner() {
+    openModal('modal-scanner');
+    document.getElementById('scan-result').classList.add('hidden');
+    qrScanner = new Html5Qrcode('qr-reader');
+    qrScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:200,height:200}},onScan,()=>{}).catch(()=>{
+        Swal.fire('ไม่สามารถเปิดกล้อง','กรุณาใช้ HTTPS หรือ localhost','warning'); closeScanner();
+    });
+}
+function closeScanner() {
+    closeModal('modal-scanner');
+    if(qrScanner) qrScanner.stop().catch(()=>{}).finally(()=>{ qrScanner=null; document.getElementById('qr-reader').innerHTML=''; });
+}
+function onScan(text) {
+    const student = S.students.find(s=>String(s[0])===text);
+    const teacher = S.teachers.find(t=>String(t[0])===text);
+    const cb      = S.chromebooks.find(c=>String(c[0])===text);
+    let msg = '';
+    if (student) {
+        document.getElementById('borrower-type').value='Student'; document.getElementById('borrower-type').dispatchEvent(new Event('change'));
+        setTimeout(()=>{const cs=document.getElementById('class-select');cs.value=student[2];cs.dispatchEvent(new Event('change'));setTimeout(()=>{document.getElementById('borrower-id').value=student[0];},100);},100);
+        msg = `🎓 ${student[1]} (${student[2]})`;
+    } else if (teacher) {
+        document.getElementById('borrower-type').value='Teacher'; document.getElementById('borrower-type').dispatchEvent(new Event('change'));
+        setTimeout(()=>{document.getElementById('borrower-id').value=teacher[0];},100);
+        msg = `👤 ${teacher[1]}`;
+    } else if (cb) {
+        document.getElementById('chromebook-id').value=cb[0];
+        msg = `💻 ${cb[0]} – ${cb[1]}`;
+    } else { msg = `ไม่พบรหัส: ${text}`; }
+    const rd = document.getElementById('scan-result'); rd.classList.remove('hidden'); rd.textContent=msg;
+}
+
+// ── Utilities ─────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+function viewImg(url)   { document.getElementById('modal-img-src').src=url; openModal('modal-img'); }
+function previewImgs(inp, cId) {
+    const c=document.getElementById(cId); c.innerHTML='';
+    Array.from(inp.files).slice(0,3).forEach(f=>{ const r=new FileReader(); r.onload=e=>{const img=document.createElement('img');img.src=e.target.result;img.className='w-16 h-16 object-cover rounded-xl border border-slate-200 shadow-sm';c.appendChild(img);}; r.readAsDataURL(f); });
+}
+document.getElementById('search-inp').addEventListener('input',()=>{ clearTimeout(window._st); window._st=setTimeout(()=>{S.page=1;renderTable();},250); });
+
+// Init tab style
+document.querySelector('.master-tab').classList.add('bg-white','text-slate-800','shadow-sm');
+
+// ── CSV Import ─────────────────────────────────────────────────────
+function parseCSV(text) {
+    return text.trim().split(/\r?\n/).map(line => {
+        // Handle quoted fields
+        const cols = []; let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') { inQ = !inQ; }
+            else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+            else { cur += ch; }
         }
+        cols.push(cur.trim());
+        return cols;
+    });
+}
 
-        function renderTable() {
-            const search = document.getElementById('search-input').value.toLowerCase();
-            const filtered = state.data.filter(r => {
-                const matchesSearch = r.some(c => String(c).toLowerCase().includes(search));
-                let matchesTab = true;
-                if (state.tab !== 'all') {
-                    if (state.tab === 'Teacher') matchesTab = r[1] === 'Teacher';
-                    else matchesTab = r[3] === state.tab;
-                }
-                return matchesTab && matchesSearch;
-            });
+async function importCSV(input, type) {
+    const file = input.files[0]; if (!file) return;
+    input.value = ''; // reset so same file can re-trigger
 
-            const show = filtered.slice((state.page-1)*state.limit, state.page*state.limit);
-            document.getElementById('page-info').innerText = `${filtered.length} ITEMS TOTAL`;
-            
-            if (show.length === 0) {
-                document.getElementById('table-body').innerHTML = `<tr><td colspan="6" class="text-center py-20 text-slate-400 font-bold italic">No matching records found.</td></tr>`;
-                document.getElementById('pagination').innerHTML = '';
-                return;
-            }
+    const text = await file.text();
+    const allRows = parseCSV(text);
+    // Skip header row (if first cell looks like text label, not a code)
+    const headers = allRows[0];
+    const isHeader = isNaN(headers[0]) && !/^CB-/i.test(headers[0]);
+    const dataRows = isHeader ? allRows.slice(1) : allRows;
+    const valid = dataRows.filter(r => r.some(c => c.trim() !== ''));
 
-            const rowsHtml = show.map(r => {
-                const isBorrowed = r[7] === 'Borrowed';
-                let name = r[2];
-                if (r[1] === 'Teacher') {
-                    const t = state.teachers.find(x => String(x[0]) == String(r[2]));
-                    if(t) name = t[1];
-                } else {
-                    const s = state.students.find(x => String(x[0]) == String(r[2]));
-                    if(s) name = s[1];
-                }
-                
-                let imgHtml = '<span class="text-slate-300 italic text-[10px]">No Image</span>';
-                if (r[6] && String(r[6]).trim() !== '') {
-                    const ids = String(r[6]).split(',').filter(x => x);
-                    if(ids.length > 0) {
-                        imgHtml = '<div class="flex -space-x-3 overflow-hidden justify-center">';
-                        ids.slice(0, 3).forEach(id => {
-                            const imgUrl = 'uploads/' + id;
-                            imgHtml += `<img src="${imgUrl}" class="inline-block h-10 w-10 rounded-2xl ring-4 ring-white cursor-pointer object-cover shadow-sm hover:z-10 transition-all hover:scale-110" onclick="viewImage('${imgUrl}')">`;
-                        });
-                        if(ids.length > 3) {
-                            imgHtml += `<div class="h-10 w-10 rounded-2xl bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400 ring-4 ring-white shadow-sm">+${ids.length-3}</div>`;
-                        }
-                        imgHtml += '</div>';
-                    }
-                }
+    if (!valid.length) { Swal.fire('ไม่พบข้อมูล', 'CSV ว่างเปล่าหรือรูปแบบไม่ถูกต้อง', 'warning'); return; }
 
-                let dateStr = '-';
-                if (r[8]) {
-                    try {
-                        dateStr = new Date(r[8]).toLocaleString('th-TH', {day:'numeric', month:'short', year:'2-digit'});
-                    } catch(e) {}
-                }
-                
-                let inspectStr = '';
-                if (isBorrowed && r[9]) {
-                    try {
-                        const iDate = new Date(r[9]).toLocaleString('th-TH', {day:'numeric', month:'short'});
-                        inspectStr = `<div class="text-[9px] font-bold text-indigo-500 mt-1 uppercase tracking-tighter"><i class="bi bi-shield-check mr-1"></i>Checked: ${iDate}</div>`;
-                    } catch(e) {}
-                } else if (isBorrowed && !r[9]) {
-                    inspectStr = `<div class="text-[9px] font-bold text-rose-400 mt-1 uppercase tracking-tighter"><i class="bi bi-exclamation-triangle mr-1"></i>Unchecked</div>`;
-                }
+    const labels = { teacher: ['รหัสครู','ชื่อ-สกุล'], student: ['รหัส','ชื่อ-สกุล','ห้อง'], chromebook: ['รหัส','รุ่น','Serial'] };
+    const cols   = labels[type];
+    const previewRows = valid.slice(0, 5).map(r => `<tr>${r.slice(0,cols.length).map(c=>`<td class="px-3 py-1.5 border-b border-slate-100 text-xs text-slate-600">${c}</td>`).join('')}</tr>`).join('');
+    const moreTxt = valid.length > 5 ? `<p class="text-[10px] text-slate-400 font-bold mt-2">... และอีก ${valid.length-5} แถว</p>` : '';
 
-                let actions = '';
-                if (state.isAdmin) {
-                    actions += `<button onclick="openEdit('${r[0]}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all" title="Edit/Add Image"><i class="bi bi-pencil-square"></i></button>`;
-                    if (isBorrowed) {
-                const statusText = isBorrowed ? 'ยืม' : 'คืน';
+    const confirm = await Swal.fire({
+        title: `นำเข้า ${valid.length} แถว?`,
+        html: `<div class="text-left overflow-x-auto"><table class="min-w-full"><thead><tr>${cols.map(c=>`<th class="px-3 py-2 text-[10px] font-black text-slate-400 uppercase">${c}</th>`).join('')}</tr></thead><tbody>${previewRows}</tbody></table>${moreTxt}</div>`,
+        icon: 'question', showCancelButton: true,
+        confirmButtonColor: '#0891b2', confirmButtonText: `นำเข้า ${valid.length} แถว`,
+        cancelButtonText: 'ยกเลิก'
+    });
+    if (!confirm.isConfirmed) return;
 
-                return `
-                <tr class="hover:bg-gray-50 border-b">
-                    <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">${statusText}</span></td>
-                    <td class="px-4 py-3"><div>${name}</div><div class="text-xs text-gray-500">${r[3]||r[1]}</div></td>
-                    <td class="px-4 py-3"><div>${r[5]||'-'}</div><div class="text-xs text-gray-400">ID: ${r[4]}</div></td>
-                    <td class="px-4 py-3 text-xs text-gray-500"><div>ยืม: ${dateStr}</div>${inspectStr}</td>
-                    <td class="px-4 py-3 text-center">${imgHtml}</td>
-                    <td class="px-4 py-3 text-right">${actions}</td>
-                </tr>`;
-            }).join('');
+    const res = await api('importCSV', { type, rows: valid });
+    if (res.success) {
+        const d = res.data;
+        Swal.fire({ icon:'success', title:'นำเข้าสำเร็จ', text:`บันทึก ${d.inserted} แถว${d.skipped?` / ข้าม ${d.skipped} แถว`:''}`, timer:2000, showConfirmButton:false });
+        await loadAll(); renderMasterList(type);
+    } else {
+        Swal.fire('ผิดพลาด', res.error, 'error');
+    }
+}
 
-            document.getElementById('table-body').innerHTML = rowsHtml;
+document.addEventListener('DOMContentLoaded', loadAll);
+</script>
 
-            let pageHtml = '';
-            const totalPages = Math.ceil(filtered.length / state.limit);
-            for(let i=1; i<=totalPages; i++) {
-                if(totalPages > 8 && (i !== 1 && i !== totalPages && Math.abs(i - state.page) > 2)) {
-                    if(!pageHtml.endsWith('...</span>')) pageHtml += '<span class="px-1 text-gray-400">...</span>';
-                    continue;
-                }
-                const activeClass = i===state.page ? 'bg-blue-600 text-white' : 'bg-white hover:bg-gray-100';
-                pageHtml += `<button onclick="state.page=${i};renderTable()" class="px-3 py-1 rounded border ${activeClass}">${i}</button>`;
-            }
-            document.getElementById('pagination').innerHTML = pageHtml;
-        }
-
-        function openEdit(entryId) {
-            const row = state.data.find(r => String(r[0]) === String(entryId));
-            if (!row) return;
-            
-            let name = row[2];
-            if (row[1] === 'Teacher') {
-                const t = state.teachers.find(x => String(x[0]) == String(row[2]));
-                if(t) name = t[1];
-            } else {
-                const s = state.students.find(x => String(x[0]) == String(row[2]));
-                if(s) name = s[1];
-            }
-            
-            document.getElementById('edit-entry-id').value = entryId;
-            document.getElementById('edit-borrower-type').value = row[1];
-            document.getElementById('edit-borrower-id').value = row[2]; 
-            document.getElementById('edit-class-name').value = row[3];
-            document.getElementById('edit-show-name').innerText = name + (row[3] ? ` (${row[3]})` : '');
-            document.getElementById('edit-show-status').innerText = row[7];
-            document.getElementById('edit-preview-container').innerHTML = '';
-            document.getElementById('edit-images').value = '';
-            document.getElementById('edit-modal').classList.add('active');
-        }
-
-        document.getElementById('edit-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = e.target.querySelector('button');
-            const oldText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...'; btn.disabled = true;
-            try {
-                const files = document.getElementById('edit-images').files;
-                const blobs = [];
-                for(let f of files) blobs.push(await new Promise(r => { const rd = new FileReader(); rd.onload=ev=>r(rd.result); rd.readAsDataURL(f); }));
-                
-                const res = await run('editBorrow', {
-                    entryId: document.getElementById('edit-entry-id').value,
-                    borrowerType: document.getElementById('edit-borrower-type').value,
-                    borrowerId: document.getElementById('edit-borrower-id').value,
-                    className: document.getElementById('edit-class-name').value,
-                    newImageBlobs: blobs
-                });
-                
-                if(res.success) {
-                    Swal.fire('สำเร็จ', 'อัปเดตข้อมูลแล้ว', 'success');
-                    document.getElementById('edit-modal').classList.remove('active');
-                    loadData();
-                } else throw res.error;
-            } catch(err) { Swal.fire('ผิดพลาด', String(err), 'error'); }
-            btn.innerHTML = oldText; btn.disabled = false;
-        });
-
-        function openInspect(entryId) {
-            const row = state.data.find(r => String(r[0]) === String(entryId));
-            if (!row) return;
-            
-            let name = row[2];
-            if (row[1] === 'Teacher') {
-                const t = state.teachers.find(x => String(x[0]) == String(row[2]));
-                if(t) name = t[1];
-            } else {
-                const s = state.students.find(x => String(x[0]) == String(row[2]));
-                if(s) name = s[1];
-            }
-            
-            document.getElementById('inspect-entry-id').value = entryId;
-            document.getElementById('inspect-show-name').innerText = name + (row[3] ? ` (${row[3]})` : '');
-            document.getElementById('inspect-show-cb').innerText = row[4] + ' (' + row[5] + ')';
-            document.getElementById('inspect-condition').value = 'Normal';
-            document.getElementById('inspect-notes').value = '';
-            document.getElementById('inspect-preview-container').innerHTML = '';
-            document.getElementById('inspect-images').value = '';
-            document.getElementById('inspect-modal').classList.add('active');
-        }
-
-        document.getElementById('inspect-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = e.target.querySelector('button');
-            const oldText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...'; btn.disabled = true;
-            try {
-                const files = document.getElementById('inspect-images').files;
-                const blobs = [];
-                for(let f of files) blobs.push(await new Promise(r => { const rd = new FileReader(); rd.onload=ev=>r(rd.result); rd.readAsDataURL(f); }));
-                
-                const res = await run('addInspection', {
-                    entryId: document.getElementById('inspect-entry-id').value,
-                    condition: document.getElementById('inspect-condition').value,
-                    notes: document.getElementById('inspect-notes').value,
-                    imageBlobs: blobs
-                });
-                
-                if(res.success) {
-                    Swal.fire('สำเร็จ', 'บันทึกการตรวจสอบสภาพเครื่องแล้ว', 'success');
-                    document.getElementById('inspect-modal').classList.remove('active');
-                    loadData();
-                } else throw res.error;
-            } catch(err) { Swal.fire('ผิดพลาด', String(err), 'error'); }
-            btn.innerHTML = oldText; btn.disabled = false;
-        });
-
-        async function doAction(type, id) {
-            Swal.fire({
-                title: type === 'return' ? 'ยืนยันการคืน?' : 'ยืนยันการลบ?',
-                text: type === 'delete' ? "ข้อมูลจะหายไปถาวร" : "",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: type === 'delete' ? '#d33' : '#3085d6',
-                confirmButtonText: 'ตกลง',
-                cancelButtonText: 'ยกเลิก'
-            }).then(async (r) => {
-                if(r.isConfirmed) {
-                    const res = await run(type === 'return' ? 'returnBorrow' : 'deleteBorrow', {entryId: id});
-                    if(res.success) { 
-                        Swal.fire('สำเร็จ', '', 'success'); 
-                        loadData(); 
-                    } else {
-                        Swal.fire('ผิดพลาด', res.error, 'error');
-                    }
-                }
-            });
-        }
-
-        function renderDropdowns() {
-            const borrowedIds = state.data.filter(r => r[7] === 'Borrowed').map(r => String(r[4])); 
-            const availableChromebooks = state.chromebooks.filter(c => !borrowedIds.includes(String(c[0])));
-
-            document.getElementById('chromebook-id').innerHTML = 
-                `<option value="" disabled selected>-- เลือก (ว่าง ${availableChromebooks.length} เครื่อง) --</option>` + 
-                availableChromebooks.map(c => `<option value="${c[0]}">${c[1]} - ${c[2]} (${c[0]})</option>`).join('');
-        }
-
-        document.getElementById('borrower-type').addEventListener('change', function() {
-            const type = this.value;
-            const nameSel = document.getElementById('borrower-id');
-            const clsWrap = document.getElementById('class-select-wrapper');
-            
-            const activeBorrowerIds = state.data
-                .filter(r => r[7] === 'Borrowed')
-                .map(r => String(r[2]));
-
-            document.getElementById('dynamic-borrower-fields').classList.remove('hidden');
-            nameSel.innerHTML = `<option value="" disabled selected>-- เลือก --</option>`;
-            
-            if (type === 'Teacher') {
-                clsWrap.classList.add('hidden');
-                document.getElementById('class-select').value = ""; 
-                document.getElementById('borrower-name-label').innerText = 'เลือกครู';
-                
-                const availableTeachers = state.teachers.filter(t => !activeBorrowerIds.includes(String(t[0])));
-                
-                if (availableTeachers.length === 0) {
-                     nameSel.innerHTML += `<option value="" disabled>ครูทุกคนยืมเครื่องไปหมดแล้ว</option>`;
-                } else {
-                     nameSel.innerHTML += availableTeachers.map(t=>`<option value="${t[0]}">${t[1]}</option>`).join('');
-                }
-
-            } else {
-                clsWrap.classList.remove('hidden');
-                document.getElementById('borrower-name-label').innerText = 'เลือกนักเรียน';
-                const classes = [...new Set(state.students.map(s=>s[2]))].sort();
-                document.getElementById('class-select').innerHTML = `<option value="" disabled selected>-- ชั้น --</option>` + classes.map(c=>`<option value="${c}">${c}</option>`).join('');
-                
-                document.getElementById('class-select').onchange = function() {
-                    const selectedClass = this.value;
-                    const availableStudents = state.students.filter(s => 
-                        s[2] === selectedClass && 
-                        !activeBorrowerIds.includes(String(s[0]))
-                    );
-
-                    nameSel.innerHTML = `<option value="" disabled selected>-- เลือก --</option>`;
-                    if(availableStudents.length === 0) {
-                        nameSel.innerHTML += `<option value="" disabled>นักเรียนห้องนี้ยืมครบทุกคนแล้ว</option>`;
-                    } else {
-                        nameSel.innerHTML += availableStudents.map(s=>`<option value="${s[0]}">${s[1]}</option>`).join('');
-                    }
-                };
-            }
-        });
-
-        document.getElementById('borrow-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); 
-            if(!state.isAdmin) return showLogin();
-            
-            const btn = document.getElementById('btn-submit-borrow'); 
-            const oldText = btn.innerHTML;
-            btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...'; btn.disabled=true;
-            try {
-                const files = document.getElementById('images').files;
-                const blobs = [];
-                for(let f of files) blobs.push(await new Promise(r => { const rd = new FileReader(); rd.onload=e=>r(rd.result); rd.readAsDataURL(f); }));
-                
-                const res = await run('addBorrow', {
-                    borrowerType: document.getElementById('borrower-type').value,
-                    borrowerId: document.getElementById('borrower-id').value, 
-                    className: document.getElementById('class-select').value,
-                    chromebookId: document.getElementById('chromebook-id').value,
-                    imageBlobs: blobs
-                });
-                
-                if(res.success) { 
-                    Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อย', 'success'); 
-                    e.target.reset(); 
-                    document.getElementById('dynamic-borrower-fields').classList.add('hidden'); 
-                    document.getElementById('preview-container').innerHTML=''; 
-                    loadData(); 
-                }
-                else throw res.error;
-            } catch(err) { Swal.fire('ผิดพลาด', String(err), 'error'); }
-            btn.innerHTML=oldText; btn.disabled=false;
-        });
-
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try { 
-                const res = await run('login', {adminId: document.getElementById('admin-id').value, password: document.getElementById('admin-pass').value});
-                if(res.success) { 
-                    localStorage.setItem('adminToken', res.token); 
-                    localStorage.setItem('adminId', res.adminId); 
-                    state.isAdmin=true; 
-                    state.adminId=res.adminId; 
-                    hideLogin(); 
-                    updateAuth(); 
-                    Swal.fire('ยินดีต้อนรับ', 'เข้าสู่ระบบสำเร็จ', 'success'); 
-                } else {
-                    Swal.fire('ไม่สำเร็จ', res.error, 'error');
-                }
-            } catch(e){}
-        });
-
-        function switchMasterTab(tabId) {
-            document.querySelectorAll('.master-tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById('tab-' + tabId).classList.remove('hidden');
-            
-            const tabs = document.querySelectorAll('.master-tab');
-            tabs.forEach(t => { t.classList.remove('border-b-2', 'border-blue-600', 'text-blue-600', 'font-semibold'); t.classList.add('text-gray-500'); });
-            event.target.classList.remove('text-gray-500');
-            event.target.classList.add('border-b-2', 'border-blue-600', 'text-blue-600', 'font-semibold');
-        }
-
-        async function submitMasterData(e, type) {
-            e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            const oldText = btn.innerHTML;
-            btn.innerHTML = '...'; btn.disabled = true;
-
-            try {
-                let res;
-                if (type === 'teacher') {
-                    res = await run('addTeacher', {
-                        teacher_id: document.getElementById('md-teacher-id').value,
-                        name: document.getElementById('md-teacher-name').value
-                    });
-                } else if (type === 'student') {
-                    res = await run('addStudent', {
-                        student_id: document.getElementById('md-student-id').value,
-                        name: document.getElementById('md-student-name').value,
-                        class_name: document.getElementById('md-student-class').value
-                    });
-                } else if (type === 'chromebook') {
-                    res = await run('addChromebook', {
-                        chromebook_id: document.getElementById('md-cb-id').value,
-                        model: document.getElementById('md-cb-model').value,
-                        serial_number: document.getElementById('md-cb-serial').value
-                    });
-                }
-                if (res.success) {
-                    Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อย', 'success');
-                    e.target.reset();
-                    loadData();
-                } else {
-                    Swal.fire('ผิดพลาด', res.error || 'บันทึกไม่สำเร็จ', 'error');
-                }
-            } catch(err) {
-                Swal.fire('ผิดพลาด', String(err), 'error');
-            }
-            btn.innerHTML = oldText; btn.disabled = false;
-        }
-
-        function updateAuth() {
-            document.getElementById('btn-login-show').classList.toggle('hidden', state.isAdmin);
-            document.getElementById('admin-panel').classList.toggle('hidden', !state.isAdmin);
-            document.getElementById('borrow-form-card').classList.toggle('hidden', !state.isAdmin);
-            document.getElementById('guest-welcome').classList.toggle('hidden', state.isAdmin);
-            document.getElementById('admin-display-name').innerText = state.adminId;
-            renderTable(); 
-        }
-
-        function showLogin() { document.getElementById('login-modal').classList.add('active'); }
-        function hideLogin() { document.getElementById('login-modal').classList.remove('active'); }
-        function logout() { localStorage.clear(); state.isAdmin = false; updateAuth(); }
-
-        function filterTab(t, b) { 
-            state.tab = t; 
-            state.page = 1; 
-            document.querySelectorAll('.tab-btn').forEach(btn=>btn.classList.remove('bg-blue-100','text-blue-700')); 
-            b.classList.add('bg-blue-100','text-blue-700'); 
-            renderTable(); 
-        }
-
-        function previewImages(inp, containerId) { 
-            const c = document.getElementById(containerId); c.innerHTML = '';
-            Array.from(inp.files).forEach(f => { 
-                const r = new FileReader(); 
-                r.onload=e=>{
-                    const i=document.createElement('img');
-                    i.src=e.target.result;
-                    i.className='w-16 h-16 object-cover border rounded shadow-sm';
-                    c.appendChild(i);
-                }; 
-                r.readAsDataURL(f); 
-            });
-        }
-
-        function viewImage(url) { 
-            document.getElementById('modal-full-img').src=url; 
-            document.getElementById('image-modal').classList.add('active'); 
-        }
-
-        document.getElementById('search-input').addEventListener('input', e => { 
-            clearTimeout(window.st); 
-            window.st = setTimeout(() => {state.page=1; renderTable();}, 300); 
-        });
-
-        // ===== QR / BARCODE SCANNER =====
-        let html5Qrcode = null;
-
-        function openScanner() {
-            document.getElementById('scanner-modal').classList.add('active');
-            document.getElementById('scan-result').classList.add('hidden');
-            html5Qrcode = new Html5Qrcode('qr-reader');
-            html5Qrcode.start(
-                { facingMode: 'environment' },
-                { fps: 10, qrbox: { width: 220, height: 220 } },
-                onScanSuccess,
-                (err) => {}
-            ).catch(err => {
-                Swal.fire('ไม่สามารถเปิดกล้องได้', 'กรุณาตรวจสอบว่าเบราว์เซอร์ได้รับอนุญาตใช้กล้อง และระบบรันอยู่บน localhost หรือ HTTPS', 'warning');
-                closeScanner();
-            });
-        }
-
-        function closeScanner() {
-            document.getElementById('scanner-modal').classList.remove('active');
-            if (html5Qrcode) {
-                html5Qrcode.stop().catch(() => {}).finally(() => { html5Qrcode = null; });
-            }
-        }
-
-        function onScanSuccess(decodedText) {
-            // Check if it is a student
-            const student = state.students.find(s => String(s[0]) === String(decodedText));
-            if (student) {
-                // Set borrower type to student, populate fields
-                document.getElementById('borrower-type').value = 'Student';
-                document.getElementById('borrower-type').dispatchEvent(new Event('change'));
-                // Wait for classes to populate then select correct class
-                setTimeout(() => {
-                    const clsSel = document.getElementById('class-select');
-                    clsSel.value = student[2];
-                    clsSel.dispatchEvent(new Event('change'));
-                    setTimeout(() => {
-                        document.getElementById('borrower-id').value = student[0];
-                    }, 100);
-                }, 100);
-                showScanResult('นักเรียน: ' + student[1], 'ชั้น ' + student[2] + ' | รหัส: ' + student[0]);
-                return;
-            }
-
-            // Check if it is a teacher
-            const teacher = state.teachers.find(t => String(t[0]) === String(decodedText));
-            if (teacher) {
-                document.getElementById('borrower-type').value = 'Teacher';
-                document.getElementById('borrower-type').dispatchEvent(new Event('change'));
-                setTimeout(() => { document.getElementById('borrower-id').value = teacher[0]; }, 150);
-                showScanResult('ครู: ' + teacher[1], 'รหัสครู: ' + teacher[0]);
-                return;
-            }
-
-            // Check if it is a Chromebook
-            const cb = state.chromebooks.find(c => String(c[0]) === String(decodedText) || String(c[2]) === String(decodedText));
-            if (cb) {
-                document.getElementById('chromebook-id').value = cb[0];
-                showScanResult('Chromebook: ' + cb[1], 'รหัส: ' + cb[0] + ' | S/N: ' + cb[2]);
-                return;
-            }
-
-            showScanResult('ไม่พบข้อมูล: ' + decodedText, 'รหัสนี้ไม่มีในระบบ กรุณาเพิ่มข้อมูลก่อน');
-        }
-
-        function showScanResult(title, desc) {
-            document.getElementById('scan-result-text').textContent = title;
-            document.getElementById('scan-result-desc').textContent = desc;
-            document.getElementById('scan-result').classList.remove('hidden');
-        }
-    </script>
 <?php require_once '../components/layout_end.php'; ?>

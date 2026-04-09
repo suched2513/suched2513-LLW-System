@@ -174,51 +174,53 @@ $(document).ready(function() {
 
     // 1. Initial DataTables with premium styling
     const table = $('#requestTable').DataTable({
-        ajax: 'api/get_requests.php',
-        dom: 'rtip', // Hide some defaults
+        ajax: { url: 'api/get_requests.php', dataSrc: 'data' },
+        dom: 'rtip',
         columns: [
             { 
                 data: 'req_date',
                 render: (d, t, r) => `
-                    <div class="font-bold text-slate-700">${d}</div>
-                    <div class="text-[9px] font-black text-indigo-500 uppercase tracking-tighter">${r.time_start} - ${r.time_end}</div>
+                    <div class="fw-bold small">${d ?? '-'}</div>
+                    <div style="font-size:9px;font-weight:900;color:#6366f1;text-transform:uppercase;letter-spacing:.05em">${r.time_start ?? ''} - ${r.time_end ?? ''}</div>
                 `
             },
             { 
                 data: 't_name',
-                render: (d) => `<div class="font-bold text-slate-800">${d}</div>`
+                render: (d) => `<div class="fw-bold small">${d ?? '-'}</div>`
             },
             { 
                 data: 'reason',
                 render: (d, t, r) => `
-                    <div class="text-xs font-bold text-slate-600">${d}</div>
-                    <div class="text-[9px] font-bold text-slate-400 italic">${r.detail || ''}</div>
+                    <div class="small fw-bold">${d}</div>
+                    <div style="font-size:9px;color:#94a3b8;font-style:italic">${r.detail || ''}</div>
                 `
             },
             { 
                 data: 'total_hr',
-                render: (d) => `<div class="font-mono font-bold text-slate-500">${d} Hr</div>`
+                render: (d) => `<div class="fw-bold small font-monospace">${d} Hr</div>`
             },
             { 
                 data: 'status_boss1',
                 render: (data) => {
-                    if(data == 0) return '<span class="px-3 py-1 rounded-lg bg-amber-50 text-amber-600 font-black text-[9px] uppercase tracking-wider">Pending</span>';
-                    if(data == 1) return '<span class="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-600 font-black text-[9px] uppercase tracking-wider">Approved</span>';
-                    return '<span class="px-3 py-1 rounded-lg bg-rose-50 text-rose-500 font-black text-[9px] uppercase tracking-wider">Rejected</span>';
+                    if(data == 0) return '<span class="badge rounded-pill bg-warning text-dark" style="font-size:9px;font-weight:900;letter-spacing:.05em">PENDING</span>';
+                    if(data == 1) return '<span class="badge rounded-pill bg-success" style="font-size:9px;font-weight:900;letter-spacing:.05em">APPROVED</span>';
+                    return '<span class="badge rounded-pill bg-danger" style="font-size:9px;font-weight:900;letter-spacing:.05em">REJECTED</span>';
                 }
             },
             {
                 data: 'r_id',
-                className: 'text-right',
-                render: (id) => `
-                    <button class="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all approve-btn" data-id="${id}" title="Fast Approval (Admin Only)">
-                        <i class="bi bi-shield-check-fill text-lg"></i>
-                    </button>
-                `
+                className: 'text-end',
+                render: (id, t, r) => {
+                    if (r.status_boss1 != 0) return '<span class="text-muted small">—</span>';
+                    return `<button class="btn btn-sm btn-outline-primary approve-btn" data-id="${id}" title="Fast Approval" style="border-radius:10px;font-size:10px;font-weight:900">
+                        <i class="bi bi-shield-check-fill me-1"></i>อนุมัติ
+                    </button>`;
+                }
             }
         ],
         language: {
-            emptyTable: "No leave requests found."
+            emptyTable: "ไม่มีคำขอออกนอกบริเวณ",
+            zeroRecords: "ไม่พบข้อมูล"
         }
     });
 

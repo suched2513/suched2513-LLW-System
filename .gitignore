@@ -32,3 +32,19 @@ assets/images/user_photos/
 
 # Claude Code
 .claude/
+
+# Dangerous / Debug / Temp files — ห้าม commit เด็ดขาด
+debug_*.php
+test_*.php
+fix_*.php
+reset_*.php
+temp_*.php
+check_*.php
+nuclear_*.php
+repair_*.php
+smart_reset.php
+seed_admin.php
+find_apache.*
+run_pending.php
+*.txt
+*.bat

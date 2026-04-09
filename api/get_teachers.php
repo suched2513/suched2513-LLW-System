@@ -6,7 +6,7 @@ session_start();
 require_once '../config/database.php';
 
 // Auth guard
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['llw_role'])) {
     http_response_code(401);
     echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบก่อน']);
     exit;
@@ -27,6 +27,8 @@ try {
     $teachers = $stmt->fetchAll();
     echo json_encode(['status' => 'success', 'data' => $teachers]);
 } catch (Exception $e) {
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    error_log('[LLW] get_teachers error: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
 }
 ?>

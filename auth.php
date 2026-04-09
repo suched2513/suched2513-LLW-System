@@ -59,7 +59,7 @@ $u->bind_param('i', $user['user_id']);
 $u->execute();
 $u->close();
 
-// ─── 5. Redirect ตาม role ──────────────────────────────────────
+// ─── 5. Redirect ตาม role (หรือ ?redirect= ถ้ามี) ──────────────
 $roleMap = [
     'super_admin' => 'central_dashboard.php',
     'wfh_admin'   => 'admin/dashboard.php',
@@ -67,5 +67,17 @@ $roleMap = [
     'cb_admin'    => 'chromebook/index.php',
     'att_teacher' => 'attendance_system/dashboard.php',
 ];
-header('Location: ' . ($roleMap[$user['role']] ?? 'index.php'));
+
+// ถ้ามี redirect param ใน session (จาก login.php) และ path ปลอดภัย
+$redirectTo = null;
+if (!empty($_SESSION['login_redirect'])) {
+    $rd = $_SESSION['login_redirect'];
+    unset($_SESSION['login_redirect']);
+    // อนุญาตเฉพาะ relative path ที่ขึ้นต้นด้วย / ป้องกัน open redirect
+    if (str_starts_with($rd, '/') && !str_starts_with($rd, '//')) {
+        $redirectTo = $rd;
+    }
+}
+
+header('Location: ' . ($redirectTo ?? $roleMap[$user['role']] ?? 'index.php'));
 exit();

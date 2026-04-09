@@ -19,7 +19,7 @@ $subject_info = null;
 if ($selected_subject_id) {
     $subject_info = getSubjectById($selected_subject_id, $pdo);
     if ($subject_info) {
-        $students = getStudentsByClassroom($subject_info['classroom'], $pdo);
+        $students = getStudentsBySubject($selected_subject_id, $pdo);
     }
 }
 
@@ -27,7 +27,7 @@ if ($selected_subject_id) {
 $success_msg = '';
 $error_msg = '';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
     $date = $_POST['date'];
     $period = $_POST['period'];
     $subject_id = $_POST['subject_id'];
@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_attendance'])) {
     foreach ($student_status as $student_id => $status) {
         $time_in = $student_time_in[$student_id] ?? null;
         $note = $student_note[$student_id] ?? '';
-        if (!$saveAttendance($date, $period, $subject_id, $teacher_id, $student_id, $status, $time_in, $p_start_time, $note, $pdo)) {
+        if (!saveAttendance($date, $period, $subject_id, $teacher_id, $student_id, $status, $time_in, $p_start_time, $note, $pdo)) {
             $all_saved = false;
         }
     }
@@ -73,9 +73,10 @@ require_once '../components/layout_start.php';
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">คาบเรียน</label>
-                <select name="period" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition-all" required>
+                <select name="period" id="period-select" onchange="updateStartTime(this.value)"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition-all" required>
                     <?php for($i=1; $i<=8; $i++): ?>
-                        <option value="<?= $i ?>" <?= $selected_period == $i ? 'selected' : '' ?>>คาบที่ <?= $i ?></option>
+                        <option value="<?= $i ?>" <?= $selected_period == $i ? 'selected' : '' ?>><?= "คาบที่ $i" ?></option>
                     <?php endfor; ?>
                 </select>
             </div>
@@ -230,6 +231,19 @@ require_once '../components/layout_start.php';
 </div>
 
 <script>
+    // คาบ → เวลาเริ่ม (คาบ 1 = 08:40, คาบละ 50 นาที)
+    const periodTimes = {
+        1: '08:40', 2: '09:30', 3: '10:20', 4: '11:10',
+        5: '12:00', 6: '12:50', 7: '13:40', 8: '14:30'
+    };
+
+    function updateStartTime(period) {
+        const timeInput = document.querySelector('input[name="start_time"]');
+        if (timeInput && periodTimes[period]) {
+            timeInput.value = periodTimes[period];
+        }
+    }
+
     function getCurrentTime() {
         const now = new Date();
         return String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');

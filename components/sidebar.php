@@ -6,7 +6,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
 $current_dir  = basename(dirname($_SERVER['PHP_SELF']));
 
 // Determine active system
-$base_path = '';
+// Auto-detect base path (local dev uses /llw/ prefix, production uses /)
+$base_path = str_starts_with($_SERVER['REQUEST_URI'] ?? '/', '/llw') ? '/llw' : '';
 $activeSystem = $activeSystem ?? 'portal';
 if ($current_dir === 'attendance_system') $activeSystem = 'attendance';
 if ($current_dir === 'chromebook')        $activeSystem = 'chromebook';
@@ -28,10 +29,13 @@ $roleName = [
 // Sub-menu definitions per module
 $subMenus = [
     'attendance' => [
-        ['icon' => 'bi-speedometer2',  'label' => 'Dashboard',    'url' => $base_path . '/attendance_system/dashboard.php'],
-        ['icon' => 'bi-check2-square', 'label' => 'เช็คชื่อ',       'url' => $base_path . '/attendance_system/attendance.php'],
-        ['icon' => 'bi-bar-chart',     'label' => 'รายงาน',        'url' => $base_path . '/attendance_system/report.php'],
-        ['icon' => 'bi-people',        'label' => 'จัดการข้อมูล',    'url' => $base_path . '/attendance_system/admin.php'],
+        ['icon' => 'bi-speedometer2',    'label' => 'Dashboard',         'url' => $base_path . '/attendance_system/dashboard.php'],
+        ['icon' => 'bi-check2-square',   'label' => 'เช็คชื่อ',          'url' => $base_path . '/attendance_system/attendance.php'],
+        ['icon' => 'bi-bar-chart',       'label' => 'รายงาน',            'url' => $base_path . '/attendance_system/report.php'],
+        ['icon' => 'bi-people',          'label' => 'จัดการข้อมูล',      'url' => $base_path . '/attendance_system/admin.php'],
+        ['icon' => 'bi-graph-up-arrow',  'label' => 'รายงานผู้บริหาร',   'url' => $base_path . '/attendance_system/report_admin.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'bi-exclamation-triangle-fill', 'label' => 'สรุปมส. ทั้งโรงเรียน', 'url' => $base_path . '/attendance_system/report_ms.php',    'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'bi-download',        'label' => 'Export วิชาเลือก',  'url' => $base_path . '/attendance_system/export_elective.php', 'roles' => ['super_admin','wfh_admin']],
     ],
     'chromebook' => [
         ['icon' => 'bi-speedometer2',     'label' => 'Dashboard',  'url' => $base_path . '/chromebook/index.php'],
@@ -52,7 +56,7 @@ $subMenus = [
 
 <style>
     .sub-menu { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-    .sub-menu.open { max-height: 300px; }
+    .sub-menu.open { max-height: 500px; }
     .sub-item { transition: all 0.2s ease; }
     .sub-item:hover { padding-left: 3.5rem; }
     .nav-link-active { position: relative; }
@@ -98,7 +102,9 @@ $subMenus = [
                 <?php endif; ?>
             </a>
             <div class="sub-menu <?= $activeSystem === 'attendance' ? 'open' : '' ?> ml-4 sm:ml-6 mt-1 space-y-0.5">
-                <?php foreach ($subMenus['attendance'] as $sub): ?>
+                <?php foreach ($subMenus['attendance'] as $sub):
+                    if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                ?>
                 <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50' ?>">
                     <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
                 </a>

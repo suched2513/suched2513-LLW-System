@@ -115,6 +115,34 @@ function getStudentsByClassroom($classroom, $pdo) {
 }
 
 /**
+ * ดึงรายชื่อนักเรียนสำหรับวิชา (รองรับทั้งวิชาบังคับและวิชาเลือก)
+ * - is_elective=0 → ดึงนักเรียนทั้งห้อง (เหมือนเดิม)
+ * - is_elective=1 → ดึงเฉพาะคนที่ลงทะเบียนใน att_subject_students
+ */
+function getStudentsBySubject($subject_id, $pdo) {
+    $sub = $pdo->prepare("SELECT * FROM att_subjects WHERE id=? LIMIT 1");
+    $sub->execute([$subject_id]);
+    $subject = $sub->fetch();
+    if (!$subject) return [];
+
+    if (!empty($subject['is_elective'])) {
+        // วิชาเลือก: ดึงจาก enrollment table
+        $stmt = $pdo->prepare("
+            SELECT s.* FROM att_students s
+            JOIN att_subject_students ss ON ss.student_id = s.id
+            WHERE ss.subject_id = ?
+            ORDER BY s.student_id ASC
+        ");
+        $stmt->execute([$subject_id]);
+    } else {
+        // วิชาบังคับ: ดึงทั้งห้อง
+        $stmt = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? ORDER BY student_id ASC");
+        $stmt->execute([$subject['classroom']]);
+    }
+    return $stmt->fetchAll();
+}
+
+/**
  * แปลงเวลา (string) เป็นนาที เพื่อการคำนวณง่ายๆ (เช่น "08:40" -> 520)
  */
 function timeToMinutes($timeStr) {

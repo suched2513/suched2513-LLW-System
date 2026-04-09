@@ -356,8 +356,10 @@ if ($isLoggedIn) {
         ];
 
         foreach ($modules as $m):
+            // ถ้า login แล้ว → ไปหน้าโมดูลตรงๆ; ถ้ายังไม่ login → ผ่าน login?redirect=
+            $moduleUrl = $isLoggedIn ? $m['url'] : ('login.php?redirect=/' . $m['url']);
         ?>
-        <a href="<?= $m['url'] ?>"
+        <a href="<?= htmlspecialchars($moduleUrl) ?>"
            class="portal-card animate-slide-up group relative bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-slate-100/80 shadow-lg shadow-slate-100/50 hover:shadow-2xl hover:shadow-<?= $m['color'] ?>-200/40 overflow-hidden"
            style="animation-delay: <?= $m['delay'] ?>s">
 
@@ -380,7 +382,7 @@ if ($isLoggedIn) {
 
             <!-- Arrow -->
             <div class="card-arrow relative mt-5 sm:mt-6 flex items-center gap-2 text-<?= $m['color'] ?>-500 text-[10px] font-black uppercase tracking-widest">
-                เข้าสู่ระบบ <i class="bi bi-arrow-right"></i>
+                <?= $isLoggedIn ? 'เข้าสู่ระบบ' : 'เข้าสู่ระบบก่อน' ?> <i class="bi bi-arrow-right"></i>
             </div>
         </a>
         <?php endforeach; ?>
@@ -418,17 +420,49 @@ if ($isLoggedIn) {
 <?php endif; ?>
 
 <!-- ===== FOOTER ===== -->
-<footer class="relative wave-divider border-t border-slate-100/50 pt-16 pb-12 text-center bg-white/60 backdrop-blur-sm z-10">
-    <div class="container mx-auto px-4 sm:px-6">
-        <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center text-white text-base font-black italic mx-auto mb-4 shadow-xl shadow-blue-200/50 hover:rotate-12 transition-transform cursor-default">LLW</div>
-        <p class="text-sm font-bold text-slate-500 mb-2">โรงเรียนละลมวิทยา</p>
-        <p class="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] sm:tracking-[0.4em] mb-4">Powered by Advanced School Intelligence</p>
-        <div class="flex justify-center gap-4 sm:gap-6 text-[9px] font-bold text-slate-300 uppercase tracking-widest">
-            <a href="#" class="hover:text-blue-500 transition-colors">Privacy Policy</a>
-            <span class="text-slate-200">|</span>
-            <a href="login.php" class="hover:text-blue-500 transition-colors">Admin Login</a>
-            <span class="text-slate-200">|</span>
-            <span>© <?= date('Y') ?></span>
+<footer class="relative wave-divider border-t border-slate-100/50 pt-16 pb-10 bg-white/60 backdrop-blur-sm z-10">
+    <div class="container mx-auto px-4 sm:px-6 max-w-4xl">
+
+        <!-- Logo + Name -->
+        <div class="text-center mb-8">
+            <div class="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center text-white text-xl font-black italic mx-auto mb-4 shadow-xl shadow-blue-200/50 hover:rotate-12 transition-transform cursor-default">LLW</div>
+            <p class="text-base font-black text-slate-700">โรงเรียนละลมวิทยา</p>
+            <p class="text-[10px] font-black text-slate-300 uppercase tracking-[0.35em] mt-1">Lalom Wittaya School • Powered by Advanced School Intelligence</p>
+        </div>
+
+        <!-- Divider -->
+        <div class="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent mb-8"></div>
+
+        <!-- Developer Credit -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+            <div class="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+                <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-200/50">ส</div>
+                <div class="text-left">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">พัฒนาโดย</p>
+                    <p class="text-sm font-black text-slate-700 leading-tight">นายสุเชษฐ์ ไพรบึง</p>
+                    <p class="text-[10px] font-bold text-slate-400">ครูโรงเรียนละลมวิทยา</p>
+                </div>
+            </div>
+            <a href="https://www.facebook.com/suched.p?locale=th_TH" target="_blank" rel="noopener noreferrer"
+               class="flex items-center gap-2.5 bg-[#1877F2] text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-[#166FE5] hover:shadow-lg hover:shadow-blue-200/50 hover:-translate-y-0.5 transition-all shadow-md">
+                <i class="bi bi-facebook text-lg"></i>
+                <div class="text-left">
+                    <p class="text-[9px] font-black uppercase tracking-widest opacity-80">ติดตามผ่าน</p>
+                    <p class="font-black text-sm leading-tight">Facebook</p>
+                </div>
+            </a>
+        </div>
+
+        <!-- Links + Copyright -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex gap-5 text-[9px] font-bold text-slate-300 uppercase tracking-widest">
+                <a href="#" class="hover:text-blue-500 transition-colors">Privacy Policy</a>
+                <span class="text-slate-200">|</span>
+                <a href="login.php" class="hover:text-blue-500 transition-colors">Admin Login</a>
+                <span class="text-slate-200">|</span>
+                <a href="#modules" class="hover:text-blue-500 transition-colors">ระบบทั้งหมด</a>
+            </div>
+            <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">© <?= date('Y') ?> LLW System</span>
         </div>
     </div>
 </footer>
