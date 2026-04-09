@@ -81,19 +81,19 @@ try {
         </div>
 
         <nav class="flex-1 px-6 space-y-2">
-            <a href="#" class="sidebar-item-active flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all">
+            <a href="central_dashboard.php" class="sidebar-item-active flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all">
                 <i class="bi bi-grid-fill text-lg"></i> แดชบอร์ด
             </a>
-            <a href="#" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <a href="manage_users.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
                 <i class="bi bi-people text-lg"></i> จัดการผู้ใช้
             </a>
-            <a href="#" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
-                <i class="bi bi-building text-lg"></i> ห้องเรียน
+            <a href="attendance_system/admin.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+                <i class="bi bi-building text-lg"></i> ห้องเรียน / นักเรียน
             </a>
-            <a href="#" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <a href="attendance_system/admin.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
                 <i class="bi bi-book text-lg"></i> รายวิชา
             </a>
-            <a href="#" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <a href="admin/reports.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
                 <i class="bi bi-file-earmark-bar-graph text-lg"></i> รายงาน
             </a>
         </nav>
