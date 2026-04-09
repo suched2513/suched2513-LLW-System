@@ -204,6 +204,8 @@ require_once 'components/layout_start.php';
 $(document).ready(function() {
     let cart = [];
     let teachers = [];
+    // Global สำหรับ PIN modal
+    window._pendingApproveId = null;
 
     // 1. Initial DataTables with premium styling
     const table = $('#requestTable').DataTable({
@@ -393,10 +395,8 @@ $(document).ready(function() {
     });
 
     // 6. Approval Action — ต้องใช้ PIN ผอ.
-    let _pendingApproveId = null;
-
     $(document).on('click', '.approve-btn', function() {
-        _pendingApproveId = $(this).data('id');
+        window._pendingApproveId = $(this).data('id');
         document.getElementById('modal-pin').classList.remove('hidden');
         document.getElementById('pin-input').value = '';
         document.getElementById('pin-error').classList.add('hidden');
@@ -411,7 +411,7 @@ $(document).ready(function() {
 
 function closePinModal() {
     document.getElementById('modal-pin').classList.add('hidden');
-    _pendingApproveId = null;
+    window._pendingApproveId = null;
 }
 
 async function confirmPin() {
@@ -442,7 +442,7 @@ async function confirmPin() {
         const approveRes = await fetch('api/approve_action.php', {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ r_id: _pendingApproveId, status: 1 })
+            body: JSON.stringify({ r_id: window._pendingApproveId, status: 1 })
         }).then(r => r.json());
 
         Swal.fire({
