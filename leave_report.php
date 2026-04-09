@@ -43,6 +43,19 @@ try {
     $sRow     = $sStmt->fetch(PDO::FETCH_ASSOC);
     $bossName = htmlspecialchars($sRow['boss_name'] ?? '', ENT_QUOTES, 'UTF-8');
 
+    // ตัดคำนำหน้าสำหรับแสดงเหมือนลายเซ็น
+    $prefixes = ['ว่าที่ร้อยตรี','ว่าที่ร.ต.','นายแพทย์','พล.ต.หญิง','ดร.หญิง','นางสาว','ดร.','ผศ.ดร.','รศ.ดร.','ศ.ดร.','นาง','นาย'];
+    $bossShortName = $sRow['boss_name'] ?? '';
+    foreach ($prefixes as $p) {
+        if (mb_substr($bossShortName, 0, mb_strlen($p)) === $p) {
+            $bossShortName = htmlspecialchars(trim(mb_substr($bossShortName, mb_strlen($p))), ENT_QUOTES, 'UTF-8');
+            break;
+        }
+    }
+    if ($bossShortName === ($sRow['boss_name'] ?? '')) {
+        $bossShortName = $bossName; // ไม่มีคำนำหน้า
+    }
+
 } catch (Exception $e) {
     die('เกิดข้อผิดพลาด: ' . htmlspecialchars($e->getMessage()));
 }
@@ -429,14 +442,17 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
       </div>
       <?php endif; ?>
       <div class="remark-line"></div>
-      <div style="margin-top:8pt; text-align:center;">
-        <?php if ($bossName): ?>
-        <div class="sig-name" style="margin-bottom:2pt;">(<?= $bossName ?>)</div>
+      <div style="margin-top:6pt; text-align:center;">
+        <!-- ชื่อไม่มีคำนำหน้า เหมือนลายเซ็น -->
+        <?php if ($bossShortName): ?>
+        <div style="font-family:'Sarabun',serif; font-size:14pt; font-style:italic; margin-bottom:0pt;">
+          <?= $bossShortName ?>
+        </div>
         <?php endif; ?>
-        <div class="sig-line" style="width:130pt; margin:0 auto;"></div>
-        <?php if (!$bossName): ?>
-        <div class="sig-name">(.............................)</div>
-        <?php endif; ?>
+        <!-- ขีดลายเซ็น -->
+        <div class="sig-line" style="width:140pt; margin:0 auto;"></div>
+        <!-- ชื่อเต็มในวงเล็บ -->
+        <div class="sig-name">(<?= $bossName ?: '.............................' ?>)</div>
         <div class="sig-role">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
       </div>
     </div>
