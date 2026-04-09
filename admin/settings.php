@@ -14,6 +14,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $time_late = $_POST['late_time'];
         $conn->query("UPDATE wfh_system_settings SET regular_time_in='$time_in', late_time='$time_late' WHERE setting_id=1");
         $msg = '<div class="alert alert-success"><i class="bi bi-check-circle-fill me-1"></i>บันทึกการตั้งค่าเรียบร้อย</div>';
+    } elseif (isset($_POST['boss_name'])) {
+        // ชื่อ ผอ.
+        $bossName = trim($_POST['boss_name']);
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET boss_name = ? WHERE setting_id = 1");
+        $stmt->bind_param('s', $bossName);
+        $stmt->execute();
+        $msg = '<div class="alert alert-success"><i class="bi bi-person-fill me-1"></i>บันทึกชื่อผู้อำนวยการเรียบร้อย</div>';
     } elseif (isset($_POST['boss_pin'])) {
         // ตั้ง PIN ผอ.
         $pin = trim($_POST['boss_pin']);
@@ -84,6 +91,21 @@ $hasPIN = !empty($settings['boss_pin']);
                 <div class="form-text">หากลงเวลาหลังจากเวลานี้ จะถูกบันทึกว่า "มาสาย"</div>
             </div>
             <button type="submit" class="btn btn-success px-4"><i class="bi bi-save-fill me-1"></i>บันทึกการตั้งค่า</button>
+        </form>
+    </div>
+
+    <!-- ชื่อ ผอ. -->
+    <div class="card card-custom p-4 mt-3" style="max-width:500px;">
+        <div class="fw-semibold mb-3"><i class="bi bi-person-badge-fill text-primary me-1"></i> ชื่อผู้อำนวยการโรงเรียน</div>
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">ชื่อ-สกุล ผอ. (ใช้แสดงในเอกสารพิมพ์)</label>
+                <input type="text" class="form-control" name="boss_name"
+                    value="<?= htmlspecialchars($settings['boss_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+                    placeholder="เช่น นาย สมศักดิ์์ ใจดี" required>
+                <div class="form-text">ชื่อนี้จะแสดงในบันทึกข้อความ ช่องลงชื่อ ผอ.</div>
+            </div>
+            <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save-fill me-1"></i>บันทึกชื่อ ผอ.</button>
         </form>
     </div>
 

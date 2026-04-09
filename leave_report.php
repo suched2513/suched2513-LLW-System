@@ -38,6 +38,11 @@ try {
     $stmt2->execute([$r_id]);
     $details = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
+    // ดึงชื่อ ผอ. จาก settings
+    $sStmt = $pdo->query("SELECT boss_name FROM wfh_system_settings LIMIT 1");
+    $sRow     = $sStmt->fetch(PDO::FETCH_ASSOC);
+    $bossName = htmlspecialchars($sRow['boss_name'] ?? '', ENT_QUOTES, 'UTF-8');
+
 } catch (Exception $e) {
     die('เกิดข้อผิดพลาด: ' . htmlspecialchars($e->getMessage()));
 }
@@ -77,7 +82,7 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Sarabun', 'TH Sarabun New', serif;
-    font-size: 16pt;
+    font-size: 14pt;
     color: #000;
     background: #f0f0f0;
   }
@@ -123,7 +128,7 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
     width: 210mm;
     min-height: 297mm;
     background: #fff;
-    padding: 20mm 20mm 15mm;
+    padding: 14mm 18mm 10mm;
     box-shadow: 0 4px 24px rgba(0,0,0,0.12);
     position: relative;
   }
@@ -131,14 +136,14 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
   /* ── Header ── */
   .doc-header {
     text-align: center;
-    margin-bottom: 14pt;
+    margin-bottom: 8pt;
   }
   .doc-header img.emblem {
     width: 60pt;
     margin-bottom: 6pt;
   }
   .doc-title {
-    font-size: 22pt;
+    font-size: 20pt;
     font-weight: 700;
     letter-spacing: 2pt;
   }
@@ -152,8 +157,8 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
   .meta-line {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 6pt;
-    font-size: 15pt;
+    margin-bottom: 4pt;
+    font-size: 13pt;
   }
   .meta-line span { min-width: 40%; }
 
@@ -171,9 +176,9 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
   /* ── Body paragraphs ── */
   .body-text {
     font-size: 15pt;
-    line-height: 1.9;
-    text-indent: 40pt;
-    margin-bottom: 6pt;
+    line-height: 1.7;
+    text-indent: 36pt;
+    margin-bottom: 4pt;
   }
   .body-text.no-indent { text-indent: 0; }
 
@@ -204,13 +209,14 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
   }
   .sig-line {
     border-bottom: 1px solid #000;
-    height: 40pt;
+    height: 28pt;
     margin-bottom: 4pt;
   }
   .sig-name { font-size: 14pt; }
   .sig-role { font-size: 12pt; color: #444; }
 
   .approval-grid {
+    page-break-inside: avoid;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16pt;
@@ -219,7 +225,7 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
   .approval-box {
     border: 1px solid #aaa;
     border-radius: 6pt;
-    padding: 12pt 16pt;
+    padding: 8pt 12pt;
     font-size: 14pt;
   }
   .approval-box h4 {
@@ -244,7 +250,7 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
   .checkbox-box.checked { background: #000; }
   .remark-line {
     border-bottom: 1px solid #aaa;
-    min-height: 20pt;
+    min-height: 14pt;
     margin: 6pt 0;
   }
   .approved-stamp {
@@ -426,7 +432,7 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
       <div class="remark-line"></div>
       <div style="margin-top:10pt; text-align:center;">
         <div class="sig-line" style="width:130pt; margin:0 auto;"></div>
-        <div class="sig-name">(.........................)</div>
+        <div class="sig-name">(<?= $bossName ?: '.............................' ?>)</div>
         <div class="sig-role">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
       </div>
     </div>
