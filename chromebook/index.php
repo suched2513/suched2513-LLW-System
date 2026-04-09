@@ -128,12 +128,13 @@ require_once '../components/layout_start.php';
                                 <th class="px-5 py-4 text-left">ผู้ยืม / ห้อง</th>
                                 <th class="px-5 py-4 text-left">เครื่อง</th>
                                 <th class="px-5 py-4 text-left">วันที่</th>
+                                <th class="px-5 py-4 text-center">ตรวจสภาพ</th>
                                 <th class="px-5 py-4 text-center">รูป</th>
                                 <th class="px-5 py-4 text-right"></th>
                             </tr>
                         </thead>
                         <tbody id="table-body" class="divide-y divide-slate-50">
-                            <tr><td colspan="6" class="text-center py-16 text-slate-400 font-bold"><i class="bi bi-arrow-repeat spin mr-1"></i> กำลังโหลด...</td></tr>
+                            <tr><td colspan="7" class="text-center py-16 text-slate-400 font-bold"><i class="bi bi-arrow-repeat spin mr-1"></i> กำลังโหลด...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -401,9 +402,14 @@ function renderTable() {
             : `<span class="text-slate-300 text-[10px] font-bold">—</span>`;
         const nowD = new Date(), daysAgo = (nowD-new Date(r[8]))/(864e5);
         const overdue = isBorrowed && daysAgo>2;
-        const statusBadge = isBorrowed
-            ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-sm"><i class="bi bi-hand-index-thumb-fill text-[8px]"></i>ยืมอยู่</span>`
-            : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-sm"><i class="bi bi-check-lg text-[8px]"></i>คืนแล้ว</span>`;
+        // r[9] = last_inspected date from API
+        const lastInspected = r[9];
+        const inspectBadge = lastInspected
+            ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[9px] font-black"><i class="bi bi-shield-check"></i> ${fmtDate(lastInspected)}</span>`
+            : (isBorrowed
+                ? `<span class="text-[9px] text-amber-500 font-black"><i class="bi bi-shield-exclamation"></i> ยังไม่ตรวจ</span>`
+                : `<span class="text-[9px] text-slate-300 font-bold">—</span>`);
+        const overdue = isBorrowed && daysAgo>2;
         return `<tr class="hover:bg-slate-50/50 transition ${overdue?'bg-rose-50/30':''}">
             <td class="px-5 py-4">
                 <span class="px-2.5 py-1 rounded-full text-[10px] font-black ${isBorrowed?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700'}">${isBorrowed?'ยืมอยู่':'คืนแล้ว'}</span>
@@ -412,17 +418,21 @@ function renderTable() {
             <td class="px-5 py-4"><p class="font-bold text-slate-700">${name}</p><p class="text-[10px] text-slate-400 font-bold">${r[3]||r[1]}</p></td>
             <td class="px-5 py-4"><p class="font-mono font-black text-xs text-cyan-600">${r[4]}</p><p class="text-[9px] text-slate-300 font-bold">${r[5]}</p></td>
             <td class="px-5 py-4 text-xs text-slate-400 font-bold">${dateStr}</td>
+            <td class="px-5 py-4 text-center">${inspectBadge}</td>
             <td class="px-5 py-4 text-center">${imgHtml}</td>
             <td class="px-5 py-4 text-right">
                 <div class="flex items-center justify-end gap-1">
                     <button onclick="openEdit('${r[0]}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition" title="แก้ไข/เพิ่มรูป"><i class="bi bi-pencil-square"></i></button>
-                    ${isBorrowed?`<button onclick="openInspect('${r[0]}')" class="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition" title="ตรวจสภาพ"><i class="bi bi-shield-check"></i></button>
-                    <button onclick="doReturn('${r[0]}')" class="p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition" title="คืนเครื่อง"><i class="bi bi-box-arrow-in-left"></i></button>`:''}
+                    ${isBorrowed
+                        ? `<button onclick="openInspectReturn('${r[0]}')" class="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition" title="ตรวจสภาพ &amp; คืนเครื่อง"><i class="bi bi-shield-check"></i></button>
+                    <button onclick="doReturn('${r[0]}')" class="p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition" title="คืนเครื่อง (ข้ามการตรวจ)"><i class="bi bi-box-arrow-in-left"></i></button>`
+                        : `<button onclick="openInspect('${r[0]}')" class="p-2 text-indigo-400 hover:bg-indigo-50 rounded-xl transition" title="เพิ่มบันทึกตรวจสภาพ"><i class="bi bi-shield-plus"></i></button>`
+                    }
                     <button onclick="doDelete('${r[0]}')" class="p-2 text-rose-400 hover:bg-rose-50 rounded-xl transition" title="ลบ"><i class="bi bi-trash3"></i></button>
                 </div>
             </td>
         </tr>`;
-    }).join('') : `<tr><td colspan="6" class="text-center py-16 text-slate-400 font-bold">ไม่พบข้อมูล</td></tr>`;
+    }).join('') : `<tr><td colspan="7" class="text-center py-16 text-slate-400 font-bold">ไม่พบข้อมูล</td></tr>`;
 
     // Pagination
     let pg = '';
@@ -523,7 +533,10 @@ document.getElementById('edit-form').addEventListener('submit', async e=>{
 });
 
 // ── Inspect modal ─────────────────────────────────────────────────
+let _inspectReturnMode = false;
+
 function openInspect(id) {
+    _inspectReturnMode = false;
     const row = S.logs.find(r=>String(r[0])===String(id)); if(!row) return;
     document.getElementById('inspect-id').value = id;
     document.getElementById('inspect-show-name').textContent = getName(row)+' '+(row[3]?`(${row[3]})`:'');
@@ -532,21 +545,57 @@ function openInspect(id) {
     document.getElementById('inspect-notes').value='';
     document.getElementById('inspect-preview').innerHTML='';
     document.getElementById('inspect-imgs').value='';
+    const btn = document.querySelector('#inspect-form button[type=submit]');
+    btn.innerHTML = '<i class="bi bi-shield-fill mr-1"></i>บันทึกผลตรวจสอบ';
+    btn.className = 'w-full bg-indigo-600 text-white py-3 rounded-xl font-black hover:bg-indigo-700 transition';
     openModal('modal-inspect');
 }
+
+function openInspectReturn(id) {
+    _inspectReturnMode = true;
+    const row = S.logs.find(r=>String(r[0])===String(id)); if(!row) return;
+    document.getElementById('inspect-id').value = id;
+    document.getElementById('inspect-show-name').textContent = getName(row)+' '+(row[3]?`(${row[3]})`:'');
+    document.getElementById('inspect-show-cb').textContent = `${row[4]} (${row[5]})`;
+    document.getElementById('inspect-cond').value='Normal';
+    document.getElementById('inspect-notes').value='';
+    document.getElementById('inspect-preview').innerHTML='';
+    document.getElementById('inspect-imgs').value='';
+    const btn = document.querySelector('#inspect-form button[type=submit]');
+    btn.innerHTML = '<i class="bi bi-shield-check mr-1"></i>ตรวจสภาพ &amp; คืนเครื่อง';
+    btn.className = 'w-full bg-gradient-to-r from-indigo-600 to-emerald-600 text-white py-3 rounded-xl font-black hover:opacity-90 transition';
+    openModal('modal-inspect');
+}
+
 document.getElementById('inspect-form').addEventListener('submit', async e=>{
     e.preventDefault();
-    const btn=e.target.querySelector('button[type=submit]'); btn.disabled=true; btn.textContent='กำลังบันทึก...';
+    const btn=e.target.querySelector('button[type=submit]');
+    btn.disabled=true;
+    const origHtml = btn.innerHTML;
+    btn.innerHTML='<i class="bi bi-arrow-repeat spin mr-1"></i>กำลังบันทึก...';
     const blobs = await blobsFrom(document.getElementById('inspect-imgs'));
+    const entryId = document.getElementById('inspect-id').value;
     const res = await api('addInspection',{
-        entryId: document.getElementById('inspect-id').value,
+        entryId,
         condition: document.getElementById('inspect-cond').value,
         notes: document.getElementById('inspect-notes').value,
         imageBlobs: blobs
     });
-    if(res.success){ Swal.fire({icon:'success',title:'บันทึกการตรวจสอบแล้ว',timer:1400,showConfirmButton:false}); closeModal('modal-inspect'); loadAll(); }
-    else Swal.fire('ผิดพลาด',res.error,'error');
-    btn.disabled=false; btn.textContent='บันทึกผลตรวจสอบ';
+    if(res.success){
+        if(_inspectReturnMode){
+            const retRes = await api('returnBorrow',{entryId});
+            Swal.fire({
+                icon: retRes.success ? 'success' : 'warning',
+                title: retRes.success ? 'ตรวจสภาพ & คืนเครื่องแล้ว' : 'ตรวจสภาพสำเร็จ แต่คืนไม่สำเร็จ',
+                text: retRes.success ? '' : retRes.error,
+                timer: 1600, showConfirmButton: false
+            });
+        } else {
+            Swal.fire({icon:'success',title:'บันทึกการตรวจสอบแล้ว',timer:1400,showConfirmButton:false});
+        }
+        closeModal('modal-inspect'); loadAll();
+    } else Swal.fire('ผิดพลาด',res.error,'error');
+    btn.disabled=false; btn.innerHTML=origHtml;
 });
 
 // ── Master Data ───────────────────────────────────────────────────
