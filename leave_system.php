@@ -27,9 +27,14 @@ require_once 'components/layout_start.php';
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 italic">รายการและประวัติคำขอขออนุญาต</p>
             </div>
         </div>
-        <button class="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3" data-bs-toggle="modal" data-bs-target="#requestModal">
-            <i class="bi bi-plus-lg text-lg"></i> ยื่นคำขอใหม่
-        </button>
+        <div class="flex items-center gap-3">
+            <a href="leave_stats.php" class="px-6 py-4 bg-indigo-50 text-indigo-600 rounded-2xl font-black text-sm hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-2">
+                <i class="bi bi-graph-up-arrow"></i> สถิติ
+            </a>
+            <button class="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3" data-bs-toggle="modal" data-bs-target="#requestModal">
+                <i class="bi bi-plus-lg text-lg"></i> ยื่นคำขอใหม่
+            </button>
+        </div>
     </div>
 
     <!-- Data Table Card -->
@@ -80,10 +85,23 @@ require_once 'components/layout_start.php';
             </div>
             <div class="modal-body p-10 bg-slate-50">
                 <form id="requestForm" class="space-y-8">
+                    <!-- Reason Type -->
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1"><i class="bi bi-tag-fill mr-1"></i>ประเภทเหตุผล</label>
+                        <select class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="reason_type" id="reasonType" required>
+                            <option value="ติดต่อราชการ">🏧 ติดต่อราชการ</option>
+                            <option value="ป่วย / รักษาพยาบาล">🏥 ป่วย / รักษาพยาบาล</option>
+                            <option value="ธุระส่วนตัว">👨‍👩‍👧 ธุระส่วนตัว</option>
+                            <option value="อบรม / พัฒนาตนเอง">🎓 อบรม / พัฒนาตนเอง</option>
+                            <option value="กิจกรรมโรงเรียน">🏧 กิจกรรมโรงเรียน</option>
+                            <option value="อื่นๆ">📦 อื่นๆ</option>
+                        </select>
+                    </div>
+
                     <!-- Reason -->
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เหตุผลที่ขออนุญาต</label>
-                        <input type="text" class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="reason" required placeholder="เช่น ไปราชการ, ธุระส่วนตัว">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เหตุผลที่ขออนุญาต (ระบุเพิ่มเติม)</label>
+                        <input type="text" class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="reason" required placeholder="เช่น ไปราชการ สพม., นัดหมอโรงพยาบาล">
                     </div>
                     
                     <div class="space-y-2">
@@ -345,6 +363,7 @@ $(document).ready(function() {
     // 5. Submit Form
     $('#saveRequest').click(function() {
         const formData = {
+            reason_type: $('select[name="reason_type"]').val(),
             reason: $('input[name="reason"]').val(),
             detail: $('textarea[name="detail"]').val(),
             time_start: $('input[name="time_start"]').val(),

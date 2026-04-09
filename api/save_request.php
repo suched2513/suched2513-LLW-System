@@ -27,12 +27,13 @@ try {
 
     // 1. บันทึกลง leave_requests
     $stmt = $pdo->prepare("INSERT INTO leave_requests 
-        (teacher_id, req_date, reason, detail, time_start, time_end, total_hr, has_class, status_boss1) 
-        VALUES (?, CURDATE(), ?, ?, ?, ?, ?, ?, 0)");
+        (teacher_id, req_date, reason, reason_type, detail, time_start, time_end, total_hr, has_class, status_boss1) 
+        VALUES (?, CURDATE(), ?, ?, ?, ?, ?, ?, ?, 0)");
     
     $stmt->execute([
         $teacher_id,
         $input['reason'] ?? '',
+        $input['reason_type'] ?? 'อื่นๆ',
         $input['detail'] ?? '',
         $input['time_start'] ?? '',
         $input['time_end'] ?? '',
@@ -73,7 +74,7 @@ try {
         if ($settings && $settings['telegram_token'] && $settings['admin_chat_id']) {
             $msg  = "🔔 <b>มีคำขอออกนอกบริเวณใหม่</b>\n";
             $msg .= "👤 ผู้ขอ: " . $teacher_name . "\n";
-            $msg .= "📝 เหตุผล: " . ($input['reason'] ?? '') . "\n";
+            $msg .= "📝 เหตุผล: " . ($input['reason'] ?? '') . " (" . ($input['reason_type'] ?? '') . ")\n";
             $msg .= "⏰ เวลา: " . ($input['time_start'] ?? '') . " - " . ($input['time_end'] ?? '') . "\n";
             $msg .= "📅 วันที่: " . date('d/m/Y') . "\n";
             if (!empty($input['has_class'])) {
