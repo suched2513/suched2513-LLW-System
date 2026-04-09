@@ -24,7 +24,7 @@ require_once 'components/layout_start.php';
             </div>
             <div>
                 <h3 class="font-black text-slate-800 tracking-tight">รายการคำขอของฉัน</h3>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 italic">My Leave Requests & History</p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 italic">รายการและประวัติคำขอขออนุญาต</p>
             </div>
         </div>
         <button class="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3" data-bs-toggle="modal" data-bs-target="#requestModal">
@@ -36,7 +36,7 @@ require_once 'components/layout_start.php';
     <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
         <div class="px-10 py-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
             <h3 class="font-black text-slate-800 flex items-center gap-3"><i class="bi bi-list-ul text-blue-600"></i> ประวัติการขออนุญาต</h3>
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest font-bold">List of all requests</span>
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest font-bold">รายการคำขอทั้งหมด</span>
         </div>
         
         <div class="p-8">
@@ -72,7 +72,7 @@ require_once 'components/layout_start.php';
                     </div>
                     <div>
                         <h5 class="modal-title font-black text-lg">แบบฟอร์มขออนุญาตออกนอกบริเวณ</h5>
-                        <p class="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-0.5">Please fill in the details correctly</p>
+                        <p class="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-0.5">กรุณากรอกข้อมูลให้ถูกต้องและครบถ้วน</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white opacity-50 hover:opacity-100" data-bs-dismiss="modal"></button>
@@ -81,26 +81,26 @@ require_once 'components/layout_start.php';
                 <form id="requestForm" class="space-y-8">
                     <!-- Reason -->
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เหตุผลที่ขออนุญาต / Reason</label>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เหตุผลที่ขออนุญาต</label>
                         <input type="text" class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="reason" required placeholder="เช่น ไปราชการ, ธุระส่วนตัว">
                     </div>
                     
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">รายละเอียด/สถานที่ / Detail & Location</label>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">รายละเอียด / สถานที่</label>
                         <textarea class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="detail" rows="2" placeholder="ระบุรายละเอียดเพิ่มเติม..."></textarea>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="space-y-2">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เริ่มเวลา / From</label>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เริ่มเวลา</label>
                             <input type="time" class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="time_start" required>
                         </div>
                         <div class="space-y-2">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ถึงเวลา / Until</label>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ถึงเวลา</label>
                             <input type="time" class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="time_end" required>
                         </div>
                         <div class="space-y-2">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">รวมชั่วโมง / Total Hours</label>
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">รวมชั่วโมง</label>
                             <input type="number" step="0.5" class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="total_hr" required placeholder="0.0">
                         </div>
                     </div>
@@ -110,7 +110,7 @@ require_once 'components/layout_start.php';
                             <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg transition-transform group-hover:scale-110"><i class="bi bi-journal-check"></i></div>
                             <div>
                                 <h6 class="text-sm font-black text-slate-700">มีคาบการสอนในช่วงเวลาดังกล่าว</h6>
-                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Toggle to manage substitutions</p>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">เปิดเพื่อจัดการครูสอนแทน</p>
                             </div>
                         </div>
                         <div class="form-check form-switch p-0 m-0">
@@ -122,7 +122,7 @@ require_once 'components/layout_start.php';
                     <div id="substitutionSection" style="display: none;" class="p-8 bg-white rounded-[2rem] border-2 border-dashed border-slate-200 space-y-6">
                         <div class="flex items-center gap-4 mb-2">
                             <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-lg"><i class="bi bi-stack"></i></div>
-                            <h6 class="font-black text-slate-800 uppercase tracking-widest text-xs">Substitution Management</h6>
+                            <h6 class="font-black text-slate-800 uppercase tracking-widest text-xs">การจัดการครูสอนแทน</h6>
                         </div>
                         
                         <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -132,7 +132,7 @@ require_once 'components/layout_start.php';
                             <select id="sub_teacher_id" class="lg:col-span-1 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-xs font-bold outline-none cursor-pointer">
                                 <option value="">เลือกครูสอนแทน</option>
                             </select>
-                            <button type="button" id="addToCart" class="bg-indigo-600 text-white rounded-xl py-3 text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:scale-105 transition-all">Add Item</button>
+                            <button type="button" id="addToCart" class="bg-indigo-600 text-white rounded-xl py-3 text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:scale-105 transition-all">เพิ่มรายการ</button>
                         </div>
                         
                         <div class="overflow-hidden rounded-2xl border border-slate-100">
@@ -142,11 +142,11 @@ require_once 'components/layout_start.php';
                                         <th class="px-6 py-3">คาบ</th>
                                         <th class="px-6 py-3">วิชา/ชั้น</th>
                                         <th class="px-6 py-3">ครูสอนแทน</th>
-                                        <th class="px-6 py-3 text-right">Action</th>
+                                        <th class="px-6 py-3 text-right">จัดการ</th>
                                     </tr>
                                 </thead>
                                 <tbody id="cartItems" class="divide-y divide-slate-50">
-                                    <tr><td colspan="4" class="text-center py-6 text-slate-300 font-bold italic">No items added to cart.</td></tr>
+                                    <tr><td colspan="4" class="text-center py-6 text-slate-300 font-bold italic">ยังไม่มีรายการ — กรอกข้อมูลแล้วกด "เพิ่มรายการ"</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -154,9 +154,9 @@ require_once 'components/layout_start.php';
                 </form>
             </div>
             <div class="modal-footer bg-slate-50 p-8 border-0 flex gap-4">
-                <button type="button" class="flex-1 py-4 bg-white border border-slate-200 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all" data-bs-dismiss="modal">Cancel / ยกเลิก</button>
+                <button type="button" class="flex-1 py-4 bg-white border border-slate-200 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all" data-bs-dismiss="modal">ยกเลิก</button>
                 <button type="button" id="saveRequest" class="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all">
-                    Send Request & Notify BOSS
+                    ส่งคำขออนุมัติ
                 </button>
             </div>
         </div>
@@ -197,14 +197,14 @@ $(document).ready(function() {
             },
             { 
                 data: 'total_hr',
-                render: (d) => `<div class="fw-bold small font-monospace">${d} Hr</div>`
+                render: (d) => `<div class="fw-bold small font-monospace">${d} ชม.</div>`
             },
             { 
                 data: 'status_boss1',
                 render: (data) => {
-                    if(data == 0) return '<span class="badge rounded-pill bg-warning text-dark" style="font-size:9px;font-weight:900;letter-spacing:.05em">PENDING</span>';
-                    if(data == 1) return '<span class="badge rounded-pill bg-success" style="font-size:9px;font-weight:900;letter-spacing:.05em">APPROVED</span>';
-                    return '<span class="badge rounded-pill bg-danger" style="font-size:9px;font-weight:900;letter-spacing:.05em">REJECTED</span>';
+                    if(data == 0) return '<span class="badge rounded-pill bg-warning text-dark" style="font-size:9px;font-weight:900;letter-spacing:.05em">รออนุมัติ</span>';
+                    if(data == 1) return '<span class="badge rounded-pill bg-success" style="font-size:9px;font-weight:900;letter-spacing:.05em">อนุมัติแล้ว</span>';
+                    return '<span class="badge rounded-pill bg-danger" style="font-size:9px;font-weight:900;letter-spacing:.05em">ไม่อนุมัติ</span>';
                 }
             },
             {
@@ -212,7 +212,7 @@ $(document).ready(function() {
                 className: 'text-end',
                 render: (id, t, r) => {
                     if (r.status_boss1 != 0) return '<span class="text-muted small">—</span>';
-                    return `<button class="btn btn-sm btn-outline-primary approve-btn" data-id="${id}" title="Fast Approval" style="border-radius:10px;font-size:10px;font-weight:900">
+                    return `<button class="btn btn-sm btn-outline-primary approve-btn" data-id="${id}" title="อนุมัติด่วน" style="border-radius:10px;font-size:10px;font-weight:900">
                         <i class="bi bi-shield-check-fill me-1"></i>อนุมัติ
                     </button>`;
                 }
@@ -257,7 +257,7 @@ $(document).ready(function() {
 
         if(!period || !subject || !class_level || !sub_teacher_id) {
             Swal.fire({
-                title: 'Data Incomplete', text: 'กรุณากรอกข้อมูลสอนแทนให้ครบถ้วน', icon: 'warning',
+                title: 'ข้อมูลไม่ครบ', text: 'กรุณากรอกข้อมูลสอนแทนให้ครบถ้วน', icon: 'warning',
                 customClass: { popup: 'rounded-[2rem]', confirmButton: 'bg-blue-600 rounded-xl px-10' }
             });
             return;
@@ -272,7 +272,7 @@ $(document).ready(function() {
     function renderCart() {
         let html = '';
         if(cart.length === 0) {
-            html = '<tr><td colspan="4" class="text-center py-6 text-slate-300 font-bold italic">No items added to cart.</td></tr>';
+            html = '<tr><td colspan="4" class="text-center py-6 text-slate-300 font-bold italic">ยังไม่มีรายการ — กรอกข้อมูลแล้วกดเพิ่ม</td></tr>';
         } else {
             cart.forEach((item, index) => {
                 html += `<tr class="hover:bg-slate-50/50 transition-all">
@@ -313,19 +313,19 @@ $(document).ready(function() {
 
         if(!formData.reason || !formData.time_start || !formData.time_end) {
             Swal.fire({
-                title: 'Required Fields', text: 'กรุณากรอกข้อมูลหลักให้ครบถ้วน', icon: 'warning',
+                title: 'กรุณากรอกข้อมูล', text: 'กรุณากรอกข้อมูลหลักให้ครบถ้วน', icon: 'warning',
                 customClass: { popup: 'rounded-[2rem]', confirmButton: 'bg-blue-600 rounded-xl px-10' }
             });
             return;
         }
 
         Swal.fire({
-            title: 'Confirm Submission?',
+            title: 'ยืนยันการส่งคำขอ?',
             text: "คำขอของคุณจะถูกส่งไปเพื่ออนุมัติทาง Telegram",
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'Yes, Submit',
-            cancelButtonText: 'Cancel',
+            confirmButtonText: 'ยืนยัน ส่งคำขอ',
+            cancelButtonText: 'ยกเลิก',
             customClass: { popup: 'rounded-[2.5rem]', confirmButton: 'bg-blue-600 rounded-2xl px-10 py-3', cancelButton: 'bg-slate-100 text-slate-400 rounded-2xl px-10 py-3' }
         }).then((result) => {
             if (result.isConfirmed) {
@@ -336,7 +336,7 @@ $(document).ready(function() {
                     contentType: 'application/json',
                     success: function(res) {
                         if(res.status === 'success') {
-                            Swal.fire({ title: 'Success!', text: res.message, icon: 'success', customClass: { popup: 'rounded-[2rem]' } });
+                            Swal.fire({ title: 'ส่งคำขอสำเร็จ!', text: res.message, icon: 'success', customClass: { popup: 'rounded-[2rem]' } });
                             $('#requestModal').modal('hide');
                             $('#requestForm')[0].reset();
                             cart = [];
@@ -355,12 +355,12 @@ $(document).ready(function() {
     $(document).on('click', '.approve-btn', function() {
         const id = $(this).data('id');
         Swal.fire({
-            title: 'Fast Approve?',
+            title: 'ยืนยันการอนุมัติ?',
             icon: 'info',
             showCancelButton: true,
             confirmButtonColor: '#10b981',
-            confirmButtonText: 'Approve',
-            cancelButtonText: 'Cancel',
+            confirmButtonText: 'อนุมัติเลย',
+            cancelButtonText: 'ยกเลิก',
             customClass: { popup: 'rounded-[2.5rem]', confirmButton: 'rounded-2xl px-10 py-3', cancelButton: 'rounded-2xl px-10 py-3' }
         }).then((result) => {
             if (result.isConfirmed) {
@@ -370,7 +370,7 @@ $(document).ready(function() {
                     data: JSON.stringify({ r_id: id, status: 1 }),
                     contentType: 'application/json',
                     success: function(res) {
-                        Swal.fire({ title: 'Done!', text: res.message, icon: 'success', customClass: { popup: 'rounded-[2rem]' } });
+                        Swal.fire({ title: 'ดำเนินการแล้ว!', text: res.message, icon: 'success', customClass: { popup: 'rounded-[2rem]' } });
                         table.ajax.reload();
                     }
                 });
