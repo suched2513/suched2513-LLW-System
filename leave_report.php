@@ -445,12 +445,12 @@ $statusText = match((int)($req['status_boss1'] ?? 0)) {
       <div style="margin-top:6pt; text-align:center;">
         <!-- ชื่อไม่มีคำนำหน้า เหมือนลายเซ็น -->
         <?php if ($bossShortName): ?>
-        <div style="font-family:'Sarabun',serif; font-size:14pt; font-style:italic; margin-bottom:0pt;">
+        <div style="font-family:'Sarabun',serif; font-size:14pt; font-style:italic; margin-bottom:-2pt; line-height:1.1;">
           <?= $bossShortName ?>
         </div>
         <?php endif; ?>
         <!-- ขีดลายเซ็น -->
-        <div class="sig-line" style="width:140pt; margin:0 auto;"></div>
+        <div class="sig-line" style="width:140pt; margin:0 auto; height:0; border-bottom:1px solid #000; margin-bottom:4pt;"></div>
         <!-- ชื่อเต็มในวงเล็บ -->
         <div class="sig-name">(<?= $bossName ?: '.............................' ?>)</div>
         <div class="sig-role">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
