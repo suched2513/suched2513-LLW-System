@@ -8,13 +8,29 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 
 $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $time_in   = $_POST['regular_time_in'];
-    $time_late = $_POST['late_time'];
-    $conn->query("UPDATE wfh_system_settings SET regular_time_in='$time_in', late_time='$time_late' WHERE setting_id=1");
-    $msg = '<div class="alert alert-success"><i class="bi bi-check-circle-fill me-1"></i>บันทึกการตั้งค่าเรียบร้อย</div>';
+    if (isset($_POST['regular_time_in'])) {
+        // ตั้งค่าเวลา
+        $time_in   = $_POST['regular_time_in'];
+        $time_late = $_POST['late_time'];
+        $conn->query("UPDATE wfh_system_settings SET regular_time_in='$time_in', late_time='$time_late' WHERE setting_id=1");
+        $msg = '<div class="alert alert-success"><i class="bi bi-check-circle-fill me-1"></i>บันทึกการตั้งค่าเรียบร้อย</div>';
+    } elseif (isset($_POST['boss_pin'])) {
+        // ตั้ง PIN ผอ.
+        $pin = trim($_POST['boss_pin']);
+        if (strlen($pin) >= 4 && strlen($pin) <= 6 && ctype_digit($pin)) {
+            $hashed = password_hash($pin, PASSWORD_BCRYPT);
+            $stmt = $conn->prepare("UPDATE wfh_system_settings SET boss_pin = ? WHERE setting_id = 1");
+            $stmt->bind_param('s', $hashed);
+            $stmt->execute();
+            $msg = '<div class="alert alert-success"><i class="bi bi-shield-check-fill me-1"></i>ตั้ง PIN เรียบร้อยแล้ว</div>';
+        } else {
+            $msg = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>PIN ต้องเป็นตัวเลข 4-6 หลักเท่านั้น</div>';
+        }
+    }
 }
 
 $settings = $conn->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch_assoc();
+$hasPIN = !empty($settings['boss_pin']);
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -68,6 +84,25 @@ $settings = $conn->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch_ass
                 <div class="form-text">หากลงเวลาหลังจากเวลานี้ จะถูกบันทึกว่า "มาสาย"</div>
             </div>
             <button type="submit" class="btn btn-success px-4"><i class="bi bi-save-fill me-1"></i>บันทึกการตั้งค่า</button>
+        </form>
+    </div>
+
+    <!-- PIN ผอ. -->
+    <div class="card card-custom p-4 mt-3" style="max-width:500px;">
+        <div class="fw-semibold mb-3"><i class="bi bi-shield-lock-fill text-danger me-1"></i> PIN สำหรับผู้อำนวยการอนุมัติคำขอออกนอกบริเวณ</div>
+        <?php if ($hasPIN): ?>
+        <div class="alert alert-success py-2 small"><i class="bi bi-shield-check-fill me-1"></i>ตั้ง PIN แล้ว — ผอ.ต้องกรอก PIN ทุกครั้งที่อนุมัติ</div>
+        <?php else: ?>
+        <div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle-fill me-1"></i>ยังไม่ได้ตั้ง PIN — ระบบจะอนุมัติเลยโดยไม่ต้องใช้ PIN</div>
+        <?php endif; ?>
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label fw-semibold"><?= $hasPIN ? 'เปลี่ยน PIN ใหม่' : 'ตั้ง PIN ใหม่' ?></label>
+                <input type="password" class="form-control" name="boss_pin" maxlength="6"
+                    placeholder="กรอกตัวเลข 4-6 หลัก" required autocomplete="new-password">
+                <div class="form-text">ใช้ตัวเลขเท่านั้น 4-6 หลัก — เก็บแบบ Hashed เดิมจะผู้ใดดูไม่ออก</div>
+            </div>
+            <button type="submit" class="btn btn-danger px-4"><i class="bi bi-shield-lock-fill me-1"></i><?= $hasPIN ? 'เปลี่ยน PIN' : 'บันทึก PIN' ?></button>
         </form>
     </div>
 

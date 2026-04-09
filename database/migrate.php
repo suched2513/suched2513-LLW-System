@@ -261,11 +261,11 @@ if (empty($pending)) {
         $name = basename($file, '.php');
         try {
             $migration = loadMigration($file);
-            $pdo->beginTransaction();
-            $migration['up']($pdo);
-            $stmt = $pdo->prepare("INSERT INTO _migrations (migration, batch) VALUES (?, ?)");
+            // DDL-safe: ไม่ wrap ใน transaction เพราะ ALTER TABLE auto-commit ใน MySQL
+            $result = $migration['up']($pdo);
+            // Insert migration record (outside transaction)
+            $stmt = $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, ?)");
             $stmt->execute([$name, $batch]);
-            $pdo->commit();
             out("Migrated: {$name}", 'ok');
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();

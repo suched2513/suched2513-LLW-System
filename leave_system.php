@@ -49,6 +49,7 @@ require_once 'components/layout_start.php';
                             <th class="px-6 py-5">เหตุผล / สถานที่</th>
                             <th class="px-6 py-5">รวม (ชม.)</th>
                             <th class="px-6 py-5">สถานะ ผอ.</th>
+                            <th class="px-6 py-5 text-center">เอกสาร</th>
                             <th class="px-6 py-5 text-right"></th>
                         </tr>
                     </thead>
@@ -163,6 +164,38 @@ require_once 'components/layout_start.php';
     </div>
 </div>
 
+<!-- PIN Modal -->
+<div id="modal-pin" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-rose-600 to-pink-600 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">ยืนยัน PIN ผอ.</h5>
+                    <p class="text-[10px] font-bold text-rose-100 uppercase tracking-widest">กรอก PIN เพื่ออนุมัติคำขอ</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-8 space-y-6">
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">รหัส PIN (4-6 หลัก)</label>
+                <input type="password" id="pin-input" maxlength="6"
+                    class="w-full text-center text-3xl font-black tracking-[1rem] bg-slate-50 border-2 border-slate-200 rounded-2xl px-6 py-4 outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition-all"
+                    placeholder="••••••">
+                <p id="pin-error" class="text-rose-500 text-xs font-black mt-2 hidden"><i class="bi bi-exclamation-triangle-fill mr-1"></i>PIN ไม่ถูกต้อง กรุณาลองใหม่</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closePinModal()" class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button id="pin-confirm-btn" onclick="confirmPin()" class="flex-[2] py-3 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-rose-200 hover:opacity-90 transition-all">
+                    <i class="bi bi-shield-check mr-1"></i>ยืนยันและอนุมัติ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <!-- DataTables JS Integrated with the theme -->
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
@@ -209,11 +242,19 @@ $(document).ready(function() {
             },
             {
                 data: 'r_id',
+                className: 'text-center',
+                render: (id) => `<a href="leave_report.php?r_id=${id}" target="_blank"
+                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black hover:bg-slate-200 transition-all">
+                    <i class="bi bi-printer"></i> พิมพ์
+                </a>`
+            },
+            {
+                data: 'r_id',
                 className: 'text-end',
                 render: (id, t, r) => {
                     if (r.status_boss1 != 0) return '<span class="text-muted small">—</span>';
-                    return `<button class="btn btn-sm btn-outline-primary approve-btn" data-id="${id}" title="อนุมัติด่วน" style="border-radius:10px;font-size:10px;font-weight:900">
-                        <i class="bi bi-shield-check-fill me-1"></i>อนุมัติ
+                    return `<button class="btn btn-sm btn-outline-primary approve-btn" data-id="${id}" title="อนุมัติ (ต้องใช้ PIN)" style="border-radius:10px;font-size:10px;font-weight:900">
+                        <i class="bi bi-shield-lock-fill me-1"></i>อนุมัติ (PIN)
                     </button>`;
                 }
             }
@@ -351,33 +392,77 @@ $(document).ready(function() {
         });
     });
 
-    // 6. Approval Action (Admin Only)
+    // 6. Approval Action — ต้องใช้ PIN ผอ.
+    let _pendingApproveId = null;
+
     $(document).on('click', '.approve-btn', function() {
-        const id = $(this).data('id');
-        Swal.fire({
-            title: 'ยืนยันการอนุมัติ?',
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonColor: '#10b981',
-            confirmButtonText: 'อนุมัติเลย',
-            cancelButtonText: 'ยกเลิก',
-            customClass: { popup: 'rounded-[2.5rem]', confirmButton: 'rounded-2xl px-10 py-3', cancelButton: 'rounded-2xl px-10 py-3' }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: 'api/approve_action.php',
-                    type: 'POST',
-                    data: JSON.stringify({ r_id: id, status: 1 }),
-                    contentType: 'application/json',
-                    success: function(res) {
-                        Swal.fire({ title: 'ดำเนินการแล้ว!', text: res.message, icon: 'success', customClass: { popup: 'rounded-[2rem]' } });
-                        table.ajax.reload();
-                    }
-                });
-            }
-        });
+        _pendingApproveId = $(this).data('id');
+        document.getElementById('modal-pin').classList.remove('hidden');
+        document.getElementById('pin-input').value = '';
+        document.getElementById('pin-error').classList.add('hidden');
+        setTimeout(() => document.getElementById('pin-input').focus(), 100);
+    });
+
+    // Enter key in PIN field
+    document.getElementById('pin-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') confirmPin();
     });
 });
+
+function closePinModal() {
+    document.getElementById('modal-pin').classList.add('hidden');
+    _pendingApproveId = null;
+}
+
+async function confirmPin() {
+    const pin = document.getElementById('pin-input').value.trim();
+    if (!pin) return;
+    const btn = document.getElementById('pin-confirm-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat spin mr-1"></i>กำลังตรวจสอบ...';
+
+    try {
+        const res = await fetch('api/verify_pin.php', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({pin})
+        }).then(r => r.json());
+
+        if (!res.valid) {
+            document.getElementById('pin-error').classList.remove('hidden');
+            document.getElementById('pin-input').value = '';
+            document.getElementById('pin-input').focus();
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-shield-check mr-1"></i>ยืนยันและอนุมัติ';
+            return;
+        }
+
+        // PIN ถูกต้อง — ส่งอนุมัติ
+        document.getElementById('modal-pin').classList.add('hidden');
+        const approveRes = await fetch('api/approve_action.php', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ r_id: _pendingApproveId, status: 1 })
+        }).then(r => r.json());
+
+        Swal.fire({
+            icon: 'success',
+            title: 'อนุมัติเรียบร้อย!',
+            text: approveRes.message,
+            timer: 1800,
+            showConfirmButton: false,
+            customClass: { popup: 'rounded-[2rem]' }
+        });
+        $('#requestTable').DataTable().ajax.reload();
+
+    } catch(e) {
+        Swal.fire('เกิดข้อผิดพลาด', e.message, 'error');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-shield-check mr-1"></i>ยืนยันและอนุมัติ';
+    _pendingApproveId = null;
+}
 </script>
 
 <?php require_once 'components/layout_end.php'; ?>
