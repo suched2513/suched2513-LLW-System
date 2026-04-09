@@ -21,18 +21,18 @@ require_once '../components/layout_start.php';
                 <i class="bi bi-filter-right"></i>
             </div>
             <select id="period-filter" class="bg-slate-50 border border-slate-200 rounded-2xl px-6 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-400 transition-all cursor-pointer" onchange="applyFilter()">
-                <option value="all">ทั้งหมด / Lifetime</option>
-                <option value="today">วันนี้ / Today</option>
-                <option value="week">สัปดาห์นี้ / This Week</option>
-                <option value="month" selected>เดือนนี้ / This Month</option>
+                <option value="all">ทั้งหมด</option>
+                <option value="today">วันนี้</option>
+                <option value="week">สัปดาห์นี้</option>
+                <option value="month" selected>เดือนนี้</option>
             </select>
         </div>
         <div class="flex gap-3">
             <button onclick="exportCSV()" class="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black text-sm shadow-xl shadow-emerald-100 hover:bg-emerald-700 hover:scale-105 transition-all flex items-center gap-2">
-                <i class="bi bi-file-earmark-excel"></i> Export CSV
+                <i class="bi bi-file-earmark-excel"></i> ส่งออก CSV
             </button>
             <button onclick="window.print()" class="bg-slate-100 text-slate-600 px-8 py-3 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all flex items-center gap-2">
-                <i class="bi bi-printer"></i> Print
+                <i class="bi bi-printer"></i> พิมพ์
             </button>
         </div>
     </div>
@@ -41,22 +41,22 @@ require_once '../components/layout_start.php';
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
         <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
             <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-all"><i class="bi bi-laptop text-6xl"></i></div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Devices</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">อุปกรณ์ทั้งหมด</p>
             <h3 class="text-4xl font-black text-slate-800 tracking-tight" id="stat-total">-</h3>
         </div>
         <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
             <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-all text-amber-600"><i class="bi bi-hand-index-thumb-fill text-6xl"></i></div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">On Borrow</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">กำลังยืมอยู่</p>
             <h3 class="text-4xl font-black text-slate-800 tracking-tight" id="stat-borrowed">-</h3>
         </div>
         <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
             <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-all text-emerald-600"><i class="bi bi-check-circle-fill text-6xl"></i></div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Available</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ว่างพร้อมใช้</p>
             <h3 class="text-4xl font-black text-slate-800 tracking-tight" id="stat-avail">-</h3>
         </div>
         <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
             <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-all text-rose-600"><i class="bi bi-exclamation-triangle-fill text-6xl"></i></div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Overdue (2+ Days)</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ค้างคืน &gt;2 วัน</p>
             <h3 class="text-4xl font-black text-slate-800 tracking-tight" id="stat-overdue">-</h3>
         </div>
     </div>
@@ -65,13 +65,13 @@ require_once '../components/layout_start.php';
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2 bg-white p-10 rounded-[32px] shadow-sm border border-slate-100">
             <div class="flex justify-between items-center mb-8">
-                <h3 class="font-black text-slate-800 flex items-center gap-3"><i class="bi bi-bar-chart-fill text-blue-600"></i> Borrowing rate by Class</h3>
-                <span class="text-[10px] font-black text-slate-400 bg-slate-50 px-4 py-1.5 rounded-full uppercase tracking-widest" id="chart-period-label">All Time</span>
+                <h3 class="font-black text-slate-800 flex items-center gap-3"><i class="bi bi-bar-chart-fill text-blue-600"></i> อัตราการยืมตามห้องเรียน</h3>
+                <span class="text-[10px] font-black text-slate-400 bg-slate-50 px-4 py-1.5 rounded-full uppercase tracking-widest" id="chart-period-label">ทั้งหมด</span>
             </div>
             <div class="relative h-[300px]"><canvas id="classChart"></canvas></div>
         </div>
         <div class="bg-white p-10 rounded-[32px] shadow-sm border border-slate-100">
-            <h3 class="font-black text-slate-800 mb-8 flex items-center gap-3"><i class="bi bi-pie-chart-fill text-indigo-600"></i> Global Status</h3>
+            <h3 class="font-black text-slate-800 mb-8 flex items-center gap-3"><i class="bi bi-pie-chart-fill text-indigo-600"></i> สถานะภาพรวม</h3>
             <div class="relative h-[300px] flex justify-center"><canvas id="statusChart"></canvas></div>
         </div>
     </div>
@@ -82,7 +82,7 @@ require_once '../components/layout_start.php';
         <div class="bg-white rounded-[32px] shadow-sm border border-rose-100 overflow-hidden">
             <div class="px-10 py-6 border-b border-rose-50 bg-rose-50/30 flex items-center justify-between">
                 <h3 class="font-black text-rose-700 flex items-center gap-3"><i class="bi bi-exclamation-octagon-fill"></i> ค้างส่งเกินกำหนด</h3>
-                <span class="px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-[10px] font-black uppercase tracking-widest" id="overdue-count-badge">0 ITEMS</span>
+                <span class="px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-[10px] font-black uppercase tracking-widest" id="overdue-count-badge">0 รายการ</span>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
@@ -141,7 +141,7 @@ async function fetchAll() {
 function applyFilter() {
     const period = document.getElementById('period-filter').value;
     const now = new Date();
-    const filterLabels = {all:'ทั้งหมด / Lifetime', today:'วันนี้ / Today', week:'สัปดาห์นี้ / This Week', month:'เดือนนี้ / This Month'};
+    const filterLabels = {all:'ทั้งหมด', today:'วันนี้', week:'สัปดาห์นี้', month:'เดือนนี้'};
     
     let filteredLogs = ALL_LOGS;
     if (period !== 'all') {
@@ -186,11 +186,11 @@ function renderDashboard(logs) {
     document.getElementById('stat-borrowed').textContent = borrowed;
     document.getElementById('stat-avail').textContent = available;
     document.getElementById('stat-overdue').textContent = overdueLogs.length;
-    document.getElementById('overdue-count-badge').textContent = `${overdueLogs.length} ITEMS`;
+    document.getElementById('overdue-count-badge').textContent = `${overdueLogs.length} รายการ`;
     
     // Overdue table
     if (overdueLogs.length === 0) {
-        document.getElementById('overdue-table').innerHTML = `<tr><td colspan="3" class="text-center py-10 text-slate-400 font-bold italic"><i class="bi bi-check2-circle text-emerald-500 mr-2"></i>No Overdue Devices Currently.</td></tr>`;
+        document.getElementById('overdue-table').innerHTML = `<tr><td colspan="3" class="text-center py-10 text-slate-400 font-bold italic"><i class="bi bi-check2-circle text-emerald-500 mr-2"></i>ไม่มีอุปกรณ์ค้างส่งในขณะนี้</td></tr>`;
     } else {
         document.getElementById('overdue-table').innerHTML = overdueLogs.map(r => {
             const dayCount = Math.floor((now - new Date(r[8])) / (1000 * 60 * 60 * 24));
@@ -198,7 +198,7 @@ function renderDashboard(logs) {
             return `<tr>
                 <td class="px-8 py-5 font-bold text-slate-700">${getName(r)}<div class="text-[10px] text-slate-400 uppercase tracking-widest font-black">${r[3]||r[1]}</div></td>
                 <td class="px-6 py-5 font-mono font-bold text-slate-500 text-xs">${r[4]}<div class="text-[9px] text-slate-300 font-black">${r[5]}</div></td>
-                <td class="px-6 py-5 text-center"><span class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${urgency}">${dayCount} Days</span></td>
+                <td class="px-6 py-5 text-center"><span class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${urgency}">${dayCount} วัน</span></td>
             </tr>`;
         }).join('');
     }
@@ -217,7 +217,7 @@ function renderDashboard(logs) {
         type: 'bar',
         data: {
             labels: Object.keys(classCounts),
-            datasets: [{ label: 'Borrow Count', data: Object.values(classCounts), backgroundColor: ['#8b5cf6','#3b82f6','#06b6d4','#10b981'], borderRadius: 12 }]
+            datasets: [{ label: 'จำนวนการยืม', data: Object.values(classCounts), backgroundColor: ['#8b5cf6','#3b82f6','#06b6d4','#10b981'], borderRadius: 12 }]
         },
         options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { display: false }, border: { display: false } }, x: { grid: { display: false }, border: { display: false } } } }
     });
@@ -228,7 +228,7 @@ function renderDashboard(logs) {
     statusChart = new Chart(document.getElementById('statusChart'), {
         type: 'doughnut',
         data: {
-            labels: ['Ready', 'Borrowed', 'Damaged/Lost'],
+            labels: ['ว่างพร้อมใช้', 'กำลังยืม', 'เสียหาย/สูญหาย'],
             datasets: [{ data: [available, borrowed, damageCount], backgroundColor: ['#10b981','#f59e0b','#f43f5e'], borderWidth: 0, hoverOffset: 15 }]
         },
         options: { maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', font: { family: 'Prompt', weight: 'bold', size: 10 } } } } }
@@ -242,14 +242,14 @@ function renderDashboard(logs) {
     });
     const sorted = Object.entries(classHistory).sort((a,b)=>b[1]-a[1]).slice(0, 5);
     document.getElementById('top-classes').innerHTML = sorted.length === 0 
-        ? '<p class="text-center text-slate-400 py-10 font-bold italic">No borrowing history for students.</p>'
+        ? '<p class="text-center text-slate-400 py-10 font-bold italic">ยังไม่มีประวัติการยืมของนักเรียน</p>'
         : sorted.map((item, idx) => {
             const pct = Math.max(10, Math.round((item[1] / sorted[0][1]) * 100));
             const colorClass = ['bg-amber-400', 'bg-slate-300', 'bg-orange-300', 'bg-blue-300', 'bg-indigo-300'][idx] || 'bg-slate-200';
             return `<div>
                 <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm font-bold text-slate-700">Class ${item[0]}</span>
-                    <span class="text-xs font-black text-slate-400 uppercase tracking-widest">${item[1]} Borrows</span>
+                    <span class="text-sm font-bold text-slate-700">ห้อง ${item[0]}</span>
+                    <span class="text-xs font-black text-slate-400 uppercase tracking-widest">${item[1]} ครั้ง</span>
                 </div>
                 <div class="w-full bg-slate-50 rounded-full h-3 overflow-hidden border border-slate-100 shadow-inner">
                     <div class="${colorClass} h-full rounded-full transition-all duration-1000" style="width:${pct}%"></div>
