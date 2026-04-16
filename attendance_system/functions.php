@@ -66,8 +66,9 @@ function loginTeacher($username, $password, $pdo) {
  * ตรวจสอบการ Login (teacher/admin)
  */
 function checkLogin() {
+    global $base_path;
     if (!isset($_SESSION['teacher_id'])) {
-        header("Location: index.php");
+        header("Location: " . $base_path . "/attendance_system/index.php"); 
         exit();
     }
 }
@@ -76,8 +77,9 @@ function checkLogin() {
  * ตรวจ Super Admin สำหรับหน้า admin.php
  */
 function checkAdmin() {
-    if (!isset($_SESSION['llw_role']) || $_SESSION['llw_role'] !== 'super_admin') {
-        header('Location: ../login.php');
+    global $base_path;
+    if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+        header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
         exit();
     }
 }

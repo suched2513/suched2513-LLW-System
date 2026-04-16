@@ -127,13 +127,14 @@ $_SESSION['teacher_name'] // string
 ```php
 // ── หน้าทั่วไป (ต้อง login) ──
 session_start();
+require_once __DIR__ . '/config.php';
 if (!isset($_SESSION['llw_role'])) {
-    header('Location: /login.php'); exit();
+    header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
 
 // ── หน้า admin (ต้องมี role เฉพาะ) ──
 if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
-    header('Location: /login.php'); exit();
+    header('Location: ' . $base_path . '/login.php'); exit();
 }
 
 // ── API endpoint (return JSON) ──
@@ -154,7 +155,7 @@ if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
 **สำคัญ**:
 - ใช้ `$_SESSION['llw_role']` เป็น **มาตรฐานเดียว** — ห้ามใช้ `$_SESSION['role']` หรือ `$_SESSION['user_id']` เป็น auth check
 - API ต้อง return `http_response_code(401)` หรือ `403` + JSON — ห้าม redirect
-- หน้า page ต้อง `header('Location: /login.php'); exit();` — ห้ามลืม `exit()`
+- หน้า page ต้อง `header('Location: ' . $base_path . '/login.php'); exit();` — ห้ามลืม `exit()`
 
 ---
 
@@ -217,11 +218,11 @@ https://llw.krusuched.com/attendance_system/dashboard.php
 https://llw.krusuched.com/chromebook/index.php
 ```
 
-**ห้ามใช้ base path prefix** เช่น `/llw/` ใน links — URL ทุกตัวเริ่มจาก `/` โดยตรง
+**ห้ามใช้ absolute paths ที่เริ่มด้วย / ตรงๆ** — ให้ใช้ `$base_path` นำหน้าเสมอ
 
 ใน `components/sidebar.php`:
 ```php
-$base_path = '';  // ← ว่างเปล่า ห้ามใส่ /llw
+$base_path = '';  // ← คำนวณอัตโนมัติใน config.php
 ```
 
 ---
@@ -353,9 +354,9 @@ session_start();
 require_once __DIR__ . '/../config.php';
 
 // Auth guard
-if (!isset($_SESSION['llw_role'])) { header('Location: /login.php'); exit(); }
+if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit(); }
 // Role guard (ถ้าจำเป็น)
-// if (!in_array($_SESSION['llw_role'], ['super_admin','wfh_admin'])) { header('Location: /login.php'); exit(); }
+// if (!in_array($_SESSION['llw_role'], ['super_admin','wfh_admin'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 
 // Data fetching (prepared statements)
 $stmt = $conn->prepare("SELECT * FROM table WHERE id = ?");

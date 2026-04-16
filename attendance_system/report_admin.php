@@ -8,7 +8,7 @@ checkLogin();
 
 // Only admin roles
 if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
-    header('Location: /login.php'); exit();
+    header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
 
 $pageTitle    = 'รายงานผู้บริหาร';

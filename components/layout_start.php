@@ -7,7 +7,7 @@ require_once 'sidebar.php';
 
 // Breadcrumb data
 $breadcrumbs = [];
-$breadcrumbs[] = ['label' => 'LLW', 'url' => '/index.php', 'icon' => 'bi-house-fill'];
+$breadcrumbs[] = ['label' => 'LLW', 'url' => $base_path . '/index.php', 'icon' => 'bi-house-fill'];
 $systemLabels = [
     'attendance' => 'เช็คชื่อนักเ���ียน',
     'chromebook' => 'Chromebook',
@@ -27,9 +27,9 @@ if (isset($pageTitle)) {
     .mesh-bg {
         background-color: #f8fafc;
         background-image:
-            radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.03) 0, transparent 50%),
-            radial-gradient(at 50% 0%, rgba(99, 102, 241, 0.03) 0, transparent 50%),
-            radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.03) 0, transparent 50%);
+            radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.04) 0, transparent 50%),
+            radial-gradient(at 50% 0%, rgba(99, 102, 241, 0.04) 0, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.04) 0, transparent 50%);
     }
     .glass-header {
         background: rgba(255, 255, 255, 0.7);
@@ -57,7 +57,7 @@ if (isset($pageTitle)) {
                             <i class="bi bi-chevron-right text-[8px] text-slate-300 flex-shrink-0"></i>
                         <?php endif; ?>
                         <?php if (isset($bc['url']) && $i < count($breadcrumbs) - 1): ?>
-                            <a href="<?= $bc['url'] ?>" class="hover:text-blue-500 transition-colors flex items-center gap-1 truncate">
+                            <a href="<?= $bc['url'] ?>" class="hover:text-indigo-600 transition-colors flex items-center gap-1 truncate">
                                 <?php if (isset($bc['icon'])): ?><i class="bi <?= $bc['icon'] ?> text-xs"></i><?php endif; ?>
                                 <?= htmlspecialchars($bc['label']) ?>
                             </a>
@@ -72,14 +72,14 @@ if (isset($pageTitle)) {
 
         <div class="flex items-center gap-2 sm:gap-4 lg:gap-6 flex-shrink-0">
             <!-- Calendar Widget -->
-            <div class="hidden lg:flex items-center gap-3 px-4 sm:px-5 py-2 sm:py-2.5 bg-white/50 rounded-xl sm:rounded-2xl border border-slate-200/50 text-slate-500 text-[11px] sm:text-xs font-bold transition-all hover:bg-white hover:shadow-lg hover:shadow-slate-100/50 hover:-translate-y-0.5">
-                <i class="bi bi-calendar3 text-blue-500"></i>
+            <div class="hidden lg:flex items-center gap-3 px-4 sm:px-5 py-2 sm:py-2.5 bg-white/50 rounded-xl sm:rounded-2xl border border-slate-200/50 text-slate-500 text-[11px] sm:text-xs font-bold transition-all hover:bg-white hover:shadow-xl hover:shadow-indigo-100/40 hover:-translate-y-0.5">
+                <i class="bi bi-calendar3 text-indigo-500"></i>
                 <span><?= date('D, d M Y') ?></span>
             </div>
 
             <!-- Quick Tools -->
             <div class="flex items-center gap-1 sm:gap-2">
-                <button class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg sm:rounded-xl transition-all border border-transparent hover:border-blue-100 relative">
+                <button class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg sm:rounded-xl transition-all border border-transparent hover:border-indigo-100 relative">
                     <i class="bi bi-bell text-lg sm:text-xl"></i>
                     <span class="absolute top-2 right-2 sm:top-3 sm:right-3 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
                     <span class="absolute top-2 right-2 sm:top-3 sm:right-3 w-2 h-2 bg-rose-500 rounded-full"></span>
@@ -93,7 +93,7 @@ if (isset($pageTitle)) {
 
             <!-- Profile Thumbnail -->
             <div class="hidden sm:flex items-center gap-3">
-                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-sm sm:text-md font-black shadow-lg shadow-blue-200/50">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center text-white text-sm sm:text-md font-black shadow-lg shadow-indigo-200/50">
                     <?= mb_substr($_SESSION['firstname'] ?? 'U', 0, 1) ?>
                 </div>
             </div>

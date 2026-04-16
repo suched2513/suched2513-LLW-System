@@ -1,7 +1,7 @@
-<?php
-session_start();
+require_once __DIR__ . '/../config.php';
+
 if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'cb_admin'])) {
-    header('Location: /login.php?redirect=/chromebook/index.php'); exit();
+    header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
 $pageTitle = 'จัดการ Chromebook';
 $pageSubtitle = 'ระบบยืม-คืนและตรวจสอบสภาพอุปกรณ์';

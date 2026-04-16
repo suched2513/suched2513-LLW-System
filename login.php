@@ -129,19 +129,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 function _redirect_by_role(string $role): void {
+    global $base_path;
+    
     if (!empty($_SESSION['login_redirect'])) {
         $rd = $_SESSION['login_redirect'];
         unset($_SESSION['login_redirect']);
+        
+        // Ensure redirect target includes base_path if it's missing
+        if (str_starts_with($rd, '/') && $base_path !== '' && !str_starts_with($rd, $base_path)) {
+            $rd = $base_path . $rd;
+        }
+        
         header('Location: ' . $rd); exit();
     }
+    
     $map = [
-        'super_admin' => 'central_dashboard.php',
-        'wfh_admin'   => 'admin/dashboard.php',
-        'wfh_staff'   => 'user/dashboard.php',
-        'cb_admin'    => 'chromebook/index.php',
-        'att_teacher' => 'attendance_system/dashboard.php',
+        'super_admin' => '/central_dashboard.php',
+        'wfh_admin'   => '/admin/dashboard.php',
+        'wfh_staff'   => '/user/dashboard.php',
+        'cb_admin'    => '/chromebook/index.php',
+        'att_teacher' => '/attendance_system/dashboard.php',
     ];
-    header('Location: ' . ($map[$role] ?? 'index.php')); exit();
+    
+    $target = $map[$role] ?? '/index.php';
+    header('Location: ' . $base_path . $target); exit();
 }
 ?>
 <!DOCTYPE html>

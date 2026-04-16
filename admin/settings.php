@@ -2,6 +2,7 @@
 session_start();
 require_once '../config.php';
 
+// Auth guard
 if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
     header("Location: ../login.php"); exit();
 }
@@ -9,136 +10,232 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['regular_time_in'])) {
-        // ตั้งค่าเวลา
         $time_in   = $_POST['regular_time_in'];
         $time_late = $_POST['late_time'];
         $conn->query("UPDATE wfh_system_settings SET regular_time_in='$time_in', late_time='$time_late' WHERE setting_id=1");
-        $msg = '<div class="alert alert-success"><i class="bi bi-check-circle-fill me-1"></i>บันทึกการตั้งค่าเรียบร้อย</div>';
+        $msg = 'บันทึกการตั้งค่าเวลาเรียบร้อย';
     } elseif (isset($_POST['boss_name'])) {
-        // ชื่อ ผอ.
         $bossName = trim($_POST['boss_name']);
         $stmt = $conn->prepare("UPDATE wfh_system_settings SET boss_name = ? WHERE setting_id = 1");
         $stmt->bind_param('s', $bossName);
         $stmt->execute();
-        $msg = '<div class="alert alert-success"><i class="bi bi-person-fill me-1"></i>บันทึกชื่อผู้อำนวยการเรียบร้อย</div>';
+        $msg = 'บันทึกชื่อผู้อำนวยการเรียบร้อย';
     } elseif (isset($_POST['boss_pin'])) {
-        // ตั้ง PIN ผอ.
         $pin = trim($_POST['boss_pin']);
         if (strlen($pin) >= 4 && strlen($pin) <= 6 && ctype_digit($pin)) {
             $hashed = password_hash($pin, PASSWORD_BCRYPT);
             $stmt = $conn->prepare("UPDATE wfh_system_settings SET boss_pin = ? WHERE setting_id = 1");
             $stmt->bind_param('s', $hashed);
             $stmt->execute();
-            $msg = '<div class="alert alert-success"><i class="bi bi-shield-check-fill me-1"></i>ตั้ง PIN เรียบร้อยแล้ว</div>';
+            $msg = 'ตั้ง PIN เรียบร้อยแล้ว';
         } else {
-            $msg = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>PIN ต้องเป็นตัวเลข 4-6 หลักเท่านั้น</div>';
+            $msg = 'error:PIN ต้องเป็นตัวเลข 4-6 หลักเท่านั้น';
         }
     }
 }
 
 $settings = $conn->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch_assoc();
 $hasPIN = !empty($settings['boss_pin']);
+
+// Layout variables
+$pageTitle = 'ตั้งค่าระบบ';
+$pageSubtitle = 'กำหนดค่าพื้นฐานและระบบความปลอดภัย';
+$activeSystem = 'wfh';
+
+require_once __DIR__ . '/../components/layout_start.php';
 ?>
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ตั้งค่าระบบ - WFH:LLW</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <style>
-        * { font-family: 'Sarabun', sans-serif; }
-        body { background: #f0f4f8; }
-        .sidebar { width:230px; min-height:100vh; position:fixed; top:0; left:0; background:linear-gradient(180deg,#198754,#0d6e44); z-index:100; box-shadow:2px 0 10px rgba(0,0,0,0.1); }
-        .sidebar-brand { padding:20px 16px 16px; border-bottom:1px solid rgba(255,255,255,0.15); }
-        .sidebar-brand h5 { color:#fff; font-weight:700; margin:0; }
-        .sidebar-nav a { display:flex; align-items:center; gap:10px; color:rgba(255,255,255,0.8); padding:11px 20px; text-decoration:none; font-size:.92rem; transition:all .2s; }
-        .sidebar-nav a:hover, .sidebar-nav a.active { background:rgba(255,255,255,0.15); color:#fff; }
-        .sidebar-nav a i { font-size:1.1rem; width:20px; text-align:center; }
-        .main-content { margin-left:230px; padding:24px; }
-        .card-custom { border:none; border-radius:1rem; box-shadow:0 4px 15px rgba(0,0,0,0.07); }
-        @media(max-width:768px) { .sidebar{position:relative;width:100%;min-height:auto;} .main-content{margin-left:0;} }
-    </style>
-</head>
-<body>
-<div class="sidebar">
-    <div class="sidebar-brand"><h5><i class="bi bi-shield-check me-2"></i>WFH:LLW</h5><small class="text-white-50">ผู้ดูแลระบบ</small></div>
-    <nav class="sidebar-nav mt-2">
-        <a href="dashboard.php"><i class="bi bi-speedometer2"></i> ภาพรวม</a>
-        <a href="manage_users.php"><i class="bi bi-people-fill"></i> จัดการบุคลากร</a>
-        <a href="reports.php"><i class="bi bi-file-earmark-bar-graph"></i> รายงาน</a>
-        <a href="settings.php" class="active"><i class="bi bi-gear-fill"></i> ตั้งค่าระบบ</a>
-        <a href="../logout.php" style="border-top:1px solid rgba(255,255,255,0.1)"><i class="bi bi-box-arrow-right"></i> ออกจากระบบ</a>
-    </nav>
+
+<!-- Alert Handler -->
+<?php if ($msg): ?>
+<script>
+    Swal.fire({
+        icon: '<?= strpos($msg, "error:") === 0 ? "error" : "success" ?>',
+        title: '<?= strpos($msg, "error:") === 0 ? "ข้อผิดพลาด" : "สำเร็จ" ?>',
+        text: '<?= str_replace("error:", "", $msg) ?>',
+        confirmButtonColor: '#4f46e5'
+    });
+</script>
+<?php endif; ?>
+
+<div class="max-w-4xl mx-auto space-y-8">
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Working Time -->
+        <div class="bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-xl shadow-indigo-100/40 p-8 border border-white/60">
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-clock-fill"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-black text-slate-800">เวลาทำงาน</h3>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Time Settings</p>
+                </div>
+            </div>
+            
+            <form method="POST" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-black text-slate-700 mb-2">เวลาเริ่มงานปกติ</label>
+                    <input type="time" name="regular_time_in" value="<?= $settings['regular_time_in'] ?>" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xlt px-5 py-4 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold" required>
+                    <p class="mt-2 text-[10px] text-slate-400 font-bold uppercase tracking-wide">Standard Check-in Time</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-black text-slate-700 mb-2">เวลาที่เริ่มนับว่า "มาสาย"</label>
+                    <input type="time" name="late_time" value="<?= $settings['late_time'] ?>" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold" required>
+                    <p class="mt-2 text-[10px] text-slate-400 font-bold uppercase tracking-wide">Mark as "Late" after this time</p>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-200 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                    <i class="bi bi-save-fill me-2"></i> บันทึกเวลา
+                </button>
+            </form>
+        </div>
+
+        <!-- Director Name -->
+        <div class="bg-indigo-600 rounded-[2.5rem] shadow-xl shadow-indigo-200/50 p-8 text-white relative overflow-hidden">
+            <div class="relative z-10">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 bg-white/20 backdrop-blur-lg text-white rounded-2xl flex items-center justify-center text-xl">
+                        <i class="bi bi-person-badge-fill"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black">ผู้อำนวยการ</h3>
+                        <p class="text-xs text-white/60 font-bold uppercase tracking-wider">Director Information</p>
+                    </div>
+                </div>
+
+                <form method="POST" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-black mb-2 opacity-80">ชื่อ-สกุล ผอ. (ใช้แสดงในเอกสาร)</label>
+                        <input type="text" name="boss_name" value="<?= htmlspecialchars($settings['boss_name'] ?? '') ?>" 
+                            placeholder="เช่น นาย สมศักดิ์์ ใจดี" 
+                            class="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-sm focus:bg-white focus:text-slate-800 outline-none transition-all font-black placeholder:text-white/40" required>
+                        <p class="mt-2 text-[10px] text-white/50 font-bold uppercase tracking-wide">Will be used in print-ready reports</p>
+                    </div>
+                    <button type="submit" class="w-full bg-white text-indigo-600 font-black py-4 rounded-2xl shadow-xl transition-all hover:bg-slate-50 hover:scale-[1.02] active:scale-[0.98]">
+                        <i class="bi bi-check2-circle me-2"></i> อัปเดตข้อมูล
+                    </button>
+                </form>
+            </div>
+            <!-- Decorative circle -->
+            <div class="absolute -right-20 -bottom-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Security PIN -->
+        <div class="bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-xl shadow-indigo-100/40 p-8 border border-white/60 flex flex-col">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 <?= $hasPIN ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600' ?> rounded-2xl flex items-center justify-center text-xl transition-colors">
+                    <i class="bi <?= $hasPIN ? 'bi-shield-check' : 'bi-shield-exclamation' ?>"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-black text-slate-800">รหัสความปลอดภัย (PIN)</h3>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Approval Verification</p>
+                </div>
+            </div>
+
+            <div class="flex-1">
+                <?php if ($hasPIN): ?>
+                <div class="bg-emerald-50 text-emerald-700 px-6 py-4 rounded-2xl text-[13px] font-bold border border-emerald-100 mb-6 flex items-center gap-3">
+                    <i class="bi bi-check-circle-fill text-lg"></i>
+                    <span>ตั้งค่า PIN เรียบร้อย ผอ. ต้องใช้ PIN ในการอนุมัติคำขอ</span>
+                </div>
+                <?php else: ?>
+                <div class="bg-amber-50 text-amber-700 px-6 py-4 rounded-2xl text-[13px] font-bold border border-amber-100 mb-6 flex items-center gap-3">
+                    <i class="bi bi-exclamation-triangle-fill text-lg"></i>
+                    <span>ยังไม่ได้ตั้ง PIN ระบบจะอนุมัติทันทีโดยไม่ถามรหัส</span>
+                </div>
+                <?php endif; ?>
+
+                <form method="POST" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-black text-slate-700 mb-2"><?= $hasPIN ? 'เปลี่ยน PIN ใหม่' : 'ตั้ง PIN ใหม่' ?></label>
+                        <input type="password" name="boss_pin" maxlength="6" 
+                            placeholder="ตัวเลข 4-6 หลัก" 
+                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold tracking-widest" required>
+                    </div>
+                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-2xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]">
+                        <i class="bi bi-lock-fill me-2"></i> <?= $hasPIN ? 'ยืนยันการเปลี่ยน PIN' : 'สร้าง PIN ใหม่' ?>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- System Info -->
+        <div class="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-200/50">
+            <div class="flex items-center gap-4 mb-8">
+                <div class="w-12 h-12 bg-white text-slate-400 rounded-2xl flex items-center justify-center text-xl border border-slate-100">
+                    <i class="bi bi-info-circle-fill"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-black text-slate-800">ข้อมูลระบบ</h3>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">System Information</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <?php 
+                $info = [
+                    ['icon' => 'bi-cpu', 'label' => 'ชื่อระบบ', 'value' => 'WFH:LLW Attendance'],
+                    ['icon' => 'bi-building', 'label' => 'หน่วยงาน', 'value' => 'โรงเรียนละลมวิทยา'],
+                    ['icon' => 'bi-git', 'label' => 'เวอร์ชั่นคงที่', 'value' => 'v1.2-indigo-unified'],
+                    ['icon' => 'bi-calendar-check', 'label' => 'วันที่ปัจจุบัน', 'value' => date('d/y/').(date('Y')+543)],
+                ];
+                foreach ($info as $item): 
+                ?>
+                <div class="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <i class="bi <?= $item['icon'] ?> text-indigo-500"></i>
+                        <span class="text-xs font-black text-slate-500 uppercase tracking-widest"><?= $item['label'] ?></span>
+                    </div>
+                    <span class="text-sm font-black text-slate-800 tracking-tight"><?= $item['value'] ?></span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Path Diagnostic (Admin Only Help) -->
+    <div class="bg-indigo-50/50 rounded-[2.5rem] p-8 border border-indigo-100 mt-8">
+        <div class="flex items-center gap-4 mb-6">
+            <div class="w-12 h-12 bg-white text-indigo-600 rounded-2xl flex items-center justify-center text-xl shadow-sm">
+                <i class="bi bi-terminal-fill"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-black text-indigo-900">Environment Diagnostics</h3>
+                <p class="text-xs text-indigo-400 font-bold uppercase tracking-wider">Automated Path Tracking</p>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="space-y-1">
+                <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest ml-1">Detected Base Path</p>
+                <div class="bg-white px-4 py-3 rounded-xl border border-indigo-100 font-mono text-xs font-bold text-indigo-600">
+                    <?= $base_path ?: '(Root /)' ?>
+                </div>
+            </div>
+            <div class="space-y-1">
+                <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest ml-1">Current Request URI</p>
+                <div class="bg-white px-4 py-3 rounded-xl border border-indigo-100 font-mono text-xs font-bold text-slate-500">
+                    <?= htmlspecialchars($_SERVER['REQUEST_URI']) ?>
+                </div>
+            </div>
+            <div class="space-y-1">
+                <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest ml-1">Document Root</p>
+                <div class="bg-white px-4 py-3 rounded-xl border border-indigo-100 font-mono text-xs font-bold text-slate-500 overflow-hidden text-ellipsis">
+                    <?= htmlspecialchars($_SERVER['DOCUMENT_ROOT']) ?>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-6 flex items-start gap-3 bg-white/60 p-4 rounded-2xl border border-indigo-100">
+            <i class="bi bi-lightbulb-fill text-indigo-500"></i>
+            <p class="text-[11px] font-bold text-indigo-800/80 leading-relaxed uppercase tracking-tight">
+                PRO-TIP: ระบบตรวจสอบเส้นทาง (Path) โดยการเปรียบเทียบ Directory หลักกับ Document Root อัตโนมัติ ทำให้ลิงก์ใน Sidebar และ Breadcrumbs ทำงานถูกต้องเสมอไม่ว่าจะย้ายโฟลเดอร์โปรเจกต์ไปที่ใด
+            </p>
+        </div>
+    </div>
 </div>
-<div class="main-content">
-    <h4 class="fw-bold mb-4"><i class="bi bi-gear-fill text-success me-2"></i>ตั้งค่าระบบ</h4>
-    <?= $msg ?>
 
-    <div class="card card-custom p-4" style="max-width:500px;">
-        <div class="fw-semibold mb-3"><i class="bi bi-clock-fill text-success me-1"></i> กำหนดเวลาทำงาน</div>
-        <form method="POST">
-            <div class="mb-3">
-                <label class="form-label fw-semibold">เวลาเริ่มงานปกติ</label>
-                <input type="time" class="form-control" name="regular_time_in" value="<?= $settings['regular_time_in'] ?>" required>
-                <div class="form-text">เวลามาตรฐานที่บุคลากรควรเข้างาน</div>
-            </div>
-            <div class="mb-4">
-                <label class="form-label fw-semibold">เวลาที่เริ่มนับว่า "มาสาย"</label>
-                <input type="time" class="form-control" name="late_time" value="<?= $settings['late_time'] ?>" required>
-                <div class="form-text">หากลงเวลาหลังจากเวลานี้ จะถูกบันทึกว่า "มาสาย"</div>
-            </div>
-            <button type="submit" class="btn btn-success px-4"><i class="bi bi-save-fill me-1"></i>บันทึกการตั้งค่า</button>
-        </form>
-    </div>
-
-    <!-- ชื่อ ผอ. -->
-    <div class="card card-custom p-4 mt-3" style="max-width:500px;">
-        <div class="fw-semibold mb-3"><i class="bi bi-person-badge-fill text-primary me-1"></i> ชื่อผู้อำนวยการโรงเรียน</div>
-        <form method="POST">
-            <div class="mb-3">
-                <label class="form-label fw-semibold">ชื่อ-สกุล ผอ. (ใช้แสดงในเอกสารพิมพ์)</label>
-                <input type="text" class="form-control" name="boss_name"
-                    value="<?= htmlspecialchars($settings['boss_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-                    placeholder="เช่น นาย สมศักดิ์์ ใจดี" required>
-                <div class="form-text">ชื่อนี้จะแสดงในบันทึกข้อความ ช่องลงชื่อ ผอ.</div>
-            </div>
-            <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save-fill me-1"></i>บันทึกชื่อ ผอ.</button>
-        </form>
-    </div>
-
-    <!-- PIN ผอ. -->
-    <div class="card card-custom p-4 mt-3" style="max-width:500px;">
-        <div class="fw-semibold mb-3"><i class="bi bi-shield-lock-fill text-danger me-1"></i> PIN สำหรับผู้อำนวยการอนุมัติคำขอออกนอกบริเวณ</div>
-        <?php if ($hasPIN): ?>
-        <div class="alert alert-success py-2 small"><i class="bi bi-shield-check-fill me-1"></i>ตั้ง PIN แล้ว — ผอ.ต้องกรอก PIN ทุกครั้งที่อนุมัติ</div>
-        <?php else: ?>
-        <div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle-fill me-1"></i>ยังไม่ได้ตั้ง PIN — ระบบจะอนุมัติเลยโดยไม่ต้องใช้ PIN</div>
-        <?php endif; ?>
-        <form method="POST">
-            <div class="mb-3">
-                <label class="form-label fw-semibold"><?= $hasPIN ? 'เปลี่ยน PIN ใหม่' : 'ตั้ง PIN ใหม่' ?></label>
-                <input type="password" class="form-control" name="boss_pin" maxlength="6"
-                    placeholder="กรอกตัวเลข 4-6 หลัก" required autocomplete="new-password">
-                <div class="form-text">ใช้ตัวเลขเท่านั้น 4-6 หลัก — เก็บแบบ Hashed เดิมจะผู้ใดดูไม่ออก</div>
-            </div>
-            <button type="submit" class="btn btn-danger px-4"><i class="bi bi-shield-lock-fill me-1"></i><?= $hasPIN ? 'เปลี่ยน PIN' : 'บันทึก PIN' ?></button>
-        </form>
-    </div>
-
-    <!-- ข้อมูลระบบ -->
-    <div class="card card-custom p-4 mt-3" style="max-width:500px;">
-        <div class="fw-semibold mb-3"><i class="bi bi-info-circle-fill text-primary me-1"></i> ข้อมูลระบบ</div>
-        <table class="table table-sm">
-            <tr><td class="text-muted">ชื่อระบบ</td><td>WFH:LLW ระบบลงเวลาปฏิบัติงาน</td></tr>
-            <tr><td class="text-muted">โรงเรียน</td><td>โรงเรียนละลมวิทยา</td></tr>
-            <tr><td class="text-muted">เวอร์ชั่น</td><td>1.0.0</td></tr>
-            <tr><td class="text-muted">วันที่ระบบ</td><td><?= date('d/m/') . (date('Y')+543) ?></td></tr>
-        </table>
-    </div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<?php require_once __DIR__ . '/../components/layout_end.php'; ?>

@@ -27,18 +27,26 @@
     <style>
         body { font-family: 'Prompt', sans-serif; }
         .sidebar-item-active { 
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+            background: linear-gradient(135deg, #4f46e5, #4338ca); 
             color: white;
-            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
+            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.3);
         }
-        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
-        .transition-all { transition-duration: 0.3s; }
+        .glass { 
+            background: rgba(255, 255, 255, 0.7); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        .premium-shadow {
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+        }
+        .transition-all { transition-duration: 0.4s; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
         
         /* Custom scrollbar */
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
 
         @media print {
             .no-print { display: none !important; }

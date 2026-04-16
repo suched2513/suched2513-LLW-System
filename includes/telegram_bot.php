@@ -26,4 +26,21 @@ function sendTelegramMessage(string $token, string $chatId, string $message): bo
     $result = @file_get_contents($url, false, $ctx);
     return $result !== false;
 }
+
+class TelegramBot
+{
+    private $token;
+    private $chatId;
+
+    public function __construct(string $token, string $chatId)
+    {
+        $this->token  = $token;
+        $this->chatId = $chatId;
+    }
+
+    public function sendMessage(string $message): bool
+    {
+        return sendTelegramMessage($this->token, $this->chatId, $message);
+    }
+}
 ?>

@@ -12,7 +12,7 @@ $fullname   = $_SESSION['fullname'] ?? '';
 $firstname  = $_SESSION['firstname'] ?? 'U';
 
 // ถ้า logged in → ดึง Stats (prepared statements)
-$stats = ['wfh_today' => 0, 'cb_borrowed' => 0, 'att_today' => 0, 'leave_pending' => 0];
+$stats = ['wfh_today' => 0, 'cb_borrowed' => 0, 'att_today' => 0, 'leave_pending' => 0, 'assembly_today' => 0];
 if ($isLoggedIn) {
     try {
         $pdo = getPdo();
@@ -29,6 +29,13 @@ if ($isLoggedIn) {
         $stmt = $pdo->prepare("SELECT COUNT(DISTINCT student_id) FROM att_attendance WHERE date = ?");
         $stmt->execute([$today]);
         $stats['att_today'] = (int)$stmt->fetchColumn();
+
+        // Assembly: เช็คชื่อเข้าแถววันนี้
+        try {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM assembly_attendance WHERE date = ?");
+            $stmt->execute([$today]);
+            $stats['assembly_today'] = (int)$stmt->fetchColumn();
+        } catch (Exception $e) { $stats['assembly_today'] = 0; }
 
         // leave_requests อาจยังไม่มีตาราง
         try {
@@ -49,18 +56,27 @@ if ($isLoggedIn) {
             $quickAccess = [
                 ['url' => 'central_dashboard.php', 'icon' => 'bi-shield-lock-fill', 'label' => 'Admin Panel', 'color' => 'blue'],
                 ['url' => 'admin/dashboard.php', 'icon' => 'bi-speedometer2', 'label' => 'WFH Admin', 'color' => 'emerald'],
+                ['url' => 'supervision.php', 'icon' => 'bi-mortarboard-fill', 'label' => 'นิเทศการสอน', 'color' => 'indigo'],
+                ['url' => 'teacher_leave/index.php', 'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์', 'color' => 'rose'],
+                ['url' => 'plc_system/dashboard.php', 'icon' => 'bi-journal-richtext', 'label' => 'PLC Online', 'color' => 'violet'],
             ];
             break;
         case 'wfh_admin':
             $quickAccess = [
                 ['url' => 'admin/dashboard.php', 'icon' => 'bi-speedometer2', 'label' => 'WFH Admin', 'color' => 'emerald'],
                 ['url' => 'admin/reports.php', 'icon' => 'bi-bar-chart-fill', 'label' => 'รายงาน', 'color' => 'indigo'],
+                ['url' => 'supervision.php', 'icon' => 'bi-mortarboard-fill', 'label' => 'นิเทศการสอน', 'color' => 'rose'],
+                ['url' => 'teacher_leave/index.php', 'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์', 'color' => 'indigo'],
+                ['url' => 'plc_system/dashboard.php', 'icon' => 'bi-journal-richtext', 'label' => 'PLC Online', 'color' => 'violet'],
             ];
             break;
         case 'att_teacher':
             $quickAccess = [
-                ['url' => 'attendance_system/dashboard.php', 'icon' => 'bi-person-check-fill', 'label' => 'เช็คชื่อ', 'color' => 'indigo'],
-                ['url' => 'attendance_system/report.php', 'icon' => 'bi-bar-chart-fill', 'label' => 'รายงาน', 'color' => 'blue'],
+                ['url' => 'assembly/dashboard.php',          'icon' => 'bi-people-fill',       'label' => 'เช็คชื่อเข้าแถว', 'color' => 'amber'],
+                ['url' => 'attendance_system/dashboard.php', 'icon' => 'bi-person-check-fill', 'label' => 'เช็คชื่อในคาบ',  'color' => 'indigo'],
+                ['url' => 'supervision.php',                 'icon' => 'bi-mortarboard-fill',  'label' => 'รายงานนิเทศ',    'color' => 'rose'],
+                ['url' => 'teacher_leave/index.php',         'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์',  'color' => 'amber'],
+                ['url' => 'plc_system/dashboard.php',        'icon' => 'bi-journal-richtext',  'label' => 'PLC Online',    'color' => 'violet'],
             ];
             break;
         case 'cb_admin':
@@ -282,10 +298,10 @@ if ($isLoggedIn) {
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <?php
         $statItems = [
-            ['value' => $stats['wfh_today'],    'label' => 'เข้างานวันนี้', 'icon' => 'bi-geo-alt-fill',     'from' => 'emerald-500', 'to' => 'teal-600',    'shadow' => 'emerald'],
-            ['value' => $stats['cb_borrowed'],   'label' => 'CB ยืมอยู่',   'icon' => 'bi-laptop',           'from' => 'indigo-500',  'to' => 'purple-600',   'shadow' => 'indigo'],
-            ['value' => $stats['att_today'],     'label' => 'เช็คชื่อวันนี้', 'icon' => 'bi-person-check-fill', 'from' => 'blue-500',    'to' => 'cyan-600',     'shadow' => 'blue'],
-            ['value' => $stats['leave_pending'], 'label' => 'รออนุมัติ',    'icon' => 'bi-hourglass-split',   'from' => 'amber-500',   'to' => 'orange-600',   'shadow' => 'amber'],
+            ['value' => $stats['wfh_today'],       'label' => 'เข้างานวันนี้',   'icon' => 'bi-geo-alt-fill',     'from' => 'emerald-500', 'to' => 'teal-600',    'shadow' => 'emerald'],
+            ['value' => $stats['cb_borrowed'],      'label' => 'CB ยืมอยู่',     'icon' => 'bi-laptop',           'from' => 'indigo-500',  'to' => 'purple-600',  'shadow' => 'indigo'],
+            ['value' => $stats['assembly_today'],   'label' => 'เข้าแถววันนี้',  'icon' => 'bi-people-fill',      'from' => 'amber-500',   'to' => 'orange-500',  'shadow' => 'amber'],
+            ['value' => $stats['leave_pending'],    'label' => 'รออนุมัติ',      'icon' => 'bi-hourglass-split',  'from' => 'rose-500',    'to' => 'pink-600',    'shadow' => 'rose'],
         ];
         foreach ($statItems as $i => $s):
         ?>
@@ -309,49 +325,89 @@ if ($isLoggedIn) {
         <p class="text-xs sm:text-sm text-slate-400 font-bold mt-2 uppercase tracking-widest">All Management Modules</p>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
 
         <?php
         $modules = [
             [
-                'url' => 'attendance_system/dashboard.php',
-                'icon' => 'bi-person-check-fill',
-                'bgIcon' => 'bi-person-check',
-                'title' => 'เช็คชื่อนักเรียน',
-                'desc' => 'บันทึกเวลาเรียนรายวิชา ขาด ลา มา สาย แบบ Real-time',
-                'color' => 'blue',
+                'url'      => 'assembly/dashboard.php',
+                'icon'     => 'bi-people-fill',
+                'bgIcon'   => 'bi-people',
+                'title'    => 'เช็คชื่อเข้าแถว',
+                'desc'     => 'บันทึกการเข้าแถวประจำวัน ตรวจเครื่องแต่งกาย พร้อมแจ้งเตือน Telegram',
+                'color'    => 'amber',
+                'gradient' => 'from-amber-500 to-orange-500',
+                'delay'    => 0,
+            ],
+            [
+                'url'      => 'attendance_system/dashboard.php',
+                'icon'     => 'bi-person-check-fill',
+                'bgIcon'   => 'bi-person-check',
+                'title'    => 'เช็คชื่อในคาบเรียน',
+                'desc'     => 'บันทึกเวลาเรียนรายวิชา ขาด ลา มา สาย แบบ Real-time',
+                'color'    => 'blue',
                 'gradient' => 'from-blue-500 to-cyan-500',
-                'delay' => 0,
+                'delay'    => 0.1,
             ],
             [
-                'url' => 'chromebook/index.php',
-                'icon' => 'bi-laptop',
-                'bgIcon' => 'bi-laptop',
-                'title' => 'จัดการ Chromebook',
-                'desc' => 'ระบบยืม-คืนอุปกรณ์ดิจิทัล ตรวจสอบสถานะและคลังพัสดุ',
-                'color' => 'indigo',
+                'url'      => 'chromebook/index.php',
+                'icon'     => 'bi-laptop',
+                'bgIcon'   => 'bi-laptop',
+                'title'    => 'จัดการ Chromebook',
+                'desc'     => 'ระบบยืม-คืนอุปกรณ์ดิจิทัล ตรวจสอบสถานะและคลังพัสดุ',
+                'color'    => 'indigo',
                 'gradient' => 'from-indigo-500 to-purple-500',
-                'delay' => 0.1,
+                'delay'    => 0.2,
             ],
             [
-                'url' => 'index_wfh.php',
-                'icon' => 'bi-person-badge-fill',
-                'bgIcon' => 'bi-geo-alt',
-                'title' => 'ลงเวลาบุคลากร',
-                'desc' => 'ระบบลงเวลาเข้า-ออกงานด้วย GPS ยืนยันตัวตนผ่านพิกัดโรงเรียน',
-                'color' => 'emerald',
+                'url'      => 'index_wfh.php',
+                'icon'     => 'bi-person-badge-fill',
+                'bgIcon'   => 'bi-geo-alt',
+                'title'    => 'ลงเวลาบุคลากร',
+                'desc'     => 'ระบบลงเวลาเข้า-ออกงานด้วย GPS ยืนยันตัวตนผ่านพิกัดโรงเรียน',
+                'color'    => 'emerald',
                 'gradient' => 'from-emerald-500 to-teal-500',
-                'delay' => 0.2,
+                'delay'    => 0.3,
             ],
             [
-                'url' => 'leave_system.php',
-                'icon' => 'bi-door-open-fill',
-                'bgIcon' => 'bi-door-open',
-                'title' => 'ขออนุญาตออกนอก',
-                'desc' => 'ระบบยื่นคำขอลาออนไลน์ พร้อมแจ้งเตือนผู้บริหารผ่าน Telegram',
-                'color' => 'rose',
+                'url'      => 'leave_system.php',
+                'icon'     => 'bi-door-open-fill',
+                'bgIcon'   => 'bi-door-open',
+                'title'    => 'ขออนุญาตออกนอก',
+                'desc'     => 'ระบบยื่นคำขอลาออนไลน์ พร้อมแจ้งเตือนผู้บริหารผ่าน Telegram',
+                'color'    => 'rose',
                 'gradient' => 'from-rose-500 to-pink-500',
-                'delay' => 0.3,
+                'delay'    => 0.4,
+            ],
+            [
+                'url'      => 'supervision.php',
+                'icon'     => 'bi-mortarboard-fill',
+                'bgIcon'   => 'bi-mortarboard',
+                'title'    => 'นิเทศการสอน',
+                'desc'     => 'ระบบนิเทศการจัดการเรียนรู้เชิงรุก ติดตามสมรรถนะครูรายบุคคล',
+                'color'    => 'indigo',
+                'gradient' => 'from-indigo-600 to-blue-600',
+                'delay'    => 0.5,
+            ],
+            [
+                'url'      => 'teacher_leave/index.php',
+                'icon'     => 'bi-calendar-check-fill',
+                'bgIcon'   => 'bi-file-earmark-text',
+                'title'    => 'ใบลาออนไลน์',
+                'desc'     => 'ระบบยื่นใบลาป่วย กิจ พักผ่อน ตามระเบียบราชการ พร้อมสถิติสะสม',
+                'color'    => 'rose',
+                'gradient' => 'from-rose-600 to-red-600',
+                'delay'    => 0.6,
+            ],
+            [
+                'url'      => 'plc_system/dashboard.php',
+                'icon'     => 'bi-journal-richtext',
+                'bgIcon'   => 'bi-journal-bookmark',
+                'title'    => 'ระบบ PLC ออนไลน์',
+                'desc'     => 'ชุมชนแห่งการเรียนรู้ทางวิชาชีพ บันทึกกิจกรรมตามกระบวนการ PDCA',
+                'color'    => 'violet',
+                'gradient' => 'from-violet-600 to-purple-600',
+                'delay'    => 0.7,
             ],
         ];
 
