@@ -14,6 +14,9 @@ $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY 
 // -- Add single student --
 if (($_POST['do'] ?? '') === 'add_student') {
     $sid = trim($_POST['student_id'] ?? '');
+    // Standardize to 5 digits
+    if (preg_match('/^\d+$/', $sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
+    
     $nm = trim($_POST['name'] ?? '');
     $cls = trim($_POST['classroom'] ?? '');
     if (!$sid || !$nm || !$cls) { $msg = 'กรุณากรอกข้อมูลให้ครบถ้วน'; $msgType = 'error'; } 
@@ -99,6 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_FILES['csvfile']) || isset
                 if (count($row) < 2) continue; // Need at least ID and Name
 
                 $sid = trim($row[0] ?? '');
+                // Standardize to 5 digits
+                if (preg_match('/^\d+$/', $sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
+                
                 $name = trim($row[1] ?? '');
                 $cls = trim($row[2] ?? '');
 

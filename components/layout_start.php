@@ -2,8 +2,8 @@
 /**
  * layout_start.php — Premium Layout Wrapper for LLW System
  */
-require_once 'header.php';
-require_once 'sidebar.php';
+require_once __DIR__ . '/header.php';
+require_once __DIR__ . '/sidebar.php';
 
 // Breadcrumb data
 $breadcrumbs = [];

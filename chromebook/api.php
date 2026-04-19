@@ -145,6 +145,8 @@ try {
         // ── MASTER DATA: Students ────────────────────────────
         case 'addStudent':
             $id    = trim($payload['student_id'] ?? '');
+            if (preg_match('/^\d+$/', $id)) $id = str_pad($id, 5, '0', STR_PAD_LEFT);
+            
             $name  = trim($payload['name']        ?? '');
             $cls   = trim($payload['class_name']  ?? '');
             if (!$id || !$name || !$cls) err('ข้อมูลไม่ครบ');
@@ -193,6 +195,8 @@ try {
                         $inserted++;
                     } elseif ($type === 'student') {
                         $id  = trim($row[0] ?? '');
+                        if (preg_match('/^\d+$/', $id)) $id = str_pad($id, 5, '0', STR_PAD_LEFT);
+                        
                         $name = trim($row[1] ?? '');
                         $cls = trim($row[2] ?? '');
                         if (!$id || !$name || !$cls) { $skipped++; continue; }
