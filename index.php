@@ -59,6 +59,7 @@ if ($isLoggedIn) {
                 ['url' => 'supervision.php', 'icon' => 'bi-mortarboard-fill', 'label' => 'นิเทศการสอน', 'color' => 'indigo'],
                 ['url' => 'teacher_leave/index.php', 'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์', 'color' => 'rose'],
                 ['url' => 'plc_system/dashboard.php', 'icon' => 'bi-journal-richtext', 'label' => 'PLC Online', 'color' => 'violet'],
+                ['url' => 'behavior/dashboard.php', 'icon' => 'bi-journal-text', 'label' => 'พฤติกรรม', 'color' => 'violet'],
             ];
             break;
         case 'wfh_admin':
@@ -68,6 +69,7 @@ if ($isLoggedIn) {
                 ['url' => 'supervision.php', 'icon' => 'bi-mortarboard-fill', 'label' => 'นิเทศการสอน', 'color' => 'rose'],
                 ['url' => 'teacher_leave/index.php', 'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์', 'color' => 'indigo'],
                 ['url' => 'plc_system/dashboard.php', 'icon' => 'bi-journal-richtext', 'label' => 'PLC Online', 'color' => 'violet'],
+                ['url' => 'behavior/dashboard.php', 'icon' => 'bi-journal-text', 'label' => 'พฤติกรรม', 'color' => 'violet'],
             ];
             break;
         case 'att_teacher':
@@ -77,6 +79,7 @@ if ($isLoggedIn) {
                 ['url' => 'supervision.php',                 'icon' => 'bi-mortarboard-fill',  'label' => 'รายงานนิเทศ',    'color' => 'rose'],
                 ['url' => 'teacher_leave/index.php',         'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์',  'color' => 'amber'],
                 ['url' => 'plc_system/dashboard.php',        'icon' => 'bi-journal-richtext',  'label' => 'PLC Online',    'color' => 'violet'],
+                ['url' => 'behavior/dashboard.php',        'icon' => 'bi-journal-text',      'label' => 'พฤติกรรม',       'color' => 'violet'],
             ];
             break;
         case 'cb_admin':
@@ -408,6 +411,16 @@ if ($isLoggedIn) {
                 'color'    => 'violet',
                 'gradient' => 'from-violet-600 to-purple-600',
                 'delay'    => 0.7,
+            ],
+            [
+                'url'      => 'behavior/dashboard.php',
+                'icon'     => 'bi-journal-text',
+                'bgIcon'   => 'bi-journal-bookmark-fill',
+                'title'    => 'บันทึกพฤติกรรม',
+                'desc'     => 'ระบบจัดการคะแนนความประพฤติ บันทึกความดี และพฤติกรรมด้านต่างๆ',
+                'color'    => 'violet',
+                'gradient' => 'from-violet-600 to-indigo-600',
+                'delay'    => 0.8,
             ],
         ];
 

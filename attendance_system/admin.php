@@ -1,11 +1,7 @@
 <?php
 require_once 'functions.php';
-checkLogin();
+checkAdmin();
 
-// Auth check
-if (!isset($_SESSION['llw_role']) || $_SESSION['llw_role'] !== 'super_admin') {
-    header('Location: dashboard.php'); exit();
-}
 
 $pageTitle = 'จัดการระบบ (Admin)';
 $pageSubtitle = 'จัดการรายชื่อครู รายวิชา และข้อมูลพื้นฐาน';

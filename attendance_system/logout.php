@@ -1,8 +1,11 @@
 <?php
+/**
+ * attendance_system/logout.php — Redirect to Central Logout
+ */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-session_destroy();
-header("Location: index.php");
+
+require_once __DIR__ . '/../config.php';
+header("Location: " . $base_path . "/logout.php");
 exit();
-?>

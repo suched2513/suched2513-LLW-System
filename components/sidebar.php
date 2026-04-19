@@ -16,6 +16,7 @@ if ($current_page === 'central_dashboard.php' || $current_page === 'index.php') 
 if ($current_dir === 'assembly') $activeSystem = 'assembly';
 if ($current_page === 'supervision.php') $activeSystem = 'supervision';
 if ($current_dir === 'teacher_leave')         $activeSystem = 'teacher_leave';
+if ($current_dir === 'behavior')              $activeSystem = 'behavior';
 
 // User context
 $userName = $_SESSION['firstname'] ?? ($_SESSION['teacher_name'] ?? 'User');
@@ -73,6 +74,12 @@ $subMenus = [
         ['icon' => 'bi-person-badge', 'label' => 'รายงานรายบุคคล', 'url' => $base_path . '/supervision.php?tab=individual'],
         ['icon' => 'bi-pie-chart',     'label' => 'รายงานภาพรวม', 'url' => $base_path . '/supervision.php?tab=summary', 'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'bi-person-gear',  'label' => 'ตั้งค่าข้อมูลครู', 'url' => $base_path . '/supervision.php?tab=settings', 'roles' => ['super_admin']],
+    ],
+    'behavior' => [
+        ['icon' => 'bi-pencil-square',  'label' => 'บันทึกพฤติกรรม',    'url' => $base_path . '/behavior/dashboard.php'],
+        ['icon' => 'bi-speedometer2',   'label' => 'Admin Dashboard',   'url' => $base_path . '/behavior/admin.php',   'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'bi-sliders',        'label' => 'จัดการระบบ',        'url' => $base_path . '/behavior/manage.php',  'roles' => ['super_admin']],
+        ['icon' => 'bi-mortarboard',    'label' => 'นักเรียนดูข้อมูล',  'url' => $base_path . '/behavior/student_view.php'],
     ],
 ];
 ?>
@@ -178,6 +185,23 @@ $subMenus = [
                     if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
                 ?>
                 <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold <?= ($current_page . '?tab=' . ($_GET['tab'] ?? '')) === basename($sub['url']) ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50' ?>">
+                    <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Behavior (บันทึกพฤติกรรม) -->
+            <a href="<?= $base_path ?>/behavior/dashboard.php" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all mt-1 <?= $activeSystem === 'behavior' ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-200/50' : 'text-slate-500 hover:bg-slate-50 hover:text-violet-600 hover:pl-6' ?>">
+                <i class="bi bi-journal-text text-base sm:text-lg"></i> บันทึกพฤติกรรม
+                <?php if ($activeSystem === 'behavior'): ?>
+                <i class="bi bi-chevron-down ml-auto text-xs opacity-60"></i>
+                <?php endif; ?>
+            </a>
+            <div class="sub-menu <?= $activeSystem === 'behavior' ? 'open' : '' ?> ml-4 sm:ml-6 mt-1 space-y-0.5">
+                <?php foreach ($subMenus['behavior'] as $sub):
+                    if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                ?>
+                <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-violet-600 bg-violet-50' : 'text-slate-400 hover:text-violet-600 hover:bg-slate-50' ?>">
                     <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
                 </a>
                 <?php endforeach; ?>

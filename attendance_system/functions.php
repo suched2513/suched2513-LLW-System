@@ -63,23 +63,44 @@ function loginTeacher($username, $password, $pdo) {
 }
 
 /**
- * ตรวจสอบการ Login (teacher/admin)
+ * ตรวจสอบการ Login (Standardized for Unified System)
  */
 function checkLogin() {
-    global $base_path;
-    if (!isset($_SESSION['teacher_id'])) {
-        header("Location: " . $base_path . "/attendance_system/index.php"); 
+    global $base_path, $pdo;
+    
+    // 1. ตรวจสอบ Role หลัก
+    if (!isset($_SESSION['llw_role'])) {
+        header("Location: " . $base_path . "/login.php?redirect=" . urlencode($_SERVER['REQUEST_URI']));
         exit();
+    }
+
+    // 2. ถ้ามี Role แต่ไม่มี teacher_id (กรณีย้ายเครื่อง หรือ Session บางส่วนหาย)
+    // พยายามดึง teacher_id จาก username หรือกำหนดเป็น 0 สำหรับ admin
+    if (!isset($_SESSION['teacher_id'])) {
+        $username = $_SESSION['username'] ?? '';
+        $role = $_SESSION['llw_role'];
+
+        if ($role === 'super_admin') {
+            $_SESSION['teacher_id'] = 0;
+        } elseif ($username) {
+            $stmt = $pdo->prepare("SELECT id FROM att_teachers WHERE username = ? LIMIT 1");
+            $stmt->execute([$username]);
+            $tid = $stmt->fetchColumn();
+            $_SESSION['teacher_id'] = $tid !== false ? $tid : 0;
+        } else {
+            $_SESSION['teacher_id'] = 0;
+        }
     }
 }
 
 /**
- * ตรวจ Super Admin สำหรับหน้า admin.php
+ * ตรวจความอนุญาตเฉพาะ Admin (Super Admin / WFH Admin)
  */
 function checkAdmin() {
     global $base_path;
-    if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
-        header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+    checkLogin();
+    if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+        header('Location: ' . $base_path . '/attendance_system/dashboard.php');
         exit();
     }
 }
