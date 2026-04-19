@@ -291,6 +291,9 @@ if ($isLoggedIn) {
         <a href="#modules" class="px-8 sm:px-10 py-3.5 sm:py-4 bg-white/80 backdrop-blur-sm text-slate-600 border border-slate-200 rounded-2xl font-black hover:bg-white hover:shadow-xl hover:scale-105 hover:-translate-y-1 transition-all text-sm shadow-lg flex items-center justify-center gap-2">
             <i class="bi bi-grid-1x2-fill"></i>ดูระบบทั้งหมด
         </a>
+        <a href="behavior/student_view.php" class="px-8 sm:px-10 py-3.5 sm:py-4 bg-violet-600 text-white rounded-2xl font-black shadow-2xl shadow-violet-200/50 hover:shadow-violet-300/70 hover:scale-105 hover:-translate-y-1 transition-all text-sm flex items-center justify-center gap-2">
+            <i class="bi bi-mortarboard-fill"></i>สำหรับนักเรียน (เช็คคะแนน)
+        </a>
     </div>
     <?php endif; ?>
 </section>
@@ -422,11 +425,23 @@ if ($isLoggedIn) {
                 'gradient' => 'from-violet-600 to-indigo-600',
                 'delay'    => 0.8,
             ],
+            [
+                'url'      => 'behavior/student_view.php',
+                'icon'     => 'bi-person-badge',
+                'bgIcon'   => 'bi-mortarboard',
+                'title'    => 'พอร์ทัลนักเรียน',
+                'desc'     => 'ตรวจสอบคะแนนพฤติกรรม และส่งบันทึกความดีเพื่อขอรับคะแนน (ไม่ต้อง Login ครู)',
+                'color'    => 'violet',
+                'gradient' => 'from-purple-500 to-indigo-500',
+                'delay'    => 0.9,
+                'isPublic' => true,
+            ],
         ];
 
         foreach ($modules as $m):
-            // ถ้า login แล้ว → ไปหน้าโมดูลตรงๆ; ถ้ายังไม่ login → ผ่าน login?redirect=
-            $moduleUrl = $isLoggedIn ? $m['url'] : ('login.php?redirect=/' . $m['url']);
+            // ถ้าเป็นหน้า Public หรือ Login แล้ว → ไปหน้าโมดูลตรงๆ; ถ้ายังและไม่ใช่ Public → ผ่าน login?redirect=
+            $isPublic = isset($m['isPublic']) && $m['isPublic'];
+            $moduleUrl = ($isLoggedIn || $isPublic) ? $m['url'] : ('login.php?redirect=/' . $m['url']);
         ?>
         <a href="<?= htmlspecialchars($moduleUrl) ?>"
            class="portal-card animate-slide-up group relative bg-white/80 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-slate-100/80 shadow-lg shadow-slate-100/50 hover:shadow-2xl hover:shadow-<?= $m['color'] ?>-200/40 overflow-hidden"
