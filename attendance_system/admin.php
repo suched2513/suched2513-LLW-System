@@ -150,25 +150,29 @@ $enrollments        = [];
 $all_students_by_class = [];
 try {
     // ทดสอบว่า column is_elective มีอยู่แล้วไหม
-    $pdo->query("SELECT is_elective FROM att_subjects LIMIT 1");
-    $migration_ready = true;
+    $check_col = $pdo->query("SHOW COLUMNS FROM att_subjects LIKE 'is_elective'")->fetch();
+    if ($check_col) {
+        $migration_ready = true;
+        $elective_subjects = array_filter($subjects, function($s) {
+            return !empty($s['is_elective']);
+        });
 
-    $elective_subjects = array_filter($subjects, fn($s) => !empty($s['is_elective']));
+        // Enrollment per elective subject
+        foreach ($elective_subjects as $es) {
+            $e = $pdo->prepare("SELECT student_id FROM att_subject_students WHERE subject_id=?");
+            $e->execute([$es['id']]);
+            $enrollments[$es['id']] = $e->fetchAll(PDO::FETCH_COLUMN);
+        }
 
-    // Enrollment per elective subject
-    foreach ($elective_subjects as $es) {
-        $e = $pdo->prepare("SELECT student_id FROM att_subject_students WHERE subject_id=?");
-        $e->execute([$es['id']]);
-        $enrollments[$es['id']] = $e->fetchAll(PDO::FETCH_COLUMN);
+        // นักเรียนทุกคน จัดกลุ่มตามห้อง
+        $all_rows = $pdo->query("SELECT * FROM att_students ORDER BY classroom, student_id")->fetchAll();
+        foreach ($all_rows as $row) {
+            $all_students_by_class[$row['classroom']][] = $row;
+        }
+    } else {
+        $migration_ready = false;
     }
-
-    // นักเรียนทุกคน จัดกลุ่มตามห้อง (สำหรับ enrollment tab — ไม่จำกัดแค่ห้องของวิชา)
-    $all_rows = $pdo->query("SELECT * FROM att_students ORDER BY classroom, student_id")->fetchAll();
-    foreach ($all_rows as $row) {
-        $all_students_by_class[$row['classroom']][] = $row;
-    }
-} catch (PDOException $e) {
-    // Migration ยังไม่ run — แสดงข้อความแจ้งเตือน
+} catch (Exception $e) {
     $migration_ready = false;
 }
 
