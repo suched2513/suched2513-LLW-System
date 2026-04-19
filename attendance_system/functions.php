@@ -169,66 +169,55 @@ function getStudentsBySubject($subject_id, $pdo) {
  * แปลงเวลา (string) เป็นนาที เพื่อการคำนวณง่ายๆ (เช่น "08:40" -> 520)
  */
 function timeToMinutes($timeStr) {
+    if (empty($timeStr) || strpos($timeStr, ':') === false) return 0;
     list($hours, $minutes) = explode(':', $timeStr);
-    return ($hours * 60) + $minutes;
+    return ((int)$hours * 60) + (int)$minutes;
 }
 
 /**
  * บันทึกการเช็คชื่อ
  */
 function saveAttendance($date, $period, $subject_id, $teacher_id, $student_id, $status, $time_in, $start_time, $note, $pdo) {
-    // คำนวณสถานะสายอัตโนมัติ (เฉพาะกรณีที่สถานะไม่ใช่ ขาด ลา โดด และมีเวลาเข้ามา)
-    // ถ้าเวลาเข้า > เวลาเริ่มคาบ + 5 นาที -> สาย
+    // 1. Calculate Late Status automatically
     if ($status === 'มา' && !empty($time_in) && !empty($start_time)) {
         $timeInMinutes = timeToMinutes($time_in);
         $startTimeMinutes = timeToMinutes($start_time);
-        
         if ($timeInMinutes > ($startTimeMinutes + 5)) {
             $status = 'สาย';
         }
     }
 
-    try {
-        // ตรวจสอบว่าเคยเช็คชื่อในคาบนี้ วิชาและวันนี้ไปแล้วหรือยัง
-        $checkStmt = $pdo->prepare("SELECT id FROM att_attendance WHERE date = :date AND period = :period AND subject_id = :subject_id AND student_id = :student_id");
-        $checkStmt->execute([
-            'date' => $date,
-            'period' => $period,
-            'subject_id' => $subject_id,
-            'student_id' => $student_id
-        ]);
-        $existing = $checkStmt->fetch();
+    // 2. Check for existing record
+    $checkStmt = $pdo->prepare("SELECT id FROM att_attendance WHERE date = :date AND period = :period AND subject_id = :subject_id AND student_id = :student_id");
+    $checkStmt->execute([
+        'date' => $date,
+        'period' => $period,
+        'subject_id' => $subject_id,
+        'student_id' => $student_id
+    ]);
+    $existing = $checkStmt->fetch();
 
-        if ($existing) {
-            // Update
-            $stmt = $pdo->prepare("UPDATE att_attendance 
-                                  SET status = :status, time_in = :time_in, note = :note, teacher_id = :teacher_id
-                                  WHERE id = :id");
-            return $stmt->execute([
-                'status' => $status,
-                'time_in' => empty($time_in) ? null : $time_in,
-                'note' => $note,
-                'teacher_id' => $teacher_id, // อัปเดต teacher_id ด้วย (สำหรับกรณี Super Admin)
-                'id' => $existing['id']
-            ]);
-        } else {
-            // Insert
-            $stmt = $pdo->prepare("INSERT INTO att_attendance (date, period, subject_id, teacher_id, student_id, status, time_in, note) 
-                                  VALUES (:date, :period, :subject_id, :teacher_id, :student_id, :status, :time_in, :note)");
-            return $stmt->execute([
-                'date' => $date,
-                'period' => $period,
-                'subject_id' => $subject_id,
-                'teacher_id' => $teacher_id,
-                'student_id' => $student_id,
-                'status' => $status,
-                'time_in' => empty($time_in) ? null : $time_in,
-                'note' => $note
-            ]);
-        }
-    } catch (PDOException $e) {
-        error_log("Save Attendance Error: " . $e->getMessage());
-        return false;
+    $params = [
+        'status'     => $status,
+        'time_in'    => empty($time_in) ? null : $time_in,
+        'note'       => $note,
+        'teacher_id' => $teacher_id ?: 0
+    ];
+
+    if ($existing) {
+        // Update
+        $params['id'] = $existing['id'];
+        $stmt = $pdo->prepare("UPDATE att_attendance SET status=:status, time_in=:time_in, note=:note, teacher_id=:teacher_id WHERE id=:id");
+        return $stmt->execute($params);
+    } else {
+        // Insert
+        $params['date']       = $date;
+        $params['period']     = $period;
+        $params['subject_id'] = $subject_id;
+        $params['student_id'] = $student_id;
+        $stmt = $pdo->prepare("INSERT INTO att_attendance (date, period, subject_id, teacher_id, student_id, status, time_in, note) 
+                              VALUES (:date, :period, :subject_id, :teacher_id, :student_id, :status, :time_in, :note)");
+        return $stmt->execute($params);
     }
 }
 ?>

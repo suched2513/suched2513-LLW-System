@@ -37,19 +37,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
     $student_time_in = $_POST['time_in'] ?? [];
     $student_note = $_POST['note'] ?? [];
 
-    $all_saved = true;
-    foreach ($student_status as $sid_code => $status) {
-        $time_in = $student_time_in[$sid_code] ?? null;
-        $note = $student_note[$sid_code] ?? '';
-        
-        // บันทึกโดยใช้รหัสนักเรียน (student_id)
-        if (!saveAttendance($date, $period, $subject_id, $teacher_id, $sid_code, $status, $time_in, $p_start_time, $note, $pdo)) {
-            $all_saved = false;
+    try {
+        $pdo->beginTransaction();
+        foreach ($student_status as $sid_code => $status) {
+            $time_in = $student_time_in[$sid_code] ?? null;
+            $note = $student_note[$sid_code] ?? '';
+            
+            // Save each student's attendance
+            saveAttendance($date, $period, $subject_id, $teacher_id, $sid_code, $status, $time_in, $p_start_time, $note, $pdo);
         }
+        $pdo->commit();
+        $success_msg = "บันทึกข้อมูลเรียบร้อยแล้ว";
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        $error_msg = "เกิดข้อผิดพลาด: " . $e->getMessage();
+        error_log("Attendance Save Error: " . $e->getMessage());
     }
-
-    if ($all_saved) $success_msg = "บันทึกข้อมูลเรียบร้อยแล้ว";
-    else $error_msg = "เกิดข้อผิดพลาดในการบันทึกข้อมูลบางส่วน";
 }
 
 require_once '../components/layout_start.php';
