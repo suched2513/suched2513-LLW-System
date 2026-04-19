@@ -36,52 +36,42 @@ return [
             VALUES (:name, :cls)
         ");
 
-        $pdo->beginTransaction();
-        try {
-            // Optional: Clear cb_students for a fresh sync if it's currently empty or messy
-            // $pdo->exec("TRUNCATE TABLE cb_students"); 
+        // Note: The Migration Runner handled transactions automatically.
+        foreach ($master_students as $s) {
+            // Assembly Sync
+            $stmt_assembly->execute([
+                ':sid'  => $s['student_id'],
+                ':name' => $s['name'],
+                ':cls'  => $s['classroom']
+            ]);
 
-            foreach ($master_students as $s) {
-                // Assembly Sync
-                $stmt_assembly->execute([
-                    ':sid'  => $s['student_id'],
+            // Behavior Sync (Split ม.2/1 -> level=ม.2, room=1)
+            $cls = $s['classroom'];
+            $level = $cls;
+            $room  = '';
+            if (strpos($cls, '/') !== false) {
+                $parts = explode('/', $cls);
+                $level = trim($parts[0]);
+                $room  = trim($parts[1]);
+            }
+            $stmt_behavior->execute([
+                ':sid'   => $s['student_id'],
+                ':name'  => $s['name'],
+                ':level' => $level,
+                ':room'  => $room
+            ]);
+
+            // Chromebook Sync (Simple copy)
+            $chk_cb = $pdo->prepare("SELECT student_id FROM cb_students WHERE name = ? AND class_name = ?");
+            $chk_cb->execute([$s['name'], $s['classroom']]);
+            if (!$chk_cb->fetch()) {
+                $stmt_chromebook->execute([
                     ':name' => $s['name'],
                     ':cls'  => $s['classroom']
                 ]);
-
-                // Behavior Sync (Split ม.2/1 -> level=ม.2, room=1)
-                $cls = $s['classroom'];
-                $level = $cls;
-                $room  = '';
-                if (strpos($cls, '/') !== false) {
-                    $parts = explode('/', $cls);
-                    $level = trim($parts[0]);
-                    $room  = trim($parts[1]);
-                }
-                $stmt_behavior->execute([
-                    ':sid'   => $s['student_id'],
-                    ':name'  => $s['name'],
-                    ':level' => $level,
-                    ':room'  => $room
-                ]);
-
-                // Chromebook Sync (Simple copy, since schema lacks student_id_code)
-                // We check if student exists by name and class to avoid simple duplicates on each run
-                $chk_cb = $pdo->prepare("SELECT student_id FROM cb_students WHERE name = ? AND class_name = ?");
-                $chk_cb->execute([$s['name'], $s['classroom']]);
-                if (!$chk_cb->fetch()) {
-                    $stmt_chromebook->execute([
-                        ':name' => $s['name'],
-                        ':cls'  => $s['classroom']
-                    ]);
-                }
             }
-            $pdo->commit();
-            return true;
-        } catch (Exception $e) {
-            if ($pdo->inTransaction()) $pdo->rollBack();
-            throw $e;
         }
+        return true;
     },
 
     'down' => function (PDO $pdo) {
