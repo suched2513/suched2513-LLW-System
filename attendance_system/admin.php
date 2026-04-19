@@ -116,20 +116,31 @@ if ($action === 'add_subject') {
     }
 }
 
-// Data Fetching
-$teachers   = $pdo->query("SELECT t.*, lu.username, lu.status as user_status, lu.last_login, COUNT(DISTINCT s.id) as s_count FROM att_teachers t LEFT JOIN llw_users lu ON lu.user_id = t.llw_user_id LEFT JOIN att_subjects s ON s.teacher_id = t.id GROUP BY t.id ORDER BY t.name")->fetchAll();
-$subjects   = $pdo->query("SELECT s.*, t.name as t_name FROM att_subjects s JOIN att_teachers t ON t.id = s.teacher_id ORDER BY s.subject_code")->fetchAll();
-$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
-
-// Students (filter by classroom if selected)
-$filter_cls = $_GET['cls'] ?? ($classrooms[0] ?? '');
+// Data Fetching (Safe Mode)
+$teachers   = [];
+$subjects   = [];
+$classrooms = [];
 $all_students = [];
-if ($filter_cls) {
-    $sq = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? ORDER BY student_id");
-    $sq->execute([$filter_cls]);
-    $all_students = $sq->fetchAll();
-} else {
-    $all_students = $pdo->query("SELECT * FROM att_students ORDER BY classroom, student_id")->fetchAll();
+$filter_cls = $_GET['cls'] ?? '';
+
+try {
+    $teachers   = $pdo->query("SELECT t.*, lu.username, lu.status as user_status, lu.last_login, COUNT(DISTINCT s.id) as s_count FROM att_teachers t LEFT JOIN llw_users lu ON lu.user_id = t.llw_user_id LEFT JOIN att_subjects s ON s.teacher_id = t.id GROUP BY t.id ORDER BY t.name")->fetchAll();
+    $subjects   = $pdo->query("SELECT s.*, t.name as t_name FROM att_subjects s JOIN att_teachers t ON t.id = s.teacher_id ORDER BY s.subject_code")->fetchAll();
+    $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+
+    if (!$filter_cls) $filter_cls = $classrooms[0] ?? '';
+
+    // Students (filter by classroom if selected)
+    if ($filter_cls) {
+        $sq = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? ORDER BY student_id");
+        $sq->execute([$filter_cls]);
+        $all_students = $sq->fetchAll();
+    } else {
+        $all_students = $pdo->query("SELECT * FROM att_students ORDER BY classroom, student_id LIMIT 100")->fetchAll();
+    }
+} catch (Exception $e) {
+    $msg = "ระบบยังไม่พร้อมใช้งาน: กรุณารัน Migration ตาราง Attendance (" . $e->getMessage() . ")";
+    $msgType = 'error';
 }
 
 // --- ส่วน Elective (ต้องการ migration ก่อน) ---
