@@ -456,7 +456,7 @@ require_once '../components/layout_start.php';
             <div>
                 <p class="font-black text-amber-800 text-base">ต้อง Run Migration ก่อนใช้งานฟีเจอร์นี้!</p>
                 <p class="text-sm text-amber-700 mt-1">ยังไม่มี column <code class="bg-amber-100 px-1.5 py-0.5 rounded font-mono text-xs">is_elective</code> ในฐานข้อมูล</p>
-                <a href="/llw/database/run_pending.php" target="_blank"
+                <a href="/database/run_pending.php" target="_blank"
                    class="inline-flex items-center gap-2 mt-3 bg-amber-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-amber-600 transition shadow-lg shadow-amber-200">
                     <i class="bi bi-lightning-charge-fill"></i> เปิด run_pending.php
                 </a>
