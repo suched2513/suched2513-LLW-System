@@ -41,33 +41,77 @@ if (($_POST['do'] ?? '') === 'delete_student') {
     header("Location: import_students.php"); exit();
 }
 
-// -- Handle CSV Upload --
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csvfile'])) {
-    $classroom_filter = trim($_POST['classroom'] ?? '');
+// -- Handle CSV Upload / Import --
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_FILES['csvfile']) || isset($_POST['json_data']))) {
+    $classroom_filter = trim($_POST['classroom_fixed'] ?? '');
     $action = $_POST['do'] ?? 'preview';
-    $file = $_FILES['csvfile'];
-    if ($file['error'] !== UPLOAD_ERR_OK) { $msg = 'อัปโหลดไฟล์ล้มเหลว'; $msgType = 'error'; } 
-    elseif (!str_ends_with($file['name'], '.csv')) { $msg = 'กรุณาเลือกไฟล์ .csv'; $msgType = 'error'; } 
-    else {
-        $handle = fopen($file['tmp_name'], 'r');
-        $bom = fread($handle, 3); if ($bom !== "\xEF\xBB\xBF") rewind($handle);
-        $header = fgetcsv($handle);
-        $rowNum = 1;
-        while (($row = fgetcsv($handle)) !== false) {
-            $rowNum++; if (count($row) < 3) continue;
-            [$sid, $name, $cls] = array_map('trim', $row);
-            if (!$sid || !$name) continue;
-            if ($classroom_filter) $cls = $classroom_filter;
-            $preview[] = ['student_id'=>$sid, 'name'=>$name, 'classroom'=>$cls, 'row'=>$rowNum];
-        }
-        fclose($handle);
-        if ($action === 'import' && !empty($preview)) {
+
+    if ($action === 'import' && !empty($_POST['json_data'])) {
+        // --- PROCESS IMPORT ---
+        $data = json_decode($_POST['json_data'], true);
+        if ($data) {
             $stmt = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom) VALUES (:sid, :name, :cls) ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom)");
             $pdo->beginTransaction();
             try {
-                foreach ($preview as $p) { $stmt->execute([':sid'=>$p['student_id'],':name'=>$p['name'],':cls'=>$p['classroom']]); $importCount++; }
-                $pdo->commit(); $msg = "นำเข้าสำเร็จ $importCount รายการ"; $msgType = 'success'; $preview = [];
-            } catch (Exception $e) { $pdo->rollBack(); $msg = 'ผิดพลาด: ' . $e->getMessage(); $msgType = 'error'; }
+                foreach ($data as $p) { 
+                    $stmt->execute([':sid'=>$p['student_id'],':name'=>$p['name'],':cls'=>$p['classroom']]); 
+                    $importCount++; 
+                }
+                $pdo->commit(); 
+                $msg = "นำเข้าสำเร็จ $importCount รายการ"; 
+                $msgType = 'success';
+            } catch (Exception $e) { 
+                if ($pdo->inTransaction()) $pdo->rollBack(); 
+                $msg = 'ผิดพลาด: ' . $e->getMessage(); 
+                $msgType = 'error'; 
+            }
+        }
+    } elseif (isset($_FILES['csvfile'])) {
+        // --- PROCESS PREVIEW ---
+        $file = $_FILES['csvfile'];
+        if ($file['error'] !== UPLOAD_ERR_OK) { 
+            $msg = 'อัปโหลดไฟล์ล้มเหลว'; $msgType = 'error'; 
+        } elseif (strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) !== 'csv') { 
+            $msg = 'กรุณาเลือกไฟล์ .csv'; $msgType = 'error'; 
+        } else {
+            $content = file_get_contents($file['tmp_name']);
+            
+            // Detect Encoding (Excel Thai usually Windows-874)
+            $encoding = mb_detect_encoding($content, ['UTF-8', 'Windows-874', 'TIS-620'], true);
+            if ($encoding !== 'UTF-8') {
+                $content = mb_convert_encoding($content, 'UTF-8', $encoding ?: 'Windows-874');
+            }
+
+            // Detect Delimiter
+            $delimiter = ',';
+            if (strpos($content, ';') !== false && strpos($content, ',') === false) $delimiter = ';';
+
+            $lines = explode("\n", str_replace("\r", "", $content));
+            $is_first = true;
+            $rowNum = 0;
+
+            foreach ($lines as $line) {
+                if (empty(trim($line))) continue;
+                $row = str_getcsv($line, $delimiter);
+                $rowNum++;
+                
+                if ($is_first) { $is_first = false; continue; } // Skip header
+                if (count($row) < 2) continue; // Need at least ID and Name
+
+                $sid = trim($row[0] ?? '');
+                $name = trim($row[1] ?? '');
+                $cls = trim($row[2] ?? '');
+
+                if (!$sid || !$name) continue;
+                if ($classroom_filter) $cls = $classroom_filter;
+
+                $preview[] = ['student_id'=>$sid, 'name'=>$name, 'classroom'=>$cls, 'row'=>$rowNum];
+            }
+            
+            if (empty($preview)) {
+                $msg = 'ไม่พบข้อมูลที่สามารถนำเข้าได้ในไฟล์นี้';
+                $msgType = 'warning';
+            }
         }
     }
 }
@@ -124,11 +168,12 @@ require_once 'components/layout_start.php';
             </div>
             
             <div class="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-                <p class="text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-2">รูปแบบ CSV</p>
+                <p class="text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-2">รูปแบบ CSV (ต้องเรียงคอลัมน์ตามนี้)</p>
                 <div class="flex items-center justify-between text-[11px] text-blue-500 font-medium">
                     <span>student_id, name, classroom</span>
-                    <a href="data:text/csv;charset=utf-8,%EF%BB%BFstudent_id%2Cname%2Cclassroom%0A66001%2C%E0%B8%AA%E0%B8%A1%E0%B8%8A%E0%B8%B2%E0%B8%A2%20%E0%B9%83%E0%B8%88%E0%B8%94%E0%B8%B5%2C%E0%B8%A1.4%2F1" download="template.csv" class="underline">ดาวน์โหลดไฟล์ตัวอย่าง</a>
+                    <a href="data:text/csv;charset=utf-8,%EF%BB%BFstudent_id%2Cname%2Cclassroom%0A66001%2C%E0%B8%AA%E0%B8%A1%E0%B8%8A%E0%B8%B2%E0%B8%A2%20%E0%B9%83%E0%B8%88%E0%B8%94%E0%B8%B5%2C%E0%B8%A1.4%2F1" download="template.csv" class="underline hover:text-blue-700">ดาวน์โหลดไฟล์ตัวอย่าง</a>
                 </div>
+                <p class="text-[9px] text-slate-400 mt-2">* รองรับไฟล์จาก Excel (ภาษาไทย) และ Google Sheets (UTF-8)</p>
             </div>
 
             <form method="POST" enctype="multipart/form-data" class="space-y-4">
@@ -139,7 +184,7 @@ require_once 'components/layout_start.php';
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ระบุห้องเรียน (กรณีต้องการทับค่าในไฟล์)</label>
-                    <input type="text" name="classroom" placeholder="เว้นว่างไว้หากต้องการใช้ค่าจากไฟล์"
+                    <input type="text" name="classroom_fixed" placeholder="เว้นว่างไว้หากต้องการใช้ค่าจากไฟล์"
                            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
                 </div>
                 <button type="submit" name="do" value="preview" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900 transition shadow-lg">
@@ -148,6 +193,50 @@ require_once 'components/layout_start.php';
             </form>
         </div>
     </div>
+
+    <!-- ── PREVIEW SECTION ── -->
+    <?php if (!empty($preview)): ?>
+    <div class="bg-white rounded-3xl shadow-xl shadow-blue-100/50 border border-slate-100 overflow-hidden ring-4 ring-blue-500/10">
+        <div class="px-6 py-5 bg-blue-600 text-white flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i class="bi bi-eye-fill text-xl"></i>
+                <div>
+                    <h3 class="font-bold">ตรวจสอบข้อมูลก่อนบันทึก</h3>
+                    <p class="text-[10px] opacity-80 uppercase font-bold tracking-widest">พบข้อมูลทั้งหมด <?= count($preview) ?> รายการ</p>
+                </div>
+            </div>
+            <form method="POST" class="flex gap-2">
+                <input type="hidden" name="do" value="import">
+                <input type="hidden" name="json_data" value='<?= json_encode($preview, JSON_UNESCAPED_UNICODE) ?>'>
+                <button type="submit" class="bg-white text-blue-600 px-6 py-2 rounded-xl text-sm font-black hover:bg-blue-50 transition shadow-lg">
+                    ยืนยันการนำเข้า
+                </button>
+            </form>
+        </div>
+        <div class="overflow-x-auto max-h-[400px]">
+            <table class="min-w-full divide-y divide-slate-100">
+                <thead class="bg-slate-50 sticky top-0">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">รหัส</th>
+                        <th class="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">ชื่อ-สกุล</th>
+                        <th class="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">ห้องเรียน</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50 text-sm">
+                    <?php foreach($preview as $p): ?>
+                    <tr class="hover:bg-blue-50/30 transition">
+                        <td class="px-6 py-3 font-mono font-bold text-blue-600"><?= htmlspecialchars($p['student_id']) ?></td>
+                        <td class="px-6 py-3 font-semibold text-slate-700"><?= htmlspecialchars($p['name']) ?></td>
+                        <td class="px-6 py-3">
+                            <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-black"><?= htmlspecialchars($p['classroom']) ?></span>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- ── LIST ── -->
     <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
@@ -199,7 +288,7 @@ require_once 'components/layout_start.php';
     </div>
 </div>
 
-<!-- Modal Edit (Simplified for Execution) -->
+<!-- Modal Edit -->
 <div id="edit-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl border border-slate-100 flex flex-col gap-6">
         <h3 class="font-bold text-xl text-slate-800">แก้ไขข้อมูลนักเรียน</h3>
@@ -246,6 +335,6 @@ function deleteStudent(id, name) {
 </script>
 
 <?php
-if ($msg) echo "<script>Swal.fire({ icon: '$msgType', title: 'แจ้งเตือน', text: '$msg', timer: 2000, showConfirmButton: false });</script>";
+if ($msg) echo "<script>Swal.fire({ icon: '$msgType', title: 'แจ้งเตือน', text: '$msg', timer: 2500, showConfirmButton: false });</script>";
 require_once 'components/layout_end.php';
 ?>
