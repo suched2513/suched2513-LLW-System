@@ -393,6 +393,11 @@ $roleLabel = [
                     username, firstname, lastname, password, role
                 </code>
                 <p class="text-[10px] text-emerald-500 mt-2 italic">* Role: super_admin, wfh_admin, wfh_staff, cb_admin, att_teacher</p>
+                <p class="text-[11px] text-emerald-600 mt-3">
+                    <a href="api/download_user_template.php" class="inline-flex items-center gap-1 font-black underline decoration-emerald-200 hover:text-emerald-800 transition-colors">
+                        <i class="bi bi-download"></i> ดาวน์โหลดไฟล์ตัวอย่าง (.csv)
+                    </a>
+                </p>
             </div>
             
             <div id="drop-zone" class="border-2 border-dashed border-emerald-200 rounded-2xl p-10 text-center hover:border-emerald-400 hover:bg-emerald-50/50 transition-all cursor-pointer"
