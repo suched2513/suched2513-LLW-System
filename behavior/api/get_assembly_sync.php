@@ -5,6 +5,7 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 session_start();
+ob_start();
 require_once __DIR__ . '/../../config/database.php';
 
 if (!isset($_SESSION['llw_role'])) {
@@ -19,14 +20,17 @@ if (!isset($_SESSION['llw_role'])) {
 $studentId = $_GET['sid'] ?? $_GET['student_id'] ?? '';
 
 if (empty($studentId)) {
+    if (ob_get_length()) ob_clean();
     echo json_encode(['status' => 'success', 'data' => []]);
     exit;
 }
 
-// Normalize: pad to 5 digits
+// Standardize and prepare unpadded version
+$studentIdPadded = $studentId;
 if (preg_match('/^\d+$/', $studentId)) {
-    $studentId = str_pad($studentId, 5, '0', STR_PAD_LEFT);
+    $studentIdPadded = str_pad($studentId, 5, '0', STR_PAD_LEFT);
 }
+$studentIdUnpadded = ltrim($studentIdPadded, '0');
 
 try {
     $pdo = getPdo();

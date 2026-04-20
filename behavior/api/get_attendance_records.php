@@ -5,6 +5,7 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 session_start();
+ob_start();
 require_once __DIR__ . '/../../config/database.php';
 
 if (!isset($_SESSION['llw_role'])) {
@@ -31,7 +32,20 @@ if (preg_match('/^\d+$/', $studentId)) {
 try {
     $pdo = getPdo();
     
-    // ดึงข้อมูลย้อนหลัง 10 วันล่าสุดที่มีการบันทึก
+    // Identity Resolver: Map 5-digit sid to internal id
+    $stmtSt = $pdo->prepare("SELECT id FROM att_students WHERE student_id = ?");
+    $stmtSt->execute([$studentId]);
+    $st = $stmtSt->fetch();
+    
+    if (!$st) {
+        if (ob_get_length()) ob_clean();
+        echo json_encode(['status' => 'success', 'data' => []]);
+        exit;
+    }
+    
+    $internalId = $st['id'];
+
+    // Query using internal id
     $stmt = $pdo->prepare("
         SELECT 
             a.date, 
@@ -43,8 +57,9 @@ try {
         LEFT JOIN att_subjects s ON a.subject_id = s.id
         WHERE a.student_id = ? 
         ORDER BY a.date DESC, a.period ASC
+        LIMIT 100
     ");
-    $stmt->execute([$studentId]);
+    $stmt->execute([$internalId]);
     $raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // จัดกลุ่มตามวันที่
@@ -66,6 +81,7 @@ try {
         }
     }
 
+    if (ob_get_length()) ob_clean();
     echo json_encode([
         'status' => 'success', 
         'data' => array_values($grouped)
