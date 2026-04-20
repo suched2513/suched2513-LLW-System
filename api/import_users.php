@@ -29,22 +29,28 @@ try {
     $pdo = getPdo();
     $filePath = $_FILES['csv_file']['tmp_name'];
     
-    // อ่านข้อมูลทั้งหมดเพื่อตรวจสอบและแปลง Encoding
+    // อ่านข้อมูลทั้งหมด
     $content = file_get_contents($filePath);
+    if ($content === false) {
+        throw new Exception("ไม่สามารถอ่านไฟล์ได้");
+    }
     
-    // ตรวจจับ Encoding (เน้น UTF-8 และ Windows-874/TIS-620 สำหรับภาษาไทย)
-    $encoding = mb_detect_encoding($content, ['UTF-8', 'Windows-874', 'TIS-620'], true);
-    
-    if ($encoding !== 'UTF-8') {
-        // ถ้าไม่ใช่ UTF-8 ให้แปลงเป็น UTF-8 (ส่วนใหญ่ไฟล์จาก Excel จะเป็น Windows-874)
-        $content = mb_convert_encoding($content, 'UTF-8', $encoding ?: 'Windows-874');
+    // ตรวจจับ Encoding (ถ้ามี extension mbstring)
+    if (function_exists('mb_detect_encoding')) {
+        $encoding = mb_detect_encoding($content, ['UTF-8', 'Windows-874', 'TIS-620'], true);
+        if ($encoding !== 'UTF-8' && $encoding !== false) {
+            $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+        }
     }
 
-    // ลบ BOM (Byte Order Mark) ถ้าติดมาจาก Excel UTF-8
+    // ลบ BOM (Byte Order Mark)
     $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
 
-    // สร้าง Stream ชั่วคราวจากข้อมูลที่แปลงแล้วเพื่อใช้กับ fgetcsv
+    // สร้าง Stream ชั่วคราว
     $handle = fopen('php://temp', 'r+');
+    if ($handle === false) {
+        throw new Exception("ไม่สามารถสร้าง temporary stream ได้");
+    }
     fwrite($handle, $content);
     rewind($handle);
 
