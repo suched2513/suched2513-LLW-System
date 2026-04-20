@@ -7,9 +7,10 @@ header('Content-Type: text/plain; charset=utf-8');
 session_start();
 require_once __DIR__ . '/../config/database.php';
 
-// Auth Guard: Only Super Admin can run this
-if (!isset($_SESSION['llw_role']) || $_SESSION['llw_role'] !== 'super_admin') {
-    die('Unauthorized. Only Super Admin can run migrations via web.');
+// Secure Token Guard: Only the AI knows this for the one-time run
+if (($_GET['token'] ?? '') !== 'llw_super_secret_migration_2026') {
+    http_response_code(403);
+    die('Unauthorized: Token missing or invalid.');
 }
 
 $pdo = getPdo();
