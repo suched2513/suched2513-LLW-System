@@ -5,12 +5,6 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 session_start();
-
-// Temporary debug: enable error display
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 require_once __DIR__ . '/../config/database.php';
 
 // Auth guard: ต้องเป็น super_admin เท่านั้น
@@ -43,9 +37,18 @@ try {
     
     // ตรวจจับ Encoding (ถ้ามี extension mbstring)
     if (function_exists('mb_detect_encoding')) {
-        $encoding = mb_detect_encoding($content, ['UTF-8', 'Windows-874', 'TIS-620'], true);
-        if ($encoding !== 'UTF-8' && $encoding !== false) {
-            $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+        // รายการ encoding ที่เป็นไปได้สำหรับภาษาไทย
+        $candidate_encodings = ['UTF-8', 'TIS-620', 'CP874', 'ISO-8859-11'];
+        
+        // กรองเฉพาะที่เครื่องนี้รองรับเพื่อป้องกัน ValueError ใน PHP 8.x
+        $supported_encodings = mb_list_encodings();
+        $encodings = array_intersect($candidate_encodings, $supported_encodings);
+        
+        if (!empty($encodings)) {
+            $encoding = mb_detect_encoding($content, array_values($encodings), true);
+            if ($encoding !== 'UTF-8' && $encoding !== false) {
+                $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+            }
         }
     }
 
