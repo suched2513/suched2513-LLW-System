@@ -251,4 +251,60 @@ function saveAttendance($date, $period, $subject_id, $teacher_id, $student_id, $
         return $stmt->execute($params);
     }
 }
+
+/**
+ * ดึงรายชื่อนักเรียนกลุ่มเสี่ยง (มส.) ทั่วทั้งระบบหรือตามครู
+ * เกณฑ์: มาเรียน < 80% (นับจากคาบที่เช็คชื่อไปแล้ว)
+ */
+function getStudentsAtRisk($teacher_id, $pdo, $limit = 5) {
+    $where = $teacher_id > 0 ? "WHERE sj.teacher_id = :tid" : "";
+    $sql = "
+        SELECT 
+            s.id, s.student_id, s.name, s.classroom,
+            COUNT(a.id) as sessions_count,
+            SUM(CASE WHEN a.status='มา' THEN 1 ELSE 0 END) as present_count,
+            ROUND((SUM(CASE WHEN a.status='มา' THEN 1 ELSE 0 END) / COUNT(a.id)) * 100, 1) as presence_rate
+        FROM att_students s
+        JOIN att_attendance a ON a.student_id = s.id
+        JOIN att_subjects sj ON sj.id = a.subject_id
+        $where
+        GROUP BY s.id
+        HAVING sessions_count > 3 AND presence_rate < 80
+        ORDER BY presence_rate ASC
+        LIMIT :limit
+    ";
+    
+    $stmt = $pdo->prepare($sql);
+    if ($teacher_id > 0) $stmt->bindValue(':tid', $teacher_id, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
+
+/**
+ * ดึงรายชื่อนักเรียนดีเด่น (Diligent) - มาเรียน 100%
+ */
+function getStudentHighlights($teacher_id, $pdo, $limit = 5) {
+    $where = $teacher_id > 0 ? "WHERE sj.teacher_id = :tid" : "";
+    $sql = "
+        SELECT 
+            s.id, s.student_id, s.name, s.classroom,
+            COUNT(a.id) as sessions_count,
+            ROUND((SUM(CASE WHEN a.status='มา' THEN 1 ELSE 0 END) / COUNT(a.id)) * 100, 1) as presence_rate
+        FROM att_students s
+        JOIN att_attendance a ON a.student_id = s.id
+        JOIN att_subjects sj ON sj.id = a.subject_id
+        $where
+        GROUP BY s.id
+        HAVING sessions_count > 5 AND presence_rate >= 95
+        ORDER BY sessions_count DESC, presence_rate DESC
+        LIMIT :limit
+    ";
+    
+    $stmt = $pdo->prepare($sql);
+    if ($teacher_id > 0) $stmt->bindValue(':tid', $teacher_id, PDO::PARAM_INT);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
 ?>

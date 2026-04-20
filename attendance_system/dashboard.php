@@ -60,6 +60,10 @@ if ((int)$teacher_id === 0) { $recentStmt->execute(); }
 else { $recentStmt->execute(['teacher_id' => $teacher_id]); }
 $recentLogs = $recentStmt->fetchAll();
 
+// ── 4. Smart Monitoring Data ──
+$riskStudents = getStudentsAtRisk($teacher_id, $pdo, 5);
+$highlightStudents = getStudentHighlights($teacher_id, $pdo, 5);
+
 require_once '../components/layout_start.php';
 ?>
 
@@ -119,7 +123,92 @@ require_once '../components/layout_start.php';
         <?php endforeach; ?>
     </div>
 
-    <!-- Visualization Row -->
+    <!-- Smart Monitoring Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <!-- At-Risk Monitoring (Early Warning) -->
+        <div class="bg-white/70 backdrop-blur-xl rounded-[48px] p-10 shadow-sm border border-rose-100/50 flex flex-col gap-8 relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-40 h-40 bg-rose-50 rounded-full blur-3xl opacity-50"></div>
+            <div class="flex items-center justify-between relative z-10">
+                <div class="flex flex-col">
+                    <h3 class="font-black text-slate-800 flex items-center gap-3 text-lg">
+                        <i class="bi bi-exclamation-triangle-fill text-rose-500"></i> ติดตามเกณฑ์เสี่ยง (มส.)
+                    </h3>
+                    <p class="text-[10px] font-bold text-rose-400 uppercase tracking-widest mt-1">Students below 80% attendance rate</p>
+                </div>
+                <div class="bg-rose-50 text-rose-600 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border border-rose-100">Warning</div>
+            </div>
+
+            <div class="flex flex-col gap-4 relative z-10">
+                <?php if (empty($riskStudents)): ?>
+                    <div class="py-12 bg-slate-50/50 rounded-3xl text-center border-2 border-dashed border-slate-100">
+                        <i class="bi bi-shield-check text-4xl text-emerald-400 opacity-50"></i>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-3">No critical risks detected</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach($riskStudents as $student): ?>
+                    <div class="flex items-center justify-between p-5 bg-white rounded-[28px] border border-slate-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+                        <div class="flex items-center gap-4">
+                            <div class="w-11 h-11 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center font-black group-hover:rotate-12 transition-all">
+                                <?= mb_substr($student['name'], 0, 1) ?>
+                            </div>
+                            <div>
+                                <p class="text-[13px] font-black text-slate-800"><?= htmlspecialchars($student['name']) ?></p>
+                                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">ห้อง <?= $student['classroom'] ?></p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-black text-rose-600"><?= $student['presence_rate'] ?><span class="text-[10px] ml-0.5">%</span></p>
+                            <p class="text-[8px] font-bold text-slate-300 uppercase">Presence</p>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+            <a href="report.php" class="w-full py-4 rounded-2xl bg-slate-50 text-slate-400 text-center text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">View All Risk Analysis</a>
+        </div>
+
+        <!-- Productivity Highlights (Diligence) -->
+        <div class="bg-white/70 backdrop-blur-xl rounded-[48px] p-10 shadow-sm border border-emerald-100/50 flex flex-col gap-8 relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-40 h-40 bg-emerald-50 rounded-full blur-3xl opacity-50"></div>
+            <div class="flex items-center justify-between relative z-10">
+                <div class="flex flex-col">
+                    <h3 class="font-black text-slate-800 flex items-center gap-3 text-lg">
+                        <i class="bi bi-trophy-fill text-emerald-500"></i> นักเรียนเช็คชื่อดีเด่น
+                    </h3>
+                    <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">Students with exemplary records</p>
+                </div>
+                <div class="bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border border-emerald-100">Top Star</div>
+            </div>
+
+            <div class="flex flex-col gap-4 relative z-10">
+                <?php if (empty($highlightStudents)): ?>
+                    <div class="py-12 bg-slate-50/50 rounded-3xl text-center border-2 border-dashed border-slate-100">
+                        <i class="bi bi-hourglass-split text-4xl text-slate-300 opacity-50"></i>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-3">Analyzing performance data...</p>
+                    </div>
+                <?php else: ?>
+                    <?php foreach($highlightStudents as $student): ?>
+                    <div class="flex items-center justify-between p-5 bg-white rounded-[28px] border border-slate-100 shadow-sm hover:shadow-md transition-all group cursor-pointer">
+                        <div class="flex items-center gap-4">
+                            <div class="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center font-black group-hover:scale-110 transition-all">
+                                <?= mb_substr($student['name'], 0, 1) ?>
+                            </div>
+                            <div>
+                                <p class="text-[13px] font-black text-slate-800"><?= htmlspecialchars($student['name']) ?></p>
+                                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">ห้อง <?= $student['classroom'] ?></p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-black text-emerald-600"><?= $student['presence_rate'] ?><span class="text-[10px] ml-0.5">%</span></p>
+                            <p class="text-[8px] font-bold text-slate-300 uppercase">High Presence</p>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+            <a href="report.php" class="w-full py-4 rounded-2xl bg-slate-50 text-slate-400 text-center text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">View Full Performance</a>
+        </div>
+    </div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <!-- Main Stats Chart -->
         <div class="lg:col-span-2 bg-white rounded-[48px] p-10 shadow-sm border border-slate-200/60 flex flex-col gap-10">
