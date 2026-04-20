@@ -74,6 +74,11 @@ try {
             $cbId  = $payload['chromebookId'] ?? '';
             if (!$bType || !$bId || !$cbId) err('ข้อมูลไม่ครบ');
 
+            // Normalize student ID if borrower is a student
+            if ($bType === 'Student' && preg_match('/^\d+$/', $bId)) {
+                $bId = str_pad($bId, 5, '0', STR_PAD_LEFT);
+            }
+
             $cb = $pdo->prepare("SELECT serial_number FROM cb_chromebooks WHERE chromebook_id = ?");
             $cb->execute([$cbId]); $row = $cb->fetch();
             $serial = $row['serial_number'] ?? '';

@@ -98,7 +98,10 @@ try {
             </a>
         </nav>
 
-        <div class="p-8 mt-auto">
+        <div class="p-8 mt-auto space-y-4">
+            <a href="change_password.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-indigo-500 hover:bg-indigo-50 transition-all">
+                <i class="bi bi-key-fill text-lg"></i> เปลี่ยนรหัสผ่าน
+            </a>
             <a href="logout.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-rose-500 hover:bg-rose-50 transition-all">
                 <i class="bi bi-box-arrow-left text-lg"></i> ออกจากระบบ
             </a>

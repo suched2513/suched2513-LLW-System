@@ -77,6 +77,7 @@ $subMenus = [
     ],
     'behavior' => [
         ['icon' => 'bi-pencil-square',  'label' => 'บันทึกพฤติกรรม',    'url' => $base_path . '/behavior/dashboard.php'],
+        ['icon' => 'bi-mortarboard-fill', 'label' => 'จัดการห้องที่ปรึกษา', 'url' => $base_path . '/behavior/manage_advisors_ui.php'],
         ['icon' => 'bi-speedometer2',   'label' => 'Admin Dashboard',   'url' => $base_path . '/behavior/admin.php',   'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'bi-sliders',        'label' => 'จัดการระบบ',        'url' => $base_path . '/behavior/manage.php',  'roles' => ['super_admin']],
         ['icon' => 'bi-mortarboard',    'label' => 'นักเรียนดูข้อมูล',  'url' => $base_path . '/behavior/student_view.php'],
@@ -288,9 +289,14 @@ $subMenus = [
                 </div>
             </div>
             <div class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-200/50 flex justify-between items-center">
-                <a href="<?= $base_path ?>/logout.php" class="flex items-center gap-2 text-rose-500 font-black text-[9px] sm:text-[10px] uppercase tracking-widest hover:text-rose-700 transition-colors">
-                    <i class="bi bi-power"></i> Sign Out
-                </a>
+                <div class="flex items-center gap-3">
+                    <a href="<?= $base_path ?>/change_password.php" class="flex items-center gap-1.5 text-indigo-500 font-black text-[9px] sm:text-[10px] uppercase tracking-widest hover:text-indigo-700 transition-colors">
+                        <i class="bi bi-key-fill"></i> Pass
+                    </a>
+                    <a href="<?= $base_path ?>/logout.php" class="flex items-center gap-1.5 text-rose-500 font-black text-[9px] sm:text-[10px] uppercase tracking-widest hover:text-rose-700 transition-colors">
+                        <i class="bi bi-power"></i> Sign Out
+                    </a>
+                </div>
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             </div>
         </div>

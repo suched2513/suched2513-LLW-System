@@ -138,7 +138,10 @@ $roleLabel = [
             <i class="bi bi-file-earmark-bar-graph text-lg"></i> รายงาน
         </a>
     </nav>
-    <div class="p-8 mt-auto">
+    <div class="p-8 mt-auto space-y-4">
+        <a href="change_password.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-indigo-500 hover:bg-indigo-50 transition-all">
+            <i class="bi bi-key-fill text-lg"></i> เปลี่ยนรหัสผ่าน
+        </a>
         <a href="logout.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-rose-500 hover:bg-rose-50 transition-all">
             <i class="bi bi-box-arrow-left text-lg"></i> ออกจากระบบ
         </a>
@@ -163,6 +166,10 @@ $roleLabel = [
                 <?= htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') ?>
             </div>
             <?php endif; ?>
+            <button onclick="document.getElementById('modal-import').classList.remove('hidden')"
+                class="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-600 hover:scale-[1.02] transition-all">
+                <i class="bi bi-file-earmark-spreadsheet text-lg"></i> นำเข้า CSV
+            </button>
             <button onclick="document.getElementById('modal-add').classList.remove('hidden')"
                 class="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] transition-all">
                 <i class="bi bi-plus-lg text-lg"></i> เพิ่มผู้ใช้ใหม่
@@ -365,6 +372,49 @@ $roleLabel = [
     </div>
 </div>
 
+<!-- Modal: นำเข้า CSV -->
+<div id="modal-import" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-file-earmark-arrow-up"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">นำเข้าผู้ใช้งานจาก CSV</h5>
+                    <p class="text-[10px] font-bold text-emerald-100 uppercase tracking-widest">รองรับไฟล์ .csv (UTF-8)</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-8 space-y-6">
+            <div class="bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
+                <p class="text-xs font-bold text-emerald-700 mb-2"><i class="bi bi-info-circle-fill mr-1"></i>รูปแบบไฟล์ CSV (ไม่มีหัวตาราง):</p>
+                <code class="text-[11px] text-emerald-600 bg-emerald-100/50 px-2 py-1 rounded-lg block leading-relaxed">
+                    username, firstname, lastname, password, role
+                </code>
+                <p class="text-[10px] text-emerald-500 mt-2 italic">* Role: super_admin, wfh_admin, wfh_staff, cb_admin, att_teacher</p>
+            </div>
+            
+            <div id="drop-zone" class="border-2 border-dashed border-emerald-200 rounded-2xl p-10 text-center hover:border-emerald-400 hover:bg-emerald-50/50 transition-all cursor-pointer"
+                 onclick="document.getElementById('csv-file').click()">
+                <i class="bi bi-cloud-upload text-4xl text-emerald-400 block mb-2"></i>
+                <p class="text-sm font-bold text-slate-500">คลิกเพื่อเลือกไฟล์ CSV หรือลากมาวาง</p>
+                <p class="text-xs text-slate-400 mt-1" id="file-name">ยังไม่ได้เลือกไฟล์</p>
+            </div>
+            <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="document.getElementById('file-name').textContent = this.files[0].name">
+
+            <div class="flex gap-3">
+                <button type="button" onclick="document.getElementById('modal-import').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="button" onclick="handleImport()"
+                    class="flex-[2] py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-emerald-200/50 hover:opacity-90 transition-all">
+                    <i class="bi bi-check-circle-fill mr-1"></i> เริ่มนำเข้าข้อมูล
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Delete form (hidden) -->
 <form id="delete-form" method="POST" class="hidden">
     <input type="hidden" name="action" value="delete">
@@ -394,6 +444,47 @@ function confirmDelete(uid, name) {
             document.getElementById('delete-form').submit();
         }
     });
+}
+
+async function handleImport() {
+    const fileInput = document.getElementById('csv-file');
+    if (!fileInput.files.length) {
+        Swal.fire({ icon: 'warning', title: 'กรุณาเลือกไฟล์', text: 'กรุณาเลือกไฟล์ CSV ก่อนดำเนินการ' });
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('csv_file', fileInput.files[0]);
+
+    Swal.fire({
+        title: 'กำลังนำเข้าข้อมูล...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    try {
+        const res = await fetch('api/import_users.php', {
+            method: 'POST',
+            body: formData
+        }).then(r => r.json());
+
+        if (res.status === 'success') {
+            Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ!',
+                text: res.message,
+                confirmButtonColor: '#059669'
+            }).then(() => location.reload());
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'ผิดพลาด',
+                text: res.message
+            });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถติดต่อ API ได้' });
+    }
 }
 </script>
 

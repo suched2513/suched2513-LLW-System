@@ -178,6 +178,11 @@ function timeToMinutes($timeStr) {
  * บันทึกการเช็คชื่อ
  */
 function saveAttendance($date, $period, $subject_id, $teacher_id, $student_id, $status, $time_in, $start_time, $note, $pdo) {
+    // 0. Normalize student ID
+    if (preg_match('/^\d+$/', $student_id)) {
+        $student_id = str_pad($student_id, 5, '0', STR_PAD_LEFT);
+    }
+
     // 1. Calculate Late Status automatically
     if ($status === 'มา' && !empty($time_in) && !empty($start_time)) {
         $timeInMinutes = timeToMinutes($time_in);

@@ -41,6 +41,11 @@ try {
     foreach ($records as $r) {
         $studentId = trim($r['student_id'] ?? $r['id'] ?? '');
         if ($studentId === '') continue;
+
+        // Normalize: pad to 5 digits
+        if (preg_match('/^\d+$/', $studentId)) {
+            $studentId = str_pad($studentId, 5, '0', STR_PAD_LEFT);
+        }
         $stmt->execute([
             ':date'       => $date,
             ':classroom'  => $classroom,
