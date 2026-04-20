@@ -72,8 +72,8 @@ try {
         }
     }
 
-    // Set finalized SID for score/history queries
-    $sid = $searchSid;
+    // Set finalized SID for score/history queries from the found record
+    $sid = $student['student_id'];
 
     $st = [
         'studentId' => $student['student_id'],
@@ -172,6 +172,7 @@ try {
 
 } catch (Exception $e) {
     error_log('[behavior] get_student_focus error: ' . $e->getMessage());
+    if (ob_get_length()) ob_clean();
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
 }
