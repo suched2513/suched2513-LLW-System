@@ -119,6 +119,7 @@ require_once __DIR__ . '/../config/database.php';
                     <div class="bg-gradient-to-br from-indigo-50/50 to-blue-50/50 rounded-2xl p-4 border border-indigo-100/30">
                         <h6 class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-3 flex items-center gap-2">
                             <i class="bi bi-shield-check"></i> การเข้าแถว & ระเบียบวินัย
+                            <span class="ml-auto opacity-50" id="syncTimeAssembly"></span>
                         </h6>
                         <div id="assemblyHistoryList" class="space-y-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar text-[9px]">
                             <!-- Assembly items -->
@@ -131,6 +132,7 @@ require_once __DIR__ . '/../config/database.php';
                     <div class="bg-gradient-to-br from-emerald-50/50 to-teal-50/50 rounded-2xl p-4 border border-emerald-100/30">
                         <h6 class="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-2">
                             <i class="bi bi-calendar-check-fill"></i> การเข้าเรียนรายวิชา (คาบ 1-8)
+                            <span class="ml-auto opacity-50" id="syncTimeAttendance"></span>
                         </h6>
                         <div id="attendanceHistoryList" class="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar text-[9px]">
                             <!-- Attendance items -->
@@ -167,6 +169,18 @@ require_once __DIR__ . '/../config/database.php';
 <script>
 const BASE_BEHAVIOR_SCORE = 100;
 const clamp = (n, min, max) => Math.min(max, Math.max(min, Number(n) || 0));
+
+// HTML Escape helper (Legacy compatibility)
+function esc(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 const normId = sid => { sid = String(sid || '').trim(); if (/^\d+$/.test(sid)) sid = sid.padStart(5, '0'); return sid; };
 
 let basePath = '';
@@ -287,6 +301,7 @@ async function loadAssemblySync(sid) {
                 `;
                 list.appendChild(item);
             });
+            document.getElementById('syncTimeAssembly').innerText = `อัปเดต ${new Date().toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}`;
         } else {
             list.innerHTML = '<div class="text-center py-8 text-slate-400 italic">ไม่พบประวัติการเข้าแถวในช่วงนี้</div>';
         }
@@ -341,6 +356,7 @@ async function loadAttendanceSync(sid) {
                 `;
                 list.appendChild(card);
             });
+            document.getElementById('syncTimeAttendance').innerText = `อัปเดต ${new Date().toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})}`;
         } else {
             list.innerHTML = '<div class="text-center py-6 text-slate-400 italic">ไม่พบประวัติเข้าเรียน</div>';
         }

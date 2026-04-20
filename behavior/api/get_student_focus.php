@@ -28,20 +28,23 @@ if ($sid === '') {
 try {
     $pdo = getPdo();
 
-    // 1. Try search by ID (Exact)
-    $searchSid = $sid;
-    if (preg_match('/^\d+$/', $searchSid)) {
-        $searchSid = str_pad($searchSid, 5, '0', STR_PAD_LEFT);
+    // Poly-Identity Resolver
+    $sidPadded = $sid;
+    if (preg_match('/^\d+$/', $sid)) {
+        $sidPadded = str_pad($sid, 5, '0', STR_PAD_LEFT);
     }
+    $sidUnpadded = ltrim($sidPadded, '0');
 
-    $stmt = $pdo->prepare("
+    // 1. Get Student Info (Unpadded in att_students, Padded in request)
+    $stmtSt = $pdo->prepare("
         SELECT s.student_id, s.name, s.classroom, b.homeroom, b.img_url
         FROM att_students s
         LEFT JOIN beh_students b ON s.student_id = b.student_id
-        WHERE s.student_id = ?
+        WHERE s.student_id = ? OR s.student_id = ?
+        LIMIT 1
     ");
-    $stmt->execute([$searchSid]);
-    $student = $stmt->fetch();
+    $stmtSt->execute([$sidPadded, $sidUnpadded]);
+    $student = $stmtSt->fetch();
 
     // 2. If not found by ID, try search by Name (LIKE)
     if (!$student) {

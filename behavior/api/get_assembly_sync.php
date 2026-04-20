@@ -22,42 +22,31 @@ $studentId = $_GET['sid'] ?? $_GET['student_id'] ?? '';
 if (empty($studentId)) {
     if (ob_get_length()) ob_clean();
     echo json_encode(['status' => 'success', 'data' => []]);
-    exit;
-}
+    // Poly-Identity Resolver
+    $sidPadded = $studentId;
+    if (preg_match('/^\d+$/', $studentId)) {
+        $sidPadded = str_pad($studentId, 5, '0', STR_PAD_LEFT);
+    }
+    $sidUnpadded = ltrim($sidPadded, '0');
 
-// Standardize and prepare unpadded version
-$studentIdPadded = $studentId;
-if (preg_match('/^\d+$/', $studentId)) {
-    $studentIdPadded = str_pad($studentId, 5, '0', STR_PAD_LEFT);
-}
-$studentIdUnpadded = ltrim($studentIdPadded, '0');
+    try {
+        $pdo = getPdo();
+        $stmt = $pdo->prepare("
+            SELECT date, status, nail, hair, shirt, pants, socks, shoes, note 
+            FROM assembly_attendance 
+            WHERE student_id = ? OR student_id = ?
+            ORDER BY date DESC 
+            LIMIT 30
+        ");
+        $stmt->execute([$sidPadded, $sidUnpadded]);
+        $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-try {
-    $pdo = getPdo();
-    
-    // ดึงข้อมูลย้อนหลัง 30 รายการล่าสุด
-    $stmt = $pdo->prepare("
-        SELECT 
-            date, 
-            status, 
-            nail, 
-            hair, 
-            shirt, 
-            pants, 
-            socks, 
-            shoes, 
-            note 
-        FROM assembly_attendance 
-        WHERE student_id = ? 
-        ORDER BY date DESC 
-        LIMIT 30
-    ");
-    $stmt->execute([$studentId]);
-    $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    echo json_encode([
-        'status' => 'success', 
-        'data' => $records,
+        if (ob_get_length()) ob_clean();
+        echo json_encode([
+            'status' => 'success', 
+            'data' => $records,
+            'debug' => ['sidPadded' => $sidPadded, 'sidUnpadded' => $sidUnpadded],
+        'debug' => ['sidPadded' => $sidPadded, 'sidUnpadded' => $sidUnpadded],
         'summary' => [
             'total' => count($records),
             'absent' => count(array_filter($records, fn($r) => $r['status'] === 'ข')),

@@ -32,14 +32,21 @@ if (preg_match('/^\d+$/', $studentId)) {
 try {
     $pdo = getPdo();
     
-    // Identity Resolver: Map 5-digit sid to internal id
-    $stmtSt = $pdo->prepare("SELECT id FROM att_students WHERE student_id = ?");
-    $stmtSt->execute([$studentId]);
+    // Poly-Identity Resolver
+    $sidPadded = $studentId;
+    if (preg_match('/^\d+$/', $studentId)) {
+        $sidPadded = str_pad($studentId, 5, '0', STR_PAD_LEFT);
+    }
+    $sidUnpadded = ltrim($sidPadded, '0');
+
+    // Search master table for BOTH padded and unpadded ID
+    $stmtSt = $pdo->prepare("SELECT id FROM att_students WHERE student_id = ? OR student_id = ? LIMIT 1");
+    $stmtSt->execute([$sidPadded, $sidUnpadded]);
     $st = $stmtSt->fetch();
     
     if (!$st) {
         if (ob_get_length()) ob_clean();
-        echo json_encode(['status' => 'success', 'data' => []]);
+        echo json_encode(['status' => 'success', 'data' => [], 'debug_msg' => 'Student not found in master table']);
         exit;
     }
     
@@ -84,7 +91,8 @@ try {
     if (ob_get_length()) ob_clean();
     echo json_encode([
         'status' => 'success', 
-        'data' => array_values($grouped)
+        'data' => array_values($grouped),
+        'internal_id' => $internalId
     ]);
 
 } catch (Exception $e) {
