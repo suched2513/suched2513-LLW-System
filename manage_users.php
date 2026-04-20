@@ -468,10 +468,25 @@ async function handleImport() {
     });
 
     try {
-        const res = await fetch('api/import_users.php', {
+        const response = await fetch('api/import_users.php', {
             method: 'POST',
             body: formData
-        }).then(r => r.json());
+        });
+        
+        const text = await response.text();
+        let res;
+        try {
+            res = JSON.parse(text);
+        } catch (e) {
+            console.error('Raw Response:', text);
+            Swal.fire({
+                icon: 'error',
+                title: 'API Error',
+                html: `<div class="text-left text-xs bg-slate-50 p-4 rounded-xl overflow-auto max-h-40"><code>${text.substring(0, 500)}</code></div>`,
+                confirmButtonColor: '#ef4444'
+            });
+            return;
+        }
 
         if (res.status === 'success') {
             Swal.fire({
@@ -488,7 +503,7 @@ async function handleImport() {
             });
         }
     } catch (e) {
-        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถติดต่อ API ได้' });
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: ' + e.message });
     }
 }
 </script>
