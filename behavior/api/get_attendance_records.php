@@ -8,16 +8,24 @@ session_start();
 require_once __DIR__ . '/../../config/database.php';
 
 if (!isset($_SESSION['llw_role'])) {
-    http_response_code(401);
-    echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบ']);
-    exit;
+    $mode = $_GET['mode'] ?? 'teacher';
+    if ($mode !== 'student') {
+        http_response_code(401);
+        echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบ']);
+        exit;
+    }
 }
 
-$studentId = $_GET['student_id'] ?? '';
+$studentId = $_GET['sid'] ?? $_GET['student_id'] ?? '';
 
 if (empty($studentId)) {
     echo json_encode(['status' => 'success', 'data' => []]);
     exit;
+}
+
+// Normalize: pad to 5 digits
+if (preg_match('/^\d+$/', $studentId)) {
+    $studentId = str_pad($studentId, 5, '0', STR_PAD_LEFT);
 }
 
 try {

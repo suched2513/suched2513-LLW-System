@@ -250,7 +250,7 @@ async function loadAssemblySync(sid) {
     section.classList.remove('hidden');
 
     try {
-        const res = await fetch(basePath + '/behavior/api/get_assembly_sync.php?student_id=' + sid);
+        const res = await fetch(basePath + '/behavior/api/get_assembly_sync.php?sid=' + encodeURIComponent(sid) + '&mode=student');
         const data = await res.json();
         
         if (data.status === 'success' && data.data && data.data.length > 0) {
@@ -304,7 +304,7 @@ async function loadAttendanceSync(sid) {
     section.classList.remove('hidden');
 
     try {
-        const res = await fetch(basePath + '/behavior/api/get_attendance_records.php?student_id=' + sid);
+        const res = await fetch(basePath + '/behavior/api/get_attendance_records.php?sid=' + encodeURIComponent(sid) + '&mode=student');
         const data = await res.json();
         
         if (data.status === 'success' && data.data && data.data.length > 0) {
