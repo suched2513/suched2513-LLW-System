@@ -33,10 +33,15 @@ try {
     $files = glob($migrationsDir . '/*.php');
     sort($files);
 
+    $only = $_GET['only'] ?? '';
     $pending = [];
     foreach ($files as $f) {
         $name = basename($f, '.php');
-        if (!in_array($name, $executed)) {
+        if ($only && $name === $only) {
+            $pending = [$f];
+            break;
+        }
+        if (!$only && !in_array($name, $executed)) {
             $pending[] = $f;
         }
     }
