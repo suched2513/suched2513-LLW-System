@@ -582,6 +582,14 @@ async function loadLeaderboard() {
             
             const card = document.createElement('div');
             card.className = 'flex items-center justify-between p-5 bg-white rounded-3xl border border-slate-100 hover:shadow-lg hover:border-amber-100 transition-all group';
+            
+            // Robust classroom display logic
+            let classDisplay = esc(st.classroom || '');
+            if (!classDisplay && st.level && st.room) {
+                classDisplay = `${esc(st.level)}/${esc(st.room)}`;
+            }
+            if (!classDisplay) classDisplay = '-';
+
             card.innerHTML = `
                 <div class="flex items-center gap-5">
                     <div class="w-12 h-12 rounded-2xl ${rankColor} flex items-center justify-center font-black text-lg group-hover:scale-110 transition-all">
@@ -589,7 +597,7 @@ async function loadLeaderboard() {
                     </div>
                     <div>
                         <p class="text-sm font-black text-slate-800">${esc(st.name)}</p>
-                        <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">${esc(st.level)}/${esc(st.room)} | ID: ${esc(st.student_id)}</p>
+                        <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">${classDisplay} | ID: ${esc(st.student_id)}</p>
                     </div>
                 </div>
                 <div class="text-right">
@@ -1246,11 +1254,21 @@ window.addAdvisorMapping = async () => {
     const room = document.getElementById('map-room').value.trim();
     if (!level || !room) return;
     const res = await post('/behavior/api/manage_advisors.php', { action: 'save', level, room });
-    if (res.status === 'success') openAdvisorMappingModal(); else Swal.fire('Error', res.message, 'error');
+    if (res.status === 'success') {
+        openAdvisorMappingModal(); 
+        loadPendingDeeds(); // Refresh count badge and list
+    } else {
+        Swal.fire('Error', res.message, 'error');
+    }
 };
 window.deleteAdvisorMapping = async (id) => {
     const res = await post('/behavior/api/manage_advisors.php', { action: 'delete', mappingId: id });
-    if (res.status === 'success') openAdvisorMappingModal(); else Swal.fire('Error', res.message, 'error');
+    if (res.status === 'success') {
+        openAdvisorMappingModal(); 
+        loadPendingDeeds(); // Refresh count badge and list
+    } else {
+        Swal.fire('Error', res.message, 'error');
+    }
 };
 
 function renderClassroomSummary(data) {
