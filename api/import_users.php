@@ -5,6 +5,12 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 session_start();
+
+// Temporary debug: enable error display
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../config/database.php';
 
 // Auth guard: ต้องเป็น super_admin เท่านั้น
