@@ -6,6 +6,7 @@
 header('Content-Type: application/json; charset=utf-8');
 session_start();
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../includes/telegram_bot.php';
 
 if (!isset($_SESSION['llw_role'])) {
     http_response_code(401);
@@ -105,6 +106,24 @@ try {
         $teacherUserId,
         $imagePath,
     ]);
+
+    // ── Smart Notifications (Telegram) ──
+    $shouldNotify = ($type === 'ความดี' && $score >= 20) || ($type === 'ความผิด' && $score >= 10);
+    if ($shouldNotify) {
+        $settings = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
+        if ($settings && $settings['telegram_token']) {
+            $icon = ($type === 'ความดี') ? '🌟' : '🛑';
+            $msg = "$icon <b>สรุปบันทึกพฤติกรรม</b>\n";
+            $msg .= "👤 นักเรียน: $studentName ($studentId)\n";
+            $msg .= "📝 ประเภท: $type\n";
+            $msg .= "🔹 กิจกรรม: $activity\n";
+            $msg .= "💎 คะแนน: " . (($type === 'ความดี') ? '+' : '-') . "$score\n";
+            $msg .= "👨‍🏫 ผู้บันทึก: $teacher\n";
+            $msg .= "📅 วันที่: " . date('d/m/Y', strtotime($date));
+            
+            sendTelegramMessage($settings['telegram_token'], $settings['admin_chat_id'], $msg);
+        }
+    }
 
     echo json_encode(['status' => 'success', 'message' => 'บันทึกเรียบร้อย']);
 

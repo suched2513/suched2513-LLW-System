@@ -42,6 +42,14 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <span class="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-[8px] text-white items-center justify-center font-black">!</span>
             </span>
         </button>
+        <button id="tab-btn-leaderboard" onclick="showTab('leaderboard')"
+            class="tab-btn tab-inactive px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
+            <i class="bi bi-trophy-fill text-amber-500"></i> Hall of Fame
+        </button>
+        <button id="tab-btn-analytics" onclick="showTab('analytics')"
+            class="tab-btn tab-inactive px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
+            <i class="bi bi-bar-chart-line-fill text-indigo-500"></i> Analytics
+        </button>
     </div>
 </div>
 
@@ -120,6 +128,12 @@ require_once __DIR__ . '/../components/layout_start.php';
                             <div class="text-2xl font-black text-sky-600" id="sbpScoreNet">100</div>
                             <div class="text-[9px] font-bold text-sky-400 uppercase">สุทธิ</div>
                         </div>
+                    </div>
+
+                    <div class="mt-5 no-print">
+                        <a id="sbpCertBtn" href="#" target="_blank" class="block w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-200 hover:scale-[1.02] transition-all">
+                            <i class="bi bi-patch-check-fill me-1"></i> Print Certificate
+                        </a>
                     </div>
                 </div>
 
@@ -381,6 +395,74 @@ require_once __DIR__ . '/../components/layout_start.php';
     <?php endif; ?>
 </div>
 
+<!-- ═══════ TAB: LEADERBOARD (Hall of Fame) ═══════ -->
+<div id="tab-leaderboard" class="tab-content hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+        <!-- Decoration / Trophy -->
+        <div class="lg:col-span-4 flex flex-col items-center text-center py-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-[48px] text-white shadow-2xl shadow-amber-200/50">
+            <i class="bi bi-trophy-fill text-8xl mb-6 drop-shadow-xl animate-bounce"></i>
+            <h4 class="text-3xl font-black uppercase tracking-tighter">Hall of Fame</h4>
+            <p class="text-xs font-bold opacity-80 uppercase tracking-widest mt-2">นักเรียนแบบอย่าง ประจำปีการศึกษา</p>
+            
+            <div class="mt-10 w-full px-8 space-y-4">
+                <div class="bg-white/20 backdrop-blur-md rounded-2xl p-6 border border-white/30">
+                    <p class="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Top Performer</p>
+                    <h5 id="leaderboardTopName" class="text-xl font-black">-</h5>
+                </div>
+                <button onclick="loadLeaderboard()" class="w-full bg-white text-orange-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-orange-700/20 hover:scale-[1.02] transition-all">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh Standings
+                </button>
+            </div>
+        </div>
+
+        <!-- Leaderboard List -->
+        <div class="lg:col-span-8 bg-white rounded-[48px] p-10 shadow-sm border border-slate-100 flex flex-col gap-10">
+            <div class="flex items-center justify-between">
+                <h5 class="text-lg font-black text-slate-800 flex items-center gap-3">
+                    <i class="bi bi-stars text-amber-500"></i> อันดับนักเรียนคะแนนความดีสูงสุด
+                </h5>
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full border border-slate-100">Updated Real-time</span>
+            </div>
+
+            <div id="leaderboardContainer" class="space-y-4">
+                <!-- Items -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ TAB: ANALYTICS (Analytics) ═══════ -->
+<div id="tab-analytics" class="tab-content hidden">
+    <div class="flex flex-col gap-10">
+        <!-- Top Stats Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div class="bg-white rounded-[48px] p-10 shadow-sm border border-slate-100 flex flex-col gap-10">
+                <div>
+                    <h5 class="text-lg font-black text-slate-800 flex items-center gap-3">
+                        <i class="bi bi-bar-chart-fill text-indigo-600"></i> แผนภูมิคะแนนเฉลี่ยรายห้อง
+                    </h5>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Average Behavior Score per Class</p>
+                </div>
+                <div class="h-[400px]">
+                    <canvas id="roomStatsChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[48px] p-10 shadow-sm border border-slate-100 flex flex-col gap-10">
+                <div>
+                    <h5 class="text-lg font-black text-slate-800 flex items-center gap-3">
+                        <i class="bi bi-pie-chart-fill text-rose-500"></i> สัดส่วนพฤติกรรมในระบบ
+                    </h5>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Good Deeds vs Violations Distribution</p>
+                </div>
+                <div class="h-[400px] flex items-center justify-center">
+                    <canvas id="typeRatioChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ═══════ STUDENT MODAL (เลือกนักเรียน) ═══════ -->
 <div id="studentModal" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeStudentModal()"></div>
@@ -476,6 +558,121 @@ function showTab(name) {
     if (b) { b.classList.remove('tab-inactive'); b.classList.add('tab-active'); }
 
     if (name === 'database' && cachedAllRecordForDB.length === 0) loadDatabaseRecords();
+    if (name === 'leaderboard') loadLeaderboard();
+    if (name === 'analytics') loadAnalytics();
+}
+
+/** Leaderboard Logic **/
+async function loadLeaderboard() {
+    const container = document.getElementById('leaderboardContainer');
+    container.innerHTML = '<div class="py-20 text-center"><div class="animate-spin w-10 h-10 border-4 border-amber-200 border-t-amber-500 rounded-full mx-auto"></div></div>';
+    
+    const res = await api('/behavior/api/get_leaderboard.php');
+    if (res.status === 'success' && res.data.length > 0) {
+        container.innerHTML = '';
+        document.getElementById('leaderboardTopName').innerText = res.data[0].name;
+        
+        res.data.forEach((st, idx) => {
+            const rank = idx + 1;
+            let rankColor = 'bg-slate-50 text-slate-400';
+            let rankIcon = '';
+            if (rank === 1) { rankColor = 'bg-amber-100 text-amber-600'; rankIcon = '🥇'; }
+            if (rank === 2) { rankColor = 'bg-slate-200 text-slate-600'; rankIcon = '🥈'; }
+            if (rank === 3) { rankColor = 'bg-orange-100 text-orange-600'; rankIcon = '🥉'; }
+            
+            const card = document.createElement('div');
+            card.className = 'flex items-center justify-between p-5 bg-white rounded-3xl border border-slate-100 hover:shadow-lg hover:border-amber-100 transition-all group';
+            card.innerHTML = `
+                <div class="flex items-center gap-5">
+                    <div class="w-12 h-12 rounded-2xl ${rankColor} flex items-center justify-center font-black text-lg group-hover:scale-110 transition-all">
+                        ${rankIcon || rank}
+                    </div>
+                    <div>
+                        <p class="text-sm font-black text-slate-800">${esc(st.name)}</p>
+                        <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">${esc(st.level)}/${esc(st.room)} | ID: ${esc(st.student_id)}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xl font-black text-amber-600">${st.net_score}</div>
+                    <div class="text-[8px] font-black text-slate-300 uppercase tracking-widest">Net Points</div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    } else {
+        container.innerHTML = '<div class="py-20 text-center text-slate-400 italic">ยังไม่มีข้อมูลลำดับ</div>';
+    }
+}
+
+/** Analytics Logic **/
+let roomChart = null;
+let ratioChart = null;
+
+async function loadAnalytics() {
+    const res = await api('/behavior/api/get_room_stats.php');
+    if (res.status === 'success') {
+        renderRoomStats(res.data);
+        renderRatioStats(res.data);
+    }
+}
+
+function renderRoomStats(data) {
+    const ctx = document.getElementById('roomStatsChart').getContext('2d');
+    if (roomChart) roomChart.destroy();
+    
+    roomChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(i => 'ห้อง ' + i.classroom),
+            datasets: [{
+                label: 'คะแนนเฉลี่ย',
+                data: data.map(i => parseFloat(i.avg_score).toFixed(1)),
+                backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                borderRadius: 15,
+                barThickness: 30
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { min: 80, max: 120, grid: { borderDash: [5, 5] } },
+                y: { grid: { display: false } }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+}
+
+function renderRatioStats(data) {
+    const ctx = document.getElementById('typeRatioChart').getContext('2d');
+    if (ratioChart) ratioChart.destroy();
+    
+    const totalGood = data.reduce((a, b) => a + parseInt(b.total_good_points), 0);
+    const totalBad = data.reduce((a, b) => a + parseInt(b.total_bad_points), 0);
+    
+    ratioChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['ความดี (+)', 'ความผิด (-)'],
+            datasets: [{
+                data: [totalGood, totalBad],
+                backgroundColor: ['#10b981', '#f43f5e'],
+                borderWidth: 0,
+                cutout: '80%'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { family: 'Prompt', weight: 'bold' } } }
+            }
+        }
+    });
 }
 
 // ─── Init ───
@@ -572,6 +769,10 @@ async function loadStudentFocus(sid) {
     document.getElementById('sbpScoreGood').innerText = sGood.toLocaleString();
     document.getElementById('sbpScoreBad').innerText = sBad.toLocaleString();
     document.getElementById('sbpScoreNet').innerText = sNet.toLocaleString();
+
+    // Update Certificate Link
+    const certBtn = document.getElementById('sbpCertBtn');
+    if (certBtn) certBtn.href = window.BASE + '/behavior/export_certificate.php?student_id=' + sid;
 
     document.getElementById('teacherStudentBox').classList.remove('hidden');
 

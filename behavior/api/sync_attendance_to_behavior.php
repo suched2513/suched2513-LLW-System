@@ -101,6 +101,36 @@ try {
         }
     }
 
+    // 3. ดึงรายการโดดเรียนรายวิชา (จากระบบเช็คชื่อรายคาบ)
+    $stmtAtt = $pdo->prepare("
+        SELECT a.student_id, s.name as student_name, sub.subject_name, a.period, a.date
+        FROM att_attendance a
+        JOIN att_students s ON a.student_id = s.id
+        JOIN att_subjects sub ON sub.id = a.subject_id
+        WHERE a.date = ? AND a.status = 'โดด'
+    ");
+    $stmtAtt->execute([$date]);
+    $skips = $stmtAtt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($skips as $sk) {
+        $sid = $sk['student_id'];
+        $sName = $sk['student_name'];
+        $actNameSkip = "โดดเรียนวิชา " . $sk['subject_name'] . " (คาบที่ " . $sk['period'] . ")";
+
+        $checkSkip = $pdo->prepare("SELECT id FROM beh_records WHERE student_id = ? AND record_date = ? AND activity = ?");
+        $checkSkip->execute([$sid, $date, $actNameSkip]);
+
+        if (!$checkSkip->fetch()) {
+             $insSkip = $pdo->prepare("
+                INSERT INTO beh_records 
+                (student_id, student_name, record_date, type, activity, score, teacher_name, teacher_user_id) 
+                VALUES (?, ?, ?, 'ความผิด', ?, 10, ?, ?)
+            ");
+            $insSkip->execute([$sid, $sName, $date, $actNameSkip, $teacherName, $teacherUserId]);
+            $count++;
+        }
+    }
+
     $pdo->commit();
     echo json_encode(['status' => 'success', 'message' => "บันทึกพฤติกรรมสำเร็จ $count รายการ (ข้ามรายการซ้ำ $dupes รายการ)"]);
 
