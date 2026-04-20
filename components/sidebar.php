@@ -116,9 +116,14 @@ $subMenus = [
         <!-- Main Portal -->
         <div class="pb-4 sm:pb-6">
             <p class="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-3 sm:mb-4">Main Portal</p>
-            <a href="<?= $base_path ?>/index.php" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all <?= $activeSystem === 'portal' ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-200/50' : 'text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 hover:pl-6' ?>">
+            <a href="<?= $base_path ?>/index.php" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all <?= $activeSystem === 'portal' && $current_page !== 'manage_advisors.php' ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-200/50' : 'text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 hover:pl-6' ?>">
                 <i class="bi bi-grid-fill text-base sm:text-lg"></i> แดชบอร์ดกลาง
             </a>
+            <?php if ($userRole === 'super_admin'): ?>
+            <a href="<?= $base_path ?>/manage_advisors.php" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all mt-1 <?= $current_page === 'manage_advisors.php' ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-200/50' : 'text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:pl-6' ?>">
+                <i class="bi bi-people-fill text-base sm:text-lg"></i> จัดการครูที่ปรึกษา
+            </a>
+            <?php endif; ?>
         </div>
 
         <!-- Academic & Management -->

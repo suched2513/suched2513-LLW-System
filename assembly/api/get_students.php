@@ -80,9 +80,16 @@ try {
             $existingEvening[$row['student_id']] = $row;
         }
 
-        $teacherQuery = $pdo->prepare("SELECT teacher_name FROM assembly_classrooms WHERE classroom = ?");
+        // Get Advisors from Central Table
+        $teacherQuery = $pdo->prepare("
+            SELECT CONCAT(u.firstname, ' ', u.lastname) as full_name 
+            FROM llw_class_advisors a
+            JOIN llw_users u ON a.user_id = u.user_id
+            WHERE a.classroom = ?
+            ORDER BY a.role_type ASC
+        ");
         $teacherQuery->execute([$classroom]);
-        $teacherName = $teacherQuery->fetchColumn() ?: '';
+        $teacherName = implode(', ', $teacherQuery->fetchAll(PDO::FETCH_COLUMN));
     }
 
     // Merge

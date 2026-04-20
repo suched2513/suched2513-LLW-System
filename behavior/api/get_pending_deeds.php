@@ -29,14 +29,11 @@ try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute();
     } else {
-        // Advisor sees only their students based on beh_advisors mapping
+        // Advisor sees only their students based on CENTRAL llw_class_advisors mapping
         $sql = "SELECT r.*, s.name as student_name, s.classroom, b.img_url as student_img
                 FROM beh_records r
                 JOIN att_students s ON (TRIM(LEADING '0' FROM r.student_id) = TRIM(LEADING '0' FROM s.student_id))
-                JOIN beh_advisors a ON (
-                    SUBSTRING_INDEX(s.classroom, '/', 1) = a.level AND 
-                    SUBSTRING_INDEX(s.classroom, '/', -1) = a.room
-                )
+                JOIN llw_class_advisors a ON (s.classroom = a.classroom)
                 LEFT JOIN beh_students b ON (TRIM(LEADING '0' FROM r.student_id) = TRIM(LEADING '0' FROM b.student_id))
                 WHERE r.status = 'pending' AND a.user_id = ?
                 ORDER BY r.created_at DESC";
