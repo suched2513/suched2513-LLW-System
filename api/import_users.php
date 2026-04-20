@@ -35,21 +35,11 @@ try {
         throw new Exception("ไม่สามารถอ่านไฟล์ได้");
     }
     
-    // ตรวจจับ Encoding (ถ้ามี extension mbstring)
-    if (function_exists('mb_detect_encoding')) {
-        // รายการ encoding ที่เป็นไปได้สำหรับภาษาไทย
-        $candidate_encodings = ['UTF-8', 'TIS-620', 'CP874', 'ISO-8859-11'];
-        
-        // กรองเฉพาะที่เครื่องนี้รองรับเพื่อป้องกัน ValueError ใน PHP 8.x
-        $supported_encodings = mb_list_encodings();
-        $encodings = array_intersect($candidate_encodings, $supported_encodings);
-        
-        if (!empty($encodings)) {
-            $encoding = mb_detect_encoding($content, array_values($encodings), true);
-            if ($encoding !== 'UTF-8' && $encoding !== false) {
-                $content = mb_convert_encoding($content, 'UTF-8', $encoding);
-            }
-        }
+    // ตรวจจับและแปลง Encoding (เน้นภาษาไทย)
+    if (!mb_check_encoding($content, 'UTF-8')) {
+        // หากไม่ใช่ UTF-8 ให้บังคับแปลงจาก CP874 (รหัสภาษาไทยมาตรฐานของ Excel/Windows) ทันที
+        // นี้เป็นวิธีที่แม่นยำที่สุดสำหรับไฟล์ CSV ภาษาไทยจาก Excel
+        $content = mb_convert_encoding($content, 'UTF-8', 'CP874');
     }
 
     // ลบ BOM (Byte Order Mark)

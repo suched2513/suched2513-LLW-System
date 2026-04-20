@@ -81,6 +81,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = 'ลบผู้ใช้เรียบร้อยแล้ว';
         }
     }
+
+    if ($action === 'clear_users') {
+        $myId = (int)$_SESSION['user_id'];
+        try {
+            $stmt = $pdo->prepare("DELETE FROM llw_users WHERE user_id != ?");
+            $stmt->execute([$myId]);
+            $msg = 'ล้างข้อมูลผู้ใช้อื่นทั้งหมดเรียบร้อยแล้ว (ยกเว้นคุณ)';
+        } catch (Exception $e) {
+            $msg = 'ไม่สามารถล้างข้อมูลได้'; $msgType = 'error';
+        }
+    }
 }
 
 // ─── Fetch Users ────────────────────────────────────────────────
@@ -166,6 +177,10 @@ $roleLabel = [
                 <?= htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') ?>
             </div>
             <?php endif; ?>
+            <button onclick="confirmClear()"
+                class="flex items-center gap-2 bg-rose-100 text-rose-500 px-6 py-3 rounded-2xl font-bold hover:bg-rose-500 hover:text-white transition-all">
+                <i class="bi bi-trash3 text-lg"></i> ล้างทั้งหมด
+            </button>
             <button onclick="document.getElementById('modal-import').classList.remove('hidden')"
                 class="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-600 hover:scale-[1.02] transition-all">
                 <i class="bi bi-file-earmark-spreadsheet text-lg"></i> นำเข้า CSV
@@ -427,6 +442,27 @@ $roleLabel = [
 </form>
 
 <script>
+function confirmClear() {
+    Swal.fire({
+        title: 'ล้างข้อมูลผู้ใช้ทั้งหมด?',
+        html: 'ระบบจะลบข้อมูลผู้ใช้อื่น <b>"ทั้งหมด"</b> ยกเว้นคุณ<br><small class="text-rose-500 font-bold">การดำเนินการนี้ไม่สามารถย้อนกลับได้!</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'ยืนยันลบทั้งหมด',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) {
+            const f = document.createElement('form');
+            f.method = 'POST';
+            f.innerHTML = '<input type="hidden" name="action" value="clear_users">';
+            document.body.appendChild(f);
+            f.submit();
+        }
+    });
+}
+
 function openReset(uid, name) {
     document.getElementById('reset-uid').value = uid;
     document.getElementById('reset-name').textContent = name;
