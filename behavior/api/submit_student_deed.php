@@ -33,13 +33,22 @@ if (preg_match('/^\d+$/', $sid)) {
 try {
     $pdo = getPdo();
     
-    // Get student info
-    $stmt = $pdo->prepare("SELECT name, level, room FROM beh_students WHERE student_id = ?");
+    // Get student info from Master (att_students)
+    $stmt = $pdo->prepare("SELECT name, classroom FROM att_students WHERE student_id = ?");
     $stmt->execute([$sid]);
     $student = $stmt->fetch();
     if (!$student) {
-        echo json_encode(['status' => 'error', 'message' => 'ไม่พบรหัสนักเรียน']);
+        echo json_encode(['status' => 'error', 'message' => 'ไม่พบรหัสนักเรียนในระบบ']);
         exit;
+    }
+
+    // Parse level/room from classroom (e.g. "ม.2/2", "3/1")
+    $className = $student['classroom'] ?? '';
+    $level = '';
+    $room = '';
+    if (preg_match('/(\d+)\/(\d+)/', $className, $matches)) {
+        $level = $matches[1];
+        $room = $matches[2];
     }
 
     $dbPath = null;
@@ -68,7 +77,7 @@ try {
         if ($set && !empty($set['telegram_token']) && !empty($set['admin_chat_id'])) {
             $msg = "📢 <b>มีบันทึกความดีใหม่รอยืนยัน</b>\n";
             $msg .= "---------------------------\n";
-            $msg .= "👤 <b>นักเรียน:</b> " . $student['name'] . " (ม." . $student['level'] . "/" . $student['room'] . ")\n";
+            $msg .= "👤 <b>นักเรียน:</b> " . $student['name'] . " (ม." . $level . "/" . $room . ")\n";
             $msg .= "📝 <b>กิจกรรม:</b> " . $activity . "\n";
             $msg .= "⭐ <b>คะแนนที่เสนอ:</b> +" . $score . "\n";
             $msg .= "---------------------------\n";

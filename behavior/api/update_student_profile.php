@@ -36,12 +36,14 @@ if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
 
 try {
     $pdo = getPdo();
-    
-    // Check if student exists
-    $stmt = $pdo->prepare("SELECT id FROM beh_students WHERE student_id = ?");
-    $stmt->execute([$sid]);
-    if (!$stmt->fetch()) {
-        echo json_encode(['status' => 'error', 'message' => 'ไม่พบรหัสนักเรียน']);
+
+    // Check if student exists in Master (att_students)
+    $stmtSt = $pdo->prepare("SELECT name, classroom FROM att_students WHERE student_id = ?");
+    $stmtSt->execute([$sid]);
+    $student = $stmtSt->fetch();
+
+    if (!$student) {
+        echo json_encode(['status' => 'error', 'message' => 'ไม่พบรหัสนักเรียนในระบบหลัก']);
         exit;
     }
 
@@ -55,8 +57,28 @@ try {
     $dbPath = '/uploads/profiles/' . $newNodeName;
 
     if (move_uploaded_file($fileTmp, $targetPath)) {
-        $stmt = $pdo->prepare("UPDATE beh_students SET img_url = ? WHERE student_id = ?");
-        $stmt->execute([$dbPath, $sid]);
+        // Parse level/room from classroom for the metadata table
+        $className = $student['classroom'] ?? '';
+        $level = '';
+        $room = '';
+        if (preg_match('/(\d+)\/(\d+)/', $className, $matches)) {
+            $level = $matches[1];
+            $room = $matches[2];
+        }
+
+        // Upsert into beh_students
+        $stmt = $pdo->prepare("
+            INSERT INTO beh_students (student_id, name, level, room, img_url) 
+            VALUES (:sid, :name, :lvl, :rm, :img)
+            ON DUPLICATE KEY UPDATE img_url = :img
+        ");
+        $stmt->execute([
+            'sid'  => $sid,
+            'name' => $student['name'],
+            'lvl'  => $level,
+            'rm'   => $room,
+            'img'  => $dbPath
+        ]);
         
         echo json_encode([
             'status' => 'success', 
