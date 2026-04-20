@@ -83,7 +83,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <div class="flex gap-2 mb-3">
                     <input type="text" id="teacherStudentIdInput"
                         class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all"
-                        placeholder="รหัสนักเรียน...">
+                        placeholder="ชื่อ หรือ รหัสนักเรียน...">
                     <button id="btnLoadStudent"
                         class="bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-4 rounded-2xl font-bold shadow-lg shadow-violet-200/50 hover:scale-[1.02] transition-all flex-shrink-0">
                         <i class="bi bi-arrow-right"></i>
@@ -747,8 +747,30 @@ async function loadStudentFocus(sid) {
 
     document.getElementById('teacherSpinner').classList.add('hidden');
 
-    if (!data || !data.st) {
-        Swal.fire({ icon: 'error', title: 'ไม่พบข้อมูล', text: 'ไม่พบรหัสนักเรียนนี้' });
+    if (!data) {
+        Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' });
+        return;
+    }
+
+    if (data.status === 'multiple') {
+        const listHtml = data.data.map(s => `
+            <button onclick="handleSearchResultSelect('${s.student_id}')" 
+                    class="w-full text-left p-3 hover:bg-violet-50 rounded-xl border border-transparent hover:border-violet-100 transition-all mb-1">
+                <div class="font-bold text-slate-800">${esc(s.name)}</div>
+                <div class="text-[10px] text-slate-400">ID: ${s.student_id} | ชั้น: ${esc(s.classroom)}</div>
+            </button>
+        `).join('');
+        
+        Swal.fire({
+            title: 'พบนักเรียนมากกว่า 1 คน',
+            html: `<div class="max-h-60 overflow-y-auto">${listHtml}</div>`,
+            showConfirmButton: false
+        });
+        return;
+    }
+
+    if (!data.st) {
+        Swal.fire({ icon: 'error', title: 'ไม่พบข้อมูล', text: data.message || 'ไม่พบนักเรียนรหัส/ชื่อนี้' });
         return;
     }
 
@@ -944,6 +966,12 @@ async function loadTemplates() {
 function refreshTemplates() {
     const type = document.getElementById('behType').value;
     const sel = document.getElementById('behTemplateSelect');
+    
+    if (cachedBehaviorTemplates.goods.length === 0) {
+        loadTemplates().then(() => refreshTemplates());
+        return;
+    }
+    
     sel.innerHTML = '<option value="">(กำหนดเอง)</option>';
     const list = type === 'ความดี' ? cachedBehaviorTemplates.goods : type === 'ความผิด' ? cachedBehaviorTemplates.bads : [];
     (list || []).forEach(i => {
@@ -952,6 +980,12 @@ function refreshTemplates() {
         sel.appendChild(op);
     });
 }
+
+window.handleSearchResultSelect = (sid) => {
+    Swal.close();
+    document.getElementById('teacherStudentIdInput').value = sid;
+    loadStudentFocus(sid);
+};
 
 // ─── Delete Activity ───
 async function deleteActivity(recordId) {

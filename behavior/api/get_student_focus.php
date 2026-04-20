@@ -20,32 +20,56 @@ if (!isset($_SESSION['llw_role'])) {
 $sid = trim($_GET['sid'] ?? '');
 if ($sid === '') {
     http_response_code(400);
-    echo json_encode(['status' => 'error', 'message' => 'กรุณาระบุรหัสนักเรียน']);
+    echo json_encode(['status' => 'error', 'message' => 'กรุณาระบุรหัสหรือชื่อนักเรียน']);
     exit;
-}
-
-// Normalize: pad to 5 digits
-if (preg_match('/^\d+$/', $sid)) {
-    $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
 }
 
 try {
     $pdo = getPdo();
 
-    // Get student info from Master (att_students) with Meta (beh_students)
+    // 1. Try search by ID (Exact)
+    $searchSid = $sid;
+    if (preg_match('/^\d+$/', $searchSid)) {
+        $searchSid = str_pad($searchSid, 5, '0', STR_PAD_LEFT);
+    }
+
     $stmt = $pdo->prepare("
         SELECT s.student_id, s.name, s.classroom, b.homeroom, b.img_url
         FROM att_students s
         LEFT JOIN beh_students b ON s.student_id = b.student_id
         WHERE s.student_id = ?
     ");
-    $stmt->execute([$sid]);
+    $stmt->execute([$searchSid]);
     $student = $stmt->fetch();
 
+    // 2. If not found by ID, try search by Name (LIKE)
     if (!$student) {
-        echo json_encode(['status' => 'error', 'st' => null, 'message' => 'ไม่พบรหัสนักเรียนนี้ในฐานข้อมูลกลาง']);
-        exit;
+        $stmtName = $pdo->prepare("
+            SELECT s.student_id, s.name, s.classroom, b.homeroom, b.img_url
+            FROM att_students s
+            LEFT JOIN beh_students b ON s.student_id = b.student_id
+            WHERE s.name LIKE ?
+            ORDER BY s.classroom, s.name
+            LIMIT 20
+        ");
+        $stmtName->execute(["%$sid%"]);
+        $matches = $stmtName->fetchAll();
+
+        if (count($matches) > 1) {
+            // Multiple matches: return list for selection
+            echo json_encode(['status' => 'multiple', 'data' => $matches]);
+            exit;
+        } elseif (count($matches) === 1) {
+            $student = $matches[0];
+            $searchSid = $student['student_id'];
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'ไม่พบข้อมูลนักเรียนด้วยรหัสหรือชื่อนี้']);
+            exit;
+        }
     }
+
+    // Set finalized SID for score/history queries
+    $sid = $searchSid;
 
     $st = [
         'studentId' => $student['student_id'],
