@@ -27,12 +27,26 @@ if (!isset($_FILES['csv_file'])) {
 
 try {
     $pdo = getPdo();
-    $file = $_FILES['csv_file']['tmp_name'];
-    $handle = fopen($file, "r");
+    $filePath = $_FILES['csv_file']['tmp_name'];
     
-    if ($handle === FALSE) {
-        throw new Exception("ไม่สามารถเปิดไฟล์ได้");
+    // อ่านข้อมูลทั้งหมดเพื่อตรวจสอบและแปลง Encoding
+    $content = file_get_contents($filePath);
+    
+    // ตรวจจับ Encoding (เน้น UTF-8 และ Windows-874/TIS-620 สำหรับภาษาไทย)
+    $encoding = mb_detect_encoding($content, ['UTF-8', 'Windows-874', 'TIS-620'], true);
+    
+    if ($encoding !== 'UTF-8') {
+        // ถ้าไม่ใช่ UTF-8 ให้แปลงเป็น UTF-8 (ส่วนใหญ่ไฟล์จาก Excel จะเป็น Windows-874)
+        $content = mb_convert_encoding($content, 'UTF-8', $encoding ?: 'Windows-874');
     }
+
+    // ลบ BOM (Byte Order Mark) ถ้าติดมาจาก Excel UTF-8
+    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+    // สร้าง Stream ชั่วคราวจากข้อมูลที่แปลงแล้วเพื่อใช้กับ fgetcsv
+    $handle = fopen('php://temp', 'r+');
+    fwrite($handle, $content);
+    rewind($handle);
 
     $pdo->beginTransaction();
 
