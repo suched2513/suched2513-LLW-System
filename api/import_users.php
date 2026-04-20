@@ -25,10 +25,6 @@ if (!isset($_FILES['csv_file'])) {
     exit;
 }
 
-// Temporary debug
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 try {
     $pdo = getPdo();
     $filePath = $_FILES['csv_file']['tmp_name'];
@@ -41,9 +37,13 @@ try {
     
     // ตรวจจับและแปลง Encoding (เน้นภาษาไทย)
     if (!mb_check_encoding($content, 'UTF-8')) {
-        // หากไม่ใช่ UTF-8 ให้บังคับแปลงจาก CP874 (รหัสภาษาไทยมาตรฐานของ Excel/Windows) ทันที
-        if (function_exists('mb_convert_encoding')) {
-            $content = mb_convert_encoding($content, 'UTF-8', 'CP874');
+        // หากไม่ใช่ UTF-8 ให้ลองใช้ iconv แปลงจาก WINDOWS-874 (รหัสภาษาไทยมาตรฐานของ Excel/Windows)
+        // เนื่องจากเซิร์ฟเวอร์นี้ mbstring ไม่รองรับรหัสภาษาไทย จึงต้องใช้ iconv แทน
+        if (function_exists('iconv')) {
+            $converted = @iconv('WINDOWS-874', 'UTF-8//IGNORE', $content);
+            if ($converted !== false) {
+                $content = $converted;
+            }
         }
     }
 
