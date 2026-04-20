@@ -48,8 +48,11 @@ if ($action === 'add_teacher') {
 if ($action === 'add_student') {
     $sname = trim($_POST['student_name']);
     $sid   = trim($_POST['student_id_code']);
+    // Standardize to 5 digits for consistency
+    if (preg_match('/^\d+$/', $sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
+    
     $cls   = trim($_POST['student_classroom']);
-    if (!$sname || !$sid || !$cls) { $msg = 'กรุณากรอกข้อมูลให้ครบ'; $msgType = 'error'; }
+    if (!$sname || !$sid || !$cls) { $msg = 'กรุณากรอกข้อมูลให้ครบถ้วน'; $msgType = 'error'; }
     else {
         $chk = $pdo->prepare("SELECT id FROM att_students WHERE student_id=? AND classroom=?");
         $chk->execute([$sid, $cls]);
@@ -63,6 +66,9 @@ if ($action === 'add_student') {
     $eid   = (int)$_POST['edit_id'];
     $sname = trim($_POST['student_name']);
     $sid   = trim($_POST['student_id_code']);
+    // Standardize to 5 digits for consistency
+    if (preg_match('/^\d+$/', $sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
+    
     $cls   = trim($_POST['student_classroom']);
     if ($eid && $sname && $sid && $cls) {
         $pdo->prepare("UPDATE att_students SET name=?, student_id=?, classroom=? WHERE id=?")->execute([$sname, $sid, $cls, $eid]);

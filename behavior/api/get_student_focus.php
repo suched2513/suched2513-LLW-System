@@ -32,24 +32,25 @@ if (preg_match('/^\d+$/', $sid)) {
 try {
     $pdo = getPdo();
 
-    // Get student info
-    $stmt = $pdo->prepare("SELECT * FROM beh_students WHERE student_id = ? AND status = 'active'");
+    // Get student info from Master (att_students) with Meta (beh_students)
+    $stmt = $pdo->prepare("
+        SELECT s.student_id, s.name, s.classroom, b.homeroom, b.img_url
+        FROM att_students s
+        LEFT JOIN beh_students b ON s.student_id = b.student_id
+        WHERE s.student_id = ?
+    ");
     $stmt->execute([$sid]);
     $student = $stmt->fetch();
 
     if (!$student) {
-        echo json_encode(['status' => 'error', 'st' => null, 'message' => 'ไม่พบรหัสนักเรียนนี้']);
+        echo json_encode(['status' => 'error', 'st' => null, 'message' => 'ไม่พบรหัสนักเรียนนี้ในฐานข้อมูลกลาง']);
         exit;
     }
-
-    $classText = trim(($student['level'] ?? '') . '/' . ($student['room'] ?? ''), '/');
 
     $st = [
         'studentId' => $student['student_id'],
         'name'      => $student['name'],
-        'level'     => $student['level'] ?? '',
-        'room'      => $student['room'] ?? '',
-        'classText' => $classText,
+        'classText' => $student['classroom'],
         'homeroom'  => $student['homeroom'] ?? '',
         'img'       => $student['img_url'] ?? '',
     ];

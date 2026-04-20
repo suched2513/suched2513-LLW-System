@@ -17,19 +17,24 @@ try {
     $pdo = getPdo();
 
     $stmt = $pdo->query("
-        SELECT student_id, name, level, room, homeroom
-        FROM beh_students
-        WHERE status = 'active'
-        ORDER BY level, room, name
+        SELECT s.student_id, s.name, s.classroom, b.homeroom
+        FROM att_students s
+        LEFT JOIN beh_students b ON s.student_id = b.student_id
+        ORDER BY s.classroom, s.name
     ");
 
     $list = [];
     foreach ($stmt->fetchAll() as $s) {
-        $classText = trim(($s['level'] ?? '') . '/' . ($s['room'] ?? ''), '/');
+        $sid = $s['student_id'];
+        // Ensure 5-digit padding for IDs that are numbers
+        if (preg_match('/^\d+$/', $sid)) {
+            $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
+        }
+
         $list[] = [
-            'studentId' => $s['student_id'],
+            'studentId' => $sid,
             'name'      => $s['name'],
-            'classText' => $classText,
+            'classText' => $s['classroom'],
             'homeroom'  => $s['homeroom'] ?? '',
         ];
     }

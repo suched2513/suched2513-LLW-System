@@ -16,23 +16,23 @@ if (!isset($_SESSION['llw_role'])) {
 try {
     $pdo = getPdo();
     
-    // SQL calculating Averages per Room
+    // SQL calculating Averages per Room using Master att_students
     $sql = "
         SELECT 
-            CONCAT(s.level, '/', s.room) as classroom,
+            s.classroom,
             AVG(100 + COALESCE(good.total, 0) - COALESCE(bad.total, 0)) as avg_score,
             SUM(COALESCE(good.total, 0)) as total_good_points,
             SUM(COALESCE(bad.total, 0)) as total_bad_points
-        FROM beh_students s
+        FROM att_students s
         LEFT JOIN (
             SELECT student_id, SUM(score) as total FROM beh_records WHERE type = 'ความดี' GROUP BY student_id
         ) good ON s.student_id = good.student_id
         LEFT JOIN (
             SELECT student_id, SUM(score) as total FROM beh_records WHERE type = 'ความผิด' GROUP BY student_id
         ) bad ON s.student_id = bad.student_id
-        WHERE s.status = 'active' AND s.level IS NOT NULL AND s.room != ''
-        GROUP BY s.level, s.room
-        ORDER BY s.level ASC, s.room ASC
+        WHERE s.classroom IS NOT NULL AND s.classroom != ''
+        GROUP BY s.classroom
+        ORDER BY s.classroom ASC
     ";
     
     $stmt = $pdo->query($sql);
