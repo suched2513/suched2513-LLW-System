@@ -25,6 +25,10 @@ if (!isset($_FILES['csv_file'])) {
     exit;
 }
 
+// Temporary debug
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 try {
     $pdo = getPdo();
     $filePath = $_FILES['csv_file']['tmp_name'];
@@ -38,8 +42,9 @@ try {
     // ตรวจจับและแปลง Encoding (เน้นภาษาไทย)
     if (!mb_check_encoding($content, 'UTF-8')) {
         // หากไม่ใช่ UTF-8 ให้บังคับแปลงจาก CP874 (รหัสภาษาไทยมาตรฐานของ Excel/Windows) ทันที
-        // นี้เป็นวิธีที่แม่นยำที่สุดสำหรับไฟล์ CSV ภาษาไทยจาก Excel
-        $content = mb_convert_encoding($content, 'UTF-8', 'CP874');
+        if (function_exists('mb_convert_encoding')) {
+            $content = mb_convert_encoding($content, 'UTF-8', 'CP874');
+        }
     }
 
     // ลบ BOM (Byte Order Mark)
@@ -131,8 +136,8 @@ try {
     ]);
 
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
+    if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
     error_log('[API Import Users] Error: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาดในการประมวลผลไฟล์']);
+    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()]);
 }
