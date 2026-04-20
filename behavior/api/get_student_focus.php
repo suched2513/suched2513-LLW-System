@@ -5,6 +5,7 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 session_start();
+ob_start();
 require_once __DIR__ . '/../../config/database.php';
 
 if (!isset($_SESSION['llw_role'])) {
@@ -158,6 +159,7 @@ try {
         }
     }
 
+    if (ob_get_length()) ob_clean();
     echo json_encode([
         'status' => 'success',
         'st'     => $st,

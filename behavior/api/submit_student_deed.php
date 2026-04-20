@@ -5,6 +5,7 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 session_start();
+ob_start();
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/telegram_bot.php';
 
@@ -74,7 +75,7 @@ try {
     // Send Telegram Notification
     try {
         $set = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
-        if ($set && !empty($set['telegram_token']) && !empty($set['admin_chat_id'])) {
+        if (is_array($set) && !empty($set['telegram_token']) && !empty($set['admin_chat_id'])) {
             $msg = "📢 <b>มีบันทึกความดีใหม่รอยืนยัน</b>\n";
             $msg .= "---------------------------\n";
             $msg .= "👤 <b>นักเรียน:</b> " . $student['name'] . " (ม." . $level . "/" . $room . ")\n";
@@ -89,6 +90,7 @@ try {
         error_log('[behavior] telegram notify error: ' . $e->getMessage());
     }
 
+    if (ob_get_length()) ob_clean();
     echo json_encode(['status' => 'success', 'message' => 'ส่งบันทึกความดีเรียบร้อยแล้ว รอครูที่ปรึกษาตรวจสอบ']);
 
 } catch (Exception $e) {

@@ -207,6 +207,7 @@ document.getElementById('studentLoginForm').onsubmit = async function(e) {
         document.getElementById('studentScreen').classList.remove('hidden');
         document.getElementById('studentScreen').classList.add('fade-in');
     } catch (err) {
+        console.error('Student Login Fetch Error:', err);
         document.getElementById('btnStudentLogin').disabled = false;
         document.getElementById('btnStudentLoginSpinner').classList.add('hidden');
         Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' });
@@ -290,6 +291,7 @@ async function loadAssemblySync(sid) {
             list.innerHTML = '<div class="text-center py-8 text-slate-400 italic">ไม่พบประวัติการเข้าแถวในช่วงนี้</div>';
         }
     } catch (err) {
+        console.error('Assembly Sync Error:', err);
         list.innerHTML = '<div class="text-center py-8 text-rose-400 italic">โหลดข้อมูลล้มเหลว</div>';
     }
 }
@@ -343,6 +345,7 @@ async function loadAttendanceSync(sid) {
             list.innerHTML = '<div class="text-center py-6 text-slate-400 italic">ไม่พบประวัติเข้าเรียน</div>';
         }
     } catch (err) {
+        console.error('Attendance Sync Error:', err);
         list.innerHTML = '<div class="text-center py-8 text-rose-400 italic">โหลดข้อมูลล้มเหลว</div>';
     }
 }
@@ -382,6 +385,7 @@ async function handleProfileUpload(input) {
             Swal.fire('ข้อผิดพลาด', data.message, 'error');
         }
     } catch (err) {
+        console.error('Profile Upload Error:', err);
         Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
     }
 }
@@ -445,6 +449,7 @@ async function openSubmitDeedModal() {
                 Swal.fire('ข้อผิดพลาด', data.message, 'error');
             }
         } catch (err) {
+            console.error('Deed Submission Error:', err);
             Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
         }
     }

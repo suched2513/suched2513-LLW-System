@@ -5,6 +5,7 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 session_start();
+ob_start();
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/telegram_bot.php';
 
@@ -111,7 +112,7 @@ try {
     $shouldNotify = ($type === 'ความดี' && $score >= 20) || ($type === 'ความผิด' && $score >= 10);
     if ($shouldNotify) {
         $settings = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
-        if ($settings && $settings['telegram_token']) {
+        if (is_array($settings) && !empty($settings['telegram_token']) && !empty($settings['admin_chat_id'])) {
             $icon = ($type === 'ความดี') ? '🌟' : '🛑';
             $msg = "$icon <b>สรุปบันทึกพฤติกรรม</b>\n";
             $msg .= "👤 นักเรียน: $studentName ($studentId)\n";
@@ -125,6 +126,7 @@ try {
         }
     }
 
+    if (ob_get_length()) ob_clean();
     echo json_encode(['status' => 'success', 'message' => 'บันทึกเรียบร้อย']);
 
 } catch (Exception $e) {

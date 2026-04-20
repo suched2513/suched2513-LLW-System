@@ -5,6 +5,7 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 session_start();
+ob_start();
 require_once __DIR__ . '/../../config/database.php';
 
 // No teacher session required if coming from student portal, but we should validate
@@ -80,6 +81,7 @@ try {
             'img'  => $dbPath
         ]);
         
+        if (ob_get_length()) ob_clean();
         echo json_encode([
             'status' => 'success', 
             'message' => 'อัปโหลดรูปโปรไฟล์สำเร็จ',
