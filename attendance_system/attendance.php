@@ -150,18 +150,20 @@ require_once '../components/layout_start.php';
                     <tbody class="divide-y divide-slate-50">
                         <?php foreach($students as $student): ?>
                             <?php
-                                $sid_code = $student['student_id'];
+                                $sid_db_id = $student['id'];
+                                $sid_display_code = $student['student_id'];
+                                
                                 $stmt = $pdo->prepare("SELECT * FROM att_attendance WHERE date = :date AND period = :period AND subject_id = :subject_id AND student_id = :student_id LIMIT 1");
-                                $stmt->execute(['date' => $selected_date,'period' => $selected_period,'subject_id' => $selected_subject_id,'student_id' => $sid_code]);
+                                $stmt->execute(['date' => $selected_date,'period' => $selected_period,'subject_id' => $selected_subject_id,'student_id' => $sid_db_id]);
                                 $record = $stmt->fetch();
                                 $cur_status = $record ? $record['status'] : 'มา';
                                 $cur_time = $record ? $record['time_in'] : '';
                                 $cur_note = $record ? $record['note'] : '';
                             ?>
-                            <tr id="row-<?= $sid_code ?>" class="row-<?= $cur_status ?> transition-colors duration-200">
+                            <tr id="row-<?= $sid_db_id ?>" class="row-<?= $cur_status ?> transition-colors duration-200">
                                 <td class="px-6 py-4">
                                     <div class="flex flex-col">
-                                        <span class="text-xs font-mono font-bold text-blue-600"><?= htmlspecialchars($student['student_id']) ?></span>
+                                        <span class="text-xs font-mono font-bold text-blue-600"><?= htmlspecialchars($sid_display_code) ?></span>
                                         <span class="text-sm font-bold text-slate-700"><?= htmlspecialchars($student['name']) ?></span>
                                     </div>
                                 </td>
@@ -176,9 +178,9 @@ require_once '../components/layout_start.php';
                                         foreach($opts as $o):
                                         ?>
                                         <label class="group relative flex items-center justify-center">
-                                            <input type="radio" name="status[<?= $sid_code ?>]" value="<?= $o['v'] ?>" 
+                                            <input type="radio" name="status[<?= $sid_db_id ?>]" value="<?= $o['v'] ?>" 
                                                    <?= $cur_status == $o['v'] ? 'checked' : '' ?> 
-                                                   onclick="onStatusChange('<?= $sid_code ?>', '<?= $o['v'] ?>')"
+                                                   onclick="onStatusChange('<?= $sid_db_id ?>', '<?= $o['v'] ?>')"
                                                    class="peer absolute opacity-0 cursor-pointer">
                                             <div class="px-3 py-1.5 rounded-xl border-2 border-transparent bg-slate-100 text-slate-400 peer-checked:bg-<?= $o['c'] ?>-100 peer-checked:text-<?= $o['c'] ?>-700 peer-checked:border-<?= $o['c'] ?>-200 text-xs font-bold cursor-pointer transition-all">
                                                 <?= $o['v'] ?>
@@ -189,10 +191,10 @@ require_once '../components/layout_start.php';
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex flex-col gap-2 max-w-[200px] mx-auto">
-                                        <input type="time" name="time_in[<?= $sid_code ?>]" id="time_in_<?= $sid_code ?>" 
+                                        <input type="time" name="time_in[<?= $sid_db_id ?>]" id="time_in_<?= $sid_db_id ?>" 
                                                value="<?= htmlspecialchars($cur_time) ?>" 
                                                class="bg-white border border-slate-200 rounded-lg p-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-400">
-                                        <input type="text" name="note[<?= $sid_code ?>]" value="<?= htmlspecialchars($cur_note) ?>" 
+                                        <input type="text" name="note[<?= $sid_db_id ?>]" value="<?= htmlspecialchars($cur_note) ?>" 
                                                placeholder="หมายเหตุ..."
                                                class="bg-white border border-slate-200 rounded-lg p-1.5 text-[10px] outline-none focus:ring-2 focus:ring-blue-400 w-full">
                                     </div>

@@ -26,15 +26,14 @@ function loginTeacher($username, $password, $pdo) {
 
             $_SESSION['user_id']  = $user['user_id'];
             $_SESSION['llw_role'] = $user['role'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['fullname'] = trim($user['firstname'] . ' ' . $user['lastname']);
 
-            if ($teacher) {
-                $_SESSION['teacher_id']   = $teacher['id'];
-                $_SESSION['teacher_name'] = $teacher['name'];
-            } else {
-                // super_admin ที่ไม่มีเรคอร์ด att_teachers: ใช้ virtual id
-                $_SESSION['teacher_id']   = 0;
-                $_SESSION['teacher_name'] = trim($user['firstname'] . ' ' . $user['lastname']);
-            }
+            // Ensure a record exists in att_teachers (especially for admins)
+            $teacher = ensureTeacherRecord($user['username'], $_SESSION['fullname'], $user['user_id'], $pdo);
+            
+            $_SESSION['teacher_id']   = $teacher['id'];
+            $_SESSION['teacher_name'] = $teacher['name'];
 
             // อัปเดต last_login
             $pdo->prepare("UPDATE llw_users SET last_login=NOW() WHERE user_id=?")->execute([$user['user_id']]);
@@ -76,17 +75,17 @@ function checkLogin() {
 
     // 2. ถ้ามี Role แต่ไม่มี teacher_id (กรณีย้ายเครื่อง หรือ Session บางส่วนหาย)
     // พยายามดึง teacher_id จาก username หรือกำหนดเป็น 0 สำหรับ admin
-    if (!isset($_SESSION['teacher_id'])) {
+    // 2. ถ้ามี Role แต่ไม่มี teacher_id (หรือเป็น 0)
+    // ต้องทำให้แน่ใจว่าทุกคนที่เข้าหน้านี้มีเรคอร์ดใน att_teachers เพื่อป้องกัน FK Violation
+    if (!isset($_SESSION['teacher_id']) || (int)$_SESSION['teacher_id'] === 0) {
         $username = $_SESSION['username'] ?? '';
-        $role = $_SESSION['llw_role'];
+        $fullname = $_SESSION['fullname'] ?? ($_SESSION['firstname'] ?? 'Admin');
+        $user_id  = $_SESSION['user_id'] ?? 0;
 
-        if ($role === 'super_admin') {
-            $_SESSION['teacher_id'] = 0;
-        } elseif ($username) {
-            $stmt = $pdo->prepare("SELECT id FROM att_teachers WHERE username = ? LIMIT 1");
-            $stmt->execute([$username]);
-            $tid = $stmt->fetchColumn();
-            $_SESSION['teacher_id'] = $tid !== false ? $tid : 0;
+        if ($user_id > 0) {
+            $teacher = ensureTeacherRecord($username, $fullname, $user_id, $pdo);
+            $_SESSION['teacher_id'] = $teacher['id'] ?? 0;
+            $_SESSION['teacher_name'] = $teacher['name'] ?? $fullname;
         } else {
             $_SESSION['teacher_id'] = 0;
         }
@@ -103,6 +102,33 @@ function checkAdmin() {
         header('Location: ' . $base_path . '/attendance_system/dashboard.php');
         exit();
     }
+}
+
+/**
+ * ฟังก์ชันช่วยตรวจสอบและสร้างเรคอร์ดครู (แก้ปัญหา FK violation สำหรับ Admin)
+ */
+function ensureTeacherRecord($username, $fullname, $llw_user_id, $pdo) {
+    // 1. ลองหาจาก llw_user_id ก่อน
+    $stmt = $pdo->prepare("SELECT id, name FROM att_teachers WHERE llw_user_id = ? LIMIT 1");
+    $stmt->execute([$llw_user_id]);
+    $teacher = $stmt->fetch();
+    if ($teacher) return $teacher;
+
+    // 2. ลองหาจาก username
+    $stmt = $pdo->prepare("SELECT id, name FROM att_teachers WHERE username = ? LIMIT 1");
+    $stmt->execute([$username]);
+    $teacher = $stmt->fetch();
+    if ($teacher) {
+        // แมพ llw_user_id ย้อนหลังให้
+        $pdo->prepare("UPDATE att_teachers SET llw_user_id = ? WHERE id = ?")->execute([$llw_user_id, $teacher['id']]);
+        return $teacher;
+    }
+
+    // 3. ไม่เจอเลย -> สร้างใหม่ (สำหรับ Admin ที่ไม่เคยใช้งานระบบเช็คชื่อ)
+    $stmt = $pdo->prepare("INSERT INTO att_teachers (name, username, llw_user_id) VALUES (?, ?, ?)");
+    $stmt->execute([$fullname, $username, $llw_user_id]);
+    $id = $pdo->lastInsertId();
+    return ['id' => $id, 'name' => $fullname];
 }
 
 /**
