@@ -81,52 +81,7 @@ jobs:
           }
           PHPEOF
 
-      # ─── 3. สร้าง config/db_central.php (Central DB) ────────
-      - name: Generate config/db_central.php
-        run: |
-          cat > config/db_central.php << 'PHPEOF'
-          <?php
-          if (!defined('DB_HOST')) define('DB_HOST', '${{ secrets.DB_HOST }}');
-          if (!defined('DB_USER')) define('DB_USER', '${{ secrets.DB_USER }}');
-          if (!defined('DB_PASS')) define('DB_PASS', '${{ secrets.DB_PASS }}');
-
-          $db_central_name = '${{ secrets.DB_CENTRAL_NAME }}';
-
-          try {
-              $pdo_central = new PDO("mysql:host=" . DB_HOST . ";dbname=$db_central_name;charset=utf8mb4", DB_USER, DB_PASS);
-              $pdo_central->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-              $pdo_central->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-          } catch (PDOException $e) {
-              die("Database Connection Failed (Central): " . $e->getMessage());
-          }
-          ?>
-          PHPEOF
-
-      # ─── 4. สร้าง config/db_project.php (Project DB + Telegram) ──
-      - name: Generate config/db_project.php
-        run: |
-          cat > config/db_project.php << 'PHPEOF'
-          <?php
-          if (!defined('DB_HOST')) define('DB_HOST', '${{ secrets.DB_HOST }}');
-          if (!defined('DB_USER')) define('DB_USER', '${{ secrets.DB_USER }}');
-          if (!defined('DB_PASS')) define('DB_PASS', '${{ secrets.DB_PASS }}');
-
-          $db_project_name = '${{ secrets.DB_PROJECT_NAME }}';
-
-          try {
-              $pdo_project = new PDO("mysql:host=" . DB_HOST . ";dbname=$db_project_name;charset=utf8mb4", DB_USER, DB_PASS);
-              $pdo_project->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-              $pdo_project->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-          } catch (PDOException $e) {
-              die("Database Connection Failed (Project): " . $e->getMessage());
-          }
-
-          if (!defined('TELEGRAM_TOKEN')) define('TELEGRAM_TOKEN', '${{ secrets.TELEGRAM_TOKEN }}');
-          if (!defined('BOSS1_CHAT_ID')) define('BOSS1_CHAT_ID', '${{ secrets.TELEGRAM_BOSS1_CHAT_ID }}');
-          ?>
-          PHPEOF
-
-      # ─── 5. ลบไฟล์ที่ไม่ต้องการใน production ────────────────
+      # ─── 3. ลบไฟล์ที่ไม่ต้องการใน production ────────────────
       - name: Remove test/debug files
         run: |
           rm -f test_*.php fix_*.php debug_*.php reset_*.php temp_*.php check_*.php md.txt
@@ -134,11 +89,11 @@ jobs:
           rm -f *.md
           echo "✅ Removed test/debug files and git metadata"
 
-      # ─── 6. Install lftp ────────────────────────────────────
+      # ─── 4. Install lftp ───────────────────────────────────────
       - name: Install lftp
         run: sudo apt-get install -y lftp
 
-      # ─── 7. FTP Deploy ด้วย lftp (รองรับ passive mode) ──────
+      # ─── 5. FTP Deploy ด้วย lftp (รองรับ passive mode) ──────
       - name: Deploy via FTP
         run: |
           lftp -e "
