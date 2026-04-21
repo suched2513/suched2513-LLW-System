@@ -30,6 +30,7 @@ try {
         'data' => $user
     ]);
 } catch (Exception $e) {
+    error_log('[LLW] get_profile error: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
 }

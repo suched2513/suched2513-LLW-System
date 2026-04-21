@@ -35,6 +35,7 @@ try {
     ]);
 
 } catch (Exception $e) {
+    error_log('[LLW] get_stats error: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
 }

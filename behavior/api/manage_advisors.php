@@ -86,7 +86,7 @@ try {
 
 } catch (Exception $e) {
     if (ob_get_length()) ob_clean();
-    error_log('[behavior] manage_advisors error: ' . $e->getMessage());
-    http_response_code(200); // Return 200 with error info to avoid generic 500
-    echo json_encode(['status' => 'error', 'message' => 'ระบบฐานข้อมูลขัดข้อง: ' . $e->getMessage()]);
+    error_log('[LLW] manage_advisors error: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
 }

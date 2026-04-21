@@ -48,7 +48,7 @@ try {
 
 } catch (Exception $e) {
     if (ob_get_length()) ob_clean();
-    error_log('[behavior] get_pending_deeds error: ' . $e->getMessage());
-    http_response_code(200);
-    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()]);
+    error_log('[LLW] get_pending_deeds error: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
 }

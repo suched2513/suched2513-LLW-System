@@ -112,8 +112,9 @@ try {
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
+    error_log('[LLW] approve_leave error: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
 }
 
 // 4. ส่งแจ้งเตือน Telegram (ถ้าดำเนินการสำเร็จ)
