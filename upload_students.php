@@ -1,9 +1,15 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 session_start();
 require_once __DIR__ . '/config/database.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: /login.php'); exit(); }
 
-$pdo = getPdo();
+try {
+    $pdo = getPdo();
+} catch(Throwable $e) {
+    die('<pre style="color:red;font-size:14px;padding:20px">DB ERROR: '.$e->getMessage().'</pre>');
+}
 $msg = ''; $type = ''; $count = 0; $preview = [];
 
 // ── IMPORT ──
@@ -24,33 +30,44 @@ if (($_POST['action'] ?? '') === 'import' && !empty($_POST['json_data'])) {
 
 // ── PREVIEW CSV ──
 if (($_POST['action'] ?? '') === 'preview' && isset($_FILES['csv'])) {
-    $f = $_FILES['csv'];
-    if ($f['error'] === 0) {
-        $raw = file_get_contents($f['tmp_name']);
-        $enc = mb_detect_encoding($raw, ['UTF-8','Windows-874','TIS-620'], true);
-        if ($enc && $enc !== 'UTF-8') $raw = mb_convert_encoding($raw, 'UTF-8', $enc);
-        $raw = ltrim($raw, "\xEF\xBB\xBF");
-        $delim = (substr_count($raw,';') > substr_count($raw,',')) ? ';' : ',';
-        $lines = explode("\n", str_replace("\r","",$raw));
-        $skip = true;
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if (!$line) continue;
-            if ($skip) { $skip = false; continue; }
-            $cols = str_getcsv($line, $delim);
-            $sid = trim($cols[0] ?? '');
-            $name = trim($cols[1] ?? '');
-            $cls = trim($cols[2] ?? '');
-            if (!$sid || !$name) continue;
-            if (preg_match('/^\d+$/', $sid) && strlen($sid) < 5) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
-            $preview[] = [$sid, $name, $cls];
+    try {
+        $f = $_FILES['csv'];
+        if ($f['error'] !== 0) {
+            $msg = "Upload error code: " . $f['error']; $type = 'err';
+        } else {
+            $raw = file_get_contents($f['tmp_name']);
+            $enc = mb_detect_encoding($raw, ['UTF-8','Windows-874','TIS-620'], true);
+            if ($enc && $enc !== 'UTF-8') $raw = mb_convert_encoding($raw, 'UTF-8', $enc);
+            $raw = ltrim($raw, "\xEF\xBB\xBF");
+            $delim = (substr_count($raw,';') > substr_count($raw,',')) ? ';' : ',';
+            $lines = explode("\n", str_replace("\r","",$raw));
+            $skip = true;
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if (!$line) continue;
+                if ($skip) { $skip = false; continue; }
+                $cols = str_getcsv($line, $delim);
+                $sid = trim($cols[0] ?? '');
+                $name = trim($cols[1] ?? '');
+                $cls = trim($cols[2] ?? '');
+                if (!$sid || !$name) continue;
+                if (preg_match('/^\d+$/', $sid) && strlen($sid) < 5) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
+                $preview[] = [$sid, $name, $cls];
+            }
+            $msg = count($preview) > 0 ? "พบ ".count($preview)." รายการ" : "ไม่พบข้อมูล";
+            $type = count($preview) > 0 ? 'preview' : 'err';
         }
-        $msg = count($preview) > 0 ? "พบ ".count($preview)." รายการ กด 'ยืนยันนำเข้า' เพื่อบันทึก" : "❌ ไม่พบข้อมูล";
-        $type = count($preview) > 0 ? 'preview' : 'err';
+    } catch(Throwable $e) {
+        $msg = "ERROR: " . $e->getMessage() . " [" . basename($e->getFile()) . ":" . $e->getLine() . "]";
+        $type = 'err';
     }
 }
 
-$total = $pdo->query("SELECT COUNT(*) FROM att_students")->fetchColumn();
+try {
+    $total = $pdo->query("SELECT COUNT(*) FROM att_students")->fetchColumn();
+} catch(Throwable $e) {
+    die('<pre style="color:red;padding:20px">QUERY ERROR: '.$e->getMessage().'</pre>');
+}
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
