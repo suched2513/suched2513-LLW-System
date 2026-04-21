@@ -68,6 +68,26 @@ try {
     ");
     $stmt->execute();
     $recentActivity = $stmt->fetchAll();
+
+    // 5. สถิติการใช้งานระบบแยกตามครู
+    $thisMonth = date('Y-m');
+    $stmtTeacherStats = $pdo->prepare("
+        SELECT
+            t.id,
+            t.name,
+            COUNT(DISTINCT sub.id)          AS subject_count,
+            COUNT(DISTINCT a.id)            AS total_records,
+            COUNT(DISTINCT a.date)          AS active_days,
+            SUM(CASE WHEN DATE_FORMAT(a.date,'%Y-%m') = ? THEN 1 ELSE 0 END) AS this_month,
+            MAX(a.date)                     AS last_active
+        FROM att_teachers t
+        LEFT JOIN att_subjects sub ON sub.teacher_id = t.id
+        LEFT JOIN att_attendance a  ON a.teacher_id  = t.id
+        GROUP BY t.id, t.name
+        ORDER BY total_records DESC
+    ");
+    $stmtTeacherStats->execute([$thisMonth]);
+    $teacherStats = $stmtTeacherStats->fetchAll();
 } catch (Exception $e) {
     error_log('[Dashboard] ' . $e->getMessage());
     $countStudents = 0; $countPendingLeave = 0;
@@ -75,6 +95,7 @@ try {
     $countRemainingRooms = 0; $roomProgress = 0;
     $countOnLeaveToday = 0; $countOnLeaveToday = 0;
     $uncheckedRooms = []; $recentActivity = [];
+    $teacherStats = [];
 }
 
 ?>
@@ -385,6 +406,107 @@ try {
                             <?php endif; ?>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Teacher Usage Stats Section -->
+        <section class="mt-8">
+            <div class="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden">
+                <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                            <i class="bi bi-person-lines-fill text-indigo-600"></i>
+                            สถิติการใช้งานระบบเช็คชื่อแยกตามครู
+                        </h3>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">ผลงานเชิงประจักษ์ — เพื่อประกอบการพิจารณา</p>
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-400 bg-slate-50 px-4 py-2 rounded-xl">เดือนนี้: <?= date('F Y') ?></span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-xs">
+                        <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <tr>
+                                <th class="px-6 py-4 text-left">#</th>
+                                <th class="px-6 py-4 text-left">ชื่อครู</th>
+                                <th class="px-4 py-4 text-center">วิชาที่สอน</th>
+                                <th class="px-4 py-4 text-center">คาบทั้งหมด</th>
+                                <th class="px-4 py-4 text-center">วันที่ใช้งาน</th>
+                                <th class="px-4 py-4 text-center">เดือนนี้</th>
+                                <th class="px-4 py-4 text-center">ใช้ล่าสุด</th>
+                                <th class="px-4 py-4 text-center">สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            <?php if (empty($teacherStats)): ?>
+                            <tr><td colspan="8" class="px-6 py-10 text-center text-slate-300 font-bold">ไม่พบข้อมูลครู</td></tr>
+                            <?php else: ?>
+                            <?php foreach($teacherStats as $i => $t):
+                                $daysSince = $t['last_active']
+                                    ? (int)((strtotime($today) - strtotime($t['last_active'])) / 86400)
+                                    : 999;
+                                if ($t['total_records'] === 0) {
+                                    $badge = ['label' => 'ไม่เคยใช้', 'color' => 'slate'];
+                                } elseif ($daysSince <= 7) {
+                                    $badge = ['label' => 'Active', 'color' => 'emerald'];
+                                } elseif ($daysSince <= 30) {
+                                    $badge = ['label' => 'ใช้บ้างๆ', 'color' => 'amber'];
+                                } else {
+                                    $badge = ['label' => 'ไม่ใช้งาน', 'color' => 'rose'];
+                                }
+                            ?>
+                            <tr class="hover:bg-slate-50/50 transition-all <?= $t['total_records'] === 0 ? 'opacity-50' : '' ?>">
+                                <td class="px-6 py-4 font-black text-slate-300"><?= $i + 1 ?></td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px]">
+                                            <?= mb_substr($t['name'], 0, 1) ?>
+                                        </div>
+                                        <span class="font-bold text-slate-700"><?= htmlspecialchars($t['name']) ?></span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 text-center">
+                                    <span class="font-black text-indigo-600"><?= $t['subject_count'] ?></span>
+                                    <span class="text-slate-400 ml-0.5">วิชา</span>
+                                </td>
+                                <td class="px-4 py-4 text-center">
+                                    <span class="font-black text-slate-700"><?= number_format($t['total_records']) ?></span>
+                                    <span class="text-slate-400 ml-0.5">คาบ</span>
+                                </td>
+                                <td class="px-4 py-4 text-center">
+                                    <span class="font-black text-blue-600"><?= $t['active_days'] ?></span>
+                                    <span class="text-slate-400 ml-0.5">วัน</span>
+                                </td>
+                                <td class="px-4 py-4 text-center">
+                                    <?php if ($t['this_month'] > 0): ?>
+                                    <span class="font-black text-emerald-600"><?= $t['this_month'] ?></span>
+                                    <span class="text-slate-400 ml-0.5">คาบ</span>
+                                    <?php else: ?>
+                                    <span class="text-slate-300 font-bold">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-4 py-4 text-center">
+                                    <?php if ($t['last_active']): ?>
+                                    <span class="text-slate-500 font-bold"><?= date('d/m/Y', strtotime($t['last_active'])) ?></span>
+                                    <?php else: ?>
+                                    <span class="text-slate-300 font-bold">—</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-4 py-4 text-center">
+                                    <span class="px-3 py-1 rounded-full text-[10px] font-black bg-<?= $badge['color'] ?>-50 text-<?= $badge['color'] ?>-600 border border-<?= $badge['color'] ?>-100">
+                                        <?= $badge['label'] ?>
+                                    </span>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="px-8 py-4 bg-slate-50/50 border-t border-slate-50 flex gap-6 text-[10px] font-bold text-slate-400">
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Active = ใช้งานภายน7วัน</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 bg-amber-400 rounded-full"></span> ใช้บ้างๆ = 8-30 วัน</span>
+                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 bg-rose-500 rounded-full"></span> ไม่ใช้งาน = เกิน 30 วัน</span>
                 </div>
             </div>
         </section>
