@@ -14,31 +14,41 @@ if (!isset($_SESSION['llw_role']) || $_SESSION['llw_role'] !== 'super_admin') {
 $pdo = getPdo();
 
 // --- Fetch Real Stats ---
+$today = date('Y-m-d');
 try {
+    // 1. นักเรียนทั้งหมด (baseline)
     $countStudents = $pdo->query("SELECT COUNT(*) FROM att_students")->fetchColumn() ?: 0;
-    $countTeachers = $pdo->query("SELECT COUNT(*) FROM att_teachers")->fetchColumn() ?: 0;
-    $countSubjects = $pdo->query("SELECT COUNT(*) FROM att_subjects")->fetchColumn() ?: 0;
-    $countAssignments = $pdo->query("SELECT COUNT(*) FROM cb_borrow_logs")->fetchColumn() ?: 0;
-    
-    // Fetch Recent Activity (Combining multiple tables for a rich feed)
-    $stmt = $pdo->query("
-        (SELECT 'check_in' as type, s.name as user, sub.subject_name as detail, a.time_in as time, 'สำเร็จ' as status
-         FROM att_attendance a 
-         JOIN att_students s ON a.student_id = s.id 
-         JOIN att_subjects sub ON a.subject_id = sub.id 
-         ORDER BY a.date DESC, a.time_in DESC LIMIT 3)
-        UNION
-        (SELECT 'borrow' as type, s.name as user, c.device_name as detail, b.borrow_date as time, 'ยืมอยู่' as status
-         FROM cb_borrow_logs b 
-         JOIN cb_students s ON b.student_id = s.id 
-         JOIN cb_chromebooks c ON b.device_id = c.id 
-         ORDER BY b.borrow_date DESC LIMIT 2)
-        LIMIT 5
+
+    // 2. ใบลาที่รอดำเนินการ (action required!)
+    $stmtLeave = $pdo->prepare("SELECT COUNT(*) FROM tl_requests WHERE status = 'pending'");
+    $stmtLeave->execute();
+    $countPendingLeave = (int)$stmtLeave->fetchColumn();
+
+    // 3. คาบที่เช็คชื่อวันนี้ (system health)
+    $stmtAtt = $pdo->prepare("SELECT COUNT(DISTINCT CONCAT(period,'_',subject_id)) FROM att_attendance WHERE date = ?");
+    $stmtAtt->execute([$today]);
+    $countTodayAtt = (int)$stmtAtt->fetchColumn();
+
+    // 4. บุคลากรลาวันนี้ (operations)
+    $stmtOnLeave = $pdo->prepare("SELECT COUNT(*) FROM tl_requests WHERE status = 'approved' AND date_start <= ? AND date_end >= ?");
+    $stmtOnLeave->execute([$today, $today]);
+    $countOnLeaveToday = (int)$stmtOnLeave->fetchColumn();
+
+    // Recent Activity — เช็คชื่อล่าสุด
+    $stmt = $pdo->prepare("
+        SELECT s.name as user, sub.subject_name as detail,
+               a.date as time, a.status as status, a.period
+        FROM att_attendance a
+        JOIN att_students s ON a.student_id = s.id
+        JOIN att_subjects sub ON a.subject_id = sub.id
+        ORDER BY a.date DESC, a.id DESC LIMIT 5
     ");
+    $stmt->execute();
     $recentActivity = $stmt->fetchAll();
 } catch (Exception $e) {
-    // Fallback if tables are missing or empty
-    $countStudents = 1; $countTeachers = 1; $countSubjects = 4; $countAssignments = 1234;
+    error_log('[Dashboard] ' . $e->getMessage());
+    $countStudents = 0; $countPendingLeave = 0;
+    $countTodayAtt = 0; $countOnLeaveToday = 0;
     $recentActivity = [];
 }
 
@@ -137,6 +147,8 @@ try {
 
         <!-- Stats Cards -->
         <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+
+            <!-- Card 1: นักเรียนทั้งหมด -->
             <div class="card-gradient-1 p-8 rounded-[40px] text-white shadow-xl shadow-indigo-100 relative overflow-hidden group">
                 <div class="absolute -right-4 -bottom-4 text-white/10 text-9xl group-hover:scale-110 transition-transform">
                     <i class="bi bi-people"></i>
@@ -145,64 +157,63 @@ try {
                     <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">
                         <i class="bi bi-people-fill"></i>
                     </div>
-                    <span class="text-xs font-bold bg-white/20 px-3 py-1 rounded-full">+12%</span>
+                    <span class="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full uppercase tracking-widest">จำนวนนักเรียน</span>
                 </div>
                 <p class="text-indigo-100 font-bold text-xs uppercase tracking-widest mb-1">นักเรียนทั้งหมด</p>
-                <h3 class="text-4xl font-black mb-4"><?= $countStudents ?></h3>
-                <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-                    <div class="bg-white h-full" style="width: 75%"></div>
-                </div>
+                <h3 class="text-4xl font-black mb-4"><?= number_format($countStudents) ?></h3>
+                <p class="text-indigo-200 text-[10px] font-bold">เข้ารับการในระบบเช็คชื่อ</p>
             </div>
 
-            <div class="card-gradient-2 p-8 rounded-[40px] text-white shadow-xl shadow-rose-100 relative overflow-hidden group">
+            <!-- Card 2: ใบลารอดำเนินการ (Action Required!) -->
+            <a href="teacher_leave/index.php" class="card-gradient-2 p-8 rounded-[40px] text-white shadow-xl shadow-rose-100 relative overflow-hidden group block hover:scale-[1.02] transition-transform">
                 <div class="absolute -right-4 -bottom-4 text-white/10 text-9xl group-hover:scale-110 transition-transform">
-                    <i class="bi bi-person-check"></i>
+                    <i class="bi bi-hourglass-split"></i>
                 </div>
                 <div class="flex justify-between items-start mb-6">
                     <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">
-                        <i class="bi bi-person-badge-fill"></i>
+                        <i class="bi bi-hourglass-split"></i>
                     </div>
-                    <span class="text-xs font-bold bg-white/20 px-3 py-1 rounded-full">+8%</span>
+                    <?php if($countPendingLeave > 0): ?>
+                    <span class="text-[10px] font-black bg-white text-rose-600 px-3 py-1 rounded-full animate-pulse">ด่วน!</span>
+                    <?php else: ?>
+                    <span class="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full">ไม่มีค้าง</span>
+                    <?php endif; ?>
                 </div>
-                <p class="text-rose-100 font-bold text-xs uppercase tracking-widest mb-1">ครูผู้สอน</p>
-                <h3 class="text-4xl font-black mb-4"><?= $countTeachers ?></h3>
-                <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-                    <div class="bg-white h-full" style="width: 45%"></div>
-                </div>
-            </div>
+                <p class="text-rose-100 font-bold text-xs uppercase tracking-widest mb-1">ใบลารอพิจารณา</p>
+                <h3 class="text-4xl font-black mb-4"><?= $countPendingLeave ?></h3>
+                <p class="text-rose-200 text-[10px] font-bold"><?= $countPendingLeave > 0 ? 'คลิกเพื่อดำเนินการใบลา' : 'ไม่มีใบลารอดำเนินการ' ?></p>
+            </a>
 
+            <!-- Card 3: เช็คชื่อวันนี้ -->
             <div class="card-gradient-3 p-8 rounded-[40px] text-white shadow-xl shadow-blue-100 relative overflow-hidden group">
                 <div class="absolute -right-4 -bottom-4 text-white/10 text-9xl group-hover:scale-110 transition-transform">
-                    <i class="bi bi-journal-text"></i>
+                    <i class="bi bi-calendar-check"></i>
                 </div>
                 <div class="flex justify-between items-start mb-6">
                     <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">
-                        <i class="bi bi-book-half"></i>
+                        <i class="bi bi-calendar-check-fill"></i>
                     </div>
-                    <span class="text-xs font-bold bg-white/20 px-3 py-1 rounded-full">+15%</span>
+                    <span class="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full"><?= date('d/m/Y') ?></span>
                 </div>
-                <p class="text-blue-100 font-bold text-xs uppercase tracking-widest mb-1">รายวิชา</p>
-                <h3 class="text-4xl font-black mb-4"><?= $countSubjects ?></h3>
-                <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-                    <div class="bg-white h-full" style="width: 90%"></div>
-                </div>
+                <p class="text-blue-100 font-bold text-xs uppercase tracking-widest mb-1">คาบที่เช็คชื่อวันนี้</p>
+                <h3 class="text-4xl font-black mb-4"><?= $countTodayAtt ?></h3>
+                <p class="text-blue-200 text-[10px] font-bold">จำนวนคาบ/วิชาที่บันทึกแล้ววันนี้</p>
             </div>
 
+            <!-- Card 4: บุคลากรลาวันนี้ -->
             <div class="card-gradient-4 p-8 rounded-[40px] text-white shadow-xl shadow-emerald-100 relative overflow-hidden group">
                 <div class="absolute -right-4 -bottom-4 text-white/10 text-9xl group-hover:scale-110 transition-transform">
-                    <i class="bi bi-check-square"></i>
+                    <i class="bi bi-person-slash"></i>
                 </div>
                 <div class="flex justify-between items-start mb-6">
                     <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">
-                        <i class="bi bi-clipboard-check-fill"></i>
+                        <i class="bi bi-person-slash"></i>
                     </div>
-                    <span class="text-xs font-bold bg-white/20 px-3 py-1 rounded-full">+22%</span>
+                    <span class="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full">วันนี้</span>
                 </div>
-                <p class="text-emerald-100 font-bold text-xs uppercase tracking-widest mb-1">งานที่ส่งแล้ว</p>
-                <h3 class="text-4xl font-black mb-4"><?= $countAssignments ?></h3>
-                <div class="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-                    <div class="bg-white h-full" style="width: 60%"></div>
-                </div>
+                <p class="text-emerald-100 font-bold text-xs uppercase tracking-widest mb-1">บุคลากรลาวันนี้</p>
+                <h3 class="text-4xl font-black mb-4"><?= $countOnLeaveToday ?></h3>
+                <p class="text-emerald-200 text-[10px] font-bold"><?= $countOnLeaveToday > 0 ? 'คนอนุมัติลาแล้ววันนี้' : 'ไม่มีบุคลากรลาวันนี้' ?></p>
             </div>
         </section>
 
@@ -272,32 +283,34 @@ try {
                         <tbody class="divide-y divide-slate-50">
                             <?php if (empty($recentActivity)): ?>
                                 <tr>
-                                    <td colspan="5" class="py-10 text-center text-slate-400 font-bold italic">ไม่พบข้อมูลความเคลื่อนไหวในขณะนี้</td>
+                                    <td colspan="5" class="py-10 text-center text-slate-400 font-bold italic">ยังไม่มีการเช็คชื่อวันนี้</td>
                                 </tr>
                             <?php else: ?>
-                                <?php foreach ($recentActivity as $act): ?>
+                                <?php
+                                $statusColors = ['มา'=>'emerald','ขาด'=>'rose','ลา'=>'amber','โดด'=>'violet','สาย'=>'orange'];
+                                foreach ($recentActivity as $act):
+                                    $sc = $statusColors[$act['status']] ?? 'slate';
+                                ?>
                                 <tr class="group hover:bg-slate-50/50 transition-all">
                                     <td class="py-5 pl-4">
-                                        <span class="text-xs font-bold text-slate-500"><?= date('H:i', strtotime($act['time'])) ?> น.</span>
+                                        <span class="text-xs font-bold text-slate-500"><?= date('d/m', strtotime($act['time'])) ?></span>
                                     </td>
                                     <td class="py-5">
                                         <div class="flex items-center gap-3">
                                             <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
                                                 <i class="bi bi-person"></i>
                                             </div>
-                                            <span class="text-xs font-bold text-slate-700"><?= $act['user'] ?></span>
+                                            <span class="text-xs font-bold text-slate-700"><?= htmlspecialchars($act['user']) ?></span>
                                         </div>
                                     </td>
                                     <td class="py-5">
-                                        <span class="px-3 py-1 rounded-full text-[10px] font-black <?= $act['type'] == 'check_in' ? 'bg-blue-50 text-blue-600' : 'bg-indigo-50 text-indigo-600' ?>">
-                                            <?= $act['type'] == 'check_in' ? 'เข้าเรียน' : 'ยืมอุปกรณ์' ?>
-                                        </span>
+                                        <span class="px-3 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-600">เช็คชื่อ P<?= $act['period'] ?></span>
                                     </td>
                                     <td class="py-5">
-                                        <span class="text-xs text-slate-500 font-medium"><?= $act['detail'] ?></span>
+                                        <span class="text-xs text-slate-500 font-medium"><?= htmlspecialchars($act['detail']) ?></span>
                                     </td>
                                     <td class="py-5">
-                                        <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black">
+                                        <span class="px-3 py-1 rounded-full bg-<?= $sc ?>-50 text-<?= $sc ?>-600 text-[10px] font-black">
                                             <?= $act['status'] ?>
                                         </span>
                                     </td>
