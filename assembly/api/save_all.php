@@ -81,9 +81,9 @@ try {
             $studentId = str_pad($studentId, 5, '0', STR_PAD_LEFT);
         }
 
-        // ตรวจว่ามีอยู่แล้วไหม
-        $existCheck = $pdo->prepare("SELECT id FROM assembly_attendance WHERE date = ? AND student_id = ?");
-        $existCheck->execute([$date, $studentId]);
+        // ตรวจว่ามีอยู่แล้วไหม (ต้อง filter classroom ด้วย)
+        $existCheck = $pdo->prepare("SELECT id FROM assembly_attendance WHERE date = ? AND student_id = ? AND classroom = ?");
+        $existCheck->execute([$date, $studentId, $classroom]);
         $isUpdate = (bool)$existCheck->fetchColumn();
 
         $upsert->execute([
