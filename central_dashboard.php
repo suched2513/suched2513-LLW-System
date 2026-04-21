@@ -24,10 +24,33 @@ try {
     $stmtLeave->execute();
     $countPendingLeave = (int)$stmtLeave->fetchColumn();
 
-    // 3. คาบที่เช็คชื่อวันนี้ (system health)
-    $stmtAtt = $pdo->prepare("SELECT COUNT(DISTINCT CONCAT(period,'_',subject_id)) FROM att_attendance WHERE date = ?");
-    $stmtAtt->execute([$today]);
-    $countTodayAtt = (int)$stmtAtt->fetchColumn();
+    // 3. ห้องเรียนที่เช็คชื่อแล้ววันนี้
+    $countTotalRooms = (int)$pdo->query("SELECT COUNT(DISTINCT classroom) FROM att_students")->fetchColumn();
+
+    $stmtChecked = $pdo->prepare("
+        SELECT COUNT(DISTINCT s.classroom)
+        FROM att_attendance a
+        JOIN att_students s ON s.id = a.student_id
+        WHERE a.date = ?
+    ");
+    $stmtChecked->execute([$today]);
+    $countCheckedRooms = (int)$stmtChecked->fetchColumn();
+    $countRemainingRooms = $countTotalRooms - $countCheckedRooms;
+    $roomProgress = $countTotalRooms > 0 ? round(($countCheckedRooms / $countTotalRooms) * 100) : 0;
+
+    // รายชื่อห้องที่ยังไม่ได้เช็ค
+    $stmtUnchecked = $pdo->prepare("
+        SELECT DISTINCT classroom FROM att_students
+        WHERE classroom NOT IN (
+            SELECT DISTINCT s2.classroom
+            FROM att_attendance a2
+            JOIN att_students s2 ON s2.id = a2.student_id
+            WHERE a2.date = ?
+        )
+        ORDER BY classroom ASC
+    ");
+    $stmtUnchecked->execute([$today]);
+    $uncheckedRooms = $stmtUnchecked->fetchAll(PDO::FETCH_COLUMN);
 
     // 4. บุคลากรลาวันนี้ (operations)
     $stmtOnLeave = $pdo->prepare("SELECT COUNT(*) FROM tl_requests WHERE status = 'approved' AND date_start <= ? AND date_end >= ?");
@@ -48,8 +71,10 @@ try {
 } catch (Exception $e) {
     error_log('[Dashboard] ' . $e->getMessage());
     $countStudents = 0; $countPendingLeave = 0;
-    $countTodayAtt = 0; $countOnLeaveToday = 0;
-    $recentActivity = [];
+    $countCheckedRooms = 0; $countTotalRooms = 0;
+    $countRemainingRooms = 0; $roomProgress = 0;
+    $countOnLeaveToday = 0; $countOnLeaveToday = 0;
+    $uncheckedRooms = []; $recentActivity = [];
 }
 
 ?>
@@ -184,10 +209,10 @@ try {
                 <p class="text-rose-200 text-[10px] font-bold"><?= $countPendingLeave > 0 ? 'คลิกเพื่อดำเนินการใบลา' : 'ไม่มีใบลารอดำเนินการ' ?></p>
             </a>
 
-            <!-- Card 3: เช็คชื่อวันนี้ -->
+            <!-- Card 3: ห้องเรียนที่เช็คชื่อแล้ว -->
             <div class="card-gradient-3 p-8 rounded-[40px] text-white shadow-xl shadow-blue-100 relative overflow-hidden group">
                 <div class="absolute -right-4 -bottom-4 text-white/10 text-9xl group-hover:scale-110 transition-transform">
-                    <i class="bi bi-calendar-check"></i>
+                    <i class="bi bi-door-open"></i>
                 </div>
                 <div class="flex justify-between items-start mb-6">
                     <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">
@@ -195,9 +220,13 @@ try {
                     </div>
                     <span class="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full"><?= date('d/m/Y') ?></span>
                 </div>
-                <p class="text-blue-100 font-bold text-xs uppercase tracking-widest mb-1">คาบที่เช็คชื่อวันนี้</p>
-                <h3 class="text-4xl font-black mb-4"><?= $countTodayAtt ?></h3>
-                <p class="text-blue-200 text-[10px] font-bold">จำนวนคาบ/วิชาที่บันทึกแล้ววันนี้</p>
+                <p class="text-blue-100 font-bold text-xs uppercase tracking-widest mb-1">ห้องที่เช็คชื่อแล้ว</p>
+                <h3 class="text-4xl font-black mb-1"><?= $countCheckedRooms ?> <span class="text-xl font-bold opacity-70">/ <?= $countTotalRooms ?></span></h3>
+                <p class="text-blue-200 text-[10px] font-bold mb-3">ยังเหลืออีก <?= $countRemainingRooms ?> ห้อง</p>
+                <div class="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+                    <div class="bg-white h-full rounded-full transition-all" style="width: <?= $roomProgress ?>%"></div>
+                </div>
+                <p class="text-blue-200 text-[10px] font-bold mt-1"><?= $roomProgress ?>% เสร็จแล้ว</p>
             </div>
 
             <!-- Card 4: บุคลากรลาวันนี้ -->
@@ -216,6 +245,43 @@ try {
                 <p class="text-emerald-200 text-[10px] font-bold"><?= $countOnLeaveToday > 0 ? 'คนอนุมัติลาแล้ววันนี้' : 'ไม่มีบุคลากรลาวันนี้' ?></p>
             </div>
         </section>
+
+        <!-- Unchecked Rooms Section -->
+        <?php if ($countRemainingRooms > 0): ?>
+        <section class="mb-8">
+            <div class="bg-white rounded-[32px] shadow-sm border border-amber-100 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-black text-slate-800 flex items-center gap-2">
+                        <div class="w-8 h-8 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+                            <i class="bi bi-exclamation-triangle-fill text-sm"></i>
+                        </div>
+                        ห้องที่ยังไม่ได้เช็คชื่อวันนี้
+                        <span class="text-xs font-bold bg-amber-100 text-amber-600 px-3 py-1 rounded-full"><?= $countRemainingRooms ?> ห้อง</span>
+                    </h3>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"><?= date('d/m/Y') ?></span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <?php foreach($uncheckedRooms as $room): ?>
+                    <a href="attendance_system/attendance.php" class="px-4 py-2 bg-amber-50 text-amber-700 text-xs font-black rounded-xl border border-amber-200 hover:bg-amber-100 transition-all hover:scale-105">
+                        <i class="bi bi-door-closed-fill mr-1"></i><?= htmlspecialchars($room) ?>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </section>
+        <?php else: ?>
+        <section class="mb-8">
+            <div class="bg-emerald-50 rounded-[32px] border border-emerald-100 p-5 flex items-center gap-4">
+                <div class="w-10 h-10 bg-emerald-500 text-white rounded-2xl flex items-center justify-center text-lg shadow-lg shadow-emerald-200">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div>
+                    <p class="font-black text-emerald-700">เช็คชื่อครบทุกห้องแล้ววันนี้! 🎉</p>
+                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest"><?= $countTotalRooms ?> ห้องเรียน — <?= date('d/m/Y') ?></p>
+                </div>
+            </div>
+        </section>
+        <?php endif; ?>
 
         <!-- Charts Section -->
         <section class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
