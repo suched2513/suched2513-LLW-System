@@ -125,8 +125,8 @@ function ensureTeacherRecord($username, $fullname, $llw_user_id, $pdo) {
     }
 
     // 3. ไม่เจอเลย -> สร้างใหม่ (สำหรับ Admin ที่ไม่เคยใช้งานระบบเช็คชื่อ)
-    $stmt = $pdo->prepare("INSERT INTO att_teachers (name, username, llw_user_id) VALUES (?, ?, ?)");
-    $stmt->execute([$fullname, $username, $llw_user_id]);
+    $stmt = $pdo->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, ?, ?)");
+    $stmt->execute([$fullname, $username, '', $llw_user_id]);
     $id = $pdo->lastInsertId();
     return ['id' => $id, 'name' => $fullname];
 }
