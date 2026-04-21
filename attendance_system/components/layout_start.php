@@ -23,7 +23,7 @@ require_once __DIR__ . '/sidebar.php';
         
         <div class="flex items-center gap-3">
             <div class="hidden sm:flex flex-col text-right mr-3">
-                <span class="text-xs font-bold text-gray-800"><?= htmlspecialchars($_SESSION['teacher_name']) ?></span>
+                <span class="text-xs font-bold text-gray-800"><?= htmlspecialchars($_SESSION['teacher_name'] ?? $_SESSION['fullname'] ?? $_SESSION['username'] ?? '') ?></span>
                 <span class="text-[10px] text-gray-400 font-medium uppercase tracking-wider"><?= ($_SESSION['llw_role'] ?? 'att_teacher') === 'super_admin' ? 'Super Admin' : 'Teacher' ?></span>
             </div>
             <a href="logout.php" class="p-2.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition shadow-sm border border-red-100">
