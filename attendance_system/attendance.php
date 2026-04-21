@@ -4,14 +4,19 @@ require_once '../includes/telegram_bot.php';
 checkLogin();
 
 $teacher_id = $_SESSION['teacher_id'];
-// Super Admin เห็นทุกวิชา (pass 0 เพื่อ bypass filter ใน getTeacherSubjects)
-if (in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
-    $teacher_id = 0;
-}
+
+// แยกตัวแปรออกเป็น2 อัน:
+// 1. $save_teacher_id → teacher_id จริงจาก session ใช้ตอน save (ต้อง exist ใน att_teachers)
+// 2. $subject_filter_tid → 0 สำหรับ admin เพื่อ bypass filter ใน getTeacherSubjects
+$save_teacher_id = (int)$_SESSION['teacher_id'];
+$subject_filter_tid = in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])
+    ? 0
+    : $save_teacher_id;
+
 $pageTitle = 'เช็คชื่อรายคาบ';
 $pageSubtitle = 'บันทึกข้อมูลการเข้าเรียนของนักเรียน';
 
-$subjects = getTeacherSubjects($teacher_id, $pdo);
+$subjects = getTeacherSubjects($subject_filter_tid, $pdo);
 
 $selected_subject_id = $_GET['subject_id'] ?? '';
 $selected_date = $_GET['date'] ?? date('Y-m-d');
@@ -48,8 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
             $time_in = $student_time_in[$sid_code] ?? null;
             $note = $student_note[$sid_code] ?? '';
             
-            // Save each student's attendance
-            saveAttendance($date, $period, $subject_id, $teacher_id, $sid_code, $status, $time_in, $p_start_time, $note, $pdo);
+            // Save each student's attendance (ใช้ save_teacher_id จริง ไม่ใช้ 0 เพื่อไม่ผิด FK)
+            saveAttendance($date, $period, $subject_id, $save_teacher_id, $sid_code, $status, $time_in, $p_start_time, $note, $pdo);
         }
         $pdo->commit();
         $success_msg = "บันทึกข้อมูลเรียบร้อยแล้ว";
