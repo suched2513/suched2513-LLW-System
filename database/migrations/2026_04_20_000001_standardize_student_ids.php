@@ -2,18 +2,38 @@
 /**
  * Migration: Standardize all student IDs & Sync Missing Data
  * Created: 2026-04-20
+ * Updated: 2026-04-21 — handle duplicate IDs gracefully before padding
  */
 
 return [
     'up' => function (PDO $pdo) {
-        // 1. Sync Teachers to Chromebook System
+
+        // ─── 0. Pre-clean: ลบ duplicate student_id ที่จะเกิดเมื่อ LPAD ───────
+        // เช่น ถ้ามีทั้ง '4684' และ '04684' อยู่ด้วยกัน → เมื่อ pad แล้วจะซ้ำ
+        // เก็บ record ที่มี id สูงกว่า (ใหม่กว่า) ไว้ ลบอันเก่าออก
+        $tables = ['att_students', 'assembly_students', 'beh_students', 'cb_students'];
+        foreach ($tables as $table) {
+            if ($pdo->query("SHOW TABLES LIKE '$table'")->fetch()) {
+                // ลบ row ที่ student_id เป็นเลขล้วน
+                // และมี row อื่นที่ LPAD แล้วได้ค่าเดียวกัน
+                $pdo->exec("
+                    DELETE a FROM `$table` a
+                    INNER JOIN `$table` b
+                        ON LPAD(a.student_id, 5, '0') = LPAD(b.student_id, 5, '0')
+                        AND a.id < b.id
+                    WHERE a.student_id REGEXP '^[0-9]+$'
+                ");
+            }
+        }
+
+        // ─── 1. Sync Teachers to Chromebook System ────────────────────────
         if ($pdo->query("SHOW TABLES LIKE 'cb_teachers'")->fetch()) {
             $pdo->exec("INSERT INTO cb_teachers (teacher_id, name) 
                         SELECT id, name FROM att_teachers
                         ON DUPLICATE KEY UPDATE name = VALUES(name)");
         }
 
-        // 2. Fix Chromebook Students Sync (Add missing student_id, skip empty)
+        // ─── 2. Fix Chromebook Students Sync ─────────────────────────────
         if ($pdo->query("SHOW TABLES LIKE 'cb_students'")->fetch()) {
             $pdo->exec("TRUNCATE TABLE cb_students");
             $pdo->exec("INSERT INTO cb_students (student_id, name, class_name) 
@@ -21,7 +41,7 @@ return [
                         WHERE student_id IS NOT NULL AND student_id != ''");
         }
 
-        // 3. Standardize Master Tables (LPAD to 5 digits)
+        // ─── 3. Standardize Master Tables (LPAD to 5 digits) ─────────────
         $masters = [
             'att_students'      => 'student_id',
             'assembly_students' => 'student_id',
@@ -31,11 +51,11 @@ return [
 
         foreach ($masters as $table => $column) {
             if ($pdo->query("SHOW TABLES LIKE '$table'")->fetch()) {
-                $pdo->exec("UPDATE $table SET $column = LPAD($column, 5, '0') WHERE $column REGEXP '^[0-9]+$'");
+                $pdo->exec("UPDATE `$table` SET `$column` = LPAD(`$column`, 5, '0') WHERE `$column` REGEXP '^[0-9]+$'");
             }
         }
 
-        // 4. Update Log Tables (Foreign Keys/References)
+        // ─── 4. Update Log Tables ─────────────────────────────────────────
         $logs = [
             'att_attendance'      => 'student_id',
             'beh_records'         => 'student_id',
@@ -45,11 +65,11 @@ return [
 
         foreach ($logs as $table => $column) {
             if ($pdo->query("SHOW TABLES LIKE '$table'")->fetch()) {
-                $pdo->exec("UPDATE $table SET $column = LPAD($column, 5, '0') WHERE $column REGEXP '^[0-9]+$'");
+                $pdo->exec("UPDATE `$table` SET `$column` = LPAD(`$column`, 5, '0') WHERE `$column` REGEXP '^[0-9]+$'");
             }
         }
 
-        // Chromebook Borrow Logs
+        // ─── 5. Chromebook Borrow Logs ────────────────────────────────────
         if ($pdo->query("SHOW TABLES LIKE 'cb_borrow_logs'")->fetch()) {
             $pdo->exec("UPDATE cb_borrow_logs SET borrower_id = LPAD(borrower_id, 5, '0') 
                         WHERE borrower_type = 'Student' AND borrower_id REGEXP '^[0-9]+$'");
