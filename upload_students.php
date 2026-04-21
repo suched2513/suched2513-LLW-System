@@ -28,7 +28,39 @@ if (($_POST['action'] ?? '') === 'import' && !empty($_POST['json_data'])) {
     }
 }
 
-// ── PREVIEW CSV ──
+// ── SYNC ALL MODULES ──
+if (($_POST['action'] ?? '') === 'sync_all') {
+    try {
+        $students = $pdo->query("
+            SELECT student_id, name, classroom FROM att_students
+            WHERE student_id IS NOT NULL AND TRIM(student_id) != ''
+            GROUP BY student_id
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmtAsm = $pdo->prepare("INSERT INTO assembly_students (student_id,name,classroom) VALUES(?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),classroom=VALUES(classroom)");
+        $stmtBeh = $pdo->prepare("INSERT INTO beh_students (student_id,name,level,room,status) VALUES(?,?,?,?,'active') ON DUPLICATE KEY UPDATE name=VALUES(name),level=VALUES(level),room=VALUES(room),status='active'");
+        $stmtCb  = $pdo->prepare("INSERT INTO cb_students (student_id,name,class_name) VALUES(?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),class_name=VALUES(class_name)");
+
+        $pdo->beginTransaction();
+        $n = 0;
+        foreach ($students as $s) {
+            $sid=$s['student_id']; $name=$s['name']; $cls=$s['classroom'];
+            $level=$cls; $room='';
+            if(strpos($cls,'/')!==false){[$level,$room]=array_map('trim',explode('/',$cls,2));}
+            $stmtAsm->execute([$sid,$name,$cls]);
+            $stmtBeh->execute([$sid,$name,$level,$room]);
+            $stmtCb->execute([$sid,$name,$cls]);
+            $n++;
+        }
+        $pdo->commit();
+        $msg = "✅ Sync สำเร็จ! อัพเดท {$n} คน → Assembly, Behavior, Chromebook"; $type = 'ok';
+    } catch(Throwable $e) {
+        if($pdo->inTransaction()) $pdo->rollBack();
+        $msg = "Sync Error: " . $e->getMessage(); $type = 'err';
+    }
+}
+
+
 if (($_POST['action'] ?? '') === 'preview' && isset($_FILES['csv'])) {
     try {
         $f = $_FILES['csv'];
@@ -169,6 +201,22 @@ try {
     </form>
   </div>
   <?php endif; ?>
+
+  <!-- Sync All Modules -->
+  <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-5 border border-emerald-200">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div>
+        <h3 class="font-black text-emerald-800">🔄 Sync ข้อมูลไปทุกระบบ</h3>
+        <p class="text-xs text-emerald-600 mt-1">อัพเดทรายชื่อนักเรียนใน Assembly, Behavior, Chromebook ให้ตรงกับ att_students</p>
+      </div>
+      <form method="POST" onsubmit="return confirm('ยืนยัน Sync รายชื่อไปทุกระบบ?')">
+        <input type="hidden" name="action" value="sync_all">
+        <button type="submit" class="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-emerald-700 transition shadow-lg shadow-emerald-200 whitespace-nowrap">
+          🔄 Sync ทุกระบบเดี๋ยวนี้
+        </button>
+      </form>
+    </div>
+  </div>
 
   <div class="text-center">
     <a href="/central_dashboard.php" class="text-slate-400 text-sm hover:text-indigo-600">← กลับหน้าหลัก</a>
