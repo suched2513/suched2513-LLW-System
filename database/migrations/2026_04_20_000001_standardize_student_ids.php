@@ -4,9 +4,8 @@
  * Created: 2026-04-20
  */
 
-return new class {
-    public function up(PDO $pdo)
-    {
+return [
+    'up' => function (PDO $pdo) {
         // 1. Sync Teachers to Chromebook System
         if ($pdo->query("SHOW TABLES LIKE 'cb_teachers'")->fetch()) {
             $pdo->exec("INSERT INTO cb_teachers (teacher_id, name) 
@@ -31,8 +30,7 @@ return new class {
         ];
 
         foreach ($masters as $table => $column) {
-            $checkTable = $pdo->query("SHOW TABLES LIKE '$table'")->fetch();
-            if ($checkTable) {
+            if ($pdo->query("SHOW TABLES LIKE '$table'")->fetch()) {
                 $pdo->exec("UPDATE $table SET $column = LPAD($column, 5, '0') WHERE $column REGEXP '^[0-9]+$'");
             }
         }
@@ -46,23 +44,19 @@ return new class {
         ];
 
         foreach ($logs as $table => $column) {
-            $checkTable = $pdo->query("SHOW TABLES LIKE '$table'")->fetch();
-            if ($checkTable) {
+            if ($pdo->query("SHOW TABLES LIKE '$table'")->fetch()) {
                 $pdo->exec("UPDATE $table SET $column = LPAD($column, 5, '0') WHERE $column REGEXP '^[0-9]+$'");
             }
         }
 
-        // Chromebook Borrow Logs (Special check for type='Student')
+        // Chromebook Borrow Logs
         if ($pdo->query("SHOW TABLES LIKE 'cb_borrow_logs'")->fetch()) {
             $pdo->exec("UPDATE cb_borrow_logs SET borrower_id = LPAD(borrower_id, 5, '0') 
                         WHERE borrower_type = 'Student' AND borrower_id REGEXP '^[0-9]+$'");
         }
-        
-        return "Standardized Student IDs & Synced Teacher/Chromebook data successfully.";
-    }
+    },
 
-    public function down(PDO $pdo)
-    {
-        return "Rollback not implemented.";
-    }
-};
+    'down' => function (PDO $pdo) {
+        // Rollback not implemented — data transformation is irreversible
+    },
+];
