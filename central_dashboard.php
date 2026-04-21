@@ -70,7 +70,8 @@ try {
     $recentActivity = $stmt->fetchAll();
 
     // 5. สถิติการใช้งานระบบแยกตามครู
-    $thisMonth = date('Y-m');
+    $statsMonth = preg_match('/^\d{4}-\d{2}$/', $_GET['stats_month'] ?? '') ? $_GET['stats_month'] : date('Y-m');
+    $statsMonthLabel = date('F Y', strtotime($statsMonth . '-01'));
     $stmtTeacherStats = $pdo->prepare("
         SELECT
             t.id,
@@ -86,7 +87,7 @@ try {
         GROUP BY t.id, t.name
         ORDER BY total_records DESC
     ");
-    $stmtTeacherStats->execute([$thisMonth]);
+    $stmtTeacherStats->execute([$statsMonth]);
     $teacherStats = $stmtTeacherStats->fetchAll();
 } catch (Exception $e) {
     error_log('[Dashboard] ' . $e->getMessage());
@@ -123,6 +124,17 @@ try {
         .card-gradient-3 { background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); }
         .card-gradient-4 { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
         .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid white; }
+
+        /* Print Styles */
+        @media print {
+            aside, .no-print { display: none !important; }
+            main { margin-left: 0 !important; padding: 1rem !important; }
+            section:not(#print-section) { display: none !important; }
+            #print-section { display: block !important; }
+            body { background: white !important; }
+            .rounded-\[40px\] { border-radius: 8px !important; }
+            thead { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; }
+        }
     </style>
 </head>
 <body class="flex min-h-screen">
@@ -411,20 +423,54 @@ try {
         </section>
 
         <!-- Teacher Usage Stats Section -->
-        <section class="mt-8">
+        <section id="print-section" class="mt-8">
             <div class="bg-white rounded-[40px] shadow-sm border border-slate-100 overflow-hidden">
-                <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
-                    <div>
-                        <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                            <i class="bi bi-person-lines-fill text-indigo-600"></i>
-                            สถิติการใช้งานระบบเช็คชื่อแยกตามครู
-                        </h3>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">ผลงานเชิงประจักษ์ — เพื่อประกอบการพิจารณา</p>
+                <!-- Header + Controls -->
+                <div class="px-8 py-6 border-b border-slate-50">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                                <i class="bi bi-person-lines-fill text-indigo-600"></i>
+                                สถิติการใช้งานระบบเช็คชื่อแยกตามครู
+                            </h3>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">ผลงานเชิงประจักษ์ — เพื่อประกอบการพิจารณา</p>
+                        </div>
+                        <!-- Filter Controls -->
+                        <div class="flex flex-wrap gap-3 items-center no-print">
+                            <!-- Search by name -->
+                            <div class="relative">
+                                <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <input id="teacherSearch" type="text" placeholder="ค้นชื่อครู..."
+                                    class="pl-8 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none w-40">
+                            </div>
+                            <!-- Filter by status -->
+                            <select id="statusFilter" class="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none">
+                                <option value="">ทุกสถานะ</option>
+                                <option value="Active">Active</option>
+                                <option value="ใช้บ้างๆ">ใช้บ้างๆ</option>
+                                <option value="ไม่ใช้งาน">ไม่ใช้งาน</option>
+                                <option value="ไม่เคยใช้">ไม่เคยใช้</option>
+                            </select>
+                            <!-- Month selector -->
+                            <form method="GET" id="monthForm">
+                                <input type="month" name="stats_month" value="<?= $statsMonth ?>"
+                                    onchange="document.getElementById('monthForm').submit()"
+                                    class="px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none">
+                            </form>
+                            <!-- Print button -->
+                            <button onclick="window.print()" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
+                                <i class="bi bi-printer-fill"></i> พิมพ์
+                            </button>
+                        </div>
                     </div>
-                    <span class="text-[10px] font-bold text-slate-400 bg-slate-50 px-4 py-2 rounded-xl">เดือนนี้: <?= date('F Y') ?></span>
+                    <!-- Print header (only shows on print) -->
+                    <div class="hidden print:block mt-4 text-center border-b pb-4">
+                        <h2 class="text-xl font-black">โรงเรียนละลมวิทยา — สถิติการใช้งานระบบเช็คชื่อ</h2>
+                        <p class="text-sm text-slate-500">เดือน: <?= $statsMonthLabel ?> | พิมพ์เมื่อ: <?= date('d/m/Y H:i') ?> น.</p>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full text-xs">
+                    <table id="teacherTable" class="min-w-full text-xs">
                         <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                             <tr>
                                 <th class="px-6 py-4 text-left">#</th>
@@ -432,7 +478,7 @@ try {
                                 <th class="px-4 py-4 text-center">วิชาที่สอน</th>
                                 <th class="px-4 py-4 text-center">คาบทั้งหมด</th>
                                 <th class="px-4 py-4 text-center">วันที่ใช้งาน</th>
-                                <th class="px-4 py-4 text-center">เดือนนี้</th>
+                                <th class="px-4 py-4 text-center">เดือน <?= $statsMonthLabel ?></th>
                                 <th class="px-4 py-4 text-center">ใช้ล่าสุด</th>
                                 <th class="px-4 py-4 text-center">สถานะ</th>
                             </tr>
@@ -455,7 +501,9 @@ try {
                                     $badge = ['label' => 'ไม่ใช้งาน', 'color' => 'rose'];
                                 }
                             ?>
-                            <tr class="hover:bg-slate-50/50 transition-all <?= $t['total_records'] === 0 ? 'opacity-50' : '' ?>">
+                            <tr class="hover:bg-slate-50/50 transition-all <?= $t['total_records'] === 0 ? 'opacity-50' : '' ?>"
+                                data-name="<?= htmlspecialchars(mb_strtolower($t['name']), ENT_QUOTES) ?>"
+                                data-status="<?= htmlspecialchars($badge['label'], ENT_QUOTES) ?>">
                                 <td class="px-6 py-4 font-black text-slate-300"><?= $i + 1 ?></td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
@@ -503,10 +551,13 @@ try {
                         </tbody>
                     </table>
                 </div>
-                <div class="px-8 py-4 bg-slate-50/50 border-t border-slate-50 flex gap-6 text-[10px] font-bold text-slate-400">
-                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Active = ใช้งานภายน7วัน</span>
-                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 bg-amber-400 rounded-full"></span> ใช้บ้างๆ = 8-30 วัน</span>
-                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 bg-rose-500 rounded-full"></span> ไม่ใช้งาน = เกิน 30 วัน</span>
+                <div class="px-8 py-4 bg-slate-50/50 border-t border-slate-50 flex flex-wrap gap-6 items-center justify-between text-[10px] font-bold text-slate-400">
+                    <div class="flex gap-6">
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Active = ใช้งานภายน7วัน</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 bg-amber-400 rounded-full"></span> ใช้บ้างๆ = 8-30 วัน</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 bg-rose-500 rounded-full"></span> ไม่ใช้งาน = เกิน 30 วัน</span>
+                    </div>
+                    <span id="filteredCount" class="no-print text-slate-500"></span>
                 </div>
             </div>
         </section>
@@ -579,6 +630,32 @@ try {
                 }
             }
         });
+        // Teacher table filter
+        const searchInput  = document.getElementById('teacherSearch');
+        const statusSelect = document.getElementById('statusFilter');
+        const filteredCount = document.getElementById('filteredCount');
+
+        function filterTable() {
+            const q      = searchInput.value.trim().toLowerCase();
+            const status = statusSelect.value;
+            const rows   = document.querySelectorAll('#teacherTable tbody tr[data-name]');
+            let visible  = 0;
+
+            rows.forEach(row => {
+                const name   = row.dataset.name || '';
+                const badge  = row.dataset.status || '';
+                const matchName   = !q || name.includes(q);
+                const matchStatus = !status || badge === status;
+                const show = matchName && matchStatus;
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            filteredCount.textContent = `แสดง ${visible} จาก ${rows.length} คน`;
+        }
+
+        searchInput.addEventListener('input', filterTable);
+        statusSelect.addEventListener('change', filterTable);
+        filterTable(); // init count
     </script>
 </body>
 </html>
