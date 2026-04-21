@@ -89,6 +89,21 @@ try {
     ");
     $stmtTeacherStats->execute([$statsMonth]);
     $teacherStats = $stmtTeacherStats->fetchAll();
+
+    // 6. สถานะเช็คชื่อเดือนนี้ (real data แทน fake assignment chart)
+    $monthStart = date('Y-m-01');
+    $monthEnd   = date('Y-m-t');
+    $stmtAttStats = $pdo->prepare("
+        SELECT status, COUNT(*) as cnt
+        FROM att_attendance
+        WHERE date BETWEEN ? AND ?
+        GROUP BY status
+    ");
+    $stmtAttStats->execute([$monthStart, $monthEnd]);
+    $attStatusRaw = $stmtAttStats->fetchAll(PDO::FETCH_KEY_PAIR);
+    // เรียงตามลำดับที่ต้องการ
+    $attStatusOrder = ['มา', 'ขาด', 'ลา', 'โดด', 'สาย'];
+    $attStatusData  = array_map(fn($s) => (int)($attStatusRaw[$s] ?? 0), $attStatusOrder);
 } catch (Exception $e) {
     error_log('[Dashboard] ' . $e->getMessage());
     $countStudents = 0; $countPendingLeave = 0;
@@ -96,7 +111,7 @@ try {
     $countRemainingRooms = 0; $roomProgress = 0;
     $countOnLeaveToday = 0; $countOnLeaveToday = 0;
     $uncheckedRooms = []; $recentActivity = [];
-    $teacherStats = [];
+    $teacherStats = []; $attStatusData = [0,0,0,0,0];
 }
 
 ?>
@@ -349,12 +364,15 @@ try {
 
         <!-- Progress & Activity -->
         <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Bar Chart / Stats -->
+            <!-- Attendance Status Bar Chart -->
             <div class="lg:col-span-1 bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
-                <h3 class="text-lg font-black text-slate-800 flex items-center gap-2 mb-8">
-                    <i class="bi bi-bar-chart-fill text-emerald-600"></i> สถิติการส่งงาน
-                </h3>
-                <canvas id="assignmentBarChart" height="300"></canvas>
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <i class="bi bi-bar-chart-fill text-indigo-600"></i> สถานะเช็คชื่อ
+                    </h3>
+                </div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">รวมทั้งเดือน <?= date('m/Y') ?></p>
+                <canvas id="attStatusChart" height="300"></canvas>
             </div>
 
             <!-- Subject Progress -->
@@ -610,23 +628,34 @@ try {
             }
         });
 
-        // Assignment Bar Chart
-        const barCtx = document.getElementById('assignmentBarChart').getContext('2d');
-        new Chart(barCtx, {
+        // Attendance Status Bar Chart (real data)
+        const attCtx = document.getElementById('attStatusChart').getContext('2d');
+        new Chart(attCtx, {
             type: 'bar',
             data: {
-                labels: ['ส่งแล้ว', 'ยังไม่ส่ง', 'ส่งช้า', 'รอตรวจ'],
+                labels: ['มา', 'ขาด', 'ลา', 'โดด', 'สาย'],
                 datasets: [{
-                    data: [320, 85, 42, 156],
-                    backgroundColor: ['#34d399', '#f43f5e', '#fbbf24', '#818cf8'],
-                    borderRadius: 15
+                    data: <?= json_encode($attStatusData) ?>,
+                    backgroundColor: ['#10b981', '#f43f5e', '#f59e0b', '#8b5cf6', '#f97316'],
+                    borderRadius: 14,
+                    borderSkipped: false
                 }]
             },
             options: {
-                plugins: { legend: { display: false } },
-                scales: { 
-                    y: { visible: false, grid: { display: false }, ticks: { display: false } },
-                    x: { grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' } } }
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        padding: 10,
+                        cornerRadius: 10,
+                        callbacks: {
+                            label: ctx => ` ${ctx.parsed.y.toLocaleString()} ครั้ง`
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 11, weight: 'bold' } } }
                 }
             }
         });
