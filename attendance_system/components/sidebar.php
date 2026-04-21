@@ -2,8 +2,8 @@
 require_once __DIR__ . '/../functions.php';
 checkLogin();
 
-$teacher_id = $_SESSION['teacher_id'];
-$teacher_name = $_SESSION['teacher_name'];
+$teacher_id   = $_SESSION['teacher_id'] ?? 0;
+$teacher_name = $_SESSION['teacher_name'] ?? $_SESSION['fullname'] ?? $_SESSION['username'] ?? 'Admin';
 $role = $_SESSION['llw_role'] ?? 'att_teacher';
 $is_admin = ($role === 'super_admin');
 

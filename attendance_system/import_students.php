@@ -2,7 +2,7 @@
 require_once 'functions.php';
 checkLogin();
 
-$teacher_id = $_SESSION['teacher_id'];
+$teacher_id = $_SESSION['teacher_id'] ?? 0;
 $pageTitle = 'จัดการข้อมูลนักเรียน';
 $pageSubtitle = 'นำเข้าและจัดการรายชื่อนักเรียน';
 
@@ -127,7 +127,7 @@ $filterCls = $_GET['cls'] ?? '';
 $whereQ = $filterCls ? "WHERE classroom = " . $pdo->quote($filterCls) : '';
 $students = $pdo->query("SELECT * FROM att_students $whereQ ORDER BY classroom, student_id")->fetchAll();
 
-require_once 'components/layout_start.php';
+require_once __DIR__ . '/components/layout_start.php';
 ?>
 
 <div class="flex flex-col gap-8">
