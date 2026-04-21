@@ -19,8 +19,14 @@ $activeSystem = 'portal';
 // --- Fetch Students to list Rooms ---
 $rooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE classroom != '' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
-// --- Fetch Teachers for selection ---
-$teachers = $pdo->query("SELECT user_id, firstname, lastname FROM llw_users WHERE role IN ('att_teacher', 'super_admin') AND status = 'active' ORDER BY firstname")->fetchAll();
+// --- Fetch Teachers for selection (att_teachers linked to llw_users + direct att_teacher role) ---
+$teachers = $pdo->query("
+    SELECT DISTINCT u.user_id, u.firstname, u.lastname
+    FROM llw_users u
+    WHERE u.role IN ('att_teacher', 'super_admin')
+      AND (u.status = 'active' OR u.status IS NULL)
+    ORDER BY u.firstname, u.lastname
+")->fetchAll();
 
 // --- Fetch Existing Mappings ---
 $mappings = $pdo->query("SELECT * FROM llw_class_advisors")->fetchAll();
