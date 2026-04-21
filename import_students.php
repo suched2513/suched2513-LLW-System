@@ -4,7 +4,8 @@
  * ใช้ layout กลาง (components/) ไม่ผ่าน attendance_system
  */
 session_start();
-require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config.php';
+$pdo = getPdo();
 
 // Auth guard — super_admin only
 if (!isset($_SESSION['llw_role'])) {
