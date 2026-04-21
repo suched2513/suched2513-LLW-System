@@ -80,9 +80,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_FILES['csvfile']) || isset
             $content = file_get_contents($file['tmp_name']);
             
             // Detect Encoding (Excel Thai usually Windows-874)
-            $encoding = mb_detect_encoding($content, ['UTF-8', 'Windows-874', 'TIS-620'], true);
+            $encoding = mb_detect_encoding($content, ['UTF-8', 'CP874', 'TIS-620'], true);
             if ($encoding !== 'UTF-8') {
-                $content = mb_convert_encoding($content, 'UTF-8', $encoding ?: 'Windows-874');
+                $content = mb_convert_encoding($content, 'UTF-8', $encoding ?: 'CP874');
             }
 
             // Detect Delimiter

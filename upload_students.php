@@ -36,7 +36,7 @@ if (($_POST['action'] ?? '') === 'preview' && isset($_FILES['csv'])) {
             $msg = "Upload error code: " . $f['error']; $type = 'err';
         } else {
             $raw = file_get_contents($f['tmp_name']);
-            $enc = mb_detect_encoding($raw, ['UTF-8','Windows-874','TIS-620'], true);
+            $enc = mb_detect_encoding($raw, ['UTF-8','CP874','TIS-620'], true);
             if ($enc && $enc !== 'UTF-8') $raw = mb_convert_encoding($raw, 'UTF-8', $enc);
             $raw = ltrim($raw, "\xEF\xBB\xBF");
             $delim = (substr_count($raw,';') > substr_count($raw,',')) ? ';' : ',';
