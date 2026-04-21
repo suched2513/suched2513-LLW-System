@@ -4,6 +4,10 @@ require_once '../includes/telegram_bot.php';
 checkLogin();
 
 $teacher_id = $_SESSION['teacher_id'];
+// Super Admin เห็นทุกวิชา (pass 0 เพื่อ bypass filter ใน getTeacherSubjects)
+if (in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+    $teacher_id = 0;
+}
 $pageTitle = 'เช็คชื่อรายคาบ';
 $pageSubtitle = 'บันทึกข้อมูลการเข้าเรียนของนักเรียน';
 

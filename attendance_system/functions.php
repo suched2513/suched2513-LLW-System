@@ -133,14 +133,14 @@ function ensureTeacherRecord($username, $fullname, $llw_user_id, $pdo) {
 
 /**
  * ดึงรายวิชาที่ครูสอน
- * teacher_id=0 หมายถึง super_admin → ดึงทั้งหมด
+ * teacher_id=0 หมายถึง super_admin/wfh_admin → ดึงทั้งหมด
  */
 function getTeacherSubjects($teacher_id, $pdo) {
     if ((int)$teacher_id === 0) {
-        // super_admin ดูทุกวิชา
-        return $pdo->query("SELECT s.*, t.name as teacher_name FROM att_subjects s JOIN att_teachers t ON t.id=s.teacher_id ORDER BY t.name,s.subject_code")->fetchAll();
+        // admin ดูทุกวิชา (LEFT JOIN เผื่อวิชาที่ยังไม่มีครูผูก)
+        return $pdo->query("SELECT s.*, COALESCE(t.name, 'ไม่ระบุครู') as teacher_name FROM att_subjects s LEFT JOIN att_teachers t ON t.id = s.teacher_id ORDER BY s.subject_code ASC")->fetchAll();
     }
-    $stmt = $pdo->prepare("SELECT * FROM att_subjects WHERE teacher_id = :teacher_id ORDER BY subject_code ASC");
+    $stmt = $pdo->prepare("SELECT s.*, COALESCE(t.name, 'ไม่ระบุครู') as teacher_name FROM att_subjects s LEFT JOIN att_teachers t ON t.id = s.teacher_id WHERE s.teacher_id = :teacher_id ORDER BY s.subject_code ASC");
     $stmt->execute(['teacher_id' => $teacher_id]);
     return $stmt->fetchAll();
 }

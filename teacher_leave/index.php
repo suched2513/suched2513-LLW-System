@@ -254,11 +254,6 @@ $(document).ready(function() {
                             <i class="bi bi-hourglass-split"></i> รอตรวจสอบจากเจ้าหน้าที่
                         </span>`;
                     }
-                    if (lvl <= 1) {
-                        return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-black tracking-widest whitespace-nowrap">
-                            <i class="bi bi-hourglass-split"></i> รอตรวจสอบจากเจ้าหน้าที่
-                        </span>`;
-                    }
                     if (lvl === 2) {
                         return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-widest whitespace-nowrap">
                             <i class="bi bi-person-check"></i> รออนุมัติ ผอ./รองฯ
@@ -393,9 +388,8 @@ function openApproval(request) {
             document.getElementById('modalSubtitle').textContent = 'ผู้อำนวยการ/รองฯ พิจารณาอนุมัติ';
             document.getElementById('sigLabel').innerHTML = 'ลายเซ็นผู้อำนวยการ/รองฯ <span class="text-rose-500">*</span>';
         }
-        }
     }
-    
+
     // Attachment link handling
     const attSection = document.getElementById('attachment-view-section');
     const attLink = document.getElementById('btn-view-att');
