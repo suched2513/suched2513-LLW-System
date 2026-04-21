@@ -2,28 +2,34 @@
 /**
  * Migration: Standardize all student IDs & Sync Missing Data
  * Created: 2026-04-20
- * Updated: 2026-04-21 — handle duplicate IDs gracefully before padding
+ * Updated: 2026-04-21 — handle duplicate IDs gracefully (safe subquery approach)
  */
 
 return [
     'up' => function (PDO $pdo) {
 
-        // ─── 0. Pre-clean: ลบ duplicate student_id ที่จะเกิดเมื่อ LPAD ───────
-        // เช่น ถ้ามีทั้ง '4684' และ '04684' อยู่ด้วยกัน → เมื่อ pad แล้วจะซ้ำ
-        // เก็บ record ที่มี id สูงกว่า (ใหม่กว่า) ไว้ ลบอันเก่าออก
-        $tables = ['att_students', 'assembly_students', 'beh_students', 'cb_students'];
-        foreach ($tables as $table) {
-            if ($pdo->query("SHOW TABLES LIKE '$table'")->fetch()) {
-                // ลบ row ที่ student_id เป็นเลขล้วน
-                // และมี row อื่นที่ LPAD แล้วได้ค่าเดียวกัน
-                $pdo->exec("
-                    DELETE a FROM `$table` a
-                    INNER JOIN `$table` b
-                        ON LPAD(a.student_id, 5, '0') = LPAD(b.student_id, 5, '0')
-                        AND a.id < b.id
-                    WHERE a.student_id REGEXP '^[0-9]+$'
-                ");
-            }
+        // ─── 0. Pre-clean: delete duplicate student_ids before LPAD ──────
+        // Some tables may have both '4684' and '04684' which would collide after LPAD
+        // Strategy: for each table, find IDs that LPAD would duplicate
+        // and keep only the row with the ALREADY-padded ID (starts with '0' prefix)
+        $masterTables = ['att_students', 'assembly_students', 'beh_students'];
+        foreach ($masterTables as $table) {
+            if (!$pdo->query("SHOW TABLES LIKE '$table'")->fetch()) continue;
+
+            // Find student_ids that when padded would duplicate another padded id
+            // Delete the shorter/unpadded duplicate (e.g., '4684' when '04684' exists)
+            $pdo->exec("
+                DELETE FROM `$table`
+                WHERE student_id REGEXP '^[0-9]+$'
+                AND LENGTH(student_id) < 5
+                AND LPAD(student_id, 5, '0') IN (
+                    SELECT padded FROM (
+                        SELECT LPAD(student_id, 5, '0') AS padded
+                        FROM `$table`
+                        WHERE LENGTH(student_id) = 5 AND student_id REGEXP '^[0-9]+$'
+                    ) AS already_padded
+                )
+            ");
         }
 
         // ─── 1. Sync Teachers to Chromebook System ────────────────────────
