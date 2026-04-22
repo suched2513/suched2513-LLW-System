@@ -29,11 +29,11 @@ $activeSystem = 'homeroom';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch animate-fade-in">
     
     <!-- LEFT COLUMN: Student List (Attendance) -->
     <div class="lg:col-span-4 space-y-6">
-        <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden">
+        <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden h-full flex flex-col">
             <div class="p-6 border-b border-slate-50 flex items-center gap-4 bg-slate-50/50">
                 <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
                     <i class="bi bi-people-fill text-xl"></i>
@@ -80,7 +80,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 
     <!-- Column 2: Activity Form -->
     <div class="lg:col-span-5 space-y-6">
-        <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden">
+        <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden h-full flex flex-col">
             <div class="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center gap-4">
                 <div class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
                     <i class="bi bi-file-earmark-plus-fill text-xl"></i>
@@ -153,7 +153,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 
     <!-- Column 3: Weekly Summary -->
     <div class="lg:col-span-3 space-y-6">
-        <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden sticky top-24">
+        <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden h-full flex flex-col">
             <div class="p-6 border-b border-slate-50 flex items-center gap-4 bg-slate-50/50">
                 <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center shadow-sm">
                     <i class="bi bi-file-earmark-text text-xl"></i>
@@ -383,8 +383,8 @@ async function saveHomeroom(e) {
         const res = await r.json();
         
         if (res.status === 'success') {
-            await Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', text: 'ข้อมูลกิจกรรมและการเช็คชื่อถูกบันทึกแล้ว', timer: 2000, showConfirmButton: false });
-            loadWorkdesk(); // Refresh
+            await Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', text: 'ข้อมูลกิจกรรมและการเช็คชื่อถูกบันทึกแล้ว ระบบกำลังรีเฟรช...', timer: 2000, showConfirmButton: false });
+            location.reload(); 
         } else {
             Swal.fire('ผิดพลาด', res.message, 'error');
         }
