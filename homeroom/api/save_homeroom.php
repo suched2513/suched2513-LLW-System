@@ -60,10 +60,11 @@ try {
             $uploadDir = __DIR__ . '/../../uploads/homeroom/';
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
-            $fileName = 'hr_' . str_replace('/', '_', $classroom) . '_' . $log_date . '_' . uniqid() . '.' . $ext;
+            // บีบอัดรูปภาพก่อนบันทึก (แปลงเป็น .jpg เพื่อประหยัดพื้นที่)
+            $fileName = 'hr_' . str_replace('/', '_', $classroom) . '_' . $log_date . '_' . uniqid() . '.jpg';
             $dest = $uploadDir . $fileName;
 
-            if (move_uploaded_file($file['tmp_name'], $dest)) {
+            if (compressAndResizeImage($file['tmp_name'], $dest, 70, 1200)) {
                 $pathForDb = '/uploads/homeroom/' . $fileName;
                 $stmtPhoto = $pdo->prepare("
                     INSERT INTO homeroom_photos (classroom, log_date, image_path, user_id)
@@ -79,8 +80,46 @@ try {
     echo json_encode(['status' => 'success', 'message' => 'บันทึกข้อมูลเรียบร้อยแล้ว']);
 
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
+    if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()]);
     error_log($e->getMessage());
+}
+
+/**
+ * ฟังก์ชันย่อขนาดและบีบอัดรูปภาพ
+ */
+function compressAndResizeImage($source, $destination, $quality = 70, $maxWidth = 1200) {
+    $info = getimagesize($source);
+    if ($info === false) return false;
+
+    $mime = $info['mime'];
+    if ($mime == 'image/jpeg') $image = imagecreatefromjpeg($source);
+    elseif ($mime == 'image/png') $image = imagecreatefrompng($source);
+    elseif ($mime == 'image/webp') $image = imagecreatefromwebp($source);
+    elseif ($mime == 'image/gif') $image = imagecreatefromgif($source);
+    else return false;
+
+    // Resize if width > maxWidth
+    $width = $info[0];
+    $height = $info[1];
+    if ($width > $maxWidth) {
+        $newWidth = $maxWidth;
+        $newHeight = floor(($height / $width) * $maxWidth);
+        $tmp = imagecreatetruecolor($newWidth, $newHeight);
+        
+        // Handle transparency
+        if ($mime == 'image/png' || $mime == 'image/gif') {
+            $white = imagecolorallocate($tmp, 255, 255, 255);
+            imagefill($tmp, 0, 0, $white);
+        }
+        
+        imagecopyresampled($tmp, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+        $image = $tmp;
+    }
+
+    // Save as JPEG to minimize space
+    $result = imagejpeg($image, $destination, $quality);
+    imagedestroy($image);
+    return $result;
 }
