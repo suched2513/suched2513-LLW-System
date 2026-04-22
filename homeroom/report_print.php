@@ -16,7 +16,6 @@ $pdo = getPdo();
 
 // 1. Calculate the 5 days (Mon-Fri)
 $dates = [];
-$d = new Date(monday);
 for ($i = 0; $i < 5; $i++) {
     $dates[] = date('Y-m-d', strtotime("$monday +$i day"));
 }
