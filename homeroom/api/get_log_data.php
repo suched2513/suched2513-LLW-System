@@ -25,6 +25,15 @@ if (!$classroom || !$start_date || !$end_date) {
 try {
     $pdo = getPdo();
     
+    // Check if tables exist first
+    $requiredTables = ['att_students', 'llw_class_advisors', 'homeroom_logs', 'assembly_attendance', 'homeroom_photos'];
+    foreach ($requiredTables as $table) {
+        $check = $pdo->query("SHOW TABLES LIKE '$table'");
+        if ($check->rowCount() === 0) {
+            throw new Exception("ไม่พบตาราง '$table' ในฐานข้อมูล กรุณารัน /homeroom/api/init.php");
+        }
+    }
+
     // 1. ดึงรายชื่อนักเรียนจากฐานข้อมูลกลาง (att_students)
     $stmt = $pdo->prepare("SELECT student_id, name FROM att_students WHERE classroom = ? ORDER BY student_id");
     $stmt->execute([$classroom]);
