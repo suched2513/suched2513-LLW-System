@@ -98,7 +98,8 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">ห้องเรียน</label>
                         <select id="sel-class" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                             <?php 
-                            $classesToLink = $isAdmin ? $pdo->query("SELECT DISTINCT classroom FROM llw_class_advisors ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN) : $myClasses;
+                            // ดึงห้องเรียนทั้งหมดที่มีนักเรียนอยู่ เพื่อให้เห็นทุกห้อง
+                            $classesToLink = $pdo->query("SELECT DISTINCT classroom FROM assembly_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
                             foreach ($classesToLink as $c): ?>
                                 <option value="<?= htmlspecialchars($c) ?>" <?= $c === $targetClass ? 'selected' : '' ?>><?= htmlspecialchars($c) ?></option>
                             <?php endforeach; ?>
