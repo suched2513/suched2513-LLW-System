@@ -160,13 +160,13 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <select name="project_id" id="project_id" onchange="toggleBudgetSelect(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                     <option value="">-- ไม่ระบุโครงการ (เบิกจ่ายทั่วไป) --</option>
                     <?php foreach ($projects as $p): ?>
-                    <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['project_name']) ?> (คงเหลือ ฿<?= number_format($p['approved_amount'] - $p['used_amount'], 2) ?>)</option>
+                    <option value="<?= $p['id'] ?>" data-budget="<?= $p['budget_id'] ?>"><?= htmlspecialchars($p['project_name']) ?> (คงเหลือ ฿<?= number_format($p['approved_amount'] - $p['used_amount'], 2) ?>)</option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-span-2" id="budget_select_container">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">หมวดงบประมาณ (กรณีทั่วไป)</label>
-                <select name="budget_id" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                <select name="budget_id" id="budget_id" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                     <option value="">-- กรุณาเลือกหมวดงบ --</option>
                     <?php foreach ($budgets as $b): ?>
                     <option value="<?= $b['id'] ?>"><?= htmlspecialchars($b['plan_name']) ?></option>
@@ -215,9 +215,20 @@ require_once __DIR__ . '/../components/layout_start.php';
 
     function toggleBudgetSelect(projectId) {
         const container = document.getElementById('budget_select_container');
+        const budgetSelect = document.getElementById('budget_id');
+        const projectSelect = document.getElementById('project_id');
+        
         if (projectId) {
+            // Get budget ID from data attribute of the selected option
+            const selectedOption = projectSelect.options[projectSelect.selectedIndex];
+            const budgetId = selectedOption.getAttribute('data-budget');
+            
+            if (budgetId) {
+                budgetSelect.value = budgetId;
+            }
             container.classList.add('opacity-50', 'pointer-events-none');
         } else {
+            budgetSelect.value = "";
             container.classList.remove('opacity-50', 'pointer-events-none');
         }
     }
