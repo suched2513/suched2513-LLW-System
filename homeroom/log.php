@@ -33,19 +33,17 @@ require_once __DIR__ . '/../components/layout_start.php';
     
     <!-- LEFT COLUMN: Student List (Attendance) -->
     <div class="lg:col-span-4 space-y-6">
-        <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden sticky top-24">
-            <div class="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-                        <i class="bi bi-people-fill text-xl"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-black text-slate-800">เช็คชื่อนักเรียน</h3>
-                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Attendance Correction</p>
-                    </div>
+        <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden">
+            <div class="p-6 border-b border-slate-50 flex items-center gap-4 bg-slate-50/50">
+                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm">
+                    <i class="bi bi-people-fill text-xl"></i>
                 </div>
-                <div id="att-count" class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
-                    0 คน
+                <div>
+                    <h3 class="text-lg font-black text-slate-800 leading-tight">เช็คชื่อนักเรียน</h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attendance Correction</p>
+                </div>
+                <div class="ml-auto">
+                    <span id="att-count" class="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-lg">0 คน</span>
                 </div>
             </div>
             
@@ -80,17 +78,20 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
     </div>
 
-    <!-- CENTER COLUMN: Activity Form -->
+    <!-- Column 2: Activity Form -->
     <div class="lg:col-span-5 space-y-6">
-        <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 p-8">
-            <h5 class="text-lg font-black text-slate-800 mb-6 flex items-center gap-3">
-                <div class="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                    <i class="bi bi-file-earmark-plus"></i>
+        <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden">
+            <div class="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center gap-4">
+                <div class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                    <i class="bi bi-file-earmark-plus-fill text-xl"></i>
                 </div>
-                บันทึกกิจกรรมประจำวัน
-            </h5>
-
-            <form id="hr-form" class="space-y-6">
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 leading-tight">บันทึกกิจกรรมประจำวัน</h2>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Daily Activity Log</p>
+                </div>
+            </div>
+            
+            <form id="hr-form" class="p-8 space-y-6">
                 <!-- Select Class & Date -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -150,16 +151,16 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
     </div>
 
-    <!-- RIGHT COLUMN: Weekly Summary -->
+    <!-- Column 3: Weekly Summary -->
     <div class="lg:col-span-3 space-y-6">
         <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden sticky top-24">
-            <div class="p-6 border-b border-slate-50 flex items-center gap-3 bg-slate-50/50">
-                <div class="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
-                    <i class="bi bi-file-earmark-pdf text-xl"></i>
+            <div class="p-6 border-b border-slate-50 flex items-center gap-4 bg-slate-50/50">
+                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center shadow-sm">
+                    <i class="bi bi-file-earmark-text text-xl"></i>
                 </div>
                 <div>
-                    <h3 class="text-sm font-black text-slate-800">สรุปรายงาน</h3>
-                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Weekly Logbook Status</p>
+                    <h3 class="text-lg font-black text-slate-800 leading-tight">สรุปรายงาน</h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Weekly Logbook Status</p>
                 </div>
             </div>
             
