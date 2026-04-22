@@ -25,8 +25,16 @@ try {
     $stmt = $pdo->query("SELECT * FROM sbms_fiscal_years ORDER BY year_name DESC");
     $fiscalYears = $stmt->fetchAll();
     
-    // Set active year from URL or default to the most recent one
-    $activeYearId = $_GET['year_id'] ?? ($fiscalYears[0]['id'] ?? null);
+    // Set active year from URL or find the one marked as is_active = 1
+    $activeYearId = $_GET['year_id'] ?? null;
+    if (!$activeYearId) {
+        $stmt = $pdo->query("SELECT id FROM sbms_fiscal_years WHERE is_active = 1 LIMIT 1");
+        $activeYearId = $stmt->fetchColumn();
+        
+        if (!$activeYearId && !empty($fiscalYears)) {
+            $activeYearId = $fiscalYears[0]['id'];
+        }
+    }
     
     // Fetch specific year details
     $stmt = $pdo->prepare("SELECT * FROM sbms_fiscal_years WHERE id = ?");
