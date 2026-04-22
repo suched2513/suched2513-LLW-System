@@ -45,19 +45,19 @@ require_once __DIR__ . '/../components/layout_start.php';
 
 <div class="space-y-6">
     <!-- Action Header: Navy/Gold -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-navy p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-navy p-6 sm:p-8 rounded-3xl sm:rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
         <div class="absolute -right-10 -top-10 w-40 h-40 bg-gold/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
         <div class="relative z-10">
             <h3 class="text-xl font-black text-gold tracking-tight">การเบิกจ่ายงบประมาณ</h3>
             <p class="text-[10px] text-white/60 mt-1 font-black uppercase tracking-[0.2em]">บันทึกประวัติการใช้จ่ายและเบิกจ่ายเงิน</p>
         </div>
-        <button onclick="openModal('addDisbursementModal')" class="bg-gold hover:bg-amber-600 text-navy px-8 py-3.5 rounded-2xl font-black shadow-xl shadow-gold/20 flex items-center gap-3 transition-all hover:scale-[1.05] relative z-10">
+        <button onclick="openModal('addDisbursementModal')" class="w-full sm:w-auto bg-gold hover:bg-amber-600 text-navy px-8 py-3.5 rounded-2xl font-black shadow-xl shadow-gold/20 flex items-center justify-center gap-3 transition-all hover:scale-[1.05] relative z-10">
             <i class="bi bi-receipt-cutoff"></i> บันทึกเบิกจ่ายใหม่
         </button>
     </div>
 
     <!-- Disbursement Table -->
-    <div class="bg-white rounded-[2.5rem] shadow-xl overflow-hidden border border-slate-100">
+    <div class="bg-white rounded-3xl sm:rounded-[2.5rem] shadow-xl overflow-hidden border border-slate-100">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
