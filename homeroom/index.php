@@ -145,6 +145,12 @@ require_once __DIR__ . '/../components/layout_start.php';
 
                     <!-- Quick Links -->
                     <div class="space-y-2">
+                        <a href="/homeroom/log.php?classroom=<?= urlencode($room) ?>" class="flex items-center justify-between p-3.5 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs hover:bg-emerald-600 hover:text-white transition-all group/link border border-emerald-100 shadow-md shadow-emerald-100/50">
+                            <span class="flex items-center gap-2">
+                                <i class="bi bi-book-half"></i> บันทึกกิจกรรมโฮมรูม (Logbook)
+                            </span>
+                            <i class="bi bi-arrow-right opacity-0 group-hover/link:opacity-100 transition-all"></i>
+                        </a>
                         <a href="/assembly/dashboard.php?classroom=<?= urlencode($room) ?>" class="flex items-center justify-between p-3.5 bg-indigo-50/50 text-indigo-700 rounded-xl font-bold text-xs hover:bg-indigo-600 hover:text-white transition-all group/link">
                             <span class="flex items-center gap-2">
                                 <i class="bi bi-people-fill"></i> เช็คชื่อเข้าแถว
