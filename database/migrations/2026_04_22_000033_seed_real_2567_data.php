@@ -1,9 +1,10 @@
 <?php
 return [
     'up' => function ($pdo) {
-        // 1. Add Fiscal Year 2567
-        $pdo->prepare("INSERT IGNORE INTO sbms_fiscal_years (year_name, start_date, end_date, status) VALUES (?, ?, ?, ?)")
-            ->execute(['2567', '2023-10-01', '2024-09-30', 'closed']);
+        // 1. Add Fiscal Year 2567 and set as active
+        $pdo->exec("UPDATE sbms_fiscal_years SET is_active = 0");
+        $pdo->prepare("INSERT IGNORE INTO sbms_fiscal_years (year_name, start_date, end_date, is_active) VALUES (?, ?, ?, ?)")
+            ->execute(['2567', '2023-10-01', '2024-09-30', 1]);
         $yearId = $pdo->query("SELECT id FROM sbms_fiscal_years WHERE year_name = '2567'")->fetchColumn();
 
         // 2. Add Budget Plans for 2567
