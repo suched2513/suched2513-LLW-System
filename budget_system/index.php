@@ -166,36 +166,35 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
     </div>
 
-    <!-- Feature items -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white/70 backdrop-blur-md p-5 rounded-2xl sm:rounded-3xl border border-slate-100 flex items-center gap-3 sm:gap-4 group hover:shadow-lg transition-all cursor-pointer">
+        <a href="index.php" class="bg-white/70 backdrop-blur-md p-5 rounded-2xl sm:rounded-3xl border border-slate-100 flex items-center gap-3 sm:gap-4 group hover:shadow-lg transition-all cursor-pointer">
             <div class="w-10 h-10 sm:w-12 sm:h-12 bg-navy text-gold rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl group-hover:rotate-12 transition-transform">📊</div>
             <div class="min-w-0">
                 <p class="text-xs font-black text-navy truncate">Dashboard</p>
                 <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate">ข้อมูลเรียลไทม์</p>
             </div>
-        </div>
-        <div class="bg-white/70 backdrop-blur-md p-5 rounded-2xl sm:rounded-3xl border border-slate-100 flex items-center gap-3 sm:gap-4 group hover:shadow-lg transition-all cursor-pointer">
+        </a>
+        <a href="procurement.php" class="bg-white/70 backdrop-blur-md p-5 rounded-2xl sm:rounded-3xl border border-slate-100 flex items-center gap-3 sm:gap-4 group hover:shadow-lg transition-all cursor-pointer">
             <div class="w-10 h-10 sm:w-12 sm:h-12 bg-navy text-gold rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl group-hover:rotate-12 transition-transform">🏗️</div>
             <div class="min-w-0">
                 <p class="text-xs font-black text-navy truncate">Procurement</p>
                 <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate">จัดซื้อจัดจ้าง</p>
             </div>
-        </div>
-        <div class="bg-white/70 backdrop-blur-md p-5 rounded-2xl sm:rounded-3xl border border-slate-100 flex items-center gap-3 sm:gap-4 group hover:shadow-lg transition-all cursor-pointer">
+        </a>
+        <a href="cashbook.php" class="bg-white/70 backdrop-blur-md p-5 rounded-2xl sm:rounded-3xl border border-slate-100 flex items-center gap-3 sm:gap-4 group hover:shadow-lg transition-all cursor-pointer">
             <div class="w-10 h-10 sm:w-12 sm:h-12 bg-navy text-gold rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl group-hover:rotate-12 transition-transform">📖</div>
             <div class="min-w-0">
                 <p class="text-xs font-black text-navy truncate">Cashbook</p>
                 <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate">ทะเบียนเงิน</p>
             </div>
-        </div>
-        <div class="bg-white/70 backdrop-blur-md p-5 rounded-2xl sm:rounded-3xl border border-slate-100 flex items-center gap-3 sm:gap-4 group hover:shadow-lg transition-all cursor-pointer">
+        </a>
+        <a href="reports.php" class="bg-white/70 backdrop-blur-md p-5 rounded-2xl sm:rounded-3xl border border-slate-100 flex items-center gap-3 sm:gap-4 group hover:shadow-lg transition-all cursor-pointer">
             <div class="w-10 h-10 sm:w-12 sm:h-12 bg-navy text-gold rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl group-hover:rotate-12 transition-transform">📄</div>
             <div class="min-w-0">
                 <p class="text-xs font-black text-navy truncate">Reports</p>
                 <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate">รายงานสรุป</p>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Charts Section -->
