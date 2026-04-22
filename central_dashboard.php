@@ -104,14 +104,46 @@ try {
     // เรียงตามลำดับที่ต้องการ
     $attStatusOrder = ['มา', 'ขาด', 'ลา', 'โดด', 'สาย'];
     $attStatusData  = array_map(fn($s) => (int)($attStatusRaw[$s] ?? 0), $attStatusOrder);
+
+    // 7. แนวโน้มเช็คชื่อ 7 วันย้อนหลัง (real)
+    $stmtTrend = $pdo->prepare("SELECT date, COUNT(*) cnt FROM att_attendance WHERE date BETWEEN DATE_SUB(?,INTERVAL 6 DAY) AND ? GROUP BY date ORDER BY date");
+    $stmtTrend->execute([$today, $today]);
+    $trendRaw = $stmtTrend->fetchAll(PDO::FETCH_KEY_PAIR);
+    $trendLabels = []; $trendData = [];
+    $daysThai = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+    for ($i=6; $i>=0; $i--) { 
+        $d = date('Y-m-d', strtotime("-$i days")); 
+        $trendLabels[] = $daysThai[date('w', strtotime($d))]; 
+        $trendData[] = (int)($trendRaw[$d] ?? 0); 
+    }
+
+    // 8. สัดส่วนผู้ใช้งานแยกตามบทบาท (real)
+    $stmtUserProportion = $pdo->query("SELECT role, COUNT(*) as cnt FROM llw_users GROUP BY role");
+    $userProportionRaw = $stmtUserProportion->fetchAll(PDO::FETCH_KEY_PAIR);
+    $rolesThai = [
+        'super_admin' => 'แอดมิน',
+        'wfh_admin'   => 'ผู้บริหาร',
+        'att_teacher' => 'ครู',
+        'wfh_staff'   => 'บุคลากร',
+        'cb_admin'    => 'เจ้าหน้าที่ CB'
+    ];
+    $userProportionLabels = [];
+    $userProportionData = [];
+    foreach ($rolesThai as $key => $label) {
+        if (isset($userProportionRaw[$key])) {
+            $userProportionLabels[] = $label;
+            $userProportionData[] = (int)$userProportionRaw[$key];
+        }
+    }
 } catch (Exception $e) {
     error_log('[Dashboard] ' . $e->getMessage());
     $countStudents = 0; $countPendingLeave = 0;
     $countCheckedRooms = 0; $countTotalRooms = 0;
     $countRemainingRooms = 0; $roomProgress = 0;
-    $countOnLeaveToday = 0; $countOnLeaveToday = 0;
+    $countOnLeaveToday = 0; 
     $uncheckedRooms = []; $recentActivity = [];
-    $teacherStats = []; $attStatusData = [0,0,0,0,0];
+    $teacherStats = []; $attStatusData = [0,0,0,0,0]; $trendLabels=[]; $trendData=[];
+    $userProportionLabels = []; $userProportionData = [];
 }
 
 ?>
@@ -134,56 +166,66 @@ try {
             color: white;
             box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
         }
-        .card-gradient-1 { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); }
-        .card-gradient-2 { background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%); }
-        .card-gradient-3 { background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); }
-        .card-gradient-4 { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
-        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid white; }
-
-        /* Print Styles */
-        @media print {
-            aside, .no-print { display: none !important; }
-            main { margin-left: 0 !important; padding: 1rem !important; }
-            section:not(#print-section) { display: none !important; }
-            #print-section { display: block !important; }
-            body { background: white !important; }
-            .rounded-\[40px\] { border-radius: 8px !important; }
-            thead { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; }
+        .card-gradient-1{background:linear-gradient(135deg,#6366f1,#a855f7)}
+        .card-gradient-2{background:linear-gradient(135deg,#ec4899,#f43f5e)}
+        .card-gradient-3{background:linear-gradient(135deg,#06b6d4,#3b82f6)}
+        .card-gradient-4{background:linear-gradient(135deg,#10b981,#34d399)}
+        .section-label{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+        .section-label .bar{width:4px;height:20px;border-radius:9999px;flex-shrink:0}
+        .section-label h2{font-size:11px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em}
+        .section-label .ln{flex:1;height:1px;background:#f1f5f9}
+        .section-label .pill{font-size:10px;font-weight:700;padding:3px 12px;border-radius:9999px;white-space:nowrap}
+        @media print{
+            aside,.no-print{display:none!important}
+            main{margin-left:0!important;padding:1rem!important}
+            section:not(#print-section){display:none!important}
+            #print-section{display:block!important}
+            .section-label{display:none!important}
+            body{background:white!important}
+            thead{background-color:#f1f5f9!important;-webkit-print-color-adjust:exact}
         }
     </style>
 </head>
 <body class="flex min-h-screen">
 
     <!-- Sidebar -->
-    <aside class="w-72 bg-white border-r border-slate-100 flex flex-col fixed h-full z-20">
+    <aside class="w-72 bg-white border-r border-slate-100 flex flex-col fixed h-full z-20 no-print">
         <div class="p-8 flex items-center gap-4">
-            <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white text-xl">
+            <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center text-white text-2xl shadow-xl shadow-blue-200/50">
                 <i class="bi bi-rocket-takeoff-fill"></i>
             </div>
-            <span class="text-xl font-black text-slate-800 tracking-tight">LLW Platinum</span>
+            <div>
+                <span class="text-xl font-black text-slate-800 tracking-tight block leading-none">Platinum</span>
+                <span class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-1">Super Admin</span>
+            </div>
         </div>
 
-        <nav class="flex-1 px-6 space-y-2">
-            <a href="central_dashboard.php" class="sidebar-item-active flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all">
+        <nav class="flex-1 px-6 space-y-2 overflow-y-auto">
+            <p class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-4 mt-6">Management</p>
+            <a href="central_dashboard.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold bg-blue-600 text-white shadow-lg shadow-blue-200/50 transition-all">
                 <i class="bi bi-grid-fill text-lg"></i> แดชบอร์ด
             </a>
             <a href="manage_users.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
                 <i class="bi bi-people text-lg"></i> จัดการผู้ใช้
             </a>
-            <a href="attendance_system/admin.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
-                <i class="bi bi-building text-lg"></i> ห้องเรียน / นักเรียน
+            <a href="manage_advisors.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+                <i class="bi bi-mortarboard text-lg"></i> จัดการที่ปรึกษา
             </a>
-            <a href="attendance_system/admin.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
-                <i class="bi bi-book text-lg"></i> รายวิชา
+            <p class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-4 mt-6">Systems</p>
+            <a href="teacher_leave/index.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+                <i class="bi bi-file-earmark-text text-lg"></i> ระบบใบลา
             </a>
-            <a href="admin/reports.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
-                <i class="bi bi-file-earmark-bar-graph text-lg"></i> รายงาน
+            <a href="attendance_system/dashboard.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+                <i class="bi bi-person-check text-lg"></i> ระบบเช็คชื่อ
+            </a>
+            <a href="behavior/admin.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+                <i class="bi bi-journal-text text-lg"></i> ระบบพฤติกรรม
             </a>
         </nav>
 
         <div class="p-8 mt-auto space-y-4">
             <a href="change_password.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-indigo-500 hover:bg-indigo-50 transition-all">
-                <i class="bi bi-key-fill text-lg"></i> เปลี่ยนรหัสผ่าน
+                <i class="bi bi-key-fill text-lg"></i> เปลี่ยนรหัส
             </a>
             <a href="logout.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-rose-500 hover:bg-rose-50 transition-all">
                 <i class="bi bi-box-arrow-left text-lg"></i> ออกจากระบบ
@@ -191,34 +233,37 @@ try {
         </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="ml-72 flex-1 p-10">
+    <!-- Main -->
+    <main class="ml-72 flex-1 p-8 pb-20">
+
         <!-- Header -->
-        <header class="flex justify-between items-center mb-12">
+        <header class="flex justify-between items-center mb-10 no-print">
             <div>
-                <h1 class="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                    <i class="bi bi-grid-fill text-blue-600"></i> Super Dashboard
-                </h1>
-                <p class="text-slate-400 font-medium mt-1">ภาพรวมและวิเคราะห์ข้อมูลแบบเรียลไทม์</p>
-            </div>
-            <div class="flex items-center gap-6">
-                <div class="relative">
-                    <button class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 shadow-sm border border-slate-50 relative">
-                        <i class="bi bi-bell text-xl"></i>
-                        <span class="absolute top-3 right-3 w-4 h-4 bg-rose-500 border-2 border-white rounded-full text-[8px] text-white flex items-center justify-center font-bold">3</span>
-                    </button>
+                <div class="flex items-center gap-3 mb-1">
+                    <div class="w-1.5 h-9 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full"></div>
+                    <h1 class="text-3xl font-black text-slate-800">Super Dashboard</h1>
                 </div>
-                <div class="flex items-center gap-4 bg-white p-2 pr-6 rounded-2xl shadow-sm border border-slate-50">
-                    <img src="https://ui-avatars.com/api/?name=Admin+LLW&background=2563eb&color=fff" class="w-10 h-10 rounded-xl" alt="avatar">
-                    <div class="flex flex-col">
-                        <span class="text-sm font-black text-slate-800"><?= $_SESSION['firstname'] ?></span>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Super Admin</span>
+                <p class="text-sm text-slate-400 pl-5">สวัสดี, <span class="text-slate-600 font-bold"><?= htmlspecialchars($_SESSION['firstname']) ?></span> &mdash; <?= date('l, d F Y') ?></p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="bg-white border border-slate-100 shadow-sm rounded-2xl px-5 py-3 flex items-center gap-2">
+                    <i class="bi bi-clock text-indigo-500 text-sm"></i>
+                    <span id="liveClock" class="font-black text-slate-700 tabular-nums text-sm">--:--:--</span>
+                </div>
+                <div class="flex items-center gap-3 bg-white p-2 pr-5 rounded-2xl shadow-sm border border-slate-100">
+                    <img src="https://ui-avatars.com/api/?name=<?= urlencode($_SESSION['firstname']??'Admin') ?>&background=4f46e5&color=fff" class="w-10 h-10 rounded-xl" alt="avatar">
+                    <div>
+                        <p class="text-sm font-black text-slate-800"><?= htmlspecialchars($_SESSION['firstname']) ?></p>
+                        <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Super Admin</p>
                     </div>
                 </div>
             </div>
         </header>
 
-        <!-- Stats Cards -->
+        <!-- E: สถิติครู (print-ready) -->
+        <div class="section-label no-print"><div class="bar" style="background:#7c3aed"></div><h2>สถิติการใช้งานระบบแยกตามครู</h2><div class="ln"></div><span class="pill" style="background:#ede9fe;color:#6d28d9">ผลงานเชิงประจักษ์</span></div>
+
+        <!-- Stats Cards (Premium) -->
         <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
 
             <!-- Card 1: นักเรียนทั้งหมด -->
@@ -582,15 +627,15 @@ try {
     </main>
 
     <script>
-        // Usage Line Chart
+        // Usage Line Chart (Dynamic)
         const usageCtx = document.getElementById('usageChart').getContext('2d');
         new Chart(usageCtx, {
             type: 'line',
             data: {
-                labels: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
+                labels: <?= json_encode($trendLabels) ?>,
                 datasets: [{
                     label: 'การเข้าใช้งาน',
-                    data: [120, 150, 180, 170, 195, 90, 85],
+                    data: <?= json_encode($trendData) ?>,
                     borderColor: '#2563eb',
                     backgroundColor: 'rgba(37, 99, 235, 0.1)',
                     fill: true,
@@ -609,15 +654,15 @@ try {
             }
         });
 
-        // User Donut Chart
+        // User Donut Chart (Dynamic)
         const donutCtx = document.getElementById('userDonutChart').getContext('2d');
         new Chart(donutCtx, {
             type: 'doughnut',
             data: {
-                labels: ['นักเรียน', 'ครู', 'ผู้บริหาร', 'แอดมิน'],
+                labels: <?= json_encode($userProportionLabels) ?>,
                 datasets: [{
-                    data: [87.4, 8.7, 2.3, 1.6],
-                    backgroundColor: ['#6366f1', '#ec4899', '#3b82f6', '#10b981'],
+                    data: <?= json_encode($userProportionData) ?>,
+                    backgroundColor: ['#6366f1', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'],
                     borderWidth: 0,
                     hoverOffset: 20
                 }]

@@ -60,6 +60,7 @@ if ($isLoggedIn) {
                 ['url' => 'teacher_leave/index.php', 'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์', 'color' => 'rose'],
                 ['url' => 'plc_system/dashboard.php', 'icon' => 'bi-journal-richtext', 'label' => 'PLC Online', 'color' => 'violet'],
                 ['url' => 'behavior/dashboard.php', 'icon' => 'bi-journal-text', 'label' => 'พฤติกรรม', 'color' => 'violet'],
+                ['url' => 'homeroom/index.php', 'icon' => 'bi-mortarboard-fill', 'label' => 'ระบบครูที่ปรึกษา', 'color' => 'indigo'],
             ];
             break;
         case 'wfh_admin':
@@ -70,6 +71,7 @@ if ($isLoggedIn) {
                 ['url' => 'teacher_leave/index.php', 'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์', 'color' => 'indigo'],
                 ['url' => 'plc_system/dashboard.php', 'icon' => 'bi-journal-richtext', 'label' => 'PLC Online', 'color' => 'violet'],
                 ['url' => 'behavior/dashboard.php', 'icon' => 'bi-journal-text', 'label' => 'พฤติกรรม', 'color' => 'violet'],
+                ['url' => 'homeroom/index.php', 'icon' => 'bi-mortarboard-fill', 'label' => 'ระบบครูที่ปรึกษา', 'color' => 'indigo'],
             ];
             break;
         case 'att_teacher':
@@ -80,6 +82,7 @@ if ($isLoggedIn) {
                 ['url' => 'teacher_leave/index.php',         'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์',  'color' => 'amber'],
                 ['url' => 'plc_system/dashboard.php',        'icon' => 'bi-journal-richtext',  'label' => 'PLC Online',    'color' => 'violet'],
                 ['url' => 'behavior/dashboard.php',        'icon' => 'bi-journal-text',      'label' => 'พฤติกรรม',       'color' => 'violet'],
+                ['url' => 'homeroom/index.php',            'icon' => 'bi-mortarboard-fill',  'label' => 'ครูที่ปรึกษา',    'color' => 'indigo'],
             ];
             break;
         case 'cb_admin':
@@ -435,6 +438,16 @@ if ($isLoggedIn) {
                 'gradient' => 'from-purple-500 to-indigo-500',
                 'delay'    => 0.9,
                 'isPublic' => true,
+            ],
+            [
+                'url'      => 'homeroom/index.php',
+                'icon'     => 'bi-mortarboard-fill',
+                'bgIcon'   => 'bi-mortarboard',
+                'title'    => 'ระบบครูที่ปรึกษา',
+                'desc'     => 'ศูนย์กลางการดูแลนักเรียนประจำชั้น ติดตามการเข้าแถว พฤติกรรม และข้อมูลรายห้อง',
+                'color'    => 'indigo',
+                'gradient' => 'from-indigo-600 to-violet-700',
+                'delay'    => 1.0,
             ],
         ];
 

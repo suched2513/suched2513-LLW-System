@@ -391,7 +391,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Load initial data
-    initRooms();
+    initRooms().then(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const getRoom = urlParams.get('classroom');
+        if (getRoom) {
+            const sel = document.getElementById('att-classroom');
+            if (sel) {
+                sel.value = getRoom;
+                loadStudents();
+            }
+        }
+    });
 
     // Set dates
     const todayStr = new Date().toISOString().split('T')[0];

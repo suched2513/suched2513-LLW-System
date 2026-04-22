@@ -17,6 +17,7 @@ if ($current_dir === 'assembly') $activeSystem = 'assembly';
 if ($current_page === 'supervision.php') $activeSystem = 'supervision';
 if ($current_dir === 'teacher_leave')         $activeSystem = 'teacher_leave';
 if ($current_dir === 'behavior')              $activeSystem = 'behavior';
+if ($current_dir === 'homeroom' || $current_page === 'manage_advisors.php') $activeSystem = 'homeroom';
 
 // User context
 $userName = $_SESSION['firstname'] ?? ($_SESSION['teacher_name'] ?? 'User');
@@ -81,6 +82,10 @@ $subMenus = [
         ['icon' => 'bi-speedometer2',   'label' => 'Admin Dashboard',   'url' => $base_path . '/behavior/admin.php',   'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'bi-sliders',        'label' => 'จัดการระบบ',        'url' => $base_path . '/behavior/manage.php',  'roles' => ['super_admin']],
         ['icon' => 'bi-mortarboard',    'label' => 'นักเรียนดูข้อมูล',  'url' => $base_path . '/behavior/student_view.php'],
+    ],
+    'homeroom' => [
+        ['icon' => 'bi-speedometer2', 'label' => 'Advisor Dashboard', 'url' => $base_path . '/homeroom/index.php'],
+        ['icon' => 'bi-people-fill',   'label' => 'จัดการการมอบหมาย',  'url' => $base_path . '/manage_advisors.php', 'roles' => ['super_admin']],
     ],
 ];
 ?>
@@ -208,6 +213,23 @@ $subMenus = [
                     if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
                 ?>
                 <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-violet-600 bg-violet-50' : 'text-slate-400 hover:text-violet-600 hover:bg-slate-50' ?>">
+                    <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Homeroom (ครูที่ปรึกษา) -->
+            <a href="<?= $base_path ?>/homeroom/index.php" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all mt-1 <?= $activeSystem === 'homeroom' ? 'bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow-lg shadow-indigo-200/50' : 'text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 hover:pl-6' ?>">
+                <i class="bi bi-mortarboard-fill text-base sm:text-lg"></i> ระบบครูที่ปรึกษา
+                <?php if ($activeSystem === 'homeroom'): ?>
+                <i class="bi bi-chevron-down ml-auto text-xs opacity-60"></i>
+                <?php endif; ?>
+            </a>
+            <div class="sub-menu <?= $activeSystem === 'homeroom' ? 'open' : '' ?> ml-4 sm:ml-6 mt-1 space-y-0.5">
+                <?php foreach ($subMenus['homeroom'] as $sub):
+                    if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                ?>
+                <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50' ?>">
                     <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
                 </a>
                 <?php endforeach; ?>

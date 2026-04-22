@@ -1403,6 +1403,25 @@ function renderStudentModalPage() {
     });
     if (pageInfo) pageInfo.textContent = `Page ${studentCurrentPage} / ${totalPages}`;
 }
+// ─── Initialization ───
+document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const getRoom = urlParams.get('classroom');
+    
+    if (getRoom) {
+        showTab('database');
+        fetchStudentList().then(() => {
+            const dbSel = document.getElementById('dbFilterClass');
+            if (dbSel) {
+                dbSel.value = getRoom;
+                loadClassroomSummary();
+                filterDatabaseTable();
+            }
+        });
+    }
+    
+    loadPendingDeeds();
+});
 </script>
 
 <?php require_once __DIR__ . '/../components/layout_end.php'; ?>
