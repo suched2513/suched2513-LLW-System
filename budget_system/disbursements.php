@@ -15,13 +15,22 @@ $activeSystem = 'budget';
 try {
     $pdo = getPdo();
     
+    // Get Active Fiscal Year
+    $activeYearId = $_GET['year_id'] ?? null;
+    if (!$activeYearId) {
+        $stmt = $pdo->query("SELECT id FROM sbms_fiscal_years WHERE is_active = 1 LIMIT 1");
+        $activeYearId = $stmt->fetchColumn();
+    }
+    
     // Get Disbursements with Project info
-    $stmt = $pdo->query("
+    $stmt = $pdo->prepare("
         SELECT d.*, p.project_name 
         FROM sbms_disbursements d
         LEFT JOIN sbms_projects p ON d.project_id = p.id
+        WHERE p.fiscal_year_id = ? OR d.project_id IS NULL
         ORDER BY d.created_at DESC
     ");
+    $stmt->execute([$activeYearId]);
     $disbursements = $stmt->fetchAll();
     
     // Get Projects for selection

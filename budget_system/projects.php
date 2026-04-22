@@ -34,7 +34,16 @@ try {
     $activeYear = $stmt->fetch();
     
 } catch (Exception $e) {
-    error_log($e-<style>
+    error_log($e->getMessage());
+    $projects = [];
+    $budgets = [];
+    $activeYear = ['id' => 0, 'year_name' => '----'];
+}
+
+require_once __DIR__ . '/../components/layout_start.php';
+?>
+
+<style>
     .bg-navy { background-color: #0B1C3E; }
     .text-gold { color: #F59E0B; }
     .bg-gold { background-color: #F59E0B; }
@@ -119,16 +128,6 @@ try {
                             <i class="bi bi-eye-fill"></i>
                         </button>
                         <button class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-gold hover:text-navy transition-all">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php endforeach; ?>
-    </div>
-</div>
-          <button class="w-9 h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-all">
                             <i class="bi bi-pencil-fill"></i>
                         </button>
                     </div>
