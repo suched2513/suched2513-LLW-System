@@ -93,7 +93,7 @@ $subMenus = [
         ['icon' => 'bi-journal-check', 'label' => 'โครงการ & กิจกรรม', 'url' => $base_path . '/budget_system/projects.php'],
         ['icon' => 'bi-cash-coin',    'label' => 'บันทึกการเบิกจ่าย', 'url' => $base_path . '/budget_system/disbursements.php'],
         ['icon' => 'bi-file-earmark-bar-graph', 'label' => 'รายงานงบประมาณ', 'url' => $base_path . '/budget_system/reports.php'],
-        ['icon' => 'bi-calendar-event', 'label' => 'ตั้งค่าปีงบประมาณ', 'url' => $base_path . '/budget_system/fiscal_years.php', 'roles' => ['super_admin']],
+        ['icon' => 'bi-gear-fill',      'label' => 'ตั้งค่าระบบงบประมาณ', 'url' => $base_path . '/budget_system/settings.php', 'roles' => ['super_admin']],
     ],
 ];
 ?>
