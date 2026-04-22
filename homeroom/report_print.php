@@ -57,7 +57,7 @@ try {
 
     // Advisors
     $stmt = $pdo->prepare("
-        SELECT u.firstname, u.lastname, u.signature 
+        SELECT u.firstname, u.lastname 
         FROM llw_class_advisors a
         JOIN llw_users u ON a.user_id = u.user_id
         WHERE a.classroom = ?
