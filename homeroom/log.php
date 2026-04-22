@@ -286,20 +286,23 @@ function renderForm(date) {
 
 function renderWeeklySummary(mondayStr) {
     const container = document.getElementById('week-list');
-    const logs = currentData.logs;
-    const photos = currentData.photos;
+    const logs = currentData.logs || {};
     
-    // We'll show a range of weeks (e.g. current - 2 to current + 8)
-    // For this demonstration, let's just show 20 weeks starting from a likely semester start
-    // but anchored around current week
     let html = '';
     const monday = new Date(mondayStr);
     
+    // We show 20 weeks, but calculate status for the visible ones
     for (let i = 1; i <= 20; i++) {
-        // This is a simplified week calculation
-        // In reality, you'd want to anchor Week 1 to the actual semester start
-        const isCurrent = i === 10; // Placeholder logic
-        const weekStatus = i < 10 ? 'complete' : 'pending'; // Placeholder
+        // Simple logic: If we have at least one log entry in the current visible week range, 
+        // we can mark it as somewhat active. 
+        // For a more precise "Weekly" view, we'd need a broader API call.
+        // But for now, let's focus on the CURRENT week (Week 10 placeholder)
+        
+        const isCurrent = i === 10; // Still a placeholder for week number calculation
+        
+        // Count how many days in this week have logs (based on the current data)
+        const loggedDays = Object.keys(logs).length;
+        const isComplete = loggedDays >= 3; // Example: 3/5 days done
         
         html += `
         <div class="p-3.5 rounded-2xl ${isCurrent ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-50 border border-slate-100'} flex items-center justify-between group transition-all">
@@ -309,11 +312,11 @@ function renderWeeklySummary(mondayStr) {
                 </div>
                 <div>
                     <p class="text-[11px] font-black ${isCurrent ? 'text-indigo-600' : 'text-slate-700'}">สัปดาห์ที่ ${i}</p>
-                    <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Week Status</p>
+                    <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">${loggedDays}/5 วันที่บันทึกแล้ว</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <i class="bi bi-check-circle-fill ${weekStatus === 'complete' ? 'text-emerald-500' : 'text-slate-200'} text-lg"></i>
+                <i class="bi bi-check-circle-fill ${loggedDays > 0 ? 'text-emerald-500' : 'text-slate-200'} text-lg"></i>
                 <button onclick="printWeeklyReport(${i})" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 transition-all shadow-sm">
                     <i class="bi bi-printer text-xs"></i>
                 </button>

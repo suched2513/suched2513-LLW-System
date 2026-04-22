@@ -65,8 +65,23 @@ try {
     $stmt->execute([$classroom, $start_date, $end_date]);
     $att = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $attByStudentAndDate = [];
+    
+    // Mapping status จากตัวย่อ (ม,ข,ล,ส) เป็นตัวเต็ม (มา,ขาด,ลา,สาย)
+    $statusMap = [
+        'ม' => 'มา',
+        'ข' => 'ขาด',
+        'ล' => 'ลา',
+        'ส' => 'สาย',
+        'ด' => 'ขาด' // โดด -> ขาด (ในบริบทโฮมรูม)
+    ];
+
     foreach ($att as $a) {
-        $attByStudentAndDate[$a['student_id']][$a['date']] = $a['status'];
+        $shortStatus = $a['status'];
+        $longStatus = $statusMap[$shortStatus] ?? $shortStatus;
+        // ถ้าตัวฐานข้อมูลเป็น 'มา' อยู่แล้วก็ใช้ได้เลย
+        if (in_array($shortStatus, ['มา', 'ขาด', 'ลา', 'สาย'])) $longStatus = $shortStatus;
+        
+        $attByStudentAndDate[$a['student_id']][$a['date']] = $longStatus;
     }
 
     // 5. ดึงรูปภาพกิจกรรม (homeroom_photos)
