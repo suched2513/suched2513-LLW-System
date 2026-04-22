@@ -8,15 +8,16 @@ if (!isset($_SESSION['llw_role'])) {
     exit();
 }
 
-$pageTitle = 'Dashboard งบประมาณ';
-$pageSubtitle = 'ภาพรวมสถานะการคลังและงบประมาณโรงเรียน';
+$pageTitle = 'ระบบโครงการ & งบประมาณ';
+$pageSubtitle = 'ภาพรวมการดำเนินโครงการและสถานะการคลัง';
 $activeSystem = 'budget';
 
-// Data fetching (Placeholder for now, will link to DB later)
+// Data fetching
 $totalBudget = 0;
 $totalUsed = 0;
 $remaining = 0;
 $usedPercent = 0;
+$totalActivities = 0;
 
 try {
     $pdo = getPdo();
@@ -25,7 +26,7 @@ try {
     $stmt = $pdo->query("SELECT * FROM sbms_fiscal_years ORDER BY year_name DESC");
     $fiscalYears = $stmt->fetchAll();
     
-    // Set active year from URL or find the one marked as is_active = 1
+    // Set active year
     $activeYearId = $_GET['year_id'] ?? null;
     if (!$activeYearId) {
         $stmt = $pdo->query("SELECT id FROM sbms_fiscal_years WHERE is_active = 1 LIMIT 1");
@@ -41,7 +42,7 @@ try {
     $stmt->execute([$activeYearId]);
     $activeYear = $stmt->fetch();
 
-    // Fetch Stats for the active year
+    // Fetch Stats
     $stmt = $pdo->prepare("SELECT SUM(total_amount) as total, SUM(used_amount) as used FROM sbms_budgets WHERE fiscal_year_id = ?");
     $stmt->execute([$activeYearId]);
     $res = $stmt->fetch();
@@ -51,215 +52,222 @@ try {
     $remaining   = $totalBudget - $totalUsed;
     $usedPercent = $totalBudget > 0 ? round(($totalUsed / $totalBudget) * 100, 1) : 0;
     
-    // Get real budget sources
-    $stmt = $pdo->prepare("SELECT * FROM sbms_budgets WHERE fiscal_year_id = ?");
+    // Count Activities
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM sbms_activities a JOIN sbms_projects p ON a.project_id = p.id WHERE p.fiscal_year_id = ?");
     $stmt->execute([$activeYearId]);
-    $budgetSources = $stmt->fetchAll();
+    $totalActivities = $stmt->fetchColumn();
+
+    // Get Project List for table
+    $stmt = $pdo->prepare("
+        SELECT a.*, p.project_name, p.project_code
+        FROM sbms_activities a
+        JOIN sbms_projects p ON a.project_id = p.id
+        WHERE p.fiscal_year_id = ?
+        ORDER BY a.created_at DESC
+        LIMIT 10
+    ");
+    $stmt->execute([$activeYearId]);
+    $recentActivities = $stmt->fetchAll();
     
 } catch (Exception $e) {
     error_log($e->getMessage());
-    $totalBudget = 0; $totalUsed = 0; $remaining = 0; $usedPercent = 0;
-    $budgetSources = [];
-    $fiscalYears = [];
+    $recentActivities = [];
 }
 
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
-<style>
-    .bg-navy { background-color: #0B1C3E; }
-    .text-gold { color: #F59E0B; }
-    .bg-gold { background-color: #F59E0B; }
-    .border-gold { border-color: #F59E0B; }
-    .shadow-gold { --tw-shadow-color: rgba(245, 158, 11, 0.2); --tw-shadow: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color); }
-</style>
-
 <div class="space-y-6">
-    <!-- Action Header with Year Selector -->
-    <div class="bg-navy p-6 sm:p-8 rounded-3xl sm:rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
-        <div class="absolute -right-10 -top-10 w-48 h-48 bg-gold/10 rounded-full blur-3xl"></div>
-        <div class="relative z-10 w-full md:w-auto text-center md:text-left">
-            <h3 class="text-xl font-black text-gold tracking-tight">สรุปภาพรวมงบประมาณ</h3>
-            <div class="flex items-center justify-center md:justify-start gap-2 mt-1">
-                <span class="text-[10px] text-white/60 font-black uppercase tracking-[0.2em]">ปีงบประมาณ:</span>
-                <select onchange="window.location.href='?year_id='+this.value" class="bg-white/10 text-gold border-none text-[10px] font-black rounded-lg px-2 py-1 outline-none cursor-pointer hover:bg-white/20 transition-all">
+    <!-- Header Card -->
+    <div class="bg-gradient-to-br from-emerald-600 to-teal-700 p-8 rounded-[2.5rem] shadow-2xl shadow-emerald-200/50 flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
+        <div class="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+        <div class="relative z-10 text-center md:text-left">
+            <h3 class="text-2xl font-black text-white tracking-tight">ระบบขออนุญาตดำเนินงานและสรุปโครงการ</h3>
+            <div class="flex items-center justify-center md:justify-start gap-2 mt-2">
+                <span class="text-[10px] text-emerald-100 font-black uppercase tracking-[0.2em]">ปีงบประมาณ:</span>
+                <select onchange="window.location.href='?year_id='+this.value" class="bg-white/20 text-white border-none text-xs font-black rounded-xl px-3 py-1 outline-none cursor-pointer hover:bg-white/30 transition-all">
                     <?php foreach ($fiscalYears as $fy): ?>
-                    <option value="<?= $fy['id'] ?>" <?= $activeYearId == $fy['id'] ? 'selected' : '' ?> class="text-navy">พ.ศ. <?= $fy['year_name'] ?></option>
+                    <option value="<?= $fy['id'] ?>" <?= $activeYearId == $fy['id'] ? 'selected' : '' ?> class="text-emerald-900">พ.ศ. <?= $fy['year_name'] ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
         </div>
-        <div class="flex gap-4 relative z-10 w-full md:w-auto justify-center">
-            <a href="projects.php" class="flex-1 md:flex-none bg-gold hover:bg-amber-600 text-navy px-8 py-3.5 rounded-2xl font-black shadow-xl shadow-gold/20 flex items-center justify-center gap-3 transition-all hover:scale-[1.05]">
-                <i class="bi bi-folder-plus"></i> แผนโครงการ
+        <div class="flex gap-4 relative z-10">
+            <a href="request_form.php" class="bg-white hover:bg-emerald-50 text-emerald-700 px-8 py-4 rounded-2xl font-black shadow-xl transition-all hover:scale-[1.05] flex items-center gap-3">
+                <i class="bi bi-plus-circle-fill"></i> ขออนุญาตดำเนินงาน
             </a>
         </div>
     </div>
 
-    <!-- Top Stats -->
+    <!-- Stats Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Total Budget Card -->
-        <div class="bg-navy rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden group">
-            <div class="absolute -right-8 -top-8 w-40 h-40 bg-gold/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
-            <div class="relative z-10">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 bg-gold rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-gold/40">
-                    <i class="bi bi-bank2 text-xl sm:text-2xl text-navy"></i>
+        <!-- Received Budget -->
+        <div class="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
+            <div class="absolute left-0 top-0 w-2 h-full bg-emerald-500"></div>
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">งบประมาณที่ได้รับ</p>
+                    <h3 class="text-2xl font-black text-slate-800 mt-2"><?= number_format($totalBudget) ?> บาท</h3>
                 </div>
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gold/80">งบประมาณรวมทั้งปี</p>
-                <h3 class="text-2xl sm:text-3xl font-black mt-2 tracking-tight">฿<?= number_format($totalBudget, 2) ?></h3>
-                <div class="mt-6 flex items-center gap-2">
-                    <span class="px-2.5 py-1 bg-white/10 rounded-full text-[10px] font-bold text-gold">ปีงบประมาณ <?= $activeYear['year_name'] ?? '----' ?></span>
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center">
+                    <i class="bi bi-wallet2 text-xl"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Used Budget -->
-        <div class="bg-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
-            <div class="relative z-10">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 text-navy rounded-2xl flex items-center justify-center mb-6 group-hover:bg-navy group-hover:text-gold transition-all duration-500">
-                    <i class="bi bi-graph-up-arrow text-xl sm:text-2xl"></i>
+        <!-- Spent Budget -->
+        <div class="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
+            <div class="absolute left-0 top-0 w-2 h-full bg-amber-500"></div>
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ใช้จ่ายงบประมาณไปแล้ว</p>
+                    <h3 class="text-2xl font-black text-slate-800 mt-2"><?= number_format($totalUsed) ?> บาท</h3>
                 </div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">เบิกจ่ายสะสม</p>
-                <h3 class="text-2xl sm:text-3xl font-black text-navy mt-2">฿<?= number_format($totalUsed, 2) ?></h3>
-                <div class="mt-6">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-[10px] font-bold text-slate-500 italic">ดำเนินการแล้ว <?= $usedPercent ?>%</span>
+                <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center">
+                    <i class="bi bi-currency-dollar text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Percentage -->
+        <div class="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
+            <div class="absolute left-0 top-0 w-2 h-full bg-teal-500"></div>
+            <div class="flex justify-between items-start">
+                <div class="w-full">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ใช้จ่ายไปแล้วร้อยละ</p>
+                    <h3 class="text-2xl font-black text-slate-800 mt-2"><?= $usedPercent ?>%</h3>
+                    <div class="w-full h-2 bg-slate-100 rounded-full mt-4 overflow-hidden">
+                        <div class="h-full bg-teal-500 transition-all duration-1000" style="width: <?= $usedPercent ?>%"></div>
                     </div>
-                    <div class="w-full h-1.5 sm:h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div class="h-full bg-navy transition-all duration-1000" style="width: <?= $usedPercent ?>%"></div>
-                    </div>
+                </div>
+                <div class="w-12 h-12 bg-teal-50 text-teal-500 rounded-2xl flex items-center justify-center ml-4">
+                    <i class="bi bi-clipboard-check text-xl"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Projects Count -->
-        <div class="bg-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
-            <div class="relative z-10">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 bg-amber-50 text-gold rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <i class="bi bi-journal-check text-xl sm:text-2xl"></i>
+        <!-- Activities Count -->
+        <div class="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group">
+            <div class="absolute left-0 top-0 w-2 h-full bg-indigo-500"></div>
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">จำนวนกิจกรรมทั้งหมด</p>
+                    <h3 class="text-2xl font-black text-slate-800 mt-2"><?= $totalActivities ?> กิจกรรม</h3>
                 </div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">โครงการทั้งหมด</p>
-                <h3 class="text-2xl sm:text-3xl font-black text-navy mt-2">12 <span class="text-base font-bold text-slate-300 ml-1">โครงการ</span></h3>
-                <div class="mt-6 flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">กำลังดำเนินการ 8</span>
+                <div class="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center">
+                    <i class="bi bi-chat-dots text-xl"></i>
                 </div>
             </div>
-        </div>
-
-        <!-- Quick Access Vertical -->
-        <div class="grid grid-cols-2 md:grid-cols-1 md:grid-rows-2 gap-4 h-full">
-            <a href="projects.php" class="bg-gold hover:bg-amber-600 text-navy rounded-2xl sm:rounded-3xl p-5 flex items-center justify-between transition-all group shadow-lg shadow-gold/20">
-                <div class="flex items-center gap-3 sm:gap-4">
-                    <i class="bi bi-plus-circle-fill text-lg sm:text-xl group-hover:rotate-90 transition-transform"></i>
-                    <span class="text-[10px] sm:text-xs font-black uppercase tracking-wider">ใหม่</span>
-                </div>
-                <i class="bi bi-arrow-right"></i>
-            </a>
-            <a href="disbursements.php" class="bg-navy hover:bg-slate-800 text-white rounded-2xl sm:rounded-3xl p-5 flex items-center justify-between transition-all group shadow-xl">
-                <div class="flex items-center gap-3 sm:gap-4">
-                    <i class="bi bi-receipt text-lg sm:text-xl group-hover:scale-110 transition-transform"></i>
-                    <span class="text-[10px] sm:text-xs font-black uppercase tracking-wider">เบิกจ่าย</span>
-                </div>
-                <i class="bi bi-arrow-right text-gold"></i>
-            </a>
         </div>
     </div>
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <a href="index.php" class="bg-white/70 backdrop-blur-md p-5 rounded-2xl sm:rounded-3xl border border-slate-100 flex items-center gap-3 sm:gap-4 group hover:shadow-lg transition-all cursor-pointer">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-navy text-gold rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl group-hover:rotate-12 transition-transform">📊</div>
-            <div class="min-w-0">
-                <p class="text-xs font-black text-navy truncate">Dashboard</p>
-                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate">ข้อมูลเรียลไทม์</p>
-            </div>
-        </a>
-        <a href="procurement.php" class="bg-white/70 backdrop-blur-md p-5 rounded-2xl sm:rounded-3xl border border-slate-100 flex items-center gap-3 sm:gap-4 group hover:shadow-lg transition-all cursor-pointer">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-navy text-gold rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl group-hover:rotate-12 transition-transform">🏗️</div>
-            <div class="min-w-0">
-                <p class="text-xs font-black text-navy truncate">Procurement</p>
-                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate">จัดซื้อจัดจ้าง</p>
-            </div>
-        </a>
-        <a href="cashbook.php" class="bg-white/70 backdrop-blur-md p-5 rounded-2xl sm:rounded-3xl border border-slate-100 flex items-center gap-3 sm:gap-4 group hover:shadow-lg transition-all cursor-pointer">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-navy text-gold rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl group-hover:rotate-12 transition-transform">📖</div>
-            <div class="min-w-0">
-                <p class="text-xs font-black text-navy truncate">Cashbook</p>
-                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate">ทะเบียนเงิน</p>
-            </div>
-        </a>
-        <a href="reports.php" class="bg-white/70 backdrop-blur-md p-5 rounded-2xl sm:rounded-3xl border border-slate-100 flex items-center gap-3 sm:gap-4 group hover:shadow-lg transition-all cursor-pointer">
-            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-navy text-gold rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-xl group-hover:rotate-12 transition-transform">📄</div>
-            <div class="min-w-0">
-                <p class="text-xs font-black text-navy truncate">Reports</p>
-                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate">รายงานสรุป</p>
-            </div>
-        </a>
-    </div>
-
-    <!-- Charts Section -->
+    <!-- Main Content Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main Chart Area -->
-        <div class="lg:col-span-2 bg-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 border border-slate-100 shadow-xl">
-            <div class="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
-                <div>
-                    <h3 class="text-lg font-black text-navy italic">สถิติการใช้งบประมาณรายเดือน</h3>
-                    <p class="text-[10px] text-slate-400 mt-1 uppercase tracking-[0.2em] font-black">Monthly Budget Utilization</p>
-                </div>
-                <div class="flex gap-4">
-                    <span class="flex items-center gap-2 text-[10px] font-bold text-slate-400"><span class="w-2 h-2 rounded-full bg-navy"></span> งบประมาณ</span>
-                    <span class="flex items-center gap-2 text-[10px] font-bold text-slate-400"><span class="w-2 h-2 rounded-full bg-gold"></span> เบิกจ่ายจริง</span>
+        <!-- Activities Table -->
+        <div class="lg:col-span-2 bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden">
+            <div class="p-8 border-b border-slate-50 flex justify-between items-center">
+                <h3 class="text-lg font-black text-slate-800">รายงานโครงการ</h3>
+                <div class="flex gap-2">
+                    <button class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-black text-slate-600 transition-all">Copy</button>
+                    <button class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-black text-slate-600 transition-all">Excel</button>
+                    <button class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-[10px] font-black text-slate-600 transition-all">Print</button>
                 </div>
             </div>
-            
-            <div class="h-64 sm:h-80 flex items-center justify-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
-                <div class="text-center p-4">
-                    <i class="bi bi-graph-up text-4xl sm:text-5xl text-slate-200"></i>
-                    <p class="text-[10px] sm:text-xs text-slate-400 mt-4 font-black uppercase tracking-widest">Chart Visualization Rendering...</p>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ลำดับ</th>
+                            <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">กิจกรรม</th>
+                            <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ผู้รับผิดชอบ</th>
+                            <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">สรุปกิจกรรม</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        <?php if (empty($recentActivities)): ?>
+                        <tr>
+                            <td colspan="4" class="px-8 py-12 text-center text-slate-400 font-bold">ไม่พบข้อมูลกิจกรรม</td>
+                        </tr>
+                        <?php endif; ?>
+                        <?php foreach ($recentActivities as $idx => $act): ?>
+                        <tr class="hover:bg-slate-50 transition-all group">
+                            <td class="px-8 py-4">
+                                <span class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-black"><?= $idx + 1 ?></span>
+                            </td>
+                            <td class="px-8 py-4">
+                                <p class="text-sm font-bold text-slate-700"><?= htmlspecialchars($act['activity_name']) ?></p>
+                                <p class="text-[10px] text-slate-400 mt-1"><?= htmlspecialchars($act['project_name']) ?></p>
+                            </td>
+                            <td class="px-8 py-4 text-sm text-slate-500"><?= htmlspecialchars($act['responsible_name'] ?: '-') ?></td>
+                            <td class="px-8 py-4 text-center">
+                                <a href="summary_form.php?id=<?= $act['id'] ?>" class="text-rose-500 hover:text-rose-700 transition-all text-xl">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-[10px] font-bold text-slate-400">
+                <span>Showing <?= count($recentActivities) ?> of <?= $totalActivities ?> entries</span>
+                <div class="flex gap-2">
+                    <button class="px-3 py-1 bg-white border border-slate-200 rounded-lg">Previous</button>
+                    <button class="px-3 py-1 bg-emerald-500 text-white rounded-lg">1</button>
+                    <button class="px-3 py-1 bg-white border border-slate-200 rounded-lg">Next</button>
                 </div>
             </div>
         </div>
 
-        <!-- Budget Source Breakdown -->
-        <div class="bg-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 border border-slate-100 shadow-xl">
-            <h3 class="text-lg font-black text-navy mb-6">สัดส่วนตามแหล่งงบ</h3>
-            <div class="space-y-6">
-                <?php
-                $colors = ['navy', 'gold', 'slate-400', 'indigo', 'emerald'];
-                foreach ($budgetSources as $idx => $src):
-                    $pct = $src['total_amount'] > 0 ? round(($src['used_amount'] / $src['total_amount']) * 100) : 0;
-                    $color = $colors[$idx % count($colors)];
-                ?>
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-xs font-black text-slate-700 truncate mr-2"><?= htmlspecialchars($src['plan_name']) ?></span>
-                        <span class="text-[10px] font-bold text-slate-400"><?= $pct ?>%</span>
-                    </div>
-                    <div class="w-full h-1.5 bg-slate-100 rounded-full">
-                        <div class="h-full bg-<?= $color ?> rounded-full" style="width: <?= $pct ?>%"></div>
-                    </div>
+        <!-- Budget Chart -->
+        <div class="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl flex flex-col items-center">
+            <h3 class="text-lg font-black text-slate-800 w-full mb-8">ใช้จ่ายงบประมาณไปแล้ว</h3>
+            <div class="relative w-full max-w-[250px] aspect-square">
+                <canvas id="budgetChart"></canvas>
+                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <p class="text-2xl font-black text-slate-800"><?= number_format($totalUsed) ?></p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">จาก <?= number_format($totalBudget) ?></p>
                 </div>
-                <?php endforeach; ?>
-                
-                <div class="mt-8 p-6 bg-navy text-white rounded-3xl relative overflow-hidden">
-                    <div class="absolute -right-4 -bottom-4 text-white/10 text-6xl italic font-black">SBMS</div>
-                    <p class="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">ยอดรวมคงเหลือทั้งหมด</p>
-                    <p class="text-xl sm:text-2xl font-black text-gold tracking-tight">฿<?= number_format($remaining, 2) ?></p>
+            </div>
+            <div class="mt-12 w-full space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-rose-200"></span>
+                        <span class="text-xs font-bold text-slate-500">งบที่ได้รับ</span>
+                    </div>
+                    <span class="text-xs font-black text-slate-700"><?= number_format($totalBudget) ?></span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-orange-200"></span>
+                        <span class="text-xs font-bold text-slate-500">งบที่ใช้แล้ว</span>
+                    </div>
+                    <span class="text-xs font-black text-slate-700"><?= number_format($totalUsed) ?></span>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Success/Error Alerts
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('success')) {
-        Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: 'บันทึกข้อมูลเรียบร้อยแล้ว', timer: 2000, showConfirmButton: false, confirmButtonColor: '#0B1C3E' });
-    }
-    if (urlParams.has('error')) {
-        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: urlParams.get('error'), confirmButtonColor: '#0B1C3E' });
-    }
+    const ctx = document.getElementById('budgetChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['ใช้แล้ว', 'คงเหลือ'],
+            datasets: [{
+                data: [<?= $totalUsed ?>, <?= $remaining ?>],
+                backgroundColor: ['#fed7aa', '#fecdd3'],
+                borderWidth: 0,
+                cutout: '80%'
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            maintainAspectRatio: true
+        }
+    });
 </script>
 
 <?php require_once __DIR__ . '/../components/layout_end.php'; ?>
