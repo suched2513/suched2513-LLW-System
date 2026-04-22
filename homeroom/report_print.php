@@ -22,8 +22,8 @@ for ($i = 0; $i < 5; $i++) {
 $friday = $dates[4];
 
 // 2. Fetch Data
-// Students
-$stmt = $pdo->prepare("SELECT student_id, name FROM att_students WHERE classroom = ? ORDER BY student_id");
+// Students (Use assembly_students)
+$stmt = $pdo->prepare("SELECT student_id, name FROM assembly_students WHERE classroom = ? ORDER BY student_id");
 $stmt->execute([$classroom]);
 $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -32,7 +32,7 @@ $stmt = $pdo->prepare("SELECT log_date, topic FROM homeroom_logs WHERE classroom
 $stmt->execute([$classroom, $monday, $friday]);
 $logs = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
-// Attendance Stats
+// Attendance Stats (Map short codes to long names)
 $stmt = $pdo->prepare("
     SELECT date, status, COUNT(*) as count 
     FROM assembly_attendance 
@@ -41,8 +41,13 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$classroom, $monday, $friday]);
 $attRaw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$statusMap = ['ม' => 'มา', 'ข' => 'ขาด', 'ล' => 'ลา', 'ส' => 'สาย', 'ด' => 'ขาด'];
 $stats = [];
-foreach ($attRaw as $a) $stats[$a['date']][$a['status']] = $a['count'];
+foreach ($attRaw as $a) {
+    $longStatus = $statusMap[$a['status']] ?? $a['status'];
+    $stats[$a['date']][$longStatus] = ($stats[$a['date']][$longStatus] ?? 0) + $a['count'];
+}
 
 // Photos
 $stmt = $pdo->prepare("SELECT log_date, image_path FROM homeroom_photos WHERE classroom = ? AND log_date BETWEEN ? AND ?");
