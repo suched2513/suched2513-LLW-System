@@ -14,6 +14,7 @@ $systemLabels = [
     'wfh'        => 'ลงเวลาปฏิบัติงาน',
     'leave'      => 'ขออนุญาตออกนอก',
     'portal'     => 'แดชบอร์ดกลาง',
+    'budget'     => 'ระบบงบประมาณ SBMS',
 ];
 if (isset($activeSystem) && $activeSystem !== 'portal') {
     $breadcrumbs[] = ['label' => $systemLabels[$activeSystem] ?? $activeSystem];

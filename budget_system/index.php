@@ -244,4 +244,15 @@ require_once __DIR__ . '/../components/layout_start.php';
     </div>
 </div>
 
-<?php require_once __DIR__ . '/../components/layout_start.php';
+<script>
+    // Success/Error Alerts
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('success')) {
+        Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: 'บันทึกข้อมูลเรียบร้อยแล้ว', timer: 2000, showConfirmButton: false, confirmButtonColor: '#0B1C3E' });
+    }
+    if (urlParams.has('error')) {
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: urlParams.get('error'), confirmButtonColor: '#0B1C3E' });
+    }
+</script>
+
+<?php require_once __DIR__ . '/../components/layout_end.php'; ?>

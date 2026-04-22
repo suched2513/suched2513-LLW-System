@@ -24,13 +24,21 @@ try {
     ");
     $disbursements = $stmt->fetchAll();
     
-    // Get Approved Projects for the form
-    $stmt = $pdo->query("SELECT * FROM sbms_projects WHERE status IN ('approved', 'in_progress')");
+    // Get Projects for selection
+    $stmt = $pdo->prepare("SELECT * FROM sbms_projects WHERE fiscal_year_id = ? AND status IN ('approved', 'in_progress')");
+    $stmt->execute([$activeYearId]);
     $projects = $stmt->fetchAll();
+
+    // Get Budget Plans for selection (For general disbursements)
+    $stmt = $pdo->prepare("SELECT * FROM sbms_budgets WHERE fiscal_year_id = ?");
+    $stmt->execute([$activeYearId]);
+    $budgets = $stmt->fetchAll();
     
 } catch (Exception $e) {
     error_log($e->getMessage());
     $disbursements = [];
+    $projects = [];
+    $budgets = [];
 }
 
 require_once __DIR__ . '/../components/layout_start.php';
@@ -140,10 +148,19 @@ require_once __DIR__ . '/../components/layout_start.php';
         <form action="api/save_disbursement.php" method="POST" class="p-8 grid grid-cols-2 gap-6">
             <div class="col-span-2">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">เลือกโครงการที่เบิกจ่าย</label>
-                <select name="project_id" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                <select name="project_id" id="project_id" onchange="toggleBudgetSelect(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                     <option value="">-- ไม่ระบุโครงการ (เบิกจ่ายทั่วไป) --</option>
                     <?php foreach ($projects as $p): ?>
                     <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['project_name']) ?> (คงเหลือ ฿<?= number_format($p['approved_amount'] - $p['used_amount'], 2) ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-span-2" id="budget_select_container">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">หมวดงบประมาณ (กรณีทั่วไป)</label>
+                <select name="budget_id" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="">-- กรุณาเลือกหมวดงบ --</option>
+                    <?php foreach ($budgets as $b): ?>
+                    <option value="<?= $b['id'] ?>"><?= htmlspecialchars($b['plan_name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -186,6 +203,24 @@ require_once __DIR__ . '/../components/layout_start.php';
 <script>
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+
+    function toggleBudgetSelect(projectId) {
+        const container = document.getElementById('budget_select_container');
+        if (projectId) {
+            container.classList.add('opacity-50', 'pointer-events-none');
+        } else {
+            container.classList.remove('opacity-50', 'pointer-events-none');
+        }
+    }
+
+    // Success/Error Alerts
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('success')) {
+        Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: 'บันทึกการเบิกจ่ายเรียบร้อยแล้ว', timer: 2000, showConfirmButton: false, confirmButtonColor: '#F59E0B' });
+    }
+    if (urlParams.has('error')) {
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: urlParams.get('error'), confirmButtonColor: '#0B1C3E' });
+    }
 </script>
 
 <?php require_once __DIR__ . '/../components/layout_end.php'; ?>

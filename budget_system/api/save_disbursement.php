@@ -14,6 +14,7 @@ try {
     $pdo = getPdo();
     
     $projectId = $_POST['project_id'] ?: null;
+    $budgetId = $_POST['budget_id'] ?: null;
     $type = $_POST['disbursement_type'] ?? 'other';
     $amount = $_POST['amount'] ?? 0;
     $method = $_POST['payment_method'] ?? 'transfer';
@@ -23,6 +24,10 @@ try {
         throw new Exception('จำนวนเงินต้องมากกว่า 0');
     }
 
+    if (!$projectId && !$budgetId) {
+        throw new Exception('กรุณาเลือกโครงการหรือหมวดงบประมาณ');
+    }
+    
     $pdo->beginTransaction();
 
     // 1. Create Disbursement Record
@@ -32,20 +37,25 @@ try {
     ");
     $stmt->execute([$docNo, $type, $projectId, $amount, $method, $_SESSION['user_id'] ?? null]);
 
-    // 2. Update Project Used Amount (if linked)
+    // 2. Handle Project and Budget Updates
     if ($projectId) {
+        // Update Project Balance
         $stmt = $pdo->prepare("UPDATE sbms_projects SET used_amount = used_amount + ? WHERE id = ?");
         $stmt->execute([$amount, $projectId]);
         
         // Find budget_id for this project to update the main budget plan
         $stmt = $pdo->prepare("SELECT budget_id FROM sbms_projects WHERE id = ?");
         $stmt->execute([$projectId]);
-        $budgetId = $stmt->fetchColumn();
+        $linkedBudgetId = $stmt->fetchColumn();
         
-        if ($budgetId) {
+        if ($linkedBudgetId) {
             $stmt = $pdo->prepare("UPDATE sbms_budgets SET used_amount = used_amount + ? WHERE id = ?");
-            $stmt->execute([$amount, $budgetId]);
+            $stmt->execute([$amount, $linkedBudgetId]);
         }
+    } else if ($budgetId) {
+        // Update Budget Balance directly (General Disbursement)
+        $stmt = $pdo->prepare("UPDATE sbms_budgets SET used_amount = used_amount + ? WHERE id = ?");
+        $stmt->execute([$amount, $budgetId]);
     }
 
     $pdo->commit();

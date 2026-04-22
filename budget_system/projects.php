@@ -184,6 +184,15 @@ try {
 <script>
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+
+    // Success/Error Alerts
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('success')) {
+        Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: 'เพิ่มโครงการใหม่เรียบร้อยแล้ว', timer: 2000, showConfirmButton: false, confirmButtonColor: '#F59E0B' });
+    }
+    if (urlParams.has('error')) {
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: urlParams.get('error'), confirmButtonColor: '#0B1C3E' });
+    }
 </script>
 
 <?php require_once __DIR__ . '/../components/layout_end.php'; ?>
