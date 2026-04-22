@@ -25,21 +25,21 @@ if (!$classroom || !$start_date || !$end_date) {
 try {
     $pdo = getPdo();
     
-    // Check if tables exist first
-    $requiredTables = ['att_students', 'llw_class_advisors', 'homeroom_logs', 'assembly_attendance', 'homeroom_photos'];
+    // Check if tables exist
+    $requiredTables = ['assembly_students', 'llw_class_advisors', 'homeroom_logs', 'assembly_attendance', 'homeroom_photos'];
     foreach ($requiredTables as $table) {
         $check = $pdo->query("SHOW TABLES LIKE '$table'");
         if ($check->rowCount() === 0) {
-            throw new Exception("ไม่พบตาราง '$table' ในฐานข้อมูล กรุณารัน /homeroom/api/init.php");
+            throw new Exception("ไม่พบตาราง '$table' กรุณารัน /homeroom/api/init.php");
         }
     }
 
-    // 1. ดึงรายชื่อนักเรียนจากฐานข้อมูลกลาง (att_students)
-    $stmt = $pdo->prepare("SELECT student_id, name FROM att_students WHERE classroom = ? ORDER BY student_id");
+    // 1. ดึงรายชื่อนักเรียน (ใช้ assembly_students ตามระบบเช็คชื่อเข้าแถว)
+    $stmt = $pdo->prepare("SELECT student_id, name FROM assembly_students WHERE classroom = ? ORDER BY student_id");
     $stmt->execute([$classroom]);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // 2. ดึงข้อมูลครูที่ปรึกษาจากฐานข้อมูลกลาง (llw_class_advisors)
+    // 2. ดึงข้อมูลครูที่ปรึกษา (llw_class_advisors)
     $stmt = $pdo->prepare("
         SELECT u.firstname, u.lastname 
         FROM llw_class_advisors a
@@ -88,10 +88,9 @@ try {
     ]);
 
 } catch (Throwable $e) {
-    http_response_code(500);
+    // Return 200 but with status: error so JS can show the message instead of hanging
     echo json_encode([
         'status' => 'error', 
-        'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage(),
-        'debug' => 'โปรดตรวจสอบว่าได้รัน /homeroom/api/init.php หรือยัง'
+        'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()
     ]);
 }
