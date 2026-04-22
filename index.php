@@ -61,6 +61,7 @@ if ($isLoggedIn) {
                 ['url' => 'plc_system/dashboard.php', 'icon' => 'bi-journal-richtext', 'label' => 'PLC Online', 'color' => 'violet'],
                 ['url' => 'behavior/dashboard.php', 'icon' => 'bi-journal-text', 'label' => 'พฤติกรรม', 'color' => 'violet'],
                 ['url' => 'homeroom/index.php', 'icon' => 'bi-mortarboard-fill', 'label' => 'ระบบครูที่ปรึกษา', 'color' => 'indigo'],
+                ['url' => 'budget_system/index.php', 'icon' => 'bi-wallet2', 'label' => 'งบประมาณ (SBMS)', 'color' => 'amber'],
             ];
             break;
         case 'wfh_admin':
@@ -72,6 +73,7 @@ if ($isLoggedIn) {
                 ['url' => 'plc_system/dashboard.php', 'icon' => 'bi-journal-richtext', 'label' => 'PLC Online', 'color' => 'violet'],
                 ['url' => 'behavior/dashboard.php', 'icon' => 'bi-journal-text', 'label' => 'พฤติกรรม', 'color' => 'violet'],
                 ['url' => 'homeroom/index.php', 'icon' => 'bi-mortarboard-fill', 'label' => 'ระบบครูที่ปรึกษา', 'color' => 'indigo'],
+                ['url' => 'budget_system/index.php', 'icon' => 'bi-wallet2', 'label' => 'งบประมาณ (SBMS)', 'color' => 'amber'],
             ];
             break;
         case 'att_teacher':
@@ -444,10 +446,20 @@ if ($isLoggedIn) {
                 'icon'     => 'bi-mortarboard-fill',
                 'bgIcon'   => 'bi-mortarboard',
                 'title'    => 'ระบบครูที่ปรึกษา',
-                'desc'     => 'ศูนย์กลางการดูแลนักเรียนประจำชั้น ติดตามการเข้าแถว พฤติกรรม และข้อมูลรายห้อง',
+                'desc'     => 'ศูนย์กลางการดูแลหนักเรียนประจำชั้น ติดตามการเข้าแถว พฤติกรรม และข้อมูลรายห้อง',
                 'color'    => 'indigo',
                 'gradient' => 'from-indigo-600 to-violet-700',
                 'delay'    => 1.0,
+            ],
+            [
+                'url'      => 'budget_system/index.php',
+                'icon'     => 'bi-bank',
+                'bgIcon'   => 'bi-cash-coin',
+                'title'    => 'ระบบงบประมาณ (SBMS)',
+                'desc'     => 'บริหารจัดการงบประมาณโรงเรียน ติดตามโครงการ กิจกรรม และการเบิกจ่ายเงินรายปี',
+                'color'    => 'amber',
+                'gradient' => 'from-amber-500 to-orange-600',
+                'delay'    => 1.1,
             ],
         ];
 

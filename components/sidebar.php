@@ -18,6 +18,7 @@ if ($current_page === 'supervision.php') $activeSystem = 'supervision';
 if ($current_dir === 'teacher_leave')         $activeSystem = 'teacher_leave';
 if ($current_dir === 'behavior')              $activeSystem = 'behavior';
 if ($current_dir === 'homeroom' || $current_page === 'manage_advisors.php') $activeSystem = 'homeroom';
+if ($current_dir === 'budget_system')          $activeSystem = 'budget';
 
 // User context
 $userName = $_SESSION['firstname'] ?? ($_SESSION['teacher_name'] ?? 'User');
@@ -86,6 +87,13 @@ $subMenus = [
     'homeroom' => [
         ['icon' => 'bi-speedometer2', 'label' => 'Advisor Dashboard', 'url' => $base_path . '/homeroom/index.php'],
         ['icon' => 'bi-people-fill',   'label' => 'จัดการการมอบหมาย',  'url' => $base_path . '/manage_advisors.php', 'roles' => ['super_admin']],
+    ],
+    'budget' => [
+        ['icon' => 'bi-speedometer2', 'label' => 'Dashboard',     'url' => $base_path . '/budget_system/index.php'],
+        ['icon' => 'bi-journal-check', 'label' => 'โครงการ & กิจกรรม', 'url' => $base_path . '/budget_system/projects.php'],
+        ['icon' => 'bi-cash-coin',    'label' => 'บันทึกการเบิกจ่าย', 'url' => $base_path . '/budget_system/disbursements.php'],
+        ['icon' => 'bi-file-earmark-bar-graph', 'label' => 'รายงานงบประมาณ', 'url' => $base_path . '/budget_system/reports.php'],
+        ['icon' => 'bi-calendar-event', 'label' => 'ตั้งค่าปีงบประมาณ', 'url' => $base_path . '/budget_system/fiscal_years.php', 'roles' => ['super_admin']],
     ],
 ];
 ?>
@@ -273,6 +281,28 @@ $subMenus = [
             <div class="sub-menu <?= $activeSystem === 'teacher_leave' ? 'open' : '' ?> ml-4 sm:ml-6 mt-1 space-y-0.5">
                 <?php foreach ($subMenus['teacher_leave'] as $sub): ?>
                 <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-rose-600 bg-rose-50' : 'text-slate-400 hover:text-rose-600 hover:bg-slate-50' ?>">
+                    <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <!-- Research & Development -->
+        <div class="pb-4 sm:pb-6">
+            <p class="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-3 sm:mb-4">Finance & Assets</p>
+
+            <!-- SBMS (Budget System) -->
+            <a href="<?= $base_path ?>/budget_system/index.php" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all <?= $activeSystem === 'budget' ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-200/50' : 'text-slate-500 hover:bg-amber-50 hover:text-amber-600 hover:pl-6' ?>">
+                <i class="bi bi-wallet2 text-base sm:text-lg"></i> ระบบงบประมาณ (SBMS)
+                <?php if ($activeSystem === 'budget'): ?>
+                <i class="bi bi-chevron-down ml-auto text-xs opacity-60"></i>
+                <?php endif; ?>
+            </a>
+            <div class="sub-menu <?= $activeSystem === 'budget' ? 'open' : '' ?> ml-4 sm:ml-6 mt-1 space-y-0.5">
+                <?php foreach ($subMenus['budget'] as $sub):
+                    if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                ?>
+                <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-slate-50' ?>">
                     <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
                 </a>
                 <?php endforeach; ?>
