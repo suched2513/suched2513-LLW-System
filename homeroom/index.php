@@ -78,7 +78,9 @@ require_once __DIR__ . '/../components/layout_start.php';
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <?php 
             // รวมห้องทั้งหมดถ้าเป็น Admin หรือเฉพาะห้องตัวเอง
-            $displayClasses = $isAdmin ? $pdo->query("SELECT DISTINCT classroom FROM llw_class_advisors ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN) : $myClasses;
+            $displayClasses = $isAdmin 
+                ? $pdo->query("SELECT DISTINCT classroom FROM assembly_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN) 
+                : $myClasses;
             $today = date('Y-m-d');
 
             foreach ($displayClasses as $room): 
