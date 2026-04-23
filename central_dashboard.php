@@ -174,300 +174,318 @@ try {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
-        .sidebar-item-active {
-            background-color: #1d4ed8;
+        body { font-family: 'Prompt', sans-serif; background-color: #f1f5f9; }
+        
+        /* Executive Dark Header */
+        .exec-banner {
+            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+            border-radius: 32px;
+            padding: 40px;
             color: white;
-            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
         }
-        .card-gradient-1{background:linear-gradient(135deg,#6366f1,#a855f7)}
-        .card-gradient-2{background:linear-gradient(135deg,#ec4899,#f43f5e)}
-        .card-gradient-3{background:linear-gradient(135deg,#06b6d4,#3b82f6)}
-        .card-gradient-4{background:linear-gradient(135deg,#10b981,#34d399)}
-        .section-label{display:flex;align-items:center;gap:10px;margin-bottom:20px}
-        .section-label .bar{width:4px;height:20px;border-radius:9999px;flex-shrink:0}
-        .section-label h2{font-size:11px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em}
-        .section-label .ln{flex:1;height:1px;background:#f1f5f9}
-        .section-label .pill{font-size:10px;font-weight:700;padding:3px 12px;border-radius:9999px;white-space:nowrap}
-        @media print{
-            aside,.no-print{display:none!important}
-            main{margin-left:0!important;padding:1rem!important}
-            section:not(#print-section){display:none!important}
-            #print-section{display:block!important}
-            .section-label{display:none!important}
-            body{background:white!important}
-            thead{background-color:#f1f5f9!important;-webkit-print-color-adjust:exact}
+        .exec-banner::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        /* Mini KPI Cards */
+        .kpi-mini-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border: 1px solid rgba(255,255,255,0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        .kpi-mini-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+        .kpi-icon-circle {
+            width: 48px; height: 48px; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; color: white; flex-shrink: 0;
+        }
+
+        /* Dark Feature Panels */
+        .dark-panel {
+            background: #1e293b;
+            border-radius: 32px;
+            padding: 32px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .dark-panel .badge-label {
+            position: absolute; right: -20px; top: 15px;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 30px; transform: rotate(35deg);
+            font-size: 10px; font-weight: 900; letter-spacing: 0.1em;
+        }
+
+        .filter-pill {
+            background: white; border: 1px solid #e2e8f0;
+            padding: 10px 20px; border-radius: 16px; font-size: 13px; font-weight: 600;
+            color: #64748b; transition: all 0.2s;
+        }
+        .filter-pill:focus { border-color: #6366f1; ring: 2px; ring-color: #6366f1; }
+
+        @media print {
+            aside, .no-print { display: none !important; }
+            main { margin-left: 0 !important; padding: 1rem !important; }
         }
     </style>
 </head>
 <body class="flex min-h-screen">
 
-    <!-- Sidebar -->
-    <aside class="w-72 bg-white border-r border-slate-100 flex flex-col fixed h-full z-20 no-print">
-        <div class="p-8 flex items-center gap-4">
-            <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center text-white text-2xl shadow-xl shadow-blue-200/50">
-                <i class="bi bi-rocket-takeoff-fill"></i>
-            </div>
+    <!-- Sidebar (Hybrid Standard) -->
+    <?php include 'components/sidebar.php'; ?>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 lg:p-10 transition-all duration-500">
+
+        <!-- Top Header (Breadcrumb & User) -->
+        <header class="flex justify-between items-center mb-8 no-print">
             <div>
-                <span class="text-xl font-black text-slate-800 tracking-tight block leading-none">Platinum</span>
-                <span class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mt-1">Super Admin</span>
+                <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest">แดชบอร์ด</h2>
             </div>
-        </div>
-
-        <nav class="flex-1 px-6 space-y-2 overflow-y-auto">
-            <p class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-4 mt-6">Management</p>
-            <a href="central_dashboard.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold bg-blue-600 text-white shadow-lg shadow-blue-200/50 transition-all">
-                <i class="bi bi-grid-fill text-lg"></i> แดชบอร์ด
-            </a>
-            <a href="manage_users.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
-                <i class="bi bi-people text-lg"></i> จัดการผู้ใช้
-            </a>
-            <a href="manage_advisors.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
-                <i class="bi bi-mortarboard text-lg"></i> จัดการที่ปรึกษา
-            </a>
-            <p class="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-4 mt-6">Systems</p>
-            <a href="teacher_leave/index.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
-                <i class="bi bi-file-earmark-text text-lg"></i> ระบบใบลา
-            </a>
-            <a href="attendance_system/dashboard.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
-                <i class="bi bi-person-check text-lg"></i> ระบบเช็คชื่อ
-            </a>
-            <a href="behavior/admin.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
-                <i class="bi bi-journal-text text-lg"></i> ระบบพฤติกรรม
-            </a>
-        </nav>
-
-        <div class="p-8 mt-auto space-y-4">
-            <a href="change_password.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-indigo-500 hover:bg-indigo-50 transition-all">
-                <i class="bi bi-key-fill text-lg"></i> เปลี่ยนรหัส
-            </a>
-            <a href="logout.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-rose-500 hover:bg-rose-50 transition-all">
-                <i class="bi bi-box-arrow-left text-lg"></i> ออกจากระบบ
-            </a>
-        </div>
-    </aside>
-
-    <!-- Main -->
-    <main class="ml-72 flex-1 p-8 pb-20">
-
-        <!-- Header -->
-        <header class="flex justify-between items-center mb-10 no-print">
-            <div>
-                <div class="flex items-center gap-3 mb-1">
-                    <div class="w-1.5 h-9 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-full"></div>
-                    <h1 class="text-3xl font-black text-slate-800">Super Dashboard</h1>
-                </div>
-                <p class="text-sm text-slate-400 pl-5">สวัสดี, <span class="text-slate-600 font-bold"><?= htmlspecialchars($_SESSION['firstname']) ?></span> &mdash; <?= date('l, d F Y') ?></p>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="bg-white border border-slate-100 shadow-sm rounded-2xl px-5 py-3 flex items-center gap-2">
-                    <i class="bi bi-clock text-indigo-500 text-sm"></i>
-                    <span id="liveClock" class="font-black text-slate-700 tabular-nums text-sm">--:--:--</span>
-                </div>
-                <div class="flex items-center gap-3 bg-white p-2 pr-5 rounded-2xl shadow-sm border border-slate-100">
-                    <img src="https://ui-avatars.com/api/?name=<?= urlencode($_SESSION['firstname']??'Admin') ?>&background=4f46e5&color=fff" class="w-10 h-10 rounded-xl" alt="avatar">
-                    <div>
-                        <p class="text-sm font-black text-slate-800"><?= htmlspecialchars($_SESSION['firstname']) ?></p>
-                        <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Super Admin</p>
-                    </div>
-                </div>
+            <div class="flex items-center gap-4">
+                <a href="change_password.php" class="bg-white px-4 py-2 rounded-xl text-xs font-bold text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all">
+                    <i class="bi bi-key-fill mr-1"></i> เปลี่ยนรหัสผ่าน
+                </a>
             </div>
         </header>
 
-        <!-- E: สถิติครู (print-ready) -->
-        <div class="section-label no-print"><div class="bar" style="background:#7c3aed"></div><h2>สถิติการใช้งานระบบแยกตามครู</h2><div class="ln"></div><span class="pill" style="background:#ede9fe;color:#6d28d9">ผลงานเชิงประจักษ์</span></div>
-
-        <!-- Stats Cards (Premium) -->
-        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-
-            <!-- Card 1: นักเรียนทั้งหมด -->
-            <div class="card-gradient-1 p-8 rounded-[40px] text-white shadow-xl shadow-indigo-100 relative overflow-hidden group">
-                <div class="absolute -right-4 -bottom-4 text-white/10 text-9xl group-hover:scale-110 transition-transform">
-                    <i class="bi bi-people"></i>
-                </div>
-                <div class="flex justify-between items-start mb-6">
-                    <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">
-                        <i class="bi bi-people-fill"></i>
+        <!-- Executive Banner -->
+        <section class="mb-10 no-print">
+            <div class="exec-banner">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div class="flex items-center gap-6">
+                        <div class="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl shadow-inner border border-white/20">
+                            <i class="bi bi-bar-chart-line-fill"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-3xl font-black tracking-tight">แดชบอร์ดผู้บริหาร</h1>
+                            <p class="text-slate-400 text-sm mt-1">ภาพรวมระบบบริหารจัดการโรงเรียน • อัปเดตเมื่อ <?= date('d M Y H:i') ?> น.</p>
+                        </div>
                     </div>
-                    <span class="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full uppercase tracking-widest">จำนวนนักเรียน</span>
+                    <div class="flex items-center gap-3">
+                        <div class="flex -space-x-2 mr-4">
+                            <span class="w-4 h-4 rounded-full bg-emerald-500 border-2 border-slate-800"></span>
+                            <span class="w-4 h-4 rounded-full bg-blue-500 border-2 border-slate-800"></span>
+                            <span class="w-4 h-4 rounded-full bg-rose-500 border-2 border-slate-800"></span>
+                            <span class="w-4 h-4 rounded-full bg-amber-500 border-2 border-slate-800"></span>
+                            <span class="w-4 h-4 rounded-full bg-slate-500 border-2 border-slate-800"></span>
+                        </div>
+                        <button onclick="window.print()" class="bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border border-white/10">
+                            <i class="bi bi-printer"></i> พิมพ์ / PDF
+                        </button>
+                        <button onclick="location.reload()" class="bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border border-white/10">
+                            <i class="bi bi-arrow-clockwise"></i> รีเฟรช
+                        </button>
+                    </div>
                 </div>
-                <p class="text-indigo-100 font-bold text-xs uppercase tracking-widest mb-1">นักเรียนทั้งหมด</p>
-                <h3 class="text-4xl font-black mb-4"><?= number_format($countStudents) ?></h3>
-                <p class="text-indigo-200 text-[10px] font-bold">เข้ารับการในระบบเช็คชื่อ</p>
+            </div>
+        </section>
+
+        <!-- Quick Filters -->
+        <section class="mb-10 no-print">
+            <div class="bg-white/50 backdrop-blur-md p-4 rounded-3xl border border-white/50 shadow-sm flex flex-wrap gap-4 items-center">
+                <div class="flex flex-col gap-1 flex-1 min-w-[150px]">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-2">จากวันที่</span>
+                    <input type="date" class="filter-pill w-full">
+                </div>
+                <div class="flex flex-col gap-1 flex-1 min-w-[150px]">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-2">ถึงวันที่</span>
+                    <input type="date" class="filter-pill w-full">
+                </div>
+                <div class="flex flex-col gap-1 flex-1 min-w-[150px]">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-2">สถานะ</span>
+                    <select class="filter-pill w-full">
+                        <option>ทุกสถานะ</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1 flex-[2] min-w-[200px]">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-2">ค้นหา</span>
+                    <div class="relative">
+                        <i class="bi bi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" placeholder="ค้นหาข้อมูล..." class="filter-pill w-full pl-10">
+                    </div>
+                </div>
+                <button class="bg-slate-100 text-slate-500 px-6 py-3 rounded-2xl text-sm font-bold hover:bg-slate-200 transition-all self-end">
+                    ล้างตัวกรอง
+                </button>
+            </div>
+        </section>
+
+        <!-- Mini KPI Cards Grid -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6 mb-10 no-print">
+            
+            <!-- Card 1: Students -->
+            <div class="kpi-mini-card">
+                <div class="kpi-icon-circle bg-emerald-500 shadow-lg shadow-emerald-100">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-black text-slate-800 leading-none"><?= number_format($countStudents) ?></h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">นักเรียนทั้งหมด</p>
+                    <p class="text-[9px] font-bold text-emerald-500 mt-0.5"><i class="bi bi-person-check"></i> ในระบบ</p>
+                </div>
             </div>
 
-            <!-- Card 2: ใบลารอดำเนินการ (Action Required!) -->
-            <a href="teacher_leave/index.php" class="card-gradient-2 p-8 rounded-[40px] text-white shadow-xl shadow-rose-100 relative overflow-hidden group block hover:scale-[1.02] transition-transform">
-                <div class="absolute -right-4 -bottom-4 text-white/10 text-9xl group-hover:scale-110 transition-transform">
+            <!-- Card 2: Pending Leave -->
+            <a href="teacher_leave/index.php" class="kpi-mini-card">
+                <div class="kpi-icon-circle bg-amber-500 shadow-lg shadow-amber-100">
                     <i class="bi bi-hourglass-split"></i>
                 </div>
-                <div class="flex justify-between items-start mb-6">
-                    <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">
-                        <i class="bi bi-hourglass-split"></i>
-                    </div>
-                    <?php if($countPendingLeave > 0): ?>
-                    <span class="text-[10px] font-black bg-white text-rose-600 px-3 py-1 rounded-full animate-pulse">ด่วน!</span>
-                    <?php else: ?>
-                    <span class="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full">ไม่มีค้าง</span>
-                    <?php endif; ?>
+                <div>
+                    <h3 class="text-2xl font-black text-slate-800 leading-none"><?= $countPendingLeave ?></h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">ใบลารออนุมัติ</p>
+                    <p class="text-[9px] font-bold text-amber-500 mt-0.5"><i class="bi bi-lightning-fill"></i> รอจัดการ</p>
                 </div>
-                <p class="text-rose-100 font-bold text-xs uppercase tracking-widest mb-1">ใบลารอพิจารณา</p>
-                <h3 class="text-4xl font-black mb-4"><?= $countPendingLeave ?></h3>
-                <p class="text-rose-200 text-[10px] font-bold"><?= $countPendingLeave > 0 ? 'คลิกเพื่อดำเนินการใบลา' : 'ไม่มีใบลารอดำเนินการ' ?></p>
             </a>
 
-            <!-- Card 3: ห้องเรียนที่เช็คชื่อแล้ว -->
-            <div class="card-gradient-3 p-8 rounded-[40px] text-white shadow-xl shadow-blue-100 relative overflow-hidden group">
-                <div class="absolute -right-4 -bottom-4 text-white/10 text-9xl group-hover:scale-110 transition-transform">
-                    <i class="bi bi-door-open"></i>
-                </div>
-                <div class="flex justify-between items-start mb-6">
-                    <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">
-                        <i class="bi bi-calendar-check-fill"></i>
-                    </div>
-                    <span class="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full"><?= date('d/m/Y') ?></span>
-                </div>
-                <p class="text-blue-100 font-bold text-xs uppercase tracking-widest mb-1">ห้องที่เช็คชื่อแล้ว</p>
-                <h3 class="text-4xl font-black mb-1"><?= $countCheckedRooms ?> <span class="text-xl font-bold opacity-70">/ <?= $countTotalRooms ?></span></h3>
-                <p class="text-blue-200 text-[10px] font-bold mb-3">ยังเหลืออีก <?= $countRemainingRooms ?> ห้อง</p>
-                <div class="w-full bg-white/20 h-2 rounded-full overflow-hidden">
-                    <div class="bg-white h-full rounded-full transition-all" style="width: <?= $roomProgress ?>%"></div>
-                </div>
-                <p class="text-blue-200 text-[10px] font-bold mt-1"><?= $roomProgress ?>% เสร็จแล้ว</p>
-            </div>
-
-            <!-- Card 4: บุคลากรลาวันนี้ -->
-            <div class="card-gradient-4 p-8 rounded-[40px] text-white shadow-xl shadow-emerald-100 relative overflow-hidden group">
-                <div class="absolute -right-4 -bottom-4 text-white/10 text-9xl group-hover:scale-110 transition-transform">
-                    <i class="bi bi-person-slash"></i>
-                </div>
-                <div class="flex justify-between items-start mb-6">
-                    <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-2xl">
-                        <i class="bi bi-person-slash"></i>
-                    </div>
-                    <span class="text-[10px] font-bold bg-white/20 px-3 py-1 rounded-full">วันนี้</span>
-                </div>
-                <p class="text-emerald-100 font-bold text-xs uppercase tracking-widest mb-1">บุคลากรลาวันนี้</p>
-                <h3 class="text-4xl font-black mb-4"><?= $countOnLeaveToday ?></h3>
-                <p class="text-emerald-200 text-[10px] font-bold"><?= $countOnLeaveToday > 0 ? 'คนอนุมัติลาแล้ววันนี้' : 'ไม่มีบุคลากรลาวันนี้' ?></p>
-            </div>
-        </section>
-
-        <!-- Unchecked Rooms Section -->
-        <?php if ($countRemainingRooms > 0): ?>
-        <section class="mb-8">
-            <div class="bg-white rounded-[32px] shadow-sm border border-amber-100 p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-black text-slate-800 flex items-center gap-2">
-                        <div class="w-8 h-8 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
-                            <i class="bi bi-exclamation-triangle-fill text-sm"></i>
-                        </div>
-                        ห้องที่ยังไม่ได้เช็คชื่อวันนี้
-                        <span class="text-xs font-bold bg-amber-100 text-amber-600 px-3 py-1 rounded-full"><?= $countRemainingRooms ?> ห้อง</span>
-                    </h3>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"><?= date('d/m/Y') ?></span>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <?php foreach($uncheckedRooms as $room): ?>
-                    <a href="attendance_system/attendance.php" class="px-4 py-2 bg-amber-50 text-amber-700 text-xs font-black rounded-xl border border-amber-200 hover:bg-amber-100 transition-all hover:scale-105">
-                        <i class="bi bi-door-closed-fill mr-1"></i><?= htmlspecialchars($room) ?>
-                    </a>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </section>
-        <?php else: ?>
-        <section class="mb-8">
-            <div class="bg-emerald-50 rounded-[32px] border border-emerald-100 p-5 flex items-center gap-4">
-                <div class="w-10 h-10 bg-emerald-500 text-white rounded-2xl flex items-center justify-center text-lg shadow-lg shadow-emerald-200">
+            <!-- Card 3: Checked Rooms -->
+            <div class="kpi-mini-card">
+                <div class="kpi-icon-circle bg-blue-500 shadow-lg shadow-blue-100">
                     <i class="bi bi-check-circle-fill"></i>
                 </div>
                 <div>
-                    <p class="font-black text-emerald-700">เช็คชื่อครบทุกห้องแล้ววันนี้! 🎉</p>
-                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest"><?= $countTotalRooms ?> ห้องเรียน — <?= date('d/m/Y') ?></p>
+                    <h3 class="text-2xl font-black text-slate-800 leading-none"><?= $countCheckedRooms ?></h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">เช็คชื่อแล้ว</p>
+                    <p class="text-[9px] font-bold text-blue-500 mt-0.5"><i class="bi bi-door-open"></i> ห้องเรียน</p>
                 </div>
             </div>
-        </section>
-        <?php endif; ?>
 
-        <!-- Charts Section -->
-        <section class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-            <!-- Line Chart -->
-            <div class="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
-                <div class="flex justify-between items-center mb-8">
-                    <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                        <i class="bi bi-graph-up-arrow text-blue-600"></i> การเข้าใช้งานระบบ
-                    </h3>
-                    <div class="flex gap-2">
-                        <button class="px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold">7 วัน</button>
-                        <button class="px-4 py-2 text-slate-400 rounded-xl text-xs font-bold">30 วัน</button>
+            <!-- Card 4: Remaining Rooms -->
+            <div class="kpi-mini-card">
+                <div class="kpi-icon-circle bg-indigo-500 shadow-lg shadow-indigo-100">
+                    <i class="bi bi-slash-circle-fill"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-black text-slate-800 leading-none"><?= $countRemainingRooms ?></h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">ยังไม่เช็คชื่อ</p>
+                    <p class="text-[9px] font-bold text-indigo-500 mt-0.5"><i class="bi bi-clock-history"></i> ค้างอยู่</p>
+                </div>
+            </div>
+
+            <!-- Card 5: Personnel on Leave -->
+            <div class="kpi-mini-card">
+                <div class="kpi-icon-circle bg-rose-500 shadow-lg shadow-rose-100">
+                    <i class="bi bi-person-slash"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-black text-slate-800 leading-none"><?= $countOnLeaveToday ?></h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">บุคลากรลาวันนี้</p>
+                    <p class="text-[9px] font-bold text-rose-500 mt-0.5"><i class="bi bi-calendar-event"></i> วันนี้</p>
+                </div>
+            </div>
+
+            <!-- Card 6: Total Activity -->
+            <div class="kpi-mini-card">
+                <div class="kpi-icon-circle bg-cyan-500 shadow-lg shadow-cyan-100">
+                    <i class="bi bi-activity"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-black text-slate-800 leading-none"><?= count($recentActivity) ?></h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">กิจกรรมล่าสุด</p>
+                    <p class="text-[9px] font-bold text-cyan-500 mt-0.5"><i class="bi bi-stars"></i> รายการ</p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Dark Highlight Panels -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10 no-print">
+            
+            <!-- Panel 1: Progress Score -->
+            <div class="dark-panel">
+                <div class="badge-label">SCORE</div>
+                <div class="flex items-center gap-6">
+                    <div class="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center text-4xl">
+                        <i class="bi bi-lightning-charge"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">ความก้าวหน้าการเช็คชื่อวันนี้</p>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-6xl font-black"><?= $roomProgress ?></span>
+                            <span class="text-2xl font-bold text-slate-500">%</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 font-bold mt-2 italic">สะสมจากทุกห้องเรียนที่บันทึกข้อมูลในระบบ</p>
                     </div>
                 </div>
-                <canvas id="usageChart" height="250"></canvas>
             </div>
 
-            <!-- Donut Chart -->
-            <div class="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
-                <h3 class="text-lg font-black text-slate-800 flex items-center gap-2 mb-8">
-                    <i class="bi bi-pie-chart text-indigo-600"></i> สัดส่วนผู้ใช้งาน
-                </h3>
-                <div class="flex items-center justify-center relative">
-                    <canvas id="userDonutChart" height="250"></canvas>
-                    <div class="absolute flex flex-col items-center">
-                        <span class="text-3xl font-black text-slate-800">100%</span>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">ทั้งหมด</span>
+            <!-- Panel 2: Quick Queue -->
+            <div class="dark-panel">
+                <div class="badge-label">QUEUE</div>
+                <div class="flex items-center gap-6">
+                    <div class="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center text-4xl">
+                        <i class="bi bi-stack"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">คิวรออนุมัติใบลาของฉัน</p>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-6xl font-black"><?= $countPendingLeave ?></span>
+                            <span class="text-2xl font-bold text-slate-500">รายการ</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 font-bold mt-2 italic">ต้องดำเนินการโดยผู้ใช้งานปัจจุบัน</p>
                     </div>
                 </div>
             </div>
+
         </section>
 
-        <!-- Progress & Activity -->
-        <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Attendance Status Bar Chart -->
-            <div class="lg:col-span-1 bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                        <i class="bi bi-bar-chart-fill text-indigo-600"></i> สถานะเช็คชื่อ
-                    </h3>
+        <!-- Charts Row -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10 no-print">
+            
+            <!-- Donut: Status Distribution -->
+            <div class="bg-white p-8 rounded-[40px] shadow-sm border border-slate-50">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex justify-between">การกระจายตามสถานะคำขอ <span class="text-[9px] text-slate-300">DONUT</span></h3>
+                <div class="relative flex items-center justify-center">
+                    <canvas id="userDonutChart" height="200"></canvas>
                 </div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">รวมทั้งเดือน <?= date('m/Y') ?></p>
-                <canvas id="attStatusChart" height="300"></canvas>
             </div>
 
-            <!-- Subject Progress -->
-            <div class="lg:col-span-2 bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
-                <div class="flex justify-between items-center mb-10">
-                    <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                        <i class="bi bi-activity text-rose-600"></i> กิจกรรมล่าสุด
-                    </h3>
-                    <button onclick="location.reload()" class="text-xs font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl transition-all hover:bg-blue-600 hover:text-white">
-                        <i class="bi bi-arrow-clockwise"></i> รีเฟรช
-                    </button>
+            <!-- Bar: Attendance Status -->
+            <div class="bg-white p-8 rounded-[40px] shadow-sm border border-slate-50">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex justify-between">สถานะการเช็คชื่อเดือนนี้ <span class="text-[9px] text-slate-300">BAR</span></h3>
+                <canvas id="attStatusChart" height="200"></canvas>
+            </div>
+
+            <!-- Line: Usage Trend -->
+            <div class="bg-white p-8 rounded-[40px] shadow-sm border border-slate-50">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex justify-between">แนวโน้มการใช้งาน (7 วัน) <span class="text-[9px] text-slate-300">LINE</span></h3>
+                <canvas id="usageChart" height="200"></canvas>
+            </div>
+
+            <!-- Sparklines: Summary -->
+            <div class="bg-white p-8 rounded-[40px] shadow-sm border border-slate-50">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex justify-between">สรุปสถิติเชิงลึก <span class="text-[9px] text-slate-300">INLINE</span></h3>
+                <div class="space-y-4 mt-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-slate-500">นักเรียนมา</span>
+                        <div class="flex-1 px-4"><div class="h-1 bg-emerald-100 rounded-full overflow-hidden"><div class="bg-emerald-500 h-full" style="width: 85%"></div></div></div>
+                        <span class="text-[11px] font-black text-slate-700">85%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-slate-500">สาย/ลา</span>
+                        <div class="flex-1 px-4"><div class="h-1 bg-amber-100 rounded-full overflow-hidden"><div class="bg-amber-500 h-full" style="width: 12%"></div></div></div>
+                        <span class="text-[11px] font-black text-slate-700">12%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-slate-500">ขาดเรียน</span>
+                        <div class="flex-1 px-4"><div class="h-1 bg-rose-100 rounded-full overflow-hidden"><div class="bg-rose-500 h-full" style="width: 3%"></div></div></div>
+                        <span class="text-[11px] font-black text-slate-700">3%</span>
+                    </div>
                 </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="text-left">
-                                <th class="pb-6 text-xs font-black text-slate-400 uppercase tracking-widest pl-4">เวลา</th>
-                                <th class="pb-6 text-xs font-black text-slate-400 uppercase tracking-widest">ผู้ใช้</th>
-                                <th class="pb-6 text-xs font-black text-slate-400 uppercase tracking-widest">กิจกรรม</th>
-                                <th class="pb-6 text-xs font-black text-slate-400 uppercase tracking-widest">รายละเอียด</th>
-                                <th class="pb-6 text-xs font-black text-slate-400 uppercase tracking-widest">สถานะ</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-50">
-                            <?php if (empty($recentActivity)): ?>
-                                <tr>
-                                    <td colspan="5" class="py-10 text-center text-slate-400 font-bold italic">ยังไม่มีการเช็คชื่อวันนี้</td>
-                                </tr>
-                            <?php else: ?>
-                                <?php
-                                $statusColors = ['มา'=>'emerald','ขาด'=>'rose','ลา'=>'amber','โดด'=>'violet','สาย'=>'orange'];
-                                foreach ($recentActivity as $act):
-                                    $sc = $statusColors[$act['status']] ?? 'slate';
-                                ?>
-                                <tr class="group hover:bg-slate-50/50 transition-all">
+            </div>
+
+        </section>            <tr class="group hover:bg-slate-50/50 transition-all">
                                     <td class="py-5 pl-4">
                                         <span class="text-xs font-bold text-slate-500"><?= date('d/m', strtotime($act['time'])) ?></span>
                                     </td>
