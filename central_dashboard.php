@@ -265,7 +265,7 @@ $statsMonthLabel = $statsMonthLabel ?? date('F Y');
                 <div class="flex gap-4 bg-white/5 p-2 rounded-3xl border border-white/10 backdrop-blur-md">
                     <form action="" method="GET" class="flex gap-2">
                         <select name="year" onchange="this.form.submit()" class="bg-slate-800 text-white text-xs font-bold px-4 py-3 rounded-2xl outline-none border border-white/5 focus:border-indigo-500">
-                            <?php for($y=2569; $y>=2565; $y--): ?>
+                            <?php for($y=2569; $y<=2573; $y++): ?>
                                 <option value="<?= $y ?>" <?= $currentYear == $y ? 'selected' : '' ?>>ปีการศึกษา <?= $y ?></option>
                             <?php endfor; ?>
                         </select>
