@@ -55,3 +55,8 @@
     </style>
 </head>
 <body class="h-full overflow-hidden flex flex-col sm:flex-row bg-slate-50 font-['Prompt']">
+    <script>
+        if (localStorage.getItem('sidebarState') === 'collapsed' && window.innerWidth > 1024) {
+            document.body.classList.add('sidebar-collapsed');
+        }
+    </script>

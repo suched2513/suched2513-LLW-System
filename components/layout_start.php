@@ -45,9 +45,9 @@ if (isset($pageTitle)) {
 <main class="flex-1 flex flex-col h-full overflow-hidden mesh-bg relative">
 
     <!-- Top Header -->
-    <header class="h-16 sm:h-20 flex-shrink-0 flex items-center justify-between px-4 sm:px-6 lg:px-10 glass-header no-print z-40 sticky top-0">
+    <header class="h-16 sm:h-20 flex-shrink-0 flex items-center justify-between px-4 sm:px-6 lg:px-10 glass-header no-print z-40 sticky top-0 sidebar-transition">
         <div class="flex items-center gap-3 sm:gap-4 lg:gap-6 min-w-0">
-            <button onclick="toggleSidebar()" class="lg:hidden p-2 sm:p-3 text-slate-500 hover:bg-slate-100/80 rounded-xl sm:rounded-2xl transition-all flex-shrink-0">
+            <button onclick="toggleSidebar()" class="p-2 sm:p-3 text-slate-500 hover:bg-slate-100/80 rounded-xl sm:rounded-2xl transition-all flex-shrink-0">
                 <i class="bi bi-list text-xl sm:text-2xl"></i>
             </button>
             <div class="flex flex-col min-w-0">
