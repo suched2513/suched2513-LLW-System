@@ -21,11 +21,44 @@ function llw_sub($str, $start, $len) {
 
 $pdo = getPdo();
 
+// --- Configuration & Filters ---
+$currentYear = (int)($_GET['year'] ?? 2567);
+$currentSemester = (int)($_GET['semester'] ?? 1);
+
+// --- Handle Web Migration (One-click Update) ---
+$updateMessage = '';
+if (isset($_POST['run_migration'])) {
+    try {
+        $migrationFile = __DIR__ . '/database/migrations/2026_04_23_000002_enhance_student_demographics.php';
+        if (file_exists($migrationFile)) {
+            $migration = require $migrationFile;
+            if (is_array($migration) && isset($migration['up'])) {
+                $migration['up']($pdo);
+                // Check if we need to record it
+                $stmt = $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, (SELECT COALESCE(MAX(batch),0)+1 FROM _migrations))");
+                $stmt->execute(['2026_04_23_000002_enhance_student_demographics']);
+                $updateMessage = '<div class="bg-emerald-500 text-white p-4 rounded-2xl mb-6 font-bold shadow-lg shadow-emerald-200">✓ อัปเดตโครงสร้างฐานข้อมูล (เพศ/ปีการศึกษา) สำเร็จแล้ว!</div>';
+            }
+        }
+    } catch (Exception $e) {
+        $updateMessage = '<div class="bg-rose-500 text-white p-4 rounded-2xl mb-6 font-bold">✗ เกิดข้อผิดพลาด: ' . htmlspecialchars($e->getMessage()) . '</div>';
+    }
+}
+
 // --- Fetch Real Stats ---
 $today = date('Y-m-d');
 try {
-    // 1. นักเรียนทั้งหมด
-    $countStudents = $pdo->query("SELECT COUNT(*) FROM att_students")->fetchColumn() ?: 0;
+    // Check if columns exist (for safe UI rendering)
+    $hasDemographics = false;
+    try {
+        $pdo->query("SELECT gender, academic_year FROM att_students LIMIT 1");
+        $hasDemographics = true;
+    } catch (Exception $e) { $hasDemographics = false; }
+
+    $whereClause = $hasDemographics ? " WHERE academic_year = $currentYear AND semester = $currentSemester" : "";
+
+    // 1. นักเรียนทั้งหมด (filtered)
+    $countStudents = $pdo->query("SELECT COUNT(*) FROM att_students" . $whereClause)->fetchColumn() ?: 0;
 
     // 2. ใบลาที่รอดำเนินการ
     $stmtLeave = $pdo->prepare("SELECT COUNT(*) FROM tl_requests WHERE status = 'pending'");
@@ -33,14 +66,14 @@ try {
     $countPendingLeave = (int)$stmtLeave->fetchColumn();
 
     // 3. ห้องเรียนที่เช็คชื่อแล้ววันนี้
-    $countTotalRooms = (int)$pdo->query("SELECT COUNT(DISTINCT classroom) FROM att_students")->fetchColumn();
+    $countTotalRooms = (int)$pdo->query("SELECT COUNT(DISTINCT classroom) FROM att_students" . $whereClause)->fetchColumn();
 
     $stmtChecked = $pdo->prepare("
         SELECT COUNT(DISTINCT s.classroom)
         FROM att_attendance a
         JOIN att_students s ON s.id = a.student_id
-        WHERE a.date = ?
-    ");
+        WHERE a.date = ?" . ($hasDemographics ? " AND s.academic_year = $currentYear AND s.semester = $currentSemester" : "")
+    );
     $stmtChecked->execute([$today]);
     $countCheckedRooms = (int)$stmtChecked->fetchColumn();
     $countRemainingRooms = $countTotalRooms - $countCheckedRooms;
@@ -58,6 +91,7 @@ try {
         FROM att_attendance a
         JOIN att_students s ON a.student_id = s.id
         JOIN att_subjects sub ON a.subject_id = sub.id
+        " . ($hasDemographics ? " WHERE s.academic_year = $currentYear AND s.semester = $currentSemester" : "") . "
         ORDER BY a.date DESC, a.id DESC LIMIT 5
     ");
     $stmt->execute();
@@ -88,10 +122,11 @@ try {
     $monthStart = date('Y-m-01');
     $monthEnd   = date('Y-m-t');
     $stmtAttStats = $pdo->prepare("
-        SELECT status, COUNT(*) as cnt
-        FROM att_attendance
-        WHERE date BETWEEN ? AND ?
-        GROUP BY status
+        SELECT a.status, COUNT(*) as cnt
+        FROM att_attendance a
+        " . ($hasDemographics ? " JOIN att_students s ON a.student_id = s.id" : "") . "
+        WHERE a.date BETWEEN ? AND ?" . ($hasDemographics ? " AND s.academic_year = $currentYear AND s.semester = $currentSemester" : "") . "
+        GROUP BY a.status
     ");
     $stmtAttStats->execute([$monthStart, $monthEnd]);
     $attStatusRaw = $stmtAttStats->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
@@ -104,11 +139,12 @@ try {
 
     // 7. แนวโน้มเช็คชื่อ 7 วันย้อนหลัง
     $stmtTrend = $pdo->prepare("
-        SELECT date, COUNT(*) cnt 
-        FROM att_attendance 
-        WHERE date >= DATE_SUB(?, INTERVAL 6 DAY)
-        GROUP BY date 
-        ORDER BY date
+        SELECT a.date, COUNT(*) cnt 
+        FROM att_attendance a
+        " . ($hasDemographics ? " JOIN att_students s ON a.student_id = s.id" : "") . "
+        WHERE a.date >= DATE_SUB(?, INTERVAL 6 DAY) " . ($hasDemographics ? " AND s.academic_year = $currentYear AND s.semester = $currentSemester" : "") . "
+        GROUP BY a.date 
+        ORDER BY a.date
     ");
     $stmtTrend->execute([$today]);
     $trendRaw = $stmtTrend->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
@@ -139,23 +175,29 @@ try {
         }
     }
 
-    // 9. จำนวนนักเรียนรายห้อง
+    // 9. จำนวนนักเรียนรายห้อง (Detailed with Gender)
     $enrollmentStats = [];
+    $sqlEnrollment = "
+        SELECT 
+            s.classroom, 
+            COUNT(*) as cnt,
+            SUM(CASE WHEN s.gender = 'ชาย' THEN 1 ELSE 0 END) as male_cnt,
+            SUM(CASE WHEN s.gender = 'หญิง' THEN 1 ELSE 0 END) as female_cnt,
+            GROUP_CONCAT(DISTINCT u.firstname SEPARATOR ' / ') as advisors
+        FROM att_students s
+        LEFT JOIN llw_class_advisors ca ON s.classroom = ca.classroom
+        LEFT JOIN llw_users u ON ca.user_id = u.user_id
+        " . ($hasDemographics ? " WHERE s.academic_year = $currentYear AND s.semester = $currentSemester" : "") . "
+        GROUP BY s.classroom 
+        ORDER BY s.classroom
+    ";
+    
     try {
-        $stmtEnrollment = $pdo->query("
-            SELECT 
-                s.classroom, 
-                COUNT(*) as cnt,
-                GROUP_CONCAT(u.firstname SEPARATOR ' / ') as advisors
-            FROM att_students s
-            LEFT JOIN llw_class_advisors a ON s.classroom = a.classroom
-            LEFT JOIN llw_users u ON a.user_id = u.user_id
-            GROUP BY s.classroom 
-            ORDER BY s.classroom
-        ");
+        $stmtEnrollment = $pdo->query($sqlEnrollment);
         $enrollmentStats = $stmtEnrollment->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } catch (Exception $e) {
-        $stmtFallback = $pdo->query("SELECT classroom, COUNT(*) as cnt, '' as advisors FROM att_students GROUP BY classroom ORDER BY classroom");
+        // Fallback for missing gender column
+        $stmtFallback = $pdo->query("SELECT classroom, COUNT(*) as cnt, 0 as male_cnt, 0 as female_cnt, '' as advisors FROM att_students GROUP BY classroom ORDER BY classroom");
         $enrollmentStats = $stmtFallback->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 } catch (Exception $e) {
@@ -164,7 +206,7 @@ try {
     $countRemainingRooms = 0; $roomProgress = 0; $countOnLeaveToday = 0;
     $recentActivity = []; $teacherStats = []; $attStatusData = [0,0,0,0,0];
     $trendLabels = []; $trendData = []; $userProportionLabels = []; $userProportionData = [];
-    $enrollmentStats = [];
+    $enrollmentStats = []; $hasDemographics = false;
 }
 
 $activeSystem = 'portal';
@@ -176,114 +218,221 @@ $statsMonthLabel = $statsMonthLabel ?? date('F Y');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | LLW</title>
+    <title>Executive Dashboard | LLW</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Prompt', sans-serif; background: #f8fafc; }
-        .exec-banner { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 2rem; padding: 2.5rem; color: white; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-        .kpi-card { background: white; border-radius: 1.5rem; padding: 1.5rem; border: 1px solid #f1f5f9; transition: all 0.3s; }
-        .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
-        .dark-panel { background: #1e293b; border-radius: 2rem; padding: 2rem; color: white; }
+        body { font-family: 'Prompt', sans-serif; background: #f0f4f8; }
+        .exec-banner { 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+            border-radius: 2.5rem; padding: 3rem; color: white; 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            position: relative; overflow: hidden;
+        }
+        .exec-banner::after {
+            content: ''; position: absolute; top: -50%; right: -20%; width: 60%; height: 200%;
+            background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%); transform: rotate(-15deg);
+        }
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px);
+            border-radius: 2rem; border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); transition: all 0.3s;
+        }
+        .glass-card:hover { transform: translateY(-5px); box-shadow: 0 20px 35px -5px rgba(0,0,0,0.1); }
+        .stat-badge { font-size: 9px; font-weight: 900; letter-spacing: 0.1em; padding: 4px 10px; border-radius: 10px; text-transform: uppercase; }
     </style>
 </head>
 <body class="flex min-h-screen">
     <?php if (file_exists('components/sidebar.php')) include 'components/sidebar.php'; ?>
     
-    <main class="flex-1 p-6 lg:p-10">
-        <section class="mb-8 exec-banner">
-            <h1 class="text-3xl font-bold">Executive Dashboard</h1>
-            <p class="text-slate-400 mt-1">อัปเดตข้อมูลล่าสุด: <?= date('d/m/Y H:i') ?></p>
-        </section>
+    <main class="flex-1 p-6 lg:p-12 transition-all duration-500">
+        
+        <?= $updateMessage ?>
 
-        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
-            <div class="kpi-card flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-blue-500 text-white flex items-center justify-center text-xl"><i class="bi bi-people"></i></div>
-                <div><p class="text-2xl font-bold text-slate-800"><?= number_format($countStudents) ?></p><p class="text-[10px] font-bold text-slate-400 uppercase">นักเรียน</p></div>
-            </div>
-            <div class="kpi-card flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xl"><i class="bi bi-hourglass"></i></div>
-                <div><p class="text-2xl font-bold text-slate-800"><?= $countPendingLeave ?></p><p class="text-[10px] font-bold text-slate-400 uppercase">ใบลารอ</p></div>
-            </div>
-            <div class="kpi-card flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-xl"><i class="bi bi-check-lg"></i></div>
-                <div><p class="text-2xl font-bold text-slate-800"><?= $countCheckedRooms ?></p><p class="text-[10px] font-bold text-slate-400 uppercase">เช็คแล้ว</p></div>
-            </div>
-            <div class="kpi-card flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-rose-500 text-white flex items-center justify-center text-xl"><i class="bi bi-x-lg"></i></div>
-                <div><p class="text-2xl font-bold text-slate-800"><?= $countRemainingRooms ?></p><p class="text-[10px] font-bold text-slate-400 uppercase">ค้างเช็ค</p></div>
-            </div>
-            <div class="kpi-card flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-indigo-500 text-white flex items-center justify-center text-xl"><i class="bi bi-person-slash"></i></div>
-                <div><p class="text-2xl font-bold text-slate-800"><?= $countOnLeaveToday ?></p><p class="text-[10px] font-bold text-slate-400 uppercase">บุคลากรลา</p></div>
-            </div>
-            <div class="kpi-card flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-slate-500 text-white flex items-center justify-center text-xl"><i class="bi bi-activity"></i></div>
-                <div><p class="text-2xl font-bold text-slate-800"><?= count($recentActivity) ?></p><p class="text-[10px] font-bold text-slate-400 uppercase">กิจกรรม</p></div>
-            </div>
-        </section>
-
-        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div class="dark-panel flex items-center gap-6">
-                <div class="text-6xl font-bold text-emerald-400"><?= $roomProgress ?>%</div>
-                <div><p class="text-xs font-bold text-slate-400 uppercase">ความก้าวหน้าเช็คชื่อ</p><p class="text-sm text-slate-500 mt-1">วันนี้จากทั้งหมด <?= $countTotalRooms ?> ห้อง</p></div>
-            </div>
-            <div class="dark-panel flex items-center gap-6">
-                <div class="text-6xl font-bold text-amber-400"><?= $countPendingLeave ?></div>
-                <div><p class="text-xs font-bold text-slate-400 uppercase">ใบลาที่ต้องอนุมัติ</p><p class="text-sm text-slate-500 mt-1">รายการสะสมรอการดำเนินการ</p></div>
+        <section class="mb-10 exec-banner">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                <div>
+                    <h1 class="text-4xl font-black tracking-tight">Executive Dashboard</h1>
+                    <p class="text-slate-400 mt-2 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        สรุปสถิติจริง: <?= date('d F Y H:i') ?> น.
+                    </p>
+                </div>
+                
+                <!-- Filters -->
+                <div class="flex gap-4 bg-white/5 p-2 rounded-3xl border border-white/10 backdrop-blur-md">
+                    <form action="" method="GET" class="flex gap-2">
+                        <select name="year" onchange="this.form.submit()" class="bg-slate-800 text-white text-xs font-bold px-4 py-3 rounded-2xl outline-none border border-white/5 focus:border-indigo-500">
+                            <?php for($y=2567; $y>=2565; $y--): ?>
+                                <option value="<?= $y ?>" <?= $currentYear == $y ? 'selected' : '' ?>>ปีการศึกษา <?= $y ?></option>
+                            <?php endfor; ?>
+                        </select>
+                        <select name="semester" onchange="this.form.submit()" class="bg-slate-800 text-white text-xs font-bold px-4 py-3 rounded-2xl outline-none border border-white/5 focus:border-indigo-500">
+                            <option value="1" <?= $currentSemester == 1 ? 'selected' : '' ?>>ภาคเรียนที่ 1</option>
+                            <option value="2" <?= $currentSemester == 2 ? 'selected' : '' ?>>ภาคเรียนที่ 2</option>
+                        </select>
+                    </form>
+                    <?php if(!$hasDemographics): ?>
+                    <form action="" method="POST">
+                        <button name="run_migration" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black px-6 py-3 rounded-2xl transition-all shadow-lg shadow-indigo-500/20">
+                            <i class="bi bi-rocket-takeoff mr-2"></i> อัปเดตระบบ v2
+                        </button>
+                    </form>
+                    <?php endif; ?>
+                </div>
             </div>
         </section>
 
-        <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-3xl border border-slate-100">
-                <h3 class="text-xs font-bold text-slate-400 uppercase mb-4">สัดส่วนบทบาท</h3>
-                <canvas id="roleChart" height="200"></canvas>
+        <!-- KPI Grid -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6 mb-10">
+            <div class="glass-card p-6">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-indigo-200"><i class="bi bi-people-fill"></i></div>
+                <p class="text-3xl font-black text-slate-800"><?= number_format($countStudents) ?></p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">นักเรียนทั้งหมด</p>
             </div>
-            <div class="bg-white p-6 rounded-3xl border border-slate-100">
-                <h3 class="text-xs font-bold text-slate-400 uppercase mb-4">สถานะเช็คชื่อ</h3>
-                <canvas id="attChart" height="200"></canvas>
+            <div class="glass-card p-6 border-l-4 border-l-amber-500">
+                <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-amber-200"><i class="bi bi-envelope-paper-fill"></i></div>
+                <p class="text-3xl font-black text-slate-800"><?= $countPendingLeave ?></p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">ใบลาที่ค้างอยู่</p>
             </div>
-            <div class="bg-white p-6 rounded-3xl border border-slate-100">
-                <h3 class="text-xs font-bold text-slate-400 uppercase mb-4">แนวโน้ม 7 วัน</h3>
-                <canvas id="trendChart" height="200"></canvas>
+            <div class="glass-card p-6">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-emerald-200"><i class="bi bi-calendar-check-fill"></i></div>
+                <p class="text-3xl font-black text-slate-800"><?= $countCheckedRooms ?></p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">ห้องที่เช็คแล้ว</p>
+            </div>
+            <div class="glass-card p-6">
+                <div class="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-rose-200"><i class="bi bi-calendar-x-fill"></i></div>
+                <p class="text-3xl font-black text-slate-800"><?= $countRemainingRooms ?></p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">ห้องที่ยังไม่เช็ค</p>
+            </div>
+            <div class="glass-card p-6">
+                <div class="w-12 h-12 rounded-2xl bg-cyan-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-cyan-200"><i class="bi bi-person-workspace"></i></div>
+                <p class="text-3xl font-black text-slate-800"><?= $countOnLeaveToday ?></p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">บุคลากรลาวันนี้</p>
+            </div>
+            <div class="glass-card p-6">
+                <div class="w-12 h-12 rounded-2xl bg-slate-800 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-slate-200"><i class="bi bi-lightning-fill"></i></div>
+                <p class="text-3xl font-black text-slate-800"><?= count($recentActivity) ?></p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">กิจกรรมล่าสุด</p>
             </div>
         </section>
 
-        <section class="bg-white rounded-3xl border border-slate-100 p-8 mb-8">
-            <h3 class="text-lg font-bold text-slate-800 mb-6">จำนวนนักเรียนแยกรายห้อง</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <!-- Charts Section -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+            <div class="glass-card p-8">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex justify-between items-center">
+                    สถานะการเช็คชื่อ
+                    <span class="stat-badge bg-blue-50 text-blue-600">Monthly</span>
+                </h3>
+                <canvas id="attChart" height="220"></canvas>
+            </div>
+            <div class="glass-card p-8">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex justify-between items-center">
+                    แนวโน้ม 7 วันล่าสุด
+                    <span class="stat-badge bg-emerald-50 text-emerald-600">Trend</span>
+                </h3>
+                <canvas id="trendChart" height="220"></canvas>
+            </div>
+            <div class="glass-card p-8">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex justify-between items-center">
+                    สัดส่วนผู้ใช้งาน
+                    <span class="stat-badge bg-indigo-50 text-indigo-600">Roles</span>
+                </h3>
+                <canvas id="roleChart" height="220"></canvas>
+            </div>
+        </section>
+
+        <!-- Detailed Enrollment Grid -->
+        <section class="mb-10">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-800">จำนวนนักเรียนแยกรายห้อง</h2>
+                    <p class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-widest">Enrollment Breakdown by Gender</p>
+                </div>
+                <div class="flex gap-2">
+                    <span class="stat-badge bg-blue-500 text-white">ชาย</span>
+                    <span class="stat-badge bg-pink-500 text-white">หญิง</span>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
                 <?php foreach($enrollmentStats as $room): ?>
-                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-tighter mb-1"><?= htmlspecialchars($room['classroom']) ?></p>
-                    <p class="text-3xl font-bold text-slate-800"><?= $room['cnt'] ?></p>
-                    <p class="text-[9px] text-slate-500 truncate mt-1"><?= $room['advisors'] ?: '-' ?></p>
+                <div class="glass-card p-6 group">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center font-black text-xs text-slate-500 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                            <?= explode('/', $room['classroom'])[0] ?>
+                        </div>
+                        <i class="bi bi-chevron-right text-slate-200 group-hover:text-indigo-600 transition-all"></i>
+                    </div>
+                    <h4 class="text-xl font-black text-slate-800 tracking-tighter"><?= htmlspecialchars($room['classroom']) ?></h4>
+                    <p class="text-[10px] font-bold text-slate-400 mt-1 truncate" title="<?= htmlspecialchars($room['advisors']) ?>">
+                        <?= $room['advisors'] ? 'ครู' . $room['advisors'] : 'ยังไม่ระบุครูที่ปรึกษา' ?>
+                    </p>
+                    
+                    <div class="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
+                        <div>
+                            <p class="text-[8px] font-black text-slate-300 uppercase tracking-widest">Total</p>
+                            <p class="text-3xl font-black text-slate-800 leading-none"><?= $room['cnt'] ?></p>
+                        </div>
+                        <div class="text-right flex flex-col gap-1">
+                            <span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-black">♂ <?= $room['male_cnt'] ?></span>
+                            <span class="px-2 py-1 rounded-lg bg-pink-50 text-pink-600 text-[10px] font-black">♀ <?= $room['female_cnt'] ?></span>
+                        </div>
+                    </div>
                 </div>
                 <?php endforeach; ?>
             </div>
         </section>
 
-        <section class="bg-white rounded-3xl border border-slate-100 overflow-hidden">
-            <div class="p-6 border-b border-slate-50 flex justify-between items-center">
-                <h3 class="font-bold text-slate-800">สถิติการใช้งานแยกครู</h3>
-                <form method="GET" class="flex gap-2">
-                    <input type="month" name="stats_month" value="<?= $statsMonth ?>" onchange="this.form.submit()" class="text-xs p-2 border rounded-lg">
+        <!-- Teacher Performance Section -->
+        <section class="glass-card overflow-hidden">
+            <div class="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <i class="bi bi-graph-up-arrow text-indigo-600"></i>
+                        สถิติการใช้งานแยกตามครูผู้สอน
+                    </h3>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Monthly Usage Performance Index</p>
+                </div>
+                <form method="GET" class="flex gap-3">
+                    <input type="hidden" name="year" value="<?= $currentYear ?>">
+                    <input type="hidden" name="semester" value="<?= $currentSemester ?>">
+                    <input type="month" name="stats_month" value="<?= $statsMonth ?>" onchange="this.form.submit()" 
+                           class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
                 </form>
             </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-50 text-slate-400 font-bold uppercase">
-                        <tr><th class="px-6 py-4">ครู</th><th class="px-6 py-4">วิชา</th><th class="px-6 py-4">คาบรวม</th><th class="px-6 py-4">เดือนนี้</th><th class="px-6 py-4">ใช้ล่าสุด</th></tr>
+                <table class="w-full text-xs text-left">
+                    <thead class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                        <tr>
+                            <th class="px-8 py-5">ชื่อ-นามสกุล ครูผู้สอน</th>
+                            <th class="px-6 py-5 text-center">วิชา</th>
+                            <th class="px-6 py-5 text-center">คาบรวม</th>
+                            <th class="px-6 py-5 text-center">วันที่เข้าใช้</th>
+                            <th class="px-6 py-5 text-center">เดือนนี้</th>
+                            <th class="px-6 py-5 text-center">ใช้ล่าสุด</th>
+                        </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
                         <?php foreach($teacherStats as $t): ?>
-                        <tr>
-                            <td class="px-6 py-4 font-bold"><?= htmlspecialchars($t['name']) ?></td>
-                            <td class="px-6 py-4"><?= $t['subject_count'] ?></td>
-                            <td class="px-6 py-4"><?= $t['total_records'] ?></td>
-                            <td class="px-6 py-4 text-emerald-600 font-bold"><?= $t['this_month'] ?></td>
-                            <td class="px-6 py-4 text-slate-400"><?= $t['last_active'] ?: '-' ?></td>
+                        <tr class="hover:bg-slate-50/30 transition-all">
+                            <td class="px-8 py-5">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs">
+                                        <?= llw_sub($t['name'], 0, 1) ?>
+                                    </div>
+                                    <span class="font-bold text-slate-700"><?= htmlspecialchars($t['name']) ?></span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5 text-center font-black text-slate-500"><?= $t['subject_count'] ?></td>
+                            <td class="px-6 py-5 text-center font-black text-slate-800"><?= number_format($t['total_records']) ?></td>
+                            <td class="px-6 py-5 text-center font-black text-blue-600"><?= $t['active_days'] ?> วัน</td>
+                            <td class="px-6 py-5 text-center">
+                                <span class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-black"><?= $t['this_month'] ?></span>
+                            </td>
+                            <td class="px-6 py-5 text-center text-slate-400 font-bold"><?= $t['last_active'] ?: '-' ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -293,14 +442,67 @@ $statsMonthLabel = $statsMonthLabel ?? date('F Y');
     </main>
 
     <script>
-        const ctxRole = document.getElementById('roleChart');
-        new Chart(ctxRole, { type: 'doughnut', data: { labels: <?= json_encode($userProportionLabels) ?>, datasets: [{ data: <?= json_encode($userProportionData) ?>, backgroundColor: ['#6366f1','#ec4899','#3b82f6','#10b981','#f59e0b'] }] }, options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } } } });
-        
+        const chartOptions = {
+            plugins: { legend: { display: false } },
+            scales: { 
+                y: { beginAtZero: true, grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } },
+                x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } }
+            },
+            responsive: true,
+            maintainAspectRatio: false
+        };
+
         const ctxAtt = document.getElementById('attChart');
-        new Chart(ctxAtt, { type: 'bar', data: { labels: ['มา','ขาด','ลา','โดด','สาย'], datasets: [{ data: <?= json_encode($attStatusData) ?>, backgroundColor: ['#10b981','#f43f5e','#f59e0b','#8b5cf6','#f97316'], borderRadius: 8 }] }, options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, display: false }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } } });
+        new Chart(ctxAtt, { 
+            type: 'bar', 
+            data: { 
+                labels: ['มา','ขาด','ลา','โดด','สาย'], 
+                datasets: [{ 
+                    data: <?= json_encode($attStatusData) ?>, 
+                    backgroundColor: ['#10b981','#f43f5e','#f59e0b','#8b5cf6','#f97316'], 
+                    borderRadius: 12 
+                }] 
+            }, 
+            options: chartOptions 
+        });
 
         const ctxTrend = document.getElementById('trendChart');
-        new Chart(ctxTrend, { type: 'line', data: { labels: <?= json_encode($trendLabels) ?>, datasets: [{ data: <?= json_encode($trendData) ?>, borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.05)' }] }, options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, display: false }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } } });
+        new Chart(ctxTrend, { 
+            type: 'line', 
+            data: { 
+                labels: <?= json_encode($trendLabels) ?>, 
+                datasets: [{ 
+                    data: <?= json_encode($trendData) ?>, 
+                    borderColor: '#6366f1', 
+                    tension: 0.4, 
+                    fill: true, 
+                    backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                    pointRadius: 4,
+                    pointBackgroundColor: '#fff',
+                    pointBorderWidth: 2
+                }] 
+            }, 
+            options: chartOptions 
+        });
+
+        const ctxRole = document.getElementById('roleChart');
+        new Chart(ctxRole, { 
+            type: 'doughnut', 
+            data: { 
+                labels: <?= json_encode($userProportionLabels) ?>, 
+                datasets: [{ 
+                    data: <?= json_encode($userProportionData) ?>, 
+                    backgroundColor: ['#6366f1','#ec4899','#3b82f6','#10b981','#f59e0b'],
+                    borderWidth: 0,
+                    hoverOffset: 15
+                }] 
+            }, 
+            options: { 
+                cutout: '75%',
+                plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 9, weight: 'bold' } } } },
+                maintainAspectRatio: false
+            } 
+        });
     </script>
 </body>
 </html>
