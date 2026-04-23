@@ -180,9 +180,9 @@ try {
     $sqlEnrollment = "
         SELECT 
             s.classroom, 
-            COUNT(*) as cnt,
-            SUM(CASE WHEN s.gender = 'ชาย' THEN 1 ELSE 0 END) as male_cnt,
-            SUM(CASE WHEN s.gender = 'หญิง' THEN 1 ELSE 0 END) as female_cnt,
+            COUNT(DISTINCT s.id) as cnt,
+            COUNT(DISTINCT CASE WHEN s.gender = 'ชาย' THEN s.id END) as male_cnt,
+            COUNT(DISTINCT CASE WHEN s.gender = 'หญิง' THEN s.id END) as female_cnt,
             GROUP_CONCAT(DISTINCT u.firstname SEPARATOR ' / ') as advisors
         FROM att_students s
         LEFT JOIN llw_class_advisors ca ON s.classroom = ca.classroom
