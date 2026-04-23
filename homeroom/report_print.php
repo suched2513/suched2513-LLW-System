@@ -16,10 +16,19 @@ try {
     $pdo = getPdo();
 
     // 1. Calculate the 5 days (Mon-Fri)
+    // Ensure $monday is actually a Monday
+    $timestamp = strtotime($monday);
+    $dayOfWeek = date('N', $timestamp); // 1 (Mon) to 7 (Sun)
+    if ($dayOfWeek != 1) {
+        $timestamp = strtotime("last Monday", $timestamp + 86400); // +86400 to handle Sunday cases
+    }
+    $mondayDate = date('Y-m-d', $timestamp);
+
     $dates = [];
     for ($i = 0; $i < 5; $i++) {
-        $dates[] = date('Y-m-d', strtotime("$monday +$i day"));
+        $dates[] = date('Y-m-d', strtotime("$mondayDate +$i day"));
     }
+    $monday = $dates[0];
     $friday = $dates[4];
 
     // 2. Fetch Data
@@ -43,10 +52,17 @@ try {
     $stmt->execute([$classroom, $monday, $friday]);
     $attRaw = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $statusMap = ['ม' => 'มา', 'ข' => 'ขาด', 'ล' => 'ลา', 'ส' => 'สาย', 'ด' => 'ขาด'];
+    // Map ALL possible statuses to the 4 standard columns
+    $statusMap = [
+        'ม' => 'มา', 'มา' => 'มา',
+        'ข' => 'ขาด', 'ขาด' => 'ขาด', 'ด' => 'ขาด', 'โดด' => 'ขาด',
+        'ล' => 'ลา', 'ลา' => 'ลา',
+        'ส' => 'สาย', 'สาย' => 'สาย'
+    ];
+    
     $stats = [];
     foreach ($attRaw as $a) {
-        $longStatus = $statusMap[$a['status']] ?? $a['status'];
+        $longStatus = $statusMap[$a['status']] ?? 'มา'; // Default to 'มา' if unknown to avoid 0s
         $stats[$a['date']][$longStatus] = ($stats[$a['date']][$longStatus] ?? 0) + $a['count'];
     }
 

@@ -204,14 +204,18 @@ async function loadWorkdesk() {
     const classroom = document.getElementById('sel-class').value;
     const date = document.getElementById('sel-date').value;
     
-    // Calculate Monday of the week for the summary
+    // Calculate Monday of the week for the summary (Local Date Logic)
     const d = new Date(date);
-    const day = d.getDay() || 7;
-    if (day !== 1) d.setHours(-24 * (day - 1));
-    const startOfWeek = d.toISOString().split('T')[0];
-    const endOfWeek = new Date(d);
-    endOfWeek.setDate(endOfWeek.getDate() + 4);
-    const endOfWeekStr = endOfWeek.toISOString().split('T')[0];
+    const day = d.getDay(); // 0: Sun, 1: Mon, ..., 6: Sat
+    
+    // Shift to Monday of the same week
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+    const monday = new Date(d.setDate(diff));
+    
+    const startOfWeek = formatDate(monday);
+    const friday = new Date(monday);
+    friday.setDate(friday.getDate() + 4);
+    const endOfWeekStr = formatDate(friday);
 
     // Show loading
     const listContainer = document.getElementById('student-list');
@@ -398,15 +402,21 @@ function printWeeklyReport(weekNum) {
     const classroom = document.getElementById('sel-class').value;
     const date = document.getElementById('sel-date').value;
     
-    // Find the Monday of the current week selected in the date picker
-    // (This logic assumes weekNum is relative to the current selection for simplicity, 
-    // or you can adjust to anchor to semester start)
+    // Find the Monday of the current week selected in the date picker (Local Logic)
     const d = new Date(date);
-    const day = d.getDay() || 7;
-    if (day !== 1) d.setHours(-24 * (day - 1));
-    const monday = d.toISOString().split('T')[0];
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const mondayObj = new Date(d.setDate(diff));
+    const monday = formatDate(mondayObj);
     
     window.open(`/homeroom/report_print.php?classroom=${encodeURIComponent(classroom)}&monday=${monday}`, '_blank');
+}
+
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function esc(str) {

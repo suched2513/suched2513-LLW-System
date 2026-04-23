@@ -135,6 +135,20 @@ try {
             $userProportionData[] = (int)$userProportionRaw[$key];
         }
     }
+
+    // 9. จำนวนนักเรียนรายห้อง (Hybrid Data: Counts + Advisors)
+    $stmtEnrollment = $pdo->query("
+        SELECT 
+            s.classroom, 
+            COUNT(*) as cnt,
+            GROUP_CONCAT(u.firstname SEPARATOR ' / ') as advisors
+        FROM att_students s
+        LEFT JOIN llw_class_advisors a ON s.classroom = a.classroom
+        LEFT JOIN llw_users u ON a.user_id = u.user_id
+        GROUP BY s.classroom 
+        ORDER BY s.classroom
+    ");
+    $enrollmentStats = $stmtEnrollment->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     error_log('[Dashboard] ' . $e->getMessage());
     $countStudents = 0; $countPendingLeave = 0;
@@ -426,7 +440,7 @@ try {
                     <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
                         <i class="bi bi-activity text-rose-600"></i> กิจกรรมล่าสุด
                     </h3>
-                    <button class="text-xs font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl transition-all hover:bg-blue-600 hover:text-white">
+                    <button onclick="location.reload()" class="text-xs font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl transition-all hover:bg-blue-600 hover:text-white">
                         <i class="bi bi-arrow-clockwise"></i> รีเฟรช
                     </button>
                 </div>
@@ -484,6 +498,130 @@ try {
                 </div>
             </div>
         </section>
+
+        <!-- Classroom Enrollment Section (Hybrid Widget) -->
+        <section class="mt-12 no-print">
+            <div class="flex items-center justify-between mb-6">
+                <div class="section-label mb-0"><div class="bar" style="background:#10b981"></div><h2>ตรวจสอบจำนวนนักเรียนรายห้อง (Hybrid View)</h2><div class="ln"></div></div>
+                <div class="flex gap-2">
+                    <button onclick="toggleEnrollmentView('grid')" id="btn-view-grid" class="view-btn active w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center transition-all shadow-sm">
+                        <i class="bi bi-grid-fill"></i>
+                    </button>
+                    <button onclick="toggleEnrollmentView('list')" id="btn-view-list" class="view-btn w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center transition-all shadow-sm">
+                        <i class="bi bi-list-task text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white/50 backdrop-blur-xl rounded-[40px] border border-white/50 p-8 shadow-xl shadow-slate-200/50">
+                <!-- Search Bar -->
+                <div class="relative mb-8 max-w-md">
+                    <i class="bi bi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="roomSearch" onkeyup="filterEnrollment()" placeholder="ค้นหาห้องเรียน หรือชื่อครู..." 
+                           class="w-full bg-white/80 border border-slate-200 rounded-2xl pl-12 pr-6 py-4 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none transition-all shadow-sm">
+                </div>
+
+                <!-- Grid View -->
+                <div id="enrollment-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 transition-all duration-500">
+                    <?php foreach($enrollmentStats as $room): ?>
+                    <div class="enrollment-card bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group" 
+                         data-room="<?= htmlspecialchars(mb_strtolower($room['classroom'])) ?>"
+                         data-advisors="<?= htmlspecialchars(mb_strtolower($room['advisors'])) ?>">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center font-black text-xs">
+                                <?= explode('/', $room['classroom'])[0] ?>
+                            </div>
+                            <span class="text-[9px] font-black bg-slate-50 text-slate-400 px-2 py-1 rounded-lg uppercase tracking-tighter italic">Room Check</span>
+                        </div>
+                        <p class="text-xl font-black text-slate-800 tracking-tight"><?= htmlspecialchars($room['classroom']) ?></p>
+                        <p class="text-[10px] font-bold text-slate-400 mt-1 truncate" title="<?= htmlspecialchars($room['advisors']) ?>">
+                            <?= $room['advisors'] ? 'ครู' . $room['advisors'] : 'ยังไม่ระบุครู' ?>
+                        </p>
+                        <div class="mt-4 pt-4 border-t border-slate-50 flex items-end justify-between">
+                            <span class="text-3xl font-black text-emerald-600 leading-none"><?= $room['cnt'] ?></span>
+                            <span class="text-[10px] font-black text-slate-300 uppercase mb-1">Students</span>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- List View (Hidden by default) -->
+                <div id="enrollment-list" class="hidden overflow-x-auto transition-all duration-500">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="text-left">
+                                <th class="pb-6 text-xs font-black text-slate-400 uppercase tracking-widest pl-4">ห้องเรียน</th>
+                                <th class="pb-6 text-xs font-black text-slate-400 uppercase tracking-widest">ครูที่ปรึกษา</th>
+                                <th class="pb-6 text-xs font-black text-slate-400 uppercase tracking-widest text-center">จำนวนนักเรียน</th>
+                                <th class="pb-6 text-xs font-black text-slate-400 uppercase tracking-widest text-right pr-4">สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            <?php foreach($enrollmentStats as $room): ?>
+                            <tr class="enrollment-row group hover:bg-slate-50/50 transition-all" 
+                                data-room="<?= htmlspecialchars(mb_strtolower($room['classroom'])) ?>"
+                                data-advisors="<?= htmlspecialchars(mb_strtolower($room['advisors'])) ?>">
+                                <td class="py-4 pl-4 font-black text-slate-700"><?= htmlspecialchars($room['classroom']) ?></td>
+                                <td class="py-4 text-xs font-bold text-slate-500"><?= $room['advisors'] ? 'ครู' . htmlspecialchars($room['advisors']) : '-' ?></td>
+                                <td class="py-4 text-center font-black text-lg text-emerald-600"><?= $room['cnt'] ?></td>
+                                <td class="py-4 text-right pr-4">
+                                    <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black border border-emerald-100">
+                                        <i class="bi bi-check-circle-fill mr-1"></i> ตรวจสอบแล้ว
+                                    </span>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <style>
+            .view-btn.active {
+                background: #10b981;
+                color: white;
+                border-color: #10b981;
+                box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
+            }
+        </style>
+
+        <script>
+            function toggleEnrollmentView(view) {
+                const grid = document.getElementById('enrollment-grid');
+                const list = document.getElementById('enrollment-list');
+                const btnGrid = document.getElementById('btn-view-grid');
+                const btnList = document.getElementById('btn-view-list');
+
+                if (view === 'grid') {
+                    grid.classList.remove('hidden');
+                    list.classList.add('hidden');
+                    btnGrid.classList.add('active');
+                    btnList.classList.remove('active');
+                } else {
+                    grid.classList.add('hidden');
+                    list.classList.remove('hidden');
+                    btnGrid.classList.remove('active');
+                    btnList.classList.add('active');
+                }
+            }
+
+            function filterEnrollment() {
+                const q = document.getElementById('roomSearch').value.toLowerCase();
+                const cards = document.querySelectorAll('.enrollment-card');
+                const rows = document.querySelectorAll('.enrollment-row');
+
+                cards.forEach(card => {
+                    const match = card.dataset.room.includes(q) || card.dataset.advisors.includes(q);
+                    card.style.display = match ? '' : 'none';
+                });
+
+                rows.forEach(row => {
+                    const match = row.dataset.room.includes(q) || row.dataset.advisors.includes(q);
+                    row.style.display = match ? '' : 'none';
+                });
+            }
+        </script>
 
         <!-- Teacher Usage Stats Section -->
         <section id="print-section" class="mt-8">
