@@ -1,6 +1,6 @@
 <?php
 /**
- * teacher_info.php — Teacher Information System
+ * teacher_info.php — Teacher Information System (Full Personnel)
  */
 session_start();
 require_once 'config/database.php';
@@ -10,19 +10,19 @@ if (!isset($_SESSION['llw_role'])) { header('Location: login.php'); exit(); }
 
 $pdo = getPdo();
 
-// --- Fetch Teacher Stats ---
-$totalTeachers = $pdo->query("SELECT COUNT(*) FROM llw_users WHERE role IN ('att_teacher', 'super_admin', 'wfh_admin')")->fetchColumn() ?: 0;
-$adminCount = $pdo->query("SELECT COUNT(*) FROM llw_users WHERE role IN ('super_admin', 'wfh_admin')")->fetchColumn() ?: 0;
-$teacherCount = $pdo->query("SELECT COUNT(*) FROM llw_users WHERE role = 'att_teacher'")->fetchColumn() ?: 0;
+// --- Fetch Stats (All Roles) ---
+$totalUsers = $pdo->query("SELECT COUNT(*) FROM llw_users WHERE status = 'active'")->fetchColumn() ?: 0;
+$adminCount = $pdo->query("SELECT COUNT(*) FROM llw_users WHERE role IN ('super_admin', 'wfh_admin') AND status = 'active'")->fetchColumn() ?: 0;
+$staffCount = $pdo->query("SELECT COUNT(*) FROM llw_users WHERE role NOT IN ('super_admin', 'wfh_admin') AND status = 'active'")->fetchColumn() ?: 0;
 
-// --- Fetch Detailed Teacher List ---
+// --- Fetch Detailed Personnel List ---
 $sql = "
     SELECT u.user_id, u.firstname, u.lastname, u.role, u.status,
            (SELECT COUNT(*) FROM att_subjects WHERE teacher_id = t.id) as subject_count,
            t.id as att_teacher_id
     FROM llw_users u
     LEFT JOIN att_teachers t ON u.user_id = t.llw_user_id
-    WHERE u.role IN ('super_admin', 'wfh_admin', 'att_teacher')
+    WHERE u.status = 'active'
     ORDER BY u.role, u.firstname
 ";
 $teachers = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
@@ -30,7 +30,9 @@ $teachers = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 $rolesThai = [
     'super_admin' => 'ผู้ดูแลระบบ',
     'wfh_admin'   => 'ผู้บริหาร',
-    'att_teacher' => 'ครูผู้สอน'
+    'att_teacher' => 'ครูผู้สอน',
+    'wfh_staff'   => 'บุคลากรทั่วไป',
+    'cb_admin'    => 'เจ้าหน้าที่ Chromebook'
 ];
 
 $pageTitle = 'สารสนเทศครูและบุคลากร';
@@ -57,13 +59,8 @@ $pageTitle = 'สารสนเทศครูและบุคลากร';
         <!-- Header -->
         <header class="glass-header px-8 py-6 flex justify-between items-center sticky top-0 z-10">
             <div>
-                <h1 class="text-2xl font-black text-slate-800">👨‍🏫 สารสนเทศครูและบุคลากร</h1>
-                <p class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-widest">Teacher & Human Resource Information System</p>
-            </div>
-            <div class="flex gap-2">
-                <button class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black text-xs shadow-lg shadow-indigo-200">
-                    <i class="bi bi-person-plus-fill mr-2"></i> เพิ่มครูใหม่
-                </button>
+                <h1 class="text-2xl font-black text-slate-800">👨‍🏫 สารสนเทศบุคลากรทั้งหมด</h1>
+                <p class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-widest">School Personnel Information System</p>
             </div>
         </header>
 
@@ -75,8 +72,8 @@ $pageTitle = 'สารสนเทศครูและบุคลากร';
                 <div class="stat-card flex items-center gap-6">
                     <div class="w-16 h-16 rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-3xl shadow-xl shadow-indigo-200"><i class="bi bi-people-fill"></i></div>
                     <div>
-                        <p class="text-4xl font-black text-slate-800 leading-none"><?= number_format($totalTeachers) ?></p>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">บุคลากรทั้งหมด</p>
+                        <p class="text-4xl font-black text-slate-800 leading-none"><?= number_format($totalUsers) ?></p>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">บุคลากรรวม</p>
                     </div>
                 </div>
                 <div class="stat-card flex items-center gap-6 border-l-8 border-l-blue-600">
@@ -87,20 +84,20 @@ $pageTitle = 'สารสนเทศครูและบุคลากร';
                     </div>
                 </div>
                 <div class="stat-card flex items-center gap-6 border-l-8 border-l-emerald-500">
-                    <div class="w-16 h-16 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-3xl shadow-xl shadow-emerald-200"><i class="bi bi-person-video3"></i></div>
+                    <div class="w-16 h-16 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-3xl shadow-xl shadow-emerald-200"><i class="bi bi-person-vcard"></i></div>
                     <div>
-                        <p class="text-4xl font-black text-slate-800 leading-none"><?= number_format($teacherCount) ?></p>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">ครูผู้สอน</p>
+                        <p class="text-4xl font-black text-slate-800 leading-none"><?= number_format($staffCount) ?></p>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">ครูและเจ้าหน้าที่</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Teacher Table -->
+            <!-- Table -->
             <div class="bg-white rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
-                <div class="p-8 border-b border-slate-50 flex justify-between items-center">
+                <div class="p-8 border-b border-slate-50">
                     <h2 class="font-black text-slate-800 flex items-center gap-2">
                         <i class="bi bi-person-badge text-indigo-600"></i>
-                        รายชื่อบุคลากรจำแนกตามตำแหน่ง
+                        รายชื่อบุคลากรจำแนกตามตำแหน่ง (Active)
                     </h2>
                 </div>
                 <div class="overflow-x-auto">
@@ -137,21 +134,13 @@ $pageTitle = 'สารสนเทศครูและบุคลากร';
                                     <span class="text-sm font-black text-slate-700"><?= $t['subject_count'] ?></span>
                                     <span class="text-[10px] text-slate-400 font-bold ml-1">วิชา</span>
                                 </td>
-                                <td class="px-6 py-5 text-center">
-                                    <div class="flex items-center justify-center gap-1.5 text-emerald-500">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                        <span class="text-[10px] font-black uppercase tracking-widest">Active</span>
-                                    </div>
+                                <td class="px-6 py-5 text-center text-emerald-500">
+                                    <span class="text-[10px] font-black uppercase tracking-widest">Active</span>
                                 </td>
                                 <td class="px-8 py-5 text-center">
-                                    <div class="flex justify-center gap-2">
-                                        <button class="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all">
-                                            <i class="bi bi-eye-fill text-xs"></i>
-                                        </button>
-                                        <button class="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 hover:bg-amber-500 hover:text-white transition-all">
-                                            <i class="bi bi-pencil-fill text-xs"></i>
-                                        </button>
-                                    </div>
+                                    <button class="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 hover:bg-amber-500 hover:text-white transition-all">
+                                        <i class="bi bi-pencil-fill text-xs"></i>
+                                    </button>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
