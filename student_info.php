@@ -11,7 +11,7 @@ if (!isset($_SESSION['llw_role'])) { header('Location: login.php'); exit(); }
 $pdo = getPdo();
 
 // --- Filters ---
-$currentYear = (int)($_GET['year'] ?? 2567);
+$currentYear = (int)($_GET['year'] ?? 2569);
 $currentSemester = (int)($_GET['semester'] ?? 1);
 $currentClass = $_GET['classroom'] ?? '';
 $search = $_GET['search'] ?? '';
@@ -96,7 +96,7 @@ $activeSystem = 'portal'; // Use portal context for now or create a new one
             
             <form class="flex flex-wrap gap-2">
                 <select name="year" class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
-                    <?php for($y=2567; $y>=2565; $y--): ?>
+                    <?php for($y=2569; $y>=2565; $y--): ?>
                         <option value="<?= $y ?>" <?= $currentYear == $y ? 'selected' : '' ?>>ปี <?= $y ?></option>
                     <?php endfor; ?>
                 </select>
