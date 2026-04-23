@@ -4,53 +4,39 @@ checkLogin();
 
 $teacher_id = $_SESSION['teacher_id'] ?? 0;
 $pageTitle = 'จัดการข้อมูลนักเรียน';
-$pageSubtitle = 'นำเข้าและจัดการรายชื่อนักเรียน';
+$pageSubtitle = 'นำเข้าและจัดการรายชื่อนักเรียนผ่านระบบ Hybrid';
+$activeSystem = 'attendance';
 
 $msg = ''; $msgType = ''; $preview = []; $errors = []; $importCount = 0;
 
 // -- Available classrooms for filter --
 $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
-// -- Add single student --
-if (($_POST['do'] ?? '') === 'add_student') {
-    $sid = trim($_POST['student_id'] ?? '');
-    // Standardize to 5 digits
-    if (preg_match('/^\d+$/', $sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
-    
-    $nm = trim($_POST['name'] ?? '');
-    $cls = trim($_POST['classroom'] ?? '');
-    if (!$sid || !$nm || !$cls) { $msg = 'กรุณากรอกข้อมูลให้ครบถ้วน'; $msgType = 'error'; } 
-    else {
-        $st = $pdo->prepare("INSERT INTO att_students (student_id,name,classroom) VALUES (?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),classroom=VALUES(classroom)");
-        $ok = $st->execute([$sid, $nm, $cls]);
-        $msg = $ok ? "เพิ่ม/อัปเดตนักเรียน '$nm' สำเร็จ" : 'เกิดข้อผิดพลาด';
-        $msgType = $ok ? 'success' : 'error';
-    }
-}
-// -- Edit single student --
-if (($_POST['do'] ?? '') === 'edit_student') {
-    $id = (int)($_POST['student_db_id'] ?? 0);
-    $nm = trim($_POST['edit_name'] ?? '');
-    $cls = trim($_POST['edit_classroom'] ?? '');
-    if ($id && $nm && $cls) {
-        $pdo->prepare("UPDATE att_students SET name=?,classroom=? WHERE id=?")->execute([$nm,$cls,$id]);
-        $msg = 'แก้ไขข้อมูลสำเร็จ'; $msgType = 'success';
-    }
-}
-// -- Delete single student --
-if (($_POST['do'] ?? '') === 'delete_student') {
-    $delId = (int)($_POST['student_id'] ?? 0);
-    if ($delId) { $pdo->prepare("DELETE FROM att_students WHERE id=?")->execute([$delId]); }
-    header("Location: import_students.php"); exit();
-}
+// -- Handle Actions --
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $do = $_POST['do'] ?? '';
 
-// -- Handle CSV Upload / Import --
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_FILES['csvfile']) || isset($_POST['json_data']))) {
-    $classroom_filter = trim($_POST['classroom_fixed'] ?? '');
-    $action = $_POST['do'] ?? 'preview';
+    // -- Add/Update single student --
+    if ($do === 'add_student') {
+        $sid = trim($_POST['student_id'] ?? '');
+        if (preg_match('/^\d+$/', $sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
+        
+        $nm = trim($_POST['name'] ?? '');
+        $cls = trim($_POST['classroom'] ?? '');
+        
+        if (!$sid || !$nm || !$cls) { $msg = 'กรุณากรอกข้อมูลให้ครบถ้วน'; $msgType = 'error'; } 
+        else {
+            try {
+                $st = $pdo->prepare("INSERT INTO att_students (student_id,name,classroom) VALUES (?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),classroom=VALUES(classroom)");
+                $ok = $st->execute([$sid, $nm, $cls]);
+                $msg = $ok ? "บันทึกข้อมูล '$nm' สำเร็จ" : 'เกิดข้อผิดพลาด';
+                $msgType = $ok ? 'success' : 'error';
+            } catch (Exception $e) { $msg = 'ผิดพลาด: '.$e->getMessage(); $msgType = 'error'; }
+        }
+    }
 
-    if ($action === 'import' && !empty($_POST['json_data'])) {
-        // --- PROCESS IMPORT ---
+    // -- Import CSV Process --
+    if ($do === 'import' && !empty($_POST['json_data'])) {
         $data = json_decode($_POST['json_data'], true);
         if ($data) {
             $stmt = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom) VALUES (:sid, :name, :cls) ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom)");
@@ -61,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_FILES['csvfile']) || isset
                     $importCount++; 
                 }
                 $pdo->commit(); 
-                $msg = "นำเข้าสำเร็จ $importCount รายการ"; 
+                $msg = "นำเข้าและอัปเดตข้อมูลนักเรียนสำเร็จ $importCount รายการ"; 
                 $msgType = 'success';
             } catch (Exception $e) { 
                 if ($pdo->inTransaction()) $pdo->rollBack(); 
@@ -69,280 +55,322 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_FILES['csvfile']) || isset
                 $msgType = 'error'; 
             }
         }
-    } elseif (isset($_FILES['csvfile'])) {
-        // --- PROCESS PREVIEW ---
+    }
+
+    // -- CSV Preview Process --
+    if ($do === 'preview' && isset($_FILES['csvfile'])) {
         $file = $_FILES['csvfile'];
-        if ($file['error'] !== UPLOAD_ERR_OK) { 
-            $msg = 'อัปโหลดไฟล์ล้มเหลว'; $msgType = 'error'; 
-        } elseif (strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) !== 'csv') { 
-            $msg = 'กรุณาเลือกไฟล์ .csv'; $msgType = 'error'; 
-        } else {
+        if ($file['error'] === UPLOAD_ERR_OK) {
             $content = file_get_contents($file['tmp_name']);
-            
-            // Detect Encoding (Excel Thai usually Windows-874)
-            // Strip BOM, normalize encoding
+            // Strip BOM
             $content = ltrim($content, "\xEF\xBB\xBF");
+            // Encoding detection (TIS-620 to UTF-8)
             if (!mb_check_encoding($content, 'UTF-8')) {
-                $conv = @iconv('TIS-620', 'UTF-8//IGNORE', $content);
-                if ($conv !== false && strlen($conv) > 10) $content = $conv;
+                $content = @iconv('TIS-620', 'UTF-8//IGNORE', $content);
             }
 
-            // Detect Delimiter
-            $delimiter = ',';
-            if (strpos($content, ';') !== false && strpos($content, ',') === false) $delimiter = ';';
-
+            $delimiter = (strpos($content, ';') !== false && strpos($content, ',') === false) ? ';' : ',';
             $lines = explode("\n", str_replace("\r", "", $content));
             $is_first = true;
-            $rowNum = 0;
-
-            foreach ($lines as $line) {
+            
+            foreach ($lines as $idx => $line) {
                 if (empty(trim($line))) continue;
                 $row = str_getcsv($line, $delimiter);
-                $rowNum++;
-                
-                if ($is_first) { $is_first = false; continue; } // Skip header
-                if (count($row) < 2) continue; // Need at least ID and Name
+                if ($is_first) { $is_first = false; continue; } // Header
+                if (count($row) < 2) continue;
 
                 $sid = trim($row[0] ?? '');
-                // Standardize to 5 digits
                 if (preg_match('/^\d+$/', $sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
-                
                 $name = trim($row[1] ?? '');
-                $cls = trim($row[2] ?? '');
+                $cls = trim($row[2] ?? $_POST['classroom_fixed'] ?? '');
 
-                if (!$sid || !$name) continue;
-                if ($classroom_filter) $cls = $classroom_filter;
-
-                $preview[] = ['student_id'=>$sid, 'name'=>$name, 'classroom'=>$cls, 'row'=>$rowNum];
-            }
-            
-            if (empty($preview)) {
-                $msg = 'ไม่พบข้อมูลที่สามารถนำเข้าได้ในไฟล์นี้';
-                $msgType = 'warning';
+                if ($sid && $name) {
+                    $preview[] = ['student_id'=>$sid, 'name'=>$name, 'classroom'=>$cls, 'row'=>$idx+1];
+                }
             }
         }
     }
 }
 
-// -- Current students --
+// -- Fetch current students for the list --
 $filterCls = $_GET['cls'] ?? '';
 $whereQ = $filterCls ? "WHERE classroom = " . $pdo->quote($filterCls) : '';
-$students = $pdo->query("SELECT * FROM att_students $whereQ ORDER BY classroom, student_id")->fetchAll();
+$students = $pdo->query("SELECT * FROM att_students $whereQ ORDER BY classroom, student_id LIMIT 500")->fetchAll();
 
 require_once __DIR__ . '/components/layout_start.php';
 ?>
 
-<div class="flex flex-col gap-8">
+<style>
+    .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5); }
+    .drop-zone { border: 2px dashed #cbd5e1; transition: all 0.3s; }
+    .drop-zone:hover, .drop-zone.active { border-color: #4f46e5; background: #f5f3ff; }
+</style>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- ── Add Single Student ── -->
-        <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 flex flex-col gap-6 h-fit">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
-                    <i class="bi bi-person-plus-fill"></i>
+<div class="space-y-10 mb-20">
+
+    <!-- Top Tools -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Import Controls -->
+        <div class="lg:col-span-8 flex flex-col gap-6">
+            <div class="glass-card rounded-[40px] p-8 shadow-xl shadow-indigo-100/30">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-14 h-14 bg-gradient-to-br from-indigo-600 to-blue-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-indigo-200/50">
+                        <i class="bi bi-cloud-arrow-up-fill"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800">นำเข้าข้อมูลนักเรียนแบบกลุ่ม</h2>
+                        <p class="text-sm text-slate-500">อัปเดตห้องเรียนและรายชื่อผ่านไฟล์ CSV</p>
+                    </div>
                 </div>
-                <h3 class="font-bold text-slate-800">เพิ่มนักเรียนรายบุคคล</h3>
+
+                <form method="POST" enctype="multipart/form-data" id="importForm" class="space-y-6">
+                    <input type="hidden" name="do" value="preview">
+                    
+                    <div id="dropZone" class="drop-zone rounded-[32px] p-10 flex flex-col items-center justify-center cursor-pointer group">
+                        <i class="bi bi-file-earmark-spreadsheet text-5xl text-slate-300 group-hover:text-indigo-500 mb-4 transition-colors"></i>
+                        <p class="text-slate-600 font-bold">ลากไฟล์ CSV มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-2">รองรับ .CSV เท่านั้น (Thai/TIS-620 หรือ UTF-8)</p>
+                        <input type="file" name="csvfile" id="fileInput" accept=".csv" class="hidden">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">บังคับห้องเรียน (ถ้ามี)</label>
+                            <input type="text" name="classroom_fixed" placeholder="เช่น ม.1/1 (เว้นว่างไว้เพื่อใช้ค่าจากไฟล์)"
+                                   class="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full bg-slate-900 text-white rounded-2xl px-8 py-4 font-black text-sm hover:bg-black hover:-translate-y-1 transition-all shadow-xl shadow-slate-200">
+                                <i class="bi bi-search mr-2"></i> ตรวจสอบข้อมูลในไฟล์
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
-            <form method="POST" class="space-y-4">
-                <input type="hidden" name="do" value="add_student">
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">รหัสนักเรียน</label>
-                    <input type="text" name="student_id" required placeholder="66001" 
-                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:ring-2 focus:ring-blue-400 outline-none">
+
+            <!-- Preview Results -->
+            <?php if (!empty($preview)): ?>
+            <div class="glass-card rounded-[40px] overflow-hidden shadow-2xl border-2 border-indigo-500/20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div class="px-8 py-6 bg-gradient-to-r from-indigo-600 to-blue-600 text-white flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-xl">
+                            <i class="bi bi-ui-checks"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-black text-lg">ตรวจสอบความถูกต้อง</h3>
+                            <p class="text-xs opacity-80">พบข้อมูลเตรียมนำเข้า <span class="font-black"><?= count($preview) ?></span> รายการ</p>
+                        </div>
+                    </div>
+                    <form method="POST">
+                        <input type="hidden" name="do" value="import">
+                        <input type="hidden" name="json_data" value='<?= json_encode($preview, JSON_UNESCAPED_UNICODE) ?>'>
+                        <button type="submit" class="bg-white text-indigo-600 px-8 py-3 rounded-2xl font-black text-sm hover:scale-105 active:scale-95 transition-all shadow-xl shadow-indigo-900/20">
+                            <i class="bi bi-check2-circle mr-2"></i> ยืนยันการอัปเดตข้อมูล
+                        </button>
+                    </form>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ชื่อ-สกุล</label>
-                    <input type="text" name="name" required placeholder="สมชาย ใจดี" 
-                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
+                <div class="max-h-[500px] overflow-y-auto">
+                    <table class="w-full">
+                        <thead class="bg-slate-50 sticky top-0 z-10">
+                            <tr class="text-left">
+                                <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ลำดับ</th>
+                                <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">รหัสประจำตัว</th>
+                                <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อ-นามสกุล</th>
+                                <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ห้องเรียนที่จะไป</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <?php foreach($preview as $p): ?>
+                            <tr class="hover:bg-indigo-50/50 transition-colors">
+                                <td class="px-8 py-4 text-xs font-bold text-slate-400">#<?= $p['row'] ?></td>
+                                <td class="px-8 py-4 font-mono font-black text-indigo-600"><?= $p['student_id'] ?></td>
+                                <td class="px-8 py-4 font-bold text-slate-700"><?= htmlspecialchars($p['name']) ?></td>
+                                <td class="px-8 py-4">
+                                    <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black border border-emerald-100">
+                                        <?= htmlspecialchars($p['classroom']) ?>
+                                    </span>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ห้องเรียน</label>
-                    <input type="text" name="classroom" required placeholder="ม.4/1" list="cls-list-add"
-                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
-                </div>
-                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100">
-                    เพิ่มนักเรียน
-                </button>
-            </form>
+            </div>
+            <?php endif; ?>
         </div>
 
-        <!-- ── Import CSV ── -->
-        <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 flex flex-col gap-6">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl">
-                    <i class="bi bi-cloud-arrow-up-fill"></i>
+        <!-- Single Add Card -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+            <div class="glass-card rounded-[40px] p-8 shadow-xl shadow-slate-200/50 border border-white">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+                        <i class="bi bi-person-plus-fill"></i>
+                    </div>
+                    <h3 class="font-black text-slate-800">เพิ่มรายบุคคล</h3>
                 </div>
-                <h3 class="font-bold text-slate-800">นำเข้าด้วยไฟล์ CSV</h3>
-            </div>
-            
-            <div class="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
-                <p class="text-[10px] text-blue-600 font-bold uppercase tracking-wider mb-2">รูปแบบ CSV (ต้องเรียงคอลัมน์ตามนี้)</p>
-                <div class="flex items-center justify-between text-[11px] text-blue-500 font-medium">
-                    <span>student_id, name, classroom</span>
-                    <a href="data:text/csv;charset=utf-8,%EF%BB%BFstudent_id%2Cname%2Cclassroom%0A66001%2C%E0%B8%AA%E0%B8%A1%E0%B8%8A%E0%B8%B2%E0%B8%A2%20%E0%B9%83%E0%B8%88%E0%B8%94%E0%B8%B5%2C%E0%B8%A1.4%2F1" download="template.csv" class="underline hover:text-blue-700">ดาวน์โหลดไฟล์ตัวอย่าง</a>
-                </div>
-                <p class="text-[9px] text-slate-400 mt-2">* รองรับไฟล์จาก Excel (ภาษาไทย) และ Google Sheets (UTF-8)</p>
+                <form method="POST" class="space-y-5">
+                    <input type="hidden" name="do" value="add_student">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">เลขประจำตัว</label>
+                        <input type="text" name="student_id" required placeholder="เช่น 04684" 
+                               class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">ชื่อ-นามสกุล</label>
+                        <input type="text" name="name" required placeholder="ชื่อ-สกุล" 
+                               class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">ห้องเรียน</label>
+                        <input type="text" name="classroom" required placeholder="ม.1/1"
+                               class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all">
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-500 text-white rounded-2xl py-4 font-black text-sm hover:bg-emerald-600 hover:-translate-y-1 transition-all shadow-xl shadow-emerald-100">
+                        บันทึกนักเรียน
+                    </button>
+                </form>
             </div>
 
-            <form method="POST" enctype="multipart/form-data" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">เลือกไฟล์ CSV</label>
-                    <input type="file" name="csvfile" accept=".csv" required 
-                           class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:bg-blue-600 file:text-white hover:file:bg-blue-700">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ระบุห้องเรียน (กรณีต้องการทับค่าในไฟล์)</label>
-                    <input type="text" name="classroom_fixed" placeholder="เว้นว่างไว้หากต้องการใช้ค่าจากไฟล์"
-                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
-                </div>
-                <button type="submit" name="do" value="preview" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900 transition shadow-lg">
-                    ตรวจสอบข้อมูล
-                </button>
-            </form>
+            <!-- Help Card -->
+            <div class="bg-indigo-600 rounded-[40px] p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 text-9xl text-white/10 rotate-12"><i class="bi bi-info-circle"></i></div>
+                <h3 class="font-black text-lg mb-4">ข้อแนะนำการใช้ไฟล์</h3>
+                <ul class="text-xs space-y-3 font-medium opacity-90">
+                    <li class="flex gap-2"><i class="bi bi-check-circle"></i> คอลัมน์ที่ 1: เลขประจำตัว (4-5 หลัก)</li>
+                    <li class="flex gap-2"><i class="bi bi-check-circle"></i> คอลัมน์ที่ 2: ชื่อ-นามสกุล</li>
+                    <li class="flex gap-2"><i class="bi bi-check-circle"></i> คอลัมน์ที่ 3: ห้องเรียน (เช่น ม.1/1)</li>
+                    <li class="flex gap-2"><i class="bi bi-exclamation-circle text-amber-300"></i> หากมีชื่อเดิมอยู่แล้ว ระบบจะย้ายห้องให้โดยอัตโนมัติ</li>
+                </ul>
+                <a href="data:text/csv;charset=utf-8,%EF%BB%BFstudent_id%2Cname%2Cclassroom%0A04684%2C%E0%B9%80%E0%B8%94%E0%B9%87%E0%B8%81%E0%B8%82%E0%B8%B2%E0%B8%A2%E0%B8%81%E0%B8%B4%E0%B8%95%E0%B8%95%E0%B8%B4%E0%B8%A8%E0%B8%B1%E0%B8%81%E0%B8%94%E0%B8%B4%E0%B9%8C%2C%E0%B8%A1.1%2F1" download="student_template.csv" 
+                   class="mt-6 inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                    <i class="bi bi-download"></i> โหลดไฟล์ตัวอย่าง
+                </a>
+            </div>
         </div>
     </div>
 
-    <!-- ── PREVIEW SECTION ── -->
-    <?php if (!empty($preview)): ?>
-    <div class="bg-white rounded-3xl shadow-xl shadow-blue-100/50 border border-slate-100 overflow-hidden ring-4 ring-blue-500/10">
-        <div class="px-6 py-5 bg-blue-600 text-white flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <i class="bi bi-eye-fill text-xl"></i>
-                <div>
-                    <h3 class="font-bold">ตรวจสอบข้อมูลก่อนบันทึก</h3>
-                    <p class="text-[10px] opacity-80 uppercase font-bold tracking-widest">พบข้อมูลทั้งหมด <?= count($preview) ?> รายการ</p>
-                </div>
-            </div>
-            <form method="POST" class="flex gap-2">
-                <input type="hidden" name="do" value="import">
-                <input type="hidden" name="json_data" value='<?= json_encode($preview, JSON_UNESCAPED_UNICODE) ?>'>
-                <button type="submit" class="bg-white text-blue-600 px-6 py-2 rounded-xl text-sm font-black hover:bg-blue-50 transition shadow-lg">
-                    ยืนยันการนำเข้า
-                </button>
+    <!-- Main List Table -->
+    <div class="glass-card rounded-[40px] overflow-hidden shadow-xl shadow-slate-200/50">
+        <div class="px-8 py-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
+            <h3 class="text-xl font-black text-slate-800 flex items-center gap-3">
+                <i class="bi bi-people-fill text-indigo-500"></i> รายชื่อนักเรียนปัจจุบัน
+            </h3>
+            <form method="GET" class="flex gap-2 w-full md:w-auto">
+                <input type="text" name="cls" value="<?= htmlspecialchars($filterCls) ?>" placeholder="กรองตามห้อง..." 
+                       class="flex-1 md:w-48 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-2 text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-500/10">
+                <button class="bg-slate-900 text-white px-6 py-2 rounded-2xl text-xs font-black hover:bg-black transition-all shadow-lg">กรอง</button>
             </form>
         </div>
-        <div class="overflow-x-auto max-h-[400px]">
-            <table class="min-w-full divide-y divide-slate-100">
-                <thead class="bg-slate-50 sticky top-0">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">รหัส</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">ชื่อ-สกุล</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">ห้องเรียน</th>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50/50">
+                    <tr class="text-left">
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">เลขประจำตัว</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อ-นามสกุล</th>
+                        <th class="px-8 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">ห้องเรียน</th>
+                        <th class="px-8 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">การจัดการ</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-50 text-sm">
-                    <?php foreach($preview as $p): ?>
-                    <tr class="hover:bg-blue-50/30 transition">
-                        <td class="px-6 py-3 font-mono font-bold text-blue-600"><?= htmlspecialchars($p['student_id']) ?></td>
-                        <td class="px-6 py-3 font-semibold text-slate-700"><?= htmlspecialchars($p['name']) ?></td>
-                        <td class="px-6 py-3">
-                            <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-black"><?= htmlspecialchars($p['classroom']) ?></span>
+                <tbody class="divide-y divide-slate-100">
+                    <?php foreach($students as $s): ?>
+                    <tr class="hover:bg-slate-50/80 transition-colors group">
+                        <td class="px-8 py-4 font-mono font-black text-indigo-600 text-xs tracking-tighter"><?= $s['student_id'] ?></td>
+                        <td class="px-8 py-4 font-bold text-slate-700"><?= htmlspecialchars($s['name']) ?></td>
+                        <td class="px-8 py-4 text-center">
+                            <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-black text-[10px]"><?= $s['classroom'] ?></span>
+                        </td>
+                        <td class="px-8 py-4 text-right">
+                            <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick='openEditModal(<?= json_encode($s) ?>)' class="p-2 text-amber-500 hover:bg-amber-50 rounded-xl transition-all"><i class="bi bi-pencil-square"></i></button>
+                                <button onclick="deleteStudent(<?= $s['id'] ?>, '<?= addslashes($s['name']) ?>')" class="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><i class="bi bi-trash-fill"></i></button>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
+                    <?php if (empty($students)): ?>
+                    <tr>
+                        <td colspan="4" class="px-8 py-20 text-center">
+                            <i class="bi bi-inbox text-5xl text-slate-200 mb-4 block"></i>
+                            <p class="text-slate-400 font-bold">ไม่พบข้อมูลนักเรียน</p>
+                        </td>
+                    </tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
     </div>
-    <?php endif; ?>
-
-    <!-- ── LIST ── -->
-    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div class="px-6 py-5 border-b border-slate-50 flex items-center justify-between">
-            <h3 class="font-bold text-slate-800">รายชื่อนักเรียนในระบบ</h3>
-            <form method="GET" class="flex gap-2">
-                <input type="text" name="cls" value="<?= htmlspecialchars($filterCls) ?>" placeholder="กรองห้อง..." 
-                       class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-400">
-                <button class="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-blue-100 transition">กรอง</button>
-            </form>
-        </div>
-
-        <?php if (empty($students)): ?>
-            <div class="p-16 text-center text-slate-300">
-                <i class="bi bi-person-x text-4xl mb-3 block"></i>
-                <p class="text-xs">ไม่พบข้อมูลนักเรียน</p>
-            </div>
-        <?php else: ?>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-50">
-                    <thead class="bg-slate-50/50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">รหัส</th>
-                            <th class="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">ชื่อ-สกุล</th>
-                            <th class="px-6 py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">ห้องเรียน</th>
-                            <th class="px-6 py-3 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-50 text-sm">
-                        <?php foreach($students as $s): ?>
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="px-6 py-3 text-blue-600 font-mono font-bold text-xs"><?= $s['student_id'] ?></td>
-                            <td class="px-6 py-3 font-bold text-slate-700"><?= htmlspecialchars($s['name']) ?></td>
-                            <td class="px-6 py-3 text-center">
-                                <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-[10px]"><?= $s['classroom'] ?></span>
-                            </td>
-                            <td class="px-6 py-3 text-right">
-                                <div class="flex justify-end gap-1.5">
-                                    <button onclick='openEditModal(<?= json_encode($s) ?>)' class="p-1.5 text-amber-500 hover:bg-amber-50 rounded-lg"><i class="bi bi-pencil-square"></i></button>
-                                    <button onclick="deleteStudent(<?= $s['id'] ?>, '<?= addslashes($s['name']) ?>')" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg"><i class="bi bi-trash-fill"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
-    </div>
 </div>
 
-<!-- Modal Edit -->
-<div id="edit-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl border border-slate-100 flex flex-col gap-6">
-        <h3 class="font-bold text-xl text-slate-800">แก้ไขข้อมูลนักเรียน</h3>
-        <form method="POST" class="space-y-4">
+<!-- Modal Edit (Enhanced) -->
+<div id="edit-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-[40px] w-full max-w-sm p-10 shadow-2xl border border-white/50 animate-in zoom-in-95 duration-300">
+        <div class="flex items-center gap-4 mb-8">
+            <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-2xl">
+                <i class="bi bi-pencil-fill"></i>
+            </div>
+            <h3 class="font-black text-xl text-slate-800">แก้ไขข้อมูล</h3>
+        </div>
+        <form method="POST" class="space-y-6">
             <input type="hidden" name="do" value="edit_student">
             <input type="hidden" name="student_db_id" id="edit-id">
-            <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ชื่อ-สกุล</label>
-                <input type="text" name="edit_name" id="edit-name" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
+            <div class="space-y-1">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">ชื่อ-นามสกุล</label>
+                <input type="text" name="edit_name" id="edit-name" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all">
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ห้องเรียน</label>
-                <input type="text" name="edit_classroom" id="edit-cls" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
+            <div class="space-y-1">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">ห้องเรียน</label>
+                <input type="text" name="edit_classroom" id="edit-cls" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all">
             </div>
-            <div class="flex gap-2 pt-2">
-                <button type="button" onclick="closeEditModal()" class="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-50 transition">ยกเลิก</button>
-                <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition">บันทึก</button>
+            <div class="flex gap-3 pt-4">
+                <button type="button" onclick="closeEditModal()" class="flex-1 px-6 py-4 rounded-2xl text-sm font-black text-slate-400 hover:bg-slate-50 transition-all">ยกเลิก</button>
+                <button type="submit" class="flex-1 bg-slate-900 text-white px-6 py-4 rounded-2xl text-sm font-black shadow-xl shadow-slate-200 hover:bg-black hover:-translate-y-1 transition-all">บันทึก</button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
-function openEditModal(s) {
-    document.getElementById('edit-id').value = s.id;
-    document.getElementById('edit-name').value = s.name;
-    document.getElementById('edit-cls').value = s.classroom;
-    document.getElementById('edit-modal').classList.remove('hidden');
-}
-function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
-function deleteStudent(id, name) {
-    Swal.fire({
-        title: 'ลบข้อมูล?', text: `ต้องการลบรายชื่อ "${name}" หรือไม่?`, icon: 'warning',
-        showCancelButton: true, confirmButtonText: 'ลบออก', cancelButtonText: 'ยกเลิก',
-        confirmButtonColor: '#e11d48', borderRadius: '20px'
-    }).then(r => {
-        if(r.isConfirmed){
-            const f = document.createElement('form'); f.method='POST';
-            f.innerHTML = `<input name="do" value="delete_student"><input name="student_id" value="${id}">`;
-            document.body.appendChild(f); f.submit();
-        }
-    });
-}
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropZone.onclick = () => fileInput.click();
+    fileInput.onchange = () => { if(fileInput.files.length) document.getElementById('importForm').submit(); };
+
+    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('active'); };
+    dropZone.ondragleave = () => dropZone.classList.remove('active');
+    dropZone.ondrop = (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('active');
+        fileInput.files = e.dataTransfer.files;
+        document.getElementById('importForm').submit();
+    };
+
+    function openEditModal(s) {
+        document.getElementById('edit-id').value = s.id;
+        document.getElementById('edit-name').value = s.name;
+        document.getElementById('edit-cls').value = s.classroom;
+        document.getElementById('edit-modal').classList.remove('hidden');
+    }
+    function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+    function deleteStudent(id, name) {
+        Swal.fire({
+            title: 'ลบข้อมูล?', text: `ต้องการลบรายชื่อ "${name}" ออกจากระบบหรือไม่?`, icon: 'warning',
+            showCancelButton: true, confirmButtonText: 'ใช่, ลบออก', cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#e11d48', cancelButtonColor: '#94a3b8',
+            customClass: { popup: 'rounded-[32px]', confirmButton: 'rounded-xl px-6 py-3', cancelButton: 'rounded-xl px-6 py-3' }
+        }).then(r => {
+            if(r.isConfirmed){
+                const f = document.createElement('form'); f.method='POST';
+                f.innerHTML = `<input name="do" value="delete_student"><input name="student_id" value="${id}">`;
+                document.body.appendChild(f); f.submit();
+            }
+        });
+    }
 </script>
 
 <?php
-if ($msg) echo "<script>Swal.fire({ icon: '$msgType', title: 'แจ้งเตือน', text: '$msg', timer: 2500, showConfirmButton: false });</script>";
+if ($msg) echo "<script>Swal.fire({ icon: '$msgType', title: 'แจ้งเตือน', text: '$msg', timer: 3000, showConfirmButton: false, customClass: { popup: 'rounded-[32px]' } });</script>";
 require_once 'components/layout_end.php';
 ?>
