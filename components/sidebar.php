@@ -133,8 +133,10 @@ $subMenus = [
     }
 
     /* Tooltips for Collapsed State */
+    .sidebar-tooltip { display: none; }
     body.sidebar-collapsed .nav-item { position: relative; }
     body.sidebar-collapsed .nav-item .sidebar-tooltip {
+        display: block;
         position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
         margin-left: 1rem; padding: 0.5rem 0.75rem;
         background: #1e293b; color: white; font-size: 11px; font-weight: bold;
