@@ -2,9 +2,6 @@
 /**
  * sis_purge.php — Safely wipe ONLY student data
  */
-session_start();
-require_once 'config/database.php';
-if (!isset($_SESSION['llw_role']) || $_SESSION['llw_role'] !== 'super_admin') { die('Unauthorized'); }
 
 $pdo = getPdo();
 
