@@ -105,10 +105,6 @@ try {
             t.id,
             t.name,
             COUNT(DISTINCT sub.id)          AS subject_count,
-            COUNT(DISTINCT a.id)            AS total_records,
-            COUNT(DISTINCT a.date)          AS active_days,
-            SUM(CASE WHEN DATE_FORMAT(a.date,'%Y-%m') = ? THEN 1 ELSE 0 END) AS this_month,
-            MAX(a.date)                     AS last_active
         FROM att_teachers t
         LEFT JOIN att_subjects sub ON sub.teacher_id = t.id
         LEFT JOIN att_attendance a  ON a.teacher_id  = t.id
@@ -181,8 +177,8 @@ try {
         SELECT 
             s.classroom, 
             COUNT(DISTINCT s.id) as cnt,
-            COUNT(DISTINCT CASE WHEN s.gender = 'ชาย' THEN s.id END) as male_cnt,
-            COUNT(DISTINCT CASE WHEN s.gender = 'หญิง' THEN s.id END) as female_cnt,
+            COUNT(DISTINCT CASE WHEN s.gender = 'ชาย' OR s.name LIKE 'เด็กชาย%' OR s.name LIKE 'นาย%' OR s.name LIKE 'ด.ช.%' THEN s.id END) as male_cnt,
+            COUNT(DISTINCT CASE WHEN s.gender = 'หญิง' OR s.name LIKE 'เด็กหญิง%' OR s.name LIKE 'นางสาว%' OR s.name LIKE 'ด.ญ.%' THEN s.id END) as female_cnt,
             GROUP_CONCAT(DISTINCT u.firstname SEPARATOR ' / ') as advisors
         FROM att_students s
         LEFT JOIN llw_class_advisors ca ON s.classroom = ca.classroom

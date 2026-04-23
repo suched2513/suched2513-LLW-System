@@ -13,9 +13,6 @@ return [
             ADD COLUMN semester INT DEFAULT 1 AFTER academic_year
         ");
 
-        // 2. พยายามเดาเพศจากคำนำหน้าชื่อ (ถ้ามี)
-        $pdo->exec("UPDATE att_students SET gender = 'ชาย' WHERE name LIKE 'เด็กชาย%' OR name LIKE 'นาย%'");
-        $pdo->exec("UPDATE att_students SET gender = 'หญิง' WHERE name LIKE 'เด็กหญิง%' OR name LIKE 'นางสาว%'");
         
         return true;
     },
