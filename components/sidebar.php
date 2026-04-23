@@ -18,6 +18,7 @@ if ($current_page === 'supervision.php') $activeSystem = 'supervision';
 if ($current_dir === 'teacher_leave')         $activeSystem = 'teacher_leave';
 if ($current_dir === 'behavior')              $activeSystem = 'behavior';
 if ($current_dir === 'homeroom' || $current_page === 'manage_advisors.php') $activeSystem = 'homeroom';
+if ($current_page === 'student_info.php' || $current_page === 'teacher_info.php') $activeSystem = 'info';
 if ($current_dir === 'budget_system')          $activeSystem = 'budget';
 
 // User context
@@ -94,6 +95,10 @@ $subMenus = [
         ['icon' => 'bi-cash-coin',    'label' => 'บันทึกการเบิกจ่าย', 'url' => $base_path . '/budget_system/disbursements.php'],
         ['icon' => 'bi-file-earmark-bar-graph', 'label' => 'รายงานงบประมาณ', 'url' => $base_path . '/budget_system/reports.php'],
         ['icon' => 'bi-gear-fill',      'label' => 'ตั้งค่าระบบงบประมาณ', 'url' => $base_path . '/budget_system/settings.php', 'roles' => ['super_admin']],
+    ],
+    'info' => [
+        ['icon' => 'bi-people-fill',        'label' => 'สารสนเทศนักเรียน',   'url' => $base_path . '/student_info.php'],
+        ['icon' => 'bi-person-vcard-fill',  'label' => 'สารสนเทศครู',        'url' => $base_path . '/teacher_info.php'],
     ],
 ];
 ?>
@@ -188,6 +193,25 @@ $subMenus = [
                 <span class="sidebar-tooltip">จัดการครูที่ปรึกษา</span>
             </a>
             <?php endif; ?>
+        </div>
+
+        <!-- School Information -->
+        <div class="pb-6">
+            <p class="sidebar-group-label text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-4">School Information</p>
+            <a href="<?= $base_path ?>/student_info.php" class="nav-item flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[13px] font-bold transition-all <?= $activeSystem === 'info' ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-200/50' : 'text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:pl-6' ?>">
+                <i class="bi bi-bar-chart-line-fill text-lg"></i> <span class="sidebar-text">ระบบสารสนเทศ</span>
+                <span class="sidebar-tooltip">ระบบสารสนเทศ</span>
+                <?php if ($activeSystem === 'info'): ?>
+                <i class="nav-link-chevron bi bi-chevron-down ml-auto text-xs opacity-60"></i>
+                <?php endif; ?>
+            </a>
+            <div class="sub-menu <?= $activeSystem === 'info' ? 'open' : '' ?> ml-6 mt-1 space-y-0.5">
+                <?php foreach ($subMenus['info'] as $sub): ?>
+                <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-blue-600 hover:bg-slate-50' ?>">
+                    <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
         </div>
 
         <!-- Academic & Management -->
