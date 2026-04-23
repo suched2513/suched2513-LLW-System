@@ -56,13 +56,23 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// --- Helper: Gender Detection ---
+function detectGender($name, $dbGender = null) {
+    if ($dbGender === 'ชาย' || $dbGender === 'หญิง') return $dbGender;
+    $name = trim($name);
+    if (mb_strpos($name, 'เด็กชาย') === 0 || mb_strpos($name, 'นาย') === 0 || mb_strpos($name, 'ด.ช.') === 0 || mb_strpos($name, 'ดช.') === 0) return 'ชาย';
+    if (mb_strpos($name, 'เด็กหญิง') === 0 || mb_strpos($name, 'นางสาว') === 0 || mb_strpos($name, 'นาง') === 0 || mb_strpos($name, 'ด.ญ.') === 0 || mb_strpos($name, 'ดญ.') === 0) return 'หญิง';
+    return null;
+}
+
 // --- Calculate Statistics ---
 $totalCount = count($students);
 $maleCount = 0;
 $femaleCount = 0;
 foreach ($students as $s) {
-    if (($s['gender'] ?? '') === 'ชาย') $maleCount++;
-    elseif (($s['gender'] ?? '') === 'หญิง') $femaleCount++;
+    $g = detectGender($s['name'], $s['gender'] ?? null);
+    if ($g === 'ชาย') $maleCount++;
+    elseif ($g === 'หญิง') $femaleCount++;
 }
 
 $pageTitle = 'สารสนเทศนักเรียน';
@@ -197,9 +207,11 @@ $activeSystem = 'portal'; // Use portal context for now or create a new one
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <?php if(($s['gender'] ?? '') === 'ชาย'): ?>
+                                    <?php 
+                                    $g = detectGender($s['name'], $s['gender'] ?? null);
+                                    if($g === 'ชาย'): ?>
                                         <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black">♂ ชาย</span>
-                                    <?php elseif(($s['gender'] ?? '') === 'หญิง'): ?>
+                                    <?php elseif($g === 'หญิง'): ?>
                                         <span class="px-3 py-1 rounded-full bg-pink-50 text-pink-600 text-[10px] font-black">♀ หญิง</span>
                                     <?php else: ?>
                                         <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-400 text-[10px] font-black">-</span>
