@@ -11,10 +11,6 @@ try {
     echo "<h2>🚀 LLW System Reset (2569 Edition)</h2>";
     echo "<hr>";
 
-    // 1. ล้างตารางนักเรียนทั้งหมด (Truncate)
-    echo "Step 1: Emptying student table...<br>";
-    $pdo->exec("TRUNCATE TABLE att_students");
-    echo "✓ Student table is now empty (Ready for your 567 students).<br>";
 
     // 2. ปรับโครงสร้างปีการศึกษาเป็น 2569
     echo "Step 2: Updating default academic year to 2569...<br>";
