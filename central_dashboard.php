@@ -247,7 +247,7 @@ $statsMonthLabel = $statsMonthLabel ?? date('F Y');
 <body class="flex min-h-screen">
     <?php if (file_exists('components/sidebar.php')) include 'components/sidebar.php'; ?>
     
-    <main class="flex-1 p-6 lg:p-12 transition-all duration-500">
+    <main class="flex-1 min-h-screen overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-12 transition-all duration-500">
         
         <?= $updateMessage ?>
 
@@ -321,26 +321,53 @@ $statsMonthLabel = $statsMonthLabel ?? date('F Y');
 
         <!-- Charts Section -->
         <section class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-            <div class="glass-card p-8">
+            <div class="glass-card p-8 min-h-[300px] flex flex-col">
                 <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex justify-between items-center">
                     สถานะการเช็คชื่อ
                     <span class="stat-badge bg-blue-50 text-blue-600">Monthly</span>
                 </h3>
-                <canvas id="attChart" height="220"></canvas>
+                <div class="flex-1 relative">
+                    <?php if(array_sum($attStatusData) > 0): ?>
+                        <canvas id="attChart"></canvas>
+                    <?php else: ?>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-300 opacity-50">
+                            <i class="bi bi-bar-chart text-4xl mb-2"></i>
+                            <p class="text-[10px] font-black uppercase tracking-widest">ยังไม่มีข้อมูลการเช็คชื่อปี <?= $currentYear ?></p>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
-            <div class="glass-card p-8">
+            <div class="glass-card p-8 min-h-[300px] flex flex-col">
                 <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex justify-between items-center">
                     แนวโน้ม 7 วันล่าสุด
                     <span class="stat-badge bg-emerald-50 text-emerald-600">Trend</span>
                 </h3>
-                <canvas id="trendChart" height="220"></canvas>
+                <div class="flex-1 relative">
+                    <?php if(array_sum($trendData) > 0): ?>
+                        <canvas id="trendChart"></canvas>
+                    <?php else: ?>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-300 opacity-50">
+                            <i class="bi bi-graph-up text-4xl mb-2"></i>
+                            <p class="text-[10px] font-black uppercase tracking-widest">รอการบันทึกกิจกรรมย้อนหลัง</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
-            <div class="glass-card p-8">
+            <div class="glass-card p-8 min-h-[300px] flex flex-col">
                 <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex justify-between items-center">
                     สัดส่วนผู้ใช้งาน
                     <span class="stat-badge bg-indigo-50 text-indigo-600">Roles</span>
                 </h3>
-                <canvas id="roleChart" height="220"></canvas>
+                <div class="flex-1 relative">
+                    <?php if(array_sum($userProportionData) > 0): ?>
+                        <canvas id="roleChart"></canvas>
+                    <?php else: ?>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-300 opacity-50">
+                            <i class="bi bi-pie-chart text-4xl mb-2"></i>
+                            <p class="text-[10px] font-black uppercase tracking-widest">ไม่พบข้อมูลผู้ใช้งาน</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </section>
 
@@ -486,23 +513,25 @@ $statsMonthLabel = $statsMonthLabel ?? date('F Y');
         });
 
         const ctxRole = document.getElementById('roleChart');
-        new Chart(ctxRole, { 
-            type: 'doughnut', 
-            data: { 
-                labels: <?= json_encode($userProportionLabels) ?>, 
-                datasets: [{ 
-                    data: <?= json_encode($userProportionData) ?>, 
-                    backgroundColor: ['#6366f1','#ec4899','#3b82f6','#10b981','#f59e0b'],
-                    borderWidth: 0,
-                    hoverOffset: 15
-                }] 
-            }, 
-            options: { 
-                cutout: '75%',
-                plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 9, weight: 'bold' } } } },
-                maintainAspectRatio: false
-            } 
-        });
+        if (ctxRole) {
+            new Chart(ctxRole, { 
+                type: 'doughnut', 
+                data: { 
+                    labels: <?= json_encode($userProportionLabels) ?>, 
+                    datasets: [{ 
+                        data: <?= json_encode($userProportionData) ?>, 
+                        backgroundColor: ['#6366f1','#ec4899','#3b82f6','#10b981','#f59e0b'],
+                        borderWidth: 0,
+                        hoverOffset: 15
+                    }] 
+                }, 
+                options: { 
+                    cutout: '75%',
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 9, weight: 'bold' } } } },
+                    maintainAspectRatio: false
+                } 
+            });
+        }
     </script>
 </body>
 </html>
