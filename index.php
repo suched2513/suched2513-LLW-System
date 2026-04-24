@@ -61,7 +61,7 @@ if ($isLoggedIn) {
                 ['url' => 'plc_system/dashboard.php', 'icon' => 'bi-journal-richtext', 'label' => 'PLC Online', 'color' => 'violet'],
                 ['url' => 'behavior/dashboard.php', 'icon' => 'bi-journal-text', 'label' => 'พฤติกรรม', 'color' => 'violet'],
                 ['url' => 'homeroom/index.php', 'icon' => 'bi-mortarboard-fill', 'label' => 'ระบบครูที่ปรึกษา', 'color' => 'indigo'],
-                ['url' => 'cleanliness/index.php', 'icon' => 'bi-stars', 'label' => 'ประเมินความสะอาด', 'color' => 'emerald'],
+                // ['url' => 'cleanliness/index.php', 'icon' => 'bi-stars', 'label' => 'ประเมินความสะอาด', 'color' => 'emerald'],
             ];
             break;
         case 'wfh_admin':
@@ -73,7 +73,7 @@ if ($isLoggedIn) {
                 ['url' => 'plc_system/dashboard.php', 'icon' => 'bi-journal-richtext', 'label' => 'PLC Online', 'color' => 'violet'],
                 ['url' => 'behavior/dashboard.php', 'icon' => 'bi-journal-text', 'label' => 'พฤติกรรม', 'color' => 'violet'],
                 ['url' => 'homeroom/index.php', 'icon' => 'bi-mortarboard-fill', 'label' => 'ระบบครูที่ปรึกษา', 'color' => 'indigo'],
-                ['url' => 'cleanliness/index.php', 'icon' => 'bi-stars', 'label' => 'ประเมินความสะอาด', 'color' => 'emerald'],
+                // ['url' => 'cleanliness/index.php', 'icon' => 'bi-stars', 'label' => 'ประเมินความสะอาด', 'color' => 'emerald'],
             ];
             break;
         case 'att_teacher':
@@ -451,6 +451,7 @@ if ($isLoggedIn) {
                 'gradient' => 'from-indigo-600 to-violet-700',
                 'delay'    => 1.0,
             ],
+            /* Temporarily Disabled
             [
                 'url'      => 'cleanliness/index.php',
                 'icon'     => 'bi-stars',
@@ -461,6 +462,7 @@ if ($isLoggedIn) {
                 'gradient' => 'from-emerald-500 to-teal-600',
                 'delay'    => 1.1,
             ],
+            */
         ];
 
         foreach ($modules as $m):

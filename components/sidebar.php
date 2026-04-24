@@ -89,12 +89,14 @@ $subMenus = [
         ['icon' => 'bi-speedometer2', 'label' => 'Advisor Dashboard', 'url' => $base_path . '/homeroom/index.php'],
         ['icon' => 'bi-people-fill',   'label' => 'จัดการการมอบหมาย',  'url' => $base_path . '/manage_advisors.php', 'roles' => ['super_admin']],
     ],
+    /* Temporarily Disabled
     'cleanliness' => [
         ['icon' => 'bi-speedometer2', 'label' => 'Dashboard',     'url' => $base_path . '/cleanliness/index.php'],
         ['icon' => 'bi-clipboard-check', 'label' => 'บันทึกคะแนน', 'url' => $base_path . '/cleanliness/index.php'],
         ['icon' => 'bi-clock-history',   'label' => 'ประวัติการประเมิน', 'url' => $base_path . '/cleanliness/history.php'],
         ['icon' => 'bi-geo-alt-fill',   'label' => 'จัดการพื้นที่', 'url' => $base_path . '/cleanliness/manage_areas.php', 'roles' => ['super_admin']],
     ],
+    */
     'info' => [
         ['icon' => 'bi-people-fill',        'label' => 'สารสนเทศนักเรียน',   'url' => $base_path . '/student_info.php'],
         ['icon' => 'bi-person-vcard-fill',  'label' => 'สารสนเทศครู',        'url' => $base_path . '/teacher_info.php'],
