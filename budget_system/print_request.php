@@ -334,13 +334,33 @@ function bahtText($amount) {
             </tr>
         </table>
 
-        <div style="margin-top: 30px; text-align: center;">
-            <strong>คำสั่ง / ผลการพิจารณา</strong><br>
-            <span class="checkbox"></span> อนุมัติ <span class="checkbox"></span> ไม่อนุมัติ<br><br>
-            ลงชื่อ............................................................<br>
-            ( ............................................................ )<br>
-            ผู้อำนวยการโรงเรียนละลมวิทยา
-        </div>
+        <table class="boss-boxes-table" style="width: 100%; border-collapse: collapse; margin-top: -1px; border: 1px solid #000;">
+            <tr>
+                <td style="width: 50%; border: 1px solid #000; padding: 10px; vertical-align: top; font-size: 14px;">
+                    <div style="text-align: center; font-weight: bold; border-bottom: 1px solid #000; margin: -10px -10px 10px -10px; padding: 5px; background: #f5f5f5;">ความเห็นของรองผู้อำนวยการโรงเรียน</div>
+                    <div style="line-height: 1.6; margin-bottom: 10px;">
+                        พิจารณาตามที่งานแผนงาน/งานพัสดุ/งานการเงิน<br>
+                        เห็นควร &nbsp;&nbsp; <span class="checkbox"></span> อนุมัติ &nbsp;&nbsp; <span class="checkbox"></span> ไม่อนุมัติ
+                    </div>
+                    <div style="margin-top: 50px; text-align: center;">
+                        ลงชื่อ............................................................<br>
+                        ( นางสาววรรณธนา วงศ์พิทักษ์ )<br>
+                        รองผู้อำนวยการโรงเรียนละลมวิทยา
+                    </div>
+                </td>
+                <td style="width: 50%; border: 1px solid #000; padding: 10px; vertical-align: top; font-size: 14px;">
+                    <div style="text-align: center; font-weight: bold; border-bottom: 1px solid #000; margin: -10px -10px 10px -10px; padding: 5px; background: #f5f5f5;">ความเห็นของผู้อำนวยการโรงเรียน</div>
+                    <div style="line-height: 1.6; margin-bottom: 10px;">
+                        <span class="checkbox"></span> อนุมัติ &nbsp;&nbsp; <span class="checkbox"></span> ไม่อนุมัติ
+                    </div>
+                    <div style="margin-top: 80px; text-align: center;">
+                        ลงชื่อ............................................................<br>
+                        ( นายสถาน ปรางมาศ )<br>
+                        ผู้อำนวยการโรงเรียนละลมวิทยา
+                    </div>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>
