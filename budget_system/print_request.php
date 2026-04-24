@@ -262,18 +262,28 @@ function bahtText($amount) {
             เหตุผลที่ขอใช้ครั้งนี้ เพื่อ <?php echo h($req['reason'] ?: '............................................................'); ?>
         </div>
 
-        <div class="signature-section">
-            <div style="width: 250px;">
-                ลงชื่อ............................................................ผู้ขอใช้<br>
-                ( <?php echo h($req['firstname'] . ' ' . $req['lastname']); ?> )<br>
-                ตำแหน่ง <?php echo getRoleDisplay($req['role']); ?>
-            </div>
-            <div style="width: 250px;">
-                ลงชื่อ............................................................ผู้รับผิดชอบโครงการ<br>
-                ( ............................................................ )<br>
-                ตำแหน่ง ............................................................
-            </div>
-        </div>
+        <table style="width: 100%; margin-top: 40px; border: none;">
+            <tr>
+                <td style="width: 50%; text-align: center; vertical-align: top; padding-bottom: 30px;">
+                    <div style="display: inline-block; text-align: left;">
+                        ลงชื่อ............................................................ผู้ขอใช้<br>
+                        <div style="text-align: center; margin-top: 5px;">
+                            ( <?php echo h($req['firstname'] . ' ' . $req['lastname']); ?> )<br>
+                            ตำแหน่ง <?php echo getRoleDisplay($req['role']); ?>
+                        </div>
+                    </div>
+                </td>
+                <td style="width: 50%; text-align: center; vertical-align: top; padding-bottom: 30px;">
+                    <div style="display: inline-block; text-align: left;">
+                        ลงชื่อ............................................................ผู้รับผิดชอบโครงการ<br>
+                        <div style="text-align: center; margin-top: 5px;">
+                            ( ............................................................ )<br>
+                            ตำแหน่ง ............................................................
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
 
         <table class="footer-boxes-table" style="width: 100%; border-collapse: collapse; margin-top: 30px; border: 1px solid #000;">
             <tr>
