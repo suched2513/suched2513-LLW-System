@@ -1,9 +1,9 @@
 <?php
 require_once 'config.php';
 
-// Auth guard: Only super_admin can run this
-if (!isAdmin()) {
-    die("Error: Access Denied. Only Super Admin can run this script.");
+// Auth guard: Only logged in users can run this
+if (!isLoggedIn()) {
+    die("Error: Access Denied. Please login first.");
 }
 
 $db = connectDB();
