@@ -89,13 +89,6 @@ $subMenus = [
         ['icon' => 'bi-speedometer2', 'label' => 'Advisor Dashboard', 'url' => $base_path . '/homeroom/index.php'],
         ['icon' => 'bi-people-fill',   'label' => 'จัดการการมอบหมาย',  'url' => $base_path . '/manage_advisors.php', 'roles' => ['super_admin']],
     ],
-    'budget' => [
-        ['icon' => 'bi-speedometer2', 'label' => 'Dashboard',     'url' => $base_path . '/budget_system/index.php'],
-        ['icon' => 'bi-journal-check', 'label' => 'โครงการ & กิจกรรม', 'url' => $base_path . '/budget_system/projects.php'],
-        ['icon' => 'bi-cash-coin',    'label' => 'บันทึกการเบิกจ่าย', 'url' => $base_path . '/budget_system/disbursements.php'],
-        ['icon' => 'bi-file-earmark-bar-graph', 'label' => 'รายงานงบประมาณ', 'url' => $base_path . '/budget_system/reports.php'],
-        ['icon' => 'bi-gear-fill',      'label' => 'ตั้งค่าระบบงบประมาณ', 'url' => $base_path . '/budget_system/settings.php', 'roles' => ['super_admin']],
-    ],
     'info' => [
         ['icon' => 'bi-people-fill',        'label' => 'สารสนเทศนักเรียน',   'url' => $base_path . '/student_info.php'],
         ['icon' => 'bi-person-vcard-fill',  'label' => 'สารสนเทศครู',        'url' => $base_path . '/teacher_info.php'],
@@ -370,27 +363,6 @@ $subMenus = [
             </div>
         </div>
 
-        <!-- Finance & Assets -->
-        <div class="pb-6">
-            <p class="sidebar-group-label text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-4">Finance & Assets</p>
-
-            <!-- SBMS -->
-            <a href="<?= $base_path ?>/budget_system/index.php" class="nav-item flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[13px] font-bold transition-all <?= $activeSystem === 'budget' ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-200/50' : 'text-slate-500 hover:bg-amber-50 hover:text-amber-600 hover:pl-6' ?>">
-                <i class="bi bi-wallet2 text-lg"></i> <span class="sidebar-text">ระบบงบประมาณ (SBMS)</span>
-                <span class="sidebar-tooltip">ระบบงบประมาณ (SBMS)</span>
-                <?php if ($activeSystem === 'budget'): ?>
-                <i class="nav-link-chevron bi bi-chevron-down ml-auto text-xs opacity-60"></i>
-                <?php endif; ?>
-            </a>
-            <div class="sub-menu <?= $activeSystem === 'budget' ? 'open' : '' ?> ml-6 mt-1 space-y-0.5">
-                <?php foreach ($subMenus['budget'] as $sub):
-                    if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                ?>
-                <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-slate-50' ?>">
-                    <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
-                </a>
-                <?php endforeach; ?>
-            </div>
         </div>
 
         <!-- Research & Development -->

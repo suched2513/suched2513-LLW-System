@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$sid || !$nm || !$cls) { $msg = 'กรุณากรอกข้อมูลให้ครบถ้วน'; $msgType = 'error'; } 
         else {
             try {
-                $st = $pdo->prepare("INSERT INTO att_students (student_id,name,classroom) VALUES (?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),classroom=VALUES(classroom)");
+                $st = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, academic_year) VALUES (?,?,?,2569) ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), academic_year=2569");
                 $ok = $st->execute([$sid, $nm, $cls]);
                 $msg = $ok ? "บันทึกข้อมูล '$nm' สำเร็จ" : 'เกิดข้อผิดพลาด';
                 $msgType = $ok ? 'success' : 'error';
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($do === 'import' && !empty($_POST['json_data'])) {
         $data = json_decode($_POST['json_data'], true);
         if ($data) {
-            $stmt = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom) VALUES (:sid, :name, :cls) ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom)");
+            $stmt = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, academic_year) VALUES (:sid, :name, :cls, 2569) ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), academic_year=2569");
             $pdo->beginTransaction();
             try {
                 foreach ($data as $p) { 

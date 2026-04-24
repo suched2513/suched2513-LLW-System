@@ -25,10 +25,10 @@ if ($classroom === '') {
 try {
     $pdo = getPdo();
 
-    // ตรวจสิทธิ์ att_teacher → ต้องเป็นห้องตัวเอง
+    // ตรวจสิทธิ์ att_teacher → ต้องเป็นห้องตัวเอง (Central Table: llw_class_advisors)
     if ($_SESSION['llw_role'] === 'att_teacher') {
         $userId = $_SESSION['user_id'] ?? 0;
-        $check  = $pdo->prepare("SELECT id FROM assembly_classrooms WHERE classroom = ? AND llw_user_id = ?");
+        $check  = $pdo->prepare("SELECT id FROM llw_class_advisors WHERE classroom = ? AND user_id = ?");
         $check->execute([$classroom, $userId]);
         if (!$check->fetch()) {
             http_response_code(403);
@@ -37,15 +37,15 @@ try {
         }
     }
 
-    // ดึงนักเรียน
+    // ดึงนักเรียนจาก Central Table (att_students)
     if ($classroom === 'all') {
-        $stmt = $pdo->query("SELECT student_id, name, classroom FROM assembly_students ORDER BY classroom, student_id");
+        $stmt = $pdo->query("SELECT student_id, name, classroom FROM att_students WHERE academic_year = 2569 ORDER BY classroom, student_id");
         $students = $stmt->fetchAll();
     } else {
         $stmt = $pdo->prepare("
             SELECT student_id, name, classroom
-            FROM assembly_students
-            WHERE classroom = ?
+            FROM att_students
+            WHERE classroom = ? AND academic_year = 2569
             ORDER BY student_id
         ");
         $stmt->execute([$classroom]);

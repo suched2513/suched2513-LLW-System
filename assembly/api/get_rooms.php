@@ -17,20 +17,22 @@ try {
     $pdo  = getPdo();
     $role = $_SESSION['llw_role'];
 
-    // att_teacher เห็นเฉพาะห้องของตัวเอง
+    // att_teacher เห็นเฉพาะห้องของตัวเอง (จาก Central Table: llw_class_advisors)
     if ($role === 'att_teacher') {
         $userId = $_SESSION['user_id'] ?? 0;
         $stmt = $pdo->prepare("
-            SELECT DISTINCT s.classroom
-            FROM assembly_students s
-            INNER JOIN assembly_classrooms c ON c.classroom = s.classroom
-            WHERE c.llw_user_id = ?
-            ORDER BY s.classroom
+            SELECT DISTINCT classroom
+            FROM llw_class_advisors
+            WHERE user_id = ?
+            ORDER BY classroom
         ");
         $stmt->execute([$userId]);
     } else {
+        // Admin เห็นทุกห้องที่มีนักเรียนในปีปัจจุบัน (2569)
         $stmt = $pdo->query("
-            SELECT DISTINCT classroom FROM assembly_students
+            SELECT DISTINCT classroom 
+            FROM att_students 
+            WHERE academic_year = 2569 
             ORDER BY classroom
         ");
     }
