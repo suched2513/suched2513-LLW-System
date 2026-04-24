@@ -14,13 +14,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             switch ($_POST['action']) {
                 case 'add':
                     $stmt = $db->prepare("
-                        INSERT INTO budget_projects (project_name, description, total_budget, 
+                        INSERT INTO budget_projects (project_name, department_id, fiscal_year, description, total_budget, 
                                            start_date, end_date, status, created_by)
-                        VALUES (:project_name, :description, :total_budget, 
+                        VALUES (:project_name, :department_id, :fiscal_year, :description, :total_budget, 
                                 :start_date, :end_date, :status, :created_by)
                     ");
                     $stmt->execute([
                         'project_name' => $_POST['project_name'],
+                        'department_id' => $_POST['department_id'] ?: null,
+                        'fiscal_year' => $_POST['fiscal_year'],
                         'description' => $_POST['description'],
                         'total_budget' => $_POST['total_budget'],
                         'start_date' => $_POST['start_date'],
@@ -39,6 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $db->prepare("
                         UPDATE budget_projects 
                         SET project_name = :project_name,
+                            department_id = :department_id,
+                            fiscal_year = :fiscal_year,
                             description = :description,
                             total_budget = :total_budget,
                             start_date = :start_date,
@@ -49,6 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([
                         'project_id' => $_POST['project_id'],
                         'project_name' => $_POST['project_name'],
+                        'department_id' => $_POST['department_id'] ?: null,
+                        'fiscal_year' => $_POST['fiscal_year'],
                         'description' => $_POST['description'],
                         'total_budget' => $_POST['total_budget'],
                         'start_date' => $_POST['start_date'],
@@ -94,11 +100,12 @@ $search = $_GET['search'] ?? '';
 
 // Build query with filters
 $query = "
-    SELECT p.*, 
+    SELECT p.*, d.dept_name,
            COALESCE(SUM(CASE WHEN t.transaction_type = 'expense' 
                             THEN t.amount ELSE 0 END), 0) as used_budget,
            COUNT(DISTINCT t.transaction_id) as transaction_count
     FROM budget_projects p
+    LEFT JOIN wfh_departments d ON p.department_id = d.dept_id
     LEFT JOIN budget_transactions t ON p.project_id = t.project_id
     WHERE 1=1
 ";
@@ -207,8 +214,17 @@ require_once __DIR__ . '/../components/layout_start.php';
                         ?>
                         <tr class="hover:bg-slate-50/50 transition-all group">
                             <td class="px-8 py-6">
-                                <p class="text-sm font-black text-slate-800"><?php echo h($project['project_name']); ?></p>
-                                <p class="text-xs text-slate-400 mt-1 line-clamp-1"><?php echo h($project['description']); ?></p>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <?php if ($project['fiscal_year']): ?>
+                                        <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-black rounded-md uppercase tracking-wider">ปี <?php echo h($project['fiscal_year']); ?></span>
+                                    <?php endif; ?>
+                                    <p class="text-sm font-black text-slate-800"><?php echo h($project['project_name']); ?></p>
+                                </div>
+                                <div class="flex items-center gap-2 text-[10px] font-bold text-slate-500 mb-1">
+                                    <i class="bi bi-building"></i>
+                                    <?php echo h($project['dept_name'] ?: 'ไม่ระบุฝ่าย'); ?>
+                                </div>
+                                <p class="text-xs text-slate-400 line-clamp-1"><?php echo h($project['description']); ?></p>
                                 <div class="flex items-center gap-2 mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                     <i class="bi bi-calendar3"></i>
                                     <?php echo date('d/m/Y', strtotime($project['start_date'])); ?> - <?php echo date('d/m/Y', strtotime($project['end_date'])); ?>
@@ -272,6 +288,21 @@ require_once __DIR__ . '/../components/layout_start.php';
             <form method="POST" class="needs-validation" novalidate>
                 <input type="hidden" name="action" value="add">
                 <div class="p-8 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">ฝ่าย/กลุ่มสาระ</label>
+                            <select name="department_id" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                                <option value="">-- เลือกฝ่าย --</option>
+                                <?php foreach (getDepartments() as $dept): ?>
+                                    <option value="<?php echo $dept['dept_id']; ?>"><?php echo h($dept['dept_name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">ปีงบประมาณ</label>
+                            <input type="text" name="fiscal_year" placeholder="เช่น 2567" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                        </div>
+                    </div>
                     <div>
                         <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">ชื่อโครงการ</label>
                         <input type="text" name="project_name" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
@@ -324,6 +355,21 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="project_id" id="edit_project_id">
                 <div class="p-8 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">ฝ่าย/กลุ่มสาระ</label>
+                            <select name="department_id" id="edit_department_id" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition-all">
+                                <option value="">-- เลือกฝ่าย --</option>
+                                <?php foreach (getDepartments() as $dept): ?>
+                                    <option value="<?php echo $dept['dept_id']; ?>"><?php echo h($dept['dept_name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">ปีงบประมาณ</label>
+                            <input type="text" name="fiscal_year" id="edit_fiscal_year" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition-all">
+                        </div>
+                    </div>
                     <div>
                         <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">ชื่อโครงการ</label>
                         <input type="text" name="project_name" id="edit_project_name" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition-all">
@@ -368,6 +414,8 @@ require_once __DIR__ . '/../components/layout_start.php';
 function editProject(project) {
     document.getElementById('edit_project_id').value = project.project_id;
     document.getElementById('edit_project_name').value = project.project_name;
+    document.getElementById('edit_department_id').value = project.department_id || '';
+    document.getElementById('edit_fiscal_year').value = project.fiscal_year || '';
     document.getElementById('edit_description').value = project.description;
     document.getElementById('edit_total_budget').value = project.total_budget;
     document.getElementById('edit_start_date').value = project.start_date;

@@ -14,7 +14,8 @@ try {
             SUM(total_budget) as total_budget,
             COUNT(*) as total_projects,
             COUNT(CASE WHEN status = 'active' THEN 1 END) as active_projects,
-            COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_projects
+            COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_projects,
+            (SELECT COUNT(*) FROM budget_disbursements WHERE status = 'pending') as pending_requests
         FROM budget_projects
     ");
     $summary = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -40,16 +41,16 @@ try {
     ");
     $active_projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // รายการใช้จ่ายล่าสุด
+    // รายการขอเบิกจ่ายล่าสุด
     $stmt = $db->query("
-        SELECT t.*, p.project_name, u.username
-        FROM budget_transactions t
-        JOIN budget_projects p ON t.project_id = p.project_id
-        JOIN llw_users u ON t.created_by = u.user_id
-        ORDER BY t.created_at DESC
+        SELECT d.*, p.project_name, u.firstname
+        FROM budget_disbursements d
+        JOIN budget_projects p ON d.project_id = p.project_id
+        JOIN llw_users u ON d.requested_by = u.user_id
+        ORDER BY d.created_at DESC
         LIMIT 5
     ");
-    $recent_transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $recent_requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // ข้อมูลสำหรับแผนภูมิแท่ง (Top 5 Projects by Budget)
     $stmt = $db->query("
@@ -126,13 +127,13 @@ require_once __DIR__ . '/../components/layout_start.php';
 
         <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2rem] p-6 text-white shadow-xl shadow-amber-200/50 relative overflow-hidden group">
             <div class="relative z-10">
-                <p class="text-[10px] font-black opacity-70 uppercase tracking-widest">กำลังดำเนินการ</p>
-                <p class="text-2xl font-black mt-1 italic"><?php echo $summary['active_projects']; ?> <span class="text-xs">โครงการ</span></p>
+                <p class="text-[10px] font-black opacity-70 uppercase tracking-widest">รอดำเนินการ</p>
+                <p class="text-2xl font-black mt-1 italic"><?php echo $summary['pending_requests']; ?> <span class="text-sm font-bold uppercase opacity-80 not-italic">โครงการ</span></p>
                 <div class="mt-4 flex items-center gap-2">
-                    <span class="px-2 py-0.5 rounded-full bg-white/20 text-[9px] font-black uppercase">เสร็จสิ้น <?php echo $summary['completed_projects']; ?></span>
+                    <span class="px-2 py-0.5 rounded-full bg-white/20 text-[9px] font-black uppercase tracking-widest">คำขอที่ยังไม่อนุมัติ</span>
                 </div>
             </div>
-            <i class="bi bi-kanban absolute -right-2 -bottom-2 text-6xl opacity-10 group-hover:scale-110 transition-transform"></i>
+            <i class="bi bi-hourglass-split absolute -right-4 -bottom-4 text-7xl opacity-20 group-hover:scale-110 group-hover:-rotate-12 transition-all"></i>
         </div>
     </div>
 

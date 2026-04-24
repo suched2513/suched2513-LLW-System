@@ -94,3 +94,43 @@ function isProjectOwner($project_id) {
         return false;
     }
 }
+
+// Get Fund Sources
+function getFundSources() {
+    try {
+        $db = connectDB();
+        return $db->query("SELECT * FROM budget_fund_sources ORDER BY source_id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    } catch(PDOException $e) {
+        return [];
+    }
+}
+
+// Get Departments
+function getDepartments() {
+    try {
+        $db = connectDB();
+        return $db->query("SELECT * FROM wfh_departments ORDER BY dept_name ASC")->fetchAll(PDO::FETCH_ASSOC);
+    } catch(PDOException $e) {
+        return [];
+    }
+}
+
+// Get Status Badge Class
+function getStatusBadgeClass($status) {
+    switch ($status) {
+        case 'pending': return 'bg-amber-50 text-amber-600 border-amber-100';
+        case 'approved': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+        case 'rejected': return 'bg-rose-50 text-rose-600 border-rose-100';
+        default: return 'bg-slate-50 text-slate-600 border-slate-100';
+    }
+}
+
+// Get Status Display in Thai
+function getStatusDisplay($status) {
+    switch ($status) {
+        case 'pending': return 'รออนุมัติ';
+        case 'approved': return 'อนุมัติแล้ว';
+        case 'rejected': return 'ไม่อนุมัติ';
+        default: return $status;
+    }
+}
