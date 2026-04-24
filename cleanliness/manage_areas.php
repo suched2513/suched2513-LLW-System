@@ -13,20 +13,24 @@ try {
     
     // Process form submission
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $action = $_POST['action'] ?? '';
-        
-        if ($action === 'add') {
-            $stmt = $pdo->prepare("INSERT INTO clean_areas (name, description, assigned_class) VALUES (?, ?, ?)");
-            $stmt->execute([$_POST['name'], $_POST['description'], $_POST['assigned_class']]);
-        } elseif ($action === 'edit') {
-            $stmt = $pdo->prepare("UPDATE clean_areas SET name = ?, description = ?, assigned_class = ? WHERE id = ?");
-            $stmt->execute([$_POST['name'], $_POST['description'], $_POST['assigned_class'], $_POST['id']]);
-        } elseif ($action === 'delete') {
-            $stmt = $pdo->prepare("DELETE FROM clean_areas WHERE id = ?");
-            $stmt->execute([$_POST['id']]);
+        try {
+            $action = $_POST['action'] ?? '';
+            
+            if ($action === 'add') {
+                $stmt = $pdo->prepare("INSERT INTO clean_areas (name, description, assigned_class) VALUES (?, ?, ?)");
+                $stmt->execute([$_POST['name'], $_POST['description'], $_POST['assigned_class']]);
+            } elseif ($action === 'edit') {
+                $stmt = $pdo->prepare("UPDATE clean_areas SET name = ?, description = ?, assigned_class = ? WHERE id = ?");
+                $stmt->execute([$_POST['name'], $_POST['description'], $_POST['assigned_class'], $_POST['id']]);
+            } elseif ($action === 'delete') {
+                $stmt = $pdo->prepare("DELETE FROM clean_areas WHERE id = ?");
+                $stmt->execute([$_POST['id']]);
+            }
+            header('Location: manage_areas.php');
+            exit();
+        } catch (Exception $e) {
+            $error_save = "ไม่สามารถบันทึกข้อมูลได้: " . $e->getMessage();
         }
-        header('Location: manage_areas.php');
-        exit();
     }
 
     $areas = $pdo->query("SELECT * FROM clean_areas ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -73,6 +77,11 @@ require_once __DIR__ . '/../components/layout_start.php';
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     <!-- Form Area -->
     <div class="lg:col-span-1">
+        <?php if (isset($error_save)): ?>
+            <div class="bg-rose-50 border border-rose-200 text-rose-600 p-4 rounded-2xl mb-6 text-sm font-bold">
+                <i class="bi bi-exclamation-triangle-fill mr-2"></i> <?= htmlspecialchars($error_save) ?>
+            </div>
+        <?php endif; ?>
         <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 p-8 sticky top-8">
             <h3 class="text-xl font-black text-slate-800 flex items-center gap-3 mb-6">
                 <i class="bi bi-plus-circle-fill text-emerald-500"></i>
@@ -90,12 +99,15 @@ require_once __DIR__ . '/../components/layout_start.php';
 
                 <div class="space-y-2">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ห้องเรียนที่รับผิดชอบ</label>
-                    <select name="assigned_class" id="areaClass" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
-                        <option value="">-- ไม่ระบุ --</option>
-                        <?php foreach ($classrooms as $room): ?>
-                            <option value="<?= htmlspecialchars($room) ?>"><?= htmlspecialchars($room) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div class="flex flex-col gap-2">
+                        <select name="assigned_class_select" id="areaClass" onchange="document.getElementById('areaClassManual').value = this.value" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
+                            <option value="">-- เลือกห้องเรียน --</option>
+                            <?php foreach ($classrooms as $room): ?>
+                                <option value="<?= htmlspecialchars($room) ?>"><?= htmlspecialchars($room) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <input type="text" name="assigned_class" id="areaClassManual" placeholder="หรือพิมพ์ชื่อห้อง..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
+                    </div>
                 </div>
 
                 <div class="space-y-2">
@@ -161,6 +173,7 @@ function editArea(area) {
     document.getElementById('areaId').value = area.id;
     document.getElementById('areaName').value = area.name;
     document.getElementById('areaClass').value = area.assigned_class || '';
+    document.getElementById('areaClassManual').value = area.assigned_class || '';
     document.getElementById('areaDesc').value = area.description || '';
     document.getElementById('cancelBtn').classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });

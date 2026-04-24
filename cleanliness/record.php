@@ -96,14 +96,17 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <!-- Class Selection -->
                 <div class="space-y-3">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ห้องเรียนที่รับผิดชอบ</label>
-                    <select name="class_name" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
-                        <option value="">-- เลือกห้องเรียน --</option>
-                        <?php foreach ($classrooms as $room): ?>
-                            <option value="<?= htmlspecialchars($room) ?>" <?= $area['assigned_class'] === $room ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($room) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div class="flex flex-col gap-2">
+                        <select name="class_name_select" onchange="document.getElementById('class_name_manual').value = this.value" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
+                            <option value="">-- เลือกห้องเรียน --</option>
+                            <?php foreach ($classrooms as $room): ?>
+                                <option value="<?= htmlspecialchars($room) ?>" <?= $area['assigned_class'] === $room ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($room) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <input type="text" name="class_name" id="class_name_manual" value="<?= htmlspecialchars($area['assigned_class'] ?: '') ?>" placeholder="หรือพิมพ์ชื่อห้อง..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
+                    </div>
                 </div>
 
                 <!-- Date -->
