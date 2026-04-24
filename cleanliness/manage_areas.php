@@ -2,8 +2,8 @@
 session_start();
 require_once __DIR__ . '/../config.php';
 
-// Role guard - Super Admin only
-if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin'])) {
+// Role guard - Super Admin or WFH Admin
+if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
     header('Location: index.php');
     exit();
 }
@@ -59,9 +59,8 @@ try {
 
 } catch (Exception $e) {
     error_log($e->getMessage());
-    $classrooms = ['ม.1/1','ม.2/1','ม.3/1','ม.4/1','ม.5/1','ม.6/1']; // Minimum fallback
-    header('Location: index.php');
-    exit();
+    $areas = $areas ?? [];
+    $classrooms = $classrooms ?? ['ม.1/1','ม.2/1','ม.3/1','ม.4/1','ม.5/1','ม.6/1'];
 }
 
 $pageTitle = 'จัดการพื้นที่ประเมิน';
