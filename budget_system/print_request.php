@@ -25,6 +25,21 @@ $stmtItems = $db->prepare("SELECT * FROM budget_disbursement_items WHERE disburs
 $stmtItems->execute([$id]);
 $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
 
+// Calculate Budget Summary for Plan Dept
+$stmtUsed = $db->prepare("
+    SELECT SUM(amount) as used_before 
+    FROM budget_transactions 
+    WHERE project_id = ? AND transaction_type = 'expense'
+");
+$stmtUsed->execute([$req['project_id']]);
+$used_data = $stmtUsed->fetch(PDO::FETCH_ASSOC);
+
+$total_budget = $req['total_budget'];
+$used_before = $used_data['used_before'] ?: 0;
+$balance = $total_budget - $used_before;
+$request_amount = $req['total_amount'];
+$net_balance = $balance - $request_amount;
+
 // Helper for Thai Date
 function thaiDate($date) {
     $months = ["", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
@@ -267,12 +282,12 @@ function bahtText($amount) {
                     <div style="margin-bottom: 8px;">
                         <span class="checkbox"></span> อยู่ในแผน &nbsp;&nbsp;&nbsp;&nbsp; <span class="checkbox"></span> ไม่อยู่ในแผน
                     </div>
-                    <div style="line-height: 1.8;">
-                        งบประมาณที่ได้รับ...............................บาท<br>
-                        ใช้ไปแล้ว..............................................บาท<br>
-                        คงเหลือ...............................................บาท<br>
-                        ขอใช้ครั้งนี้............................................บาท<br>
-                        คงเหลือสุทธิ.........................................บาท<br>
+                    <div style="line-height: 2; margin-top: 5px;">
+                        งบประมาณที่ได้รับ <span style="font-weight: bold; border-bottom: 1px dotted #000; display: inline-block; min-width: 120px; text-align: right;"><?php echo number_format($total_budget, 2); ?></span> บาท<br>
+                        ใช้ไปแล้ว <span style="font-weight: bold; border-bottom: 1px dotted #000; display: inline-block; min-width: 120px; text-align: right;"><?php echo number_format($used_before, 2); ?></span> บาท<br>
+                        คงเหลือ <span style="font-weight: bold; border-bottom: 1px dotted #000; display: inline-block; min-width: 120px; text-align: right;"><?php echo number_format($balance, 2); ?></span> บาท<br>
+                        ขอใช้ครั้งนี้ <span style="font-weight: bold; border-bottom: 1px dotted #000; display: inline-block; min-width: 120px; text-align: right;"><?php echo number_format($request_amount, 2); ?></span> บาท<br>
+                        คงเหลือสุทธิ <span style="font-weight: bold; border-bottom: 1px dotted #000; display: inline-block; min-width: 120px; text-align: right;"><?php echo number_format($net_balance, 2); ?></span> บาท<br>
                         เห็นควรดำเนินการ
                     </div>
                     <div style="margin-top: 25px; text-align: center;">
