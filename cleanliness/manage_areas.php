@@ -30,7 +30,12 @@ try {
     }
 
     $areas = $pdo->query("SELECT * FROM clean_areas ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-    $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE classroom IS NOT NULL AND classroom != '' ORDER BY classroom ASC")->fetchAll(PDO::FETCH_COLUMN);
+    $classrooms = $pdo->query("SELECT DISTINCT classroom FROM llw_class_advisors ORDER BY classroom ASC")->fetchAll(PDO::FETCH_COLUMN);
+
+    // Fallback if advisors table is empty
+    if (empty($classrooms)) {
+        $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE academic_year = 2569 ORDER BY classroom ASC")->fetchAll(PDO::FETCH_COLUMN);
+    }
 
 } catch (Exception $e) {
     error_log($e->getMessage());
