@@ -260,36 +260,64 @@ function bahtText($amount) {
             </div>
         </div>
 
-        <div class="footer-boxes">
-            <div class="footer-box">
-                <strong>ความเห็นหัวหน้าฝ่ายแผนงาน</strong><br>
-                <span class="checkbox"></span> อยู่ในแผน <span class="checkbox"></span> ไม่อยู่ในแผน<br>
-                งบประมาณที่ได้รับ.......................บาท<br>
-                ใช้ไปแล้ว.......................................บาท<br>
-                คงเหลือ..........................................บาท<br>
-                ขอใช้ครั้งนี้.......................................บาท<br>
-                คงเหลือสุทธิ....................................บาท
-            </div>
-            <div class="footer-box">
-                <strong>การดำเนินงานของฝ่ายพัสดุ</strong><br>
-                พัสดุตามรายการที่เสนอ เห็นควร<br>
-                <span class="checkbox"></span> จัดซื้อ/จัดจ้างได้<br>
-                <span class="checkbox"></span> ไม่สามารถจัดซื้อ/จัดจ้างได้<br><br>
-                ลงชื่อ............................................................<br>
-                ( ............................................................ )
-            </div>
-            <div class="footer-box">
-                <strong>การตรวจสอบและรับรอง</strong><br>
-                เห็นควร <span class="checkbox"></span> อนุมัติ <span class="checkbox"></span> ไม่อนุมัติ โดยใช้เงิน<br>
-                <ul class="fund-source-list">
-                    <?php foreach (getFundSources() as $fs): ?>
-                        <li><span class="checkbox <?php echo $req['fund_source_id'] == $fs['source_id'] ? 'checked' : ''; ?>"></span> <?php echo h($fs['source_name']); ?></li>
-                    <?php endforeach; ?>
-                </ul>
-                ลงชื่อ............................................................<br>
-                ( ............................................................ )
-            </div>
-        </div>
+        <table class="footer-boxes-table" style="width: 100%; border-collapse: collapse; margin-top: 30px; border: 1px solid #000;">
+            <tr>
+                <td style="width: 33.33%; border: 1px solid #000; padding: 10px; vertical-align: top; font-size: 14px;">
+                    <div style="text-align: center; font-weight: bold; border-bottom: 1px solid #000; margin: -10px -10px 10px -10px; padding: 5px; background: #f5f5f5;">ความเห็นของหัวหน้าฝ่ายแผนงาน</div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="checkbox"></span> อยู่ในแผน &nbsp;&nbsp;&nbsp;&nbsp; <span class="checkbox"></span> ไม่อยู่ในแผน
+                    </div>
+                    <div style="line-height: 1.8;">
+                        งบประมาณที่ได้รับ...............................บาท<br>
+                        ใช้ไปแล้ว..............................................บาท<br>
+                        คงเหลือ...............................................บาท<br>
+                        ขอใช้ครั้งนี้............................................บาท<br>
+                        คงเหลือสุทธิ.........................................บาท<br>
+                        เห็นควรดำเนินการ
+                    </div>
+                    <div style="margin-top: 25px; text-align: center;">
+                        ลงชื่อ............................................................<br>
+                        ( นางชลลัดดา มากนวล )<br>
+                        หัวหน้างานแผนงาน
+                    </div>
+                </td>
+                <td style="width: 33.33%; border: 1px solid #000; padding: 10px; vertical-align: top; font-size: 14px;">
+                    <div style="text-align: center; font-weight: bold; border-bottom: 1px solid #000; margin: -10px -10px 10px -10px; padding: 5px; background: #f5f5f5;">การดำเนินงานของฝ่ายพัสดุ</div>
+                    <div style="margin-bottom: 8px;">
+                        พัสดุตามรายการที่เสนอ<br>เห็นควร
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="checkbox"></span> จัดซื้อ/จัดจ้างได้
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="checkbox"></span> ไม่สามารถจัดซื้อ/จัดจ้างได้
+                    </div>
+                    <div style="margin-top: 100px; text-align: center;">
+                        ลงชื่อ............................................................<br>
+                        ( นางบานเย็น ภูกรักษา )<br>
+                        หัวหน้าเจ้าหน้าที่พัสดุ
+                    </div>
+                </td>
+                <td style="width: 33.33%; border: 1px solid #000; padding: 10px; vertical-align: top; font-size: 14px;">
+                    <div style="text-align: center; font-weight: bold; border-bottom: 1px solid #000; margin: -10px -10px 10px -10px; padding: 5px; background: #f5f5f5;">การตรวจสอบและรับรอง</div>
+                    <div style="margin-bottom: 8px;">
+                        ได้ทำการตรวจสอบรายการตามเสนอแล้ว<br>เห็นควร &nbsp; <span class="checkbox"></span> อนุมัติ &nbsp; <span class="checkbox"></span> ไม่อนุมัติ โดยใช้เงิน
+                    </div>
+                    <div style="margin-left: 15px; line-height: 1.6;">
+                        <?php 
+                        $sources = getFundSources();
+                        foreach ($sources as $fs): ?>
+                            <div><span class="checkbox <?php echo $req['fund_source_id'] == $fs['source_id'] ? 'checked' : ''; ?>"></span> <?php echo h($fs['source_name']); ?></div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div style="margin-top: 40px; text-align: center;">
+                        ลงชื่อ............................................................<br>
+                        ( นางรัตนา หงษ์โสภา )<br>
+                        หัวหน้างานการเงิน
+                    </div>
+                </td>
+            </tr>
+        </table>
 
         <div style="margin-top: 30px; text-align: center;">
             <strong>คำสั่ง / ผลการพิจารณา</strong><br>
