@@ -30,16 +30,34 @@ try {
     }
 
     $areas = $pdo->query("SELECT * FROM clean_areas ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
-    $classrooms = $pdo->query("SELECT DISTINCT classroom FROM llw_class_advisors ORDER BY classroom ASC")->fetchAll(PDO::FETCH_COLUMN);
 
-    // Fallback if advisors table is empty
-    if (empty($classrooms)) {
-        $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE academic_year = 2569 ORDER BY classroom ASC")->fetchAll(PDO::FETCH_COLUMN);
-    }
+    // Robust Classroom Fetching
+    $rooms = [];
+    // 1. From Subjects
+    try { 
+        $r1 = $pdo->query("SELECT DISTINCT classroom FROM att_subjects WHERE classroom != ''")->fetchAll(PDO::FETCH_COLUMN);
+        if ($r1) $rooms = array_merge($rooms, $r1);
+    } catch(Exception $e){}
+    
+    // 2. From Central Advisors
+    try { 
+        $r2 = $pdo->query("SELECT DISTINCT classroom FROM llw_class_advisors WHERE classroom != ''")->fetchAll(PDO::FETCH_COLUMN);
+        if ($r2) $rooms = array_merge($rooms, $r2);
+    } catch(Exception $e){}
+    
+    // 3. From Students (Any year)
+    try { 
+        $r3 = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE classroom != ''")->fetchAll(PDO::FETCH_COLUMN);
+        if ($r3) $rooms = array_merge($rooms, $r3);
+    } catch(Exception $e){}
+
+    $classrooms = array_values(array_unique(array_filter($rooms)));
+    sort($classrooms);
 
 } catch (Exception $e) {
     error_log($e->getMessage());
     $areas = [];
+    $classrooms = [];
 }
 
 $pageTitle = 'จัดการพื้นที่ประเมิน';

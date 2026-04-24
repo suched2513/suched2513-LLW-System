@@ -27,16 +27,27 @@ try {
         exit();
     }
 
-    // Fetch list of classrooms for selection
-    $classrooms = $pdo->query("SELECT DISTINCT classroom FROM llw_class_advisors ORDER BY classroom ASC")->fetchAll(PDO::FETCH_COLUMN);
+    // Robust Classroom Fetching
+    $rooms = [];
+    try { 
+        $r1 = $pdo->query("SELECT DISTINCT classroom FROM att_subjects WHERE classroom != ''")->fetchAll(PDO::FETCH_COLUMN);
+        if ($r1) $rooms = array_merge($rooms, $r1);
+    } catch(Exception $e){}
+    try { 
+        $r2 = $pdo->query("SELECT DISTINCT classroom FROM llw_class_advisors WHERE classroom != ''")->fetchAll(PDO::FETCH_COLUMN);
+        if ($r2) $rooms = array_merge($rooms, $r2);
+    } catch(Exception $e){}
+    try { 
+        $r3 = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE classroom != ''")->fetchAll(PDO::FETCH_COLUMN);
+        if ($r3) $rooms = array_merge($rooms, $r3);
+    } catch(Exception $e){}
 
-    // Fallback if advisors table is empty
-    if (empty($classrooms)) {
-        $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE academic_year = 2569 ORDER BY classroom ASC")->fetchAll(PDO::FETCH_COLUMN);
-    }
+    $classrooms = array_values(array_unique(array_filter($rooms)));
+    sort($classrooms);
 
 } catch (Exception $e) {
     error_log($e->getMessage());
+    $classrooms = [];
     header('Location: index.php');
     exit();
 }
