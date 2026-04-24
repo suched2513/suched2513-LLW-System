@@ -451,6 +451,16 @@ if ($isLoggedIn) {
                 'gradient' => 'from-indigo-600 to-violet-700',
                 'delay'    => 1.0,
             ],
+            [
+                'url'      => 'budget_system/index.php',
+                'icon'     => 'bi-cash-coin',
+                'bgIcon'   => 'bi-wallet2',
+                'title'    => 'ระบบบริหารงบประมาณ',
+                'desc'     => 'จัดการงบประมาณโครงการ บันทึกรายรับ-รายจ่าย และติดตามสถานะงบประมาณรายปี',
+                'color'    => 'amber',
+                'gradient' => 'from-amber-500 to-orange-500',
+                'delay'    => 1.1,
+            ],
             /* Temporarily Disabled
             [
                 'url'      => 'cleanliness/index.php',

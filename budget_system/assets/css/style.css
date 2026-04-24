@@ -1,0 +1,106 @@
+/* Custom styles */
+/* Font settings */
+body {
+    font-family: 'Prompt', sans-serif;
+    font-weight: 300;
+}
+
+h1, h2, h3, h4, h5, h6, .nav-link, .btn {
+    font-family: 'Prompt', sans-serif;
+    font-weight: 500;
+}
+
+.card-title, .modal-title {
+    font-weight: 600;
+}
+
+.table th {
+    font-weight: 500;
+}
+
+/* Adjust font weights for better Thai language display */
+.navbar-brand {
+    font-weight: 500;
+}
+
+.badge {
+    font-weight: 400;
+}
+
+/* Adjust letter spacing for better readability */
+body {
+    letter-spacing: 0.02em;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.container {
+    flex: 1 0 auto;
+}
+
+.footer {
+    flex-shrink: 0;
+    background-color: #f8f9fa;
+    padding: 1rem 0;
+    margin-top: 2rem;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+.badge {
+    font-weight: 500;
+}
+
+/* Dashboard cards hover effect */
+.card.bg-primary:hover,
+.card.bg-success:hover,
+.card.bg-info:hover {
+    transform: translateY(-3px);
+    transition: transform 0.2s ease-in-out;
+}
+
+/* Button hover effects */
+.btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

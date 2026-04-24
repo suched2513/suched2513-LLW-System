@@ -1,0 +1,56 @@
+/* Custom styles for charts */
+.recharts-wrapper {
+    margin: 0 auto;
+}
+
+.recharts-default-tooltip {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+    padding: 8px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.recharts-tooltip-label {
+    color: #666 !important;
+    font-weight: 500 !important;
+    margin-bottom: 4px !important;
+}
+
+.recharts-tooltip-item {
+    color: #333 !important;
+    font-size: 0.9em !important;
+}
+
+.recharts-legend-item {
+    font-size: 0.9em !important;
+}
+
+.recharts-cartesian-axis-tick-value {
+    font-size: 0.8em !important;
+    fill: #666 !important;
+}
+
+/* ปรับแต่งแผนภูมิวงกลม */
+.pie-chart-container {
+    position: relative;
+}
+
+.pie-total {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.pie-total .amount {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #333;
+}
+
+.pie-total .label {
+    font-size: 0.8em;
+    color: #666;
+}

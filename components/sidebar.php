@@ -97,6 +97,10 @@ $subMenus = [
         ['icon' => 'bi-geo-alt-fill',   'label' => 'จัดการพื้นที่', 'url' => $base_path . '/cleanliness/manage_areas.php', 'roles' => ['super_admin']],
     ],
     */
+    'budget' => [
+        ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'url' => $base_path . '/budget_system/index.php'],
+        ['icon' => 'bi-journal-check', 'label' => 'จัดการโครงการ', 'url' => $base_path . '/budget_system/projects.php'],
+    ],
     'info' => [
         ['icon' => 'bi-people-fill',        'label' => 'สารสนเทศนักเรียน',   'url' => $base_path . '/student_info.php'],
         ['icon' => 'bi-person-vcard-fill',  'label' => 'สารสนเทศครู',        'url' => $base_path . '/teacher_info.php'],
@@ -343,6 +347,24 @@ $subMenus = [
                     if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
                 ?>
                 <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50' ?>">
+                    <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Budget System -->
+            <a href="<?= $base_path ?>/budget_system/index.php" class="nav-item flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[13px] font-bold transition-all mt-1 <?= $activeSystem === 'budget' ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-200/50' : 'text-slate-500 hover:bg-amber-50 hover:text-amber-600 hover:pl-6' ?>">
+                <i class="bi bi-cash-coin text-lg"></i> <span class="sidebar-text">ระบบบริหารงบประมาณ</span>
+                <span class="sidebar-tooltip">ระบบบริหารงบประมาณ</span>
+                <?php if ($activeSystem === 'budget'): ?>
+                <i class="nav-link-chevron bi bi-chevron-down ml-auto text-xs opacity-60"></i>
+                <?php endif; ?>
+            </a>
+            <div class="sub-menu <?= $activeSystem === 'budget' ? 'open' : '' ?> ml-6 mt-1 space-y-0.5">
+                <?php foreach ($subMenus['budget'] as $sub):
+                    if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                ?>
+                <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-slate-50' ?>">
                     <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
                 </a>
                 <?php endforeach; ?>

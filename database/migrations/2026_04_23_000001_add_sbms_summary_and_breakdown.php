@@ -8,10 +8,8 @@ use Illuminate\Database\Capsule\Manager as Capsule;
 
 require_once __DIR__ . '/../../config/database.php';
 
-return new class {
-    public function up() {
-        $pdo = getPdo();
-        
+return [
+    'up' => function (PDO $pdo) {
         // 1. Add Breakdown columns to sbms_disbursements (supporting input_11 to input_1015 style)
         // For simplicity and flexibility, we'll add a JSON column for itemized expenses
         // but also specific columns for common summary fields
@@ -45,15 +43,15 @@ return new class {
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (disbursement_id) REFERENCES sbms_disbursements(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
-    }
+    },
 
-    public function down() {
-        $pdo = getPdo();
+    'down' => function (PDO $pdo) {
         $pdo->exec("DROP TABLE IF EXISTS sbms_summaries");
         $pdo->exec("ALTER TABLE sbms_disbursements 
             DROP COLUMN IF EXISTS expense_items,
             DROP COLUMN IF EXISTS total_spent_before,
             DROP COLUMN IF EXISTS balance_remaining
         ");
-    }
-};
+    },
+];
+
