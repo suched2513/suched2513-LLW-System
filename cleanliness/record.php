@@ -14,9 +14,11 @@ if (!$id) {
     exit();
 }
 
+$pdo = getPdo();
+$area = null;
+$classrooms = ['ม.1/1', 'ม.1/2', 'ม.2/1', 'ม.2/2', 'ม.3/1', 'ม.3/2', 'ม.4/1', 'ม.4/2', 'ม.5/1', 'ม.5/2', 'ม.6/1', 'ม.6/2'];
+
 try {
-    $pdo = getPdo();
-    
     // Fetch area info
     $stmtArea = $pdo->prepare("SELECT * FROM clean_areas WHERE id = ?");
     $stmtArea->execute([$id]);
@@ -27,34 +29,23 @@ try {
         exit();
     }
 
-    // Universal Classroom Discovery
-    $all_rooms = [];
-    $fallback_rooms = [
-        'ม.1/1', 'ม.1/2', 'ม.1/3', 'ม.1/4', 'ม.1/5',
-        'ม.2/1', 'ม.2/2', 'ม.2/3', 'ม.2/4', 'ม.2/5',
-        'ม.3/1', 'ม.3/2', 'ม.3/3', 'ม.3/4', 'ม.3/5',
-        'ม.4/1', 'ม.4/2', 'ม.4/3', 'ม.4/4', 'ม.4/5',
-        'ม.5/1', 'ม.5/2', 'ม.5/3', 'ม.5/4', 'ม.5/5',
-        'ม.6/1', 'ม.6/2', 'ม.6/3', 'ม.6/4', 'ม.6/5'
-    ];
-
-    try {
-        $tables = ['att_subjects', 'llw_class_advisors', 'att_students', 'assembly_students'];
-        foreach ($tables as $t) {
-            try {
-                $data = $pdo->query("SELECT DISTINCT classroom FROM $t WHERE classroom != ''")->fetchAll(PDO::FETCH_COLUMN);
-                if ($data) $all_rooms = array_merge($all_rooms, $data);
-            } catch(Exception $e2) {}
-        }
-    } catch(Exception $e) {}
-
-    if (empty($all_rooms)) $all_rooms = $fallback_rooms;
-    $classrooms = array_values(array_unique(array_filter($all_rooms)));
-    sort($classrooms);
+    // Classroom Discovery
+    $rooms = [];
+    $check_tables = ['att_subjects', 'llw_class_advisors', 'att_students'];
+    foreach ($check_tables as $tbl) {
+        try {
+            $data = $pdo->query("SELECT DISTINCT classroom FROM $tbl WHERE classroom != '' LIMIT 50")->fetchAll(PDO::FETCH_COLUMN);
+            if ($data) $rooms = array_merge($rooms, $data);
+        } catch (Exception $e2) {}
+    }
+    
+    if (!empty($rooms)) {
+        $classrooms = array_values(array_unique(array_filter($rooms)));
+        sort($classrooms);
+    }
 
 } catch (Exception $e) {
     error_log($e->getMessage());
-    $classrooms = ['ม.1/1','ม.2/1','ม.3/1','ม.4/1','ม.5/1','ม.6/1']; // Minimum fallback
     header('Location: index.php');
     exit();
 }
@@ -73,7 +64,6 @@ require_once __DIR__ . '/../components/layout_start.php';
     </a>
 
     <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-        <!-- Form Header -->
         <div class="bg-gradient-to-r from-emerald-500 to-teal-600 p-8 text-white">
             <div class="flex items-center gap-6">
                 <div class="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl">
@@ -93,11 +83,10 @@ require_once __DIR__ . '/../components/layout_start.php';
             <input type="hidden" name="area_id" value="<?= $area['id'] ?>">
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Class Selection -->
                 <div class="space-y-3">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ห้องเรียนที่รับผิดชอบ</label>
                     <div class="flex flex-col gap-2">
-                        <select name="class_name_select" onchange="document.getElementById('class_name_manual').value = this.value" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
+                        <select onchange="document.getElementById('class_name_manual').value = this.value" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
                             <option value="">-- เลือกห้องเรียน --</option>
                             <?php foreach ($classrooms as $room): ?>
                                 <option value="<?= htmlspecialchars($room) ?>" <?= $area['assigned_class'] === $room ? 'selected' : '' ?>>
@@ -109,7 +98,6 @@ require_once __DIR__ . '/../components/layout_start.php';
                     </div>
                 </div>
 
-                <!-- Date -->
                 <div class="space-y-3">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">วันที่ประเมิน</label>
                     <input type="date" name="score_date" value="<?= date('Y-m-d') ?>" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
@@ -118,9 +106,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 
             <hr class="border-slate-50">
 
-            <!-- Scoring Section -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-                <!-- Cleanliness -->
                 <div class="space-y-6">
                     <div class="flex items-center justify-between">
                         <label class="text-sm font-black text-slate-700">ความสะอาด (1-5)</label>
@@ -130,17 +116,9 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <input type="range" name="cleanliness_score" min="1" max="5" value="3" step="1" 
                                class="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                                oninput="document.getElementById('cleanliness_val').innerText = this.value; updateOverall();">
-                        <div class="flex justify-between text-[10px] font-black text-slate-300 mt-2 px-1">
-                            <span>ปรับปรุง</span>
-                            <span>พอใช้</span>
-                            <span>ดี</span>
-                            <span>ดีมาก</span>
-                            <span>ยอดเยี่ยม</span>
-                        </div>
                     </div>
                 </div>
 
-                <!-- Orderliness -->
                 <div class="space-y-6">
                     <div class="flex items-center justify-between">
                         <label class="text-sm font-black text-slate-700">ความเป็นระเบียบ (1-5)</label>
@@ -150,28 +128,18 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <input type="range" name="orderliness_score" min="1" max="5" value="3" step="1" 
                                class="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-500"
                                oninput="document.getElementById('orderliness_val').innerText = this.value; updateOverall();">
-                        <div class="flex justify-between text-[10px] font-black text-slate-300 mt-2 px-1">
-                            <span>ปรับปรุง</span>
-                            <span>พอใช้</span>
-                            <span>ดี</span>
-                            <span>ดีมาก</span>
-                            <span>ยอดเยี่ยม</span>
-                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Notes -->
             <div class="space-y-3">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">หมายเหตุ / ข้อเสนอแนะ</label>
-                <textarea name="notes" rows="3" placeholder="ระบุรายละเอียดเพิ่มเติม (ถ้ามี)..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"></textarea>
+                <textarea name="notes" rows="3" placeholder="ระบุรายละเอียดเพิ่มเติม..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"></textarea>
             </div>
 
-            <!-- Total Result -->
             <div class="bg-slate-50 rounded-3xl p-6 flex items-center justify-between border border-slate-100">
                 <div>
                     <h4 class="text-lg font-black text-slate-800">คะแนนรวมที่ได้</h4>
-                    <p class="text-sm text-slate-500 font-medium">คำนวณจากเกณฑ์ประเมินเบื้องต้น</p>
                 </div>
                 <div class="text-right">
                     <span id="total_score" class="text-4xl font-black text-emerald-600">60</span>
@@ -179,7 +147,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </div>
             </div>
 
-            <button type="submit" class="w-full bg-emerald-600 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-emerald-200 hover:bg-emerald-700 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-3">
+            <button type="submit" class="w-full bg-emerald-600 text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-emerald-200 hover:bg-emerald-700 hover:scale-[1.01] transition-all flex items-center justify-center gap-3">
                 <i class="bi bi-save2-fill"></i>
                 บันทึกคะแนน
             </button>
@@ -191,19 +159,16 @@ require_once __DIR__ . '/../components/layout_start.php';
 function updateOverall() {
     const clean = parseInt(document.getElementsByName('cleanliness_score')[0].value);
     const order = parseInt(document.getElementsByName('orderliness_score')[0].value);
-    // Formula: (clean + order) / 10 * 100 => (clean + order) * 10
-    const total = (clean + order) * 10;
-    document.getElementById('total_score').innerText = total;
+    document.getElementById('total_score').innerText = (clean + order) * 10;
 }
 
 document.getElementById('recordForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    
     const formData = new FormData(this);
     const data = Object.fromEntries(formData.entries());
     
     if (!data.class_name) {
-        Swal.fire({ icon: 'warning', title: 'กรุณาเลือกห้องเรียน', confirmButtonColor: '#059669' });
+        Swal.fire({ icon: 'warning', title: 'กรุณาระบุห้องเรียน', confirmButtonColor: '#059669' });
         return;
     }
 
@@ -213,17 +178,10 @@ document.getElementById('recordForm').addEventListener('submit', async function(
             body: JSON.stringify(data),
             headers: { 'Content-Type': 'application/json' }
         });
-        
         const res = await response.json();
         if (res.status === 'success') {
-            Swal.fire({
-                icon: 'success',
-                title: 'บันทึกสำเร็จ',
-                showConfirmButton: false,
-                timer: 1500
-            }).then(() => {
-                window.location.href = 'index.php';
-            });
+            Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 1500 })
+            .then(() => window.location.href = 'index.php');
         } else {
             throw new Error(res.message);
         }
