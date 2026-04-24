@@ -100,6 +100,7 @@ $subMenus = [
     'budget' => [
         ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'url' => $base_path . '/budget_system/index.php'],
         ['icon' => 'bi-journal-check', 'label' => 'จัดการโครงการ', 'url' => $base_path . '/budget_system/projects.php'],
+        ['icon' => 'bi-cash-stack', 'label' => 'บันทึกรายรับ-รายจ่าย', 'url' => $base_path . '/budget_system/transactions.php'],
     ],
     'info' => [
         ['icon' => 'bi-people-fill',        'label' => 'สารสนเทศนักเรียน',   'url' => $base_path . '/student_info.php'],
