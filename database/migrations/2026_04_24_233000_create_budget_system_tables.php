@@ -55,7 +55,7 @@ return [
         }
     },
     'down' => function (PDO $pdo) {
-        $pdo->exec("DROP TABLE IF EXISTS `budget_transactions` text");
-        $pdo->exec("DROP TABLE IF EXISTS `budget_projects` text");
+        $pdo->exec("DROP TABLE IF EXISTS `budget_transactions` ");
+        $pdo->exec("DROP TABLE IF EXISTS `budget_projects` ");
     },
 ];
