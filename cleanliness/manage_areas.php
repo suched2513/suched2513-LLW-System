@@ -31,33 +31,37 @@ try {
 
     $areas = $pdo->query("SELECT * FROM clean_areas ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
-    // Robust Classroom Fetching
-    $rooms = [];
-    // 1. From Subjects
-    try { 
-        $r1 = $pdo->query("SELECT DISTINCT classroom FROM att_subjects WHERE classroom != ''")->fetchAll(PDO::FETCH_COLUMN);
-        if ($r1) $rooms = array_merge($rooms, $r1);
-    } catch(Exception $e){}
-    
-    // 2. From Central Advisors
-    try { 
-        $r2 = $pdo->query("SELECT DISTINCT classroom FROM llw_class_advisors WHERE classroom != ''")->fetchAll(PDO::FETCH_COLUMN);
-        if ($r2) $rooms = array_merge($rooms, $r2);
-    } catch(Exception $e){}
-    
-    // 3. From Students (Any year)
-    try { 
-        $r3 = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE classroom != ''")->fetchAll(PDO::FETCH_COLUMN);
-        if ($r3) $rooms = array_merge($rooms, $r3);
-    } catch(Exception $e){}
+    // Universal Classroom Discovery
+    $all_rooms = [];
+    $fallback_rooms = [
+        'ม.1/1', 'ม.1/2', 'ม.1/3', 'ม.1/4', 'ม.1/5',
+        'ม.2/1', 'ม.2/2', 'ม.2/3', 'ม.2/4', 'ม.2/5',
+        'ม.3/1', 'ม.3/2', 'ม.3/3', 'ม.3/4', 'ม.3/5',
+        'ม.4/1', 'ม.4/2', 'ม.4/3', 'ม.4/4', 'ม.4/5',
+        'ม.5/1', 'ม.5/2', 'ม.5/3', 'ม.5/4', 'ม.5/5',
+        'ม.6/1', 'ม.6/2', 'ม.6/3', 'ม.6/4', 'ม.6/5'
+    ];
 
-    $classrooms = array_values(array_unique(array_filter($rooms)));
+    try {
+        // Search in known tables first (Performance)
+        $tables = ['att_subjects', 'llw_class_advisors', 'att_students', 'assembly_students'];
+        foreach ($tables as $t) {
+            try {
+                $data = $pdo->query("SELECT DISTINCT classroom FROM $t WHERE classroom != ''")->fetchAll(PDO::FETCH_COLUMN);
+                if ($data) $all_rooms = array_merge($all_rooms, $data);
+            } catch(Exception $e2) {}
+        }
+    } catch(Exception $e) {}
+
+    if (empty($all_rooms)) $all_rooms = $fallback_rooms;
+    $classrooms = array_values(array_unique(array_filter($all_rooms)));
     sort($classrooms);
 
 } catch (Exception $e) {
     error_log($e->getMessage());
-    $areas = [];
-    $classrooms = [];
+    $classrooms = ['ม.1/1','ม.2/1','ม.3/1','ม.4/1','ม.5/1','ม.6/1']; // Minimum fallback
+    header('Location: index.php');
+    exit();
 }
 
 $pageTitle = 'จัดการพื้นที่ประเมิน';
