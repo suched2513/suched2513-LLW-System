@@ -89,6 +89,12 @@ $subMenus = [
         ['icon' => 'bi-speedometer2', 'label' => 'Advisor Dashboard', 'url' => $base_path . '/homeroom/index.php'],
         ['icon' => 'bi-people-fill',   'label' => 'จัดการการมอบหมาย',  'url' => $base_path . '/manage_advisors.php', 'roles' => ['super_admin']],
     ],
+    'cleanliness' => [
+        ['icon' => 'bi-speedometer2', 'label' => 'Dashboard',     'url' => $base_path . '/cleanliness/index.php'],
+        ['icon' => 'bi-clipboard-check', 'label' => 'บันทึกคะแนน', 'url' => $base_path . '/cleanliness/index.php'],
+        ['icon' => 'bi-clock-history',   'label' => 'ประวัติการประเมิน', 'url' => $base_path . '/cleanliness/history.php'],
+        ['icon' => 'bi-geo-alt-fill',   'label' => 'จัดการพื้นที่', 'url' => $base_path . '/cleanliness/manage_areas.php', 'roles' => ['super_admin']],
+    ],
     'info' => [
         ['icon' => 'bi-people-fill',        'label' => 'สารสนเทศนักเรียน',   'url' => $base_path . '/student_info.php'],
         ['icon' => 'bi-person-vcard-fill',  'label' => 'สารสนเทศครู',        'url' => $base_path . '/teacher_info.php'],
@@ -201,6 +207,29 @@ $subMenus = [
             <div class="sub-menu <?= $activeSystem === 'info' ? 'open' : '' ?> ml-6 mt-1 space-y-0.5">
                 <?php foreach ($subMenus['info'] as $sub): ?>
                 <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-blue-600 hover:bg-slate-50' ?>">
+                    <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <!-- Environment & Wellness -->
+        <div class="pb-6">
+            <p class="sidebar-group-label text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-4">Environment & Wellness</p>
+
+            <!-- Cleanliness System -->
+            <a href="<?= $base_path ?>/cleanliness/index.php" class="nav-item flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[13px] font-bold transition-all <?= $activeSystem === 'cleanliness' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-200/50' : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 hover:pl-6' ?>">
+                <i class="bi bi-stars text-lg"></i> <span class="sidebar-text">ระบบบันทึกความสะอาด</span>
+                <span class="sidebar-tooltip">ระบบบันทึกความสะอาด</span>
+                <?php if ($activeSystem === 'cleanliness'): ?>
+                <i class="nav-link-chevron bi bi-chevron-down ml-auto text-xs opacity-60"></i>
+                <?php endif; ?>
+            </a>
+            <div class="sub-menu <?= $activeSystem === 'cleanliness' ? 'open' : '' ?> ml-6 mt-1 space-y-0.5">
+                <?php foreach ($subMenus['cleanliness'] as $sub):
+                    if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                ?>
+                <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 hover:text-emerald-600 hover:bg-slate-50' ?>">
                     <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
                 </a>
                 <?php endforeach; ?>
