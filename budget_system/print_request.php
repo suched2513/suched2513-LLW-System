@@ -301,9 +301,12 @@ function bahtText($amount) {
                         เห็นควรดำเนินการ
                     </div>
                     <div style="margin-top: 25px; text-align: center;">
-                        ลงชื่อ............................................................<br>
-                        ( นางชลลัดดา มากนวล )<br>
+                        ลงชื่อ<?php echo $req['plan_head_signed_at'] ? '<span style="font-family: \'Sarabun\'; font-weight: bold; color: blue;">[เซ็นออนไลน์]</span>' : '............................................................'; ?><br>
+                        ( <?php echo $req['plan_head_id'] ? h($req['plan_head_name'] ?? 'นางชลลัดดา มากนวล') : 'นางชลลัดดา มากนวล'; ?> )<br>
                         หัวหน้างานแผนงาน
+                        <?php if ($req['plan_head_signed_at']): ?>
+                            <div style="font-size: 10px; color: #666;"><?php echo date('d/m/Y H:i', strtotime($req['plan_head_signed_at'])); ?></div>
+                        <?php endif; ?>
                     </div>
                 </td>
                 <td style="width: 33.33%; border: 1px solid #000; padding: 10px; vertical-align: top; font-size: 14px;">
@@ -312,21 +315,21 @@ function bahtText($amount) {
                         พัสดุตามรายการที่เสนอ<br>เห็นควร
                     </div>
                     <div style="margin-bottom: 8px;">
-                        <span class="checkbox"></span> จัดซื้อ/จัดจ้างได้
+                        <span class="checkbox <?php echo $req['procurement_result'] === 'can_buy' ? 'checked' : ''; ?>"></span> จัดซื้อ/จัดจ้างได้
                     </div>
                     <div style="margin-bottom: 8px;">
-                        <span class="checkbox"></span> ไม่สามารถจัดซื้อ/จัดจ้างได้
+                        <span class="checkbox <?php echo $req['procurement_result'] === 'cannot_buy' ? 'checked' : ''; ?>"></span> ไม่สามารถจัดซื้อ/จัดจ้างได้
                     </div>
                     <div style="margin-top: 100px; text-align: center;">
-                        ลงชื่อ............................................................<br>
-                        ( นางบานเย็น ภูกรักษา )<br>
+                        ลงชื่อ<?php echo $req['procurement_head_signed_at'] ? '<span style="font-family: \'Sarabun\'; font-weight: bold; color: blue;">[เซ็นออนไลน์]</span>' : '............................................................'; ?><br>
+                        ( <?php echo $req['procurement_head_id'] ? h($req['procurement_head_name'] ?? 'นางบานเย็น ภูกรักษา') : 'นางบานเย็น ภูกรักษา'; ?> )<br>
                         หัวหน้าเจ้าหน้าที่พัสดุ
                     </div>
                 </td>
                 <td style="width: 33.33%; border: 1px solid #000; padding: 10px; vertical-align: top; font-size: 14px;">
                     <div style="text-align: center; font-weight: bold; border-bottom: 1px solid #000; margin: -10px -10px 10px -10px; padding: 5px; background: #f5f5f5;">การตรวจสอบและรับรอง</div>
                     <div style="margin-bottom: 8px;">
-                        ได้ทำการตรวจสอบรายการตามเสนอแล้ว<br>เห็นควร &nbsp; <span class="checkbox"></span> อนุมัติ &nbsp; <span class="checkbox"></span> ไม่อนุมัติ โดยใช้เงิน
+                        ได้ทำการตรวจสอบรายการตามเสนอแล้ว<br>เห็นควร &nbsp; <span class="checkbox <?php echo $req['finance_head_signed_at'] ? 'checked' : ''; ?>"></span> อนุมัติ &nbsp; <span class="checkbox"></span> ไม่อนุมัติ โดยใช้เงิน
                     </div>
                     <div style="margin-left: 15px; line-height: 1.6;">
                         <?php 
@@ -336,8 +339,8 @@ function bahtText($amount) {
                         <?php endforeach; ?>
                     </div>
                     <div style="margin-top: 40px; text-align: center;">
-                        ลงชื่อ............................................................<br>
-                        ( นางรัตนา หงษ์โสภา )<br>
+                        ลงชื่อ<?php echo $req['finance_head_signed_at'] ? '<span style="font-family: \'Sarabun\'; font-weight: bold; color: blue;">[เซ็นออนไลน์]</span>' : '............................................................'; ?><br>
+                        ( <?php echo $req['finance_head_id'] ? h($req['finance_head_name'] ?? 'นางรัตนา หงษ์โสภา') : 'นางรัตนา หงษ์โสภา'; ?> )<br>
                         หัวหน้างานการเงิน
                     </div>
                 </td>
@@ -350,22 +353,25 @@ function bahtText($amount) {
                     <div style="text-align: center; font-weight: bold; border-bottom: 1px solid #000; margin: -10px -10px 10px -10px; padding: 5px; background: #f5f5f5;">ความเห็นของรองผู้อำนวยการโรงเรียน</div>
                     <div style="line-height: 1.6; margin-bottom: 10px;">
                         พิจารณาตามที่งานแผนงาน/งานพัสดุ/งานการเงิน<br>
-                        เห็นควร &nbsp;&nbsp; <span class="checkbox"></span> อนุมัติ &nbsp;&nbsp; <span class="checkbox"></span> ไม่อนุมัติ
+                        เห็นควร &nbsp;&nbsp; <span class="checkbox <?php echo $req['deputy_result'] === 'approved' ? 'checked' : ''; ?>"></span> อนุมัติ &nbsp;&nbsp; <span class="checkbox <?php echo $req['deputy_result'] === 'rejected' ? 'checked' : ''; ?>"></span> ไม่อนุมัติ
                     </div>
-                    <div style="margin-top: 50px; text-align: center;">
-                        ลงชื่อ............................................................<br>
-                        ( นางสาววรรณธนา วงศ์พิทักษ์ )<br>
+                    <?php if ($req['deputy_comment']): ?>
+                        <div style="font-size: 12px; margin-bottom: 10px;">ความเห็น: <?php echo h($req['deputy_comment']); ?></div>
+                    <?php endif; ?>
+                    <div style="margin-top: 30px; text-align: center;">
+                        ลงชื่อ<?php echo $req['deputy_signed_at'] ? '<span style="font-family: \'Sarabun\'; font-weight: bold; color: blue;">[เซ็นออนไลน์]</span>' : '............................................................'; ?><br>
+                        ( <?php echo $req['deputy_id'] ? h($req['deputy_name'] ?? 'นางสาววรรณธนา วงศ์พิทักษ์') : 'นางสาววรรณธนา วงศ์พิทักษ์'; ?> )<br>
                         รองผู้อำนวยการโรงเรียนละลมวิทยา
                     </div>
                 </td>
                 <td style="width: 50%; border: 1px solid #000; padding: 10px; vertical-align: top; font-size: 14px;">
                     <div style="text-align: center; font-weight: bold; border-bottom: 1px solid #000; margin: -10px -10px 10px -10px; padding: 5px; background: #f5f5f5;">ความเห็นของผู้อำนวยการโรงเรียน</div>
                     <div style="line-height: 1.6; margin-bottom: 10px;">
-                        <span class="checkbox"></span> อนุมัติ &nbsp;&nbsp; <span class="checkbox"></span> ไม่อนุมัติ
+                        <span class="checkbox <?php echo $req['director_result'] === 'approved' ? 'checked' : ''; ?>"></span> อนุมัติ &nbsp;&nbsp; <span class="checkbox <?php echo $req['director_result'] === 'rejected' ? 'checked' : ''; ?>"></span> ไม่อนุมัติ
                     </div>
-                    <div style="margin-top: 80px; text-align: center;">
-                        ลงชื่อ............................................................<br>
-                        ( นายสถาน ปรางมาศ )<br>
+                    <div style="margin-top: 60px; text-align: center;">
+                        ลงชื่อ<?php echo $req['director_signed_at'] ? '<span style="font-family: \'Sarabun\'; font-weight: bold; color: blue;">[เซ็นออนไลน์]</span>' : '............................................................'; ?><br>
+                        ( <?php echo $req['director_id'] ? h($req['director_name'] ?? 'นายสถาน ปรางมาศ') : 'นายสถาน ปรางมาศ'; ?> )<br>
                         ผู้อำนวยการโรงเรียนละลมวิทยา
                     </div>
                 </td>
