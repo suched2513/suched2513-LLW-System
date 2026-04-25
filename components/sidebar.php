@@ -195,6 +195,10 @@ $subMenus = [
                 <span class="sidebar-tooltip">แดชบอร์ดกลาง</span>
             </a>
             <?php if ($userRole === 'super_admin'): ?>
+            <a href="<?= $base_path ?>/manage_users.php" class="nav-item flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[13px] font-bold transition-all mt-1 <?= $current_page === 'manage_users.php' ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-200/50' : 'text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:pl-6' ?>">
+                <i class="bi bi-person-gear text-lg"></i> <span class="sidebar-text">จัดการผู้ใช้งาน</span>
+                <span class="sidebar-tooltip">จัดการผู้ใช้งาน</span>
+            </a>
             <a href="<?= $base_path ?>/manage_advisors.php" class="nav-item flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[13px] font-bold transition-all mt-1 <?= $current_page === 'manage_advisors.php' ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-200/50' : 'text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:pl-6' ?>">
                 <i class="bi bi-people-fill text-lg"></i> <span class="sidebar-text">จัดการครูที่ปรึกษา</span>
                 <span class="sidebar-tooltip">จัดการครูที่ปรึกษา</span>
