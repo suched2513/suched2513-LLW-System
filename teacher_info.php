@@ -37,35 +37,9 @@ $rolesThai = [
 
 $pageTitle = 'สารสนเทศครูและบุคลากร';
 ?>
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $pageTitle ?> | LLW Platinum</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <style>
-        body { font-family: 'Prompt', sans-serif; background: #f0f4f8; }
-        .glass-header { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.5); }
-        .stat-card { background: white; border-radius: 1.5rem; padding: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
-    </style>
-</head>
-<body class="flex min-h-screen">
-    <?php include 'components/sidebar.php'; ?>
+require_once 'components/layout_start.php';
+?>
 
-    <main class="flex-1 flex flex-col h-screen overflow-hidden">
-        <!-- Header -->
-        <header class="glass-header px-8 py-6 flex justify-between items-center sticky top-0 z-10">
-            <div>
-                <h1 class="text-2xl font-black text-slate-800">👨‍🏫 สารสนเทศบุคลากรทั้งหมด</h1>
-                <p class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-widest">School Personnel Information System</p>
-            </div>
-        </header>
-
-        <!-- Content Area -->
-        <div class="flex-1 overflow-y-auto p-8">
             
             <!-- Statistics Row -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -148,7 +122,4 @@ $pageTitle = 'สารสนเทศครูและบุคลากร';
                     </table>
                 </div>
             </div>
-        </div>
-    </main>
-</body>
-</html>
+<?php require_once 'components/layout_end.php'; ?>

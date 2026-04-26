@@ -78,61 +78,55 @@ foreach ($students as $s) {
 $pageTitle = 'สารสนเทศนักเรียน';
 $activeSystem = 'portal'; // Use portal context for now or create a new one
 ?>
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $pageTitle ?> | LLW Platinum</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <style>
-        body { font-family: 'Prompt', sans-serif; background: #f0f4f8; }
-        .glass-header { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.5); }
-        .stat-card { background: white; border-radius: 1.5rem; padding: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
-    </style>
-</head>
-<body class="flex min-h-screen">
-    <?php include 'components/sidebar.php'; ?>
+require_once 'components/layout_start.php';
+?>
 
-    <main class="flex-1 flex flex-col h-screen overflow-hidden">
-        <!-- Header -->
-        <header class="glass-header px-8 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sticky top-0 z-10">
-            <div>
-                <h1 class="text-2xl font-black text-slate-800">📊 สารสนเทศนักเรียน</h1>
-                <p class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-widest">Student Information & Statistics System</p>
-            </div>
-            
-            <form class="flex flex-wrap gap-2">
-                <select name="year" class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
-                    <?php for($y=2569; $y<=2573; $y++): ?>
-                        <option value="<?= $y ?>" <?= $currentYear == $y ? 'selected' : '' ?>>ปี <?= $y ?></option>
-                    <?php endfor; ?>
-                </select>
-                <select name="semester" class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="1" <?= $currentSemester == 1 ? 'selected' : '' ?>>เทอม 1</option>
-                    <option value="2" <?= $currentSemester == 2 ? 'selected' : '' ?>>เทอม 2</option>
-                </select>
-                <select name="classroom" class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="">ทุกห้องเรียน</option>
-                    <?php foreach($rooms as $r): ?>
-                        <option value="<?= htmlspecialchars($r) ?>" <?= $currentClass == $r ? 'selected' : '' ?>><?= htmlspecialchars($r) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <div class="relative">
-                    <i class="bi bi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                    <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="ค้นชื่อ หรือ เลขประจำตัว..." 
-                           class="bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 w-48 lg:w-64">
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-column md:flex-row justify-content-between align-items-center gap-3">
+                    <form class="row g-2 w-100">
+                        <div class="col-md-2">
+                            <select name="year" class="form-select border-slate-200 rounded-3 text-xs font-bold">
+                                <?php for($y=2569; $y<=2573; $y++): ?>
+                                    <option value="<?= $y ?>" <?= $currentYear == $y ? 'selected' : '' ?>>ปี <?= $y ?></option>
+                                <?php endfor; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="semester" class="form-select border-slate-200 rounded-3 text-xs font-bold">
+                                <option value="1" <?= $currentSemester == 1 ? 'selected' : '' ?>>เทอม 1</option>
+                                <option value="2" <?= $currentSemester == 2 ? 'selected' : '' ?>>เทอม 2</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="classroom" class="form-select border-slate-200 rounded-3 text-xs font-bold">
+                                <option value="">ทุกห้องเรียน</option>
+                                <?php foreach($rooms as $r): ?>
+                                    <option value="<?= htmlspecialchars($r) ?>" <?= $currentClass == $r ? 'selected' : '' ?>><?= htmlspecialchars($r) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-slate-200 text-slate-400"><i class="fas fa-search"></i></span>
+                                <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="ค้นชื่อ หรือ เลขประจำตัว..." 
+                                       class="form-control border-slate-200 text-xs font-bold">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100 rounded-3 font-black text-xs shadow-sm">
+                                <i class="fas fa-search me-1"></i> ค้นหา
+                            </button>
+                        </div>
+                    </form>
                 </div>
-                <button type="submit" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black text-xs shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">
-                    ค้นหา
-                </button>
-            </form>
-        </header>
+            </div>
+        </div>
+    </div>
+</div>
 
-        <!-- Content Area -->
-        <div class="flex-1 overflow-y-auto p-8">
             
             <!-- Statistics Row -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -231,7 +225,4 @@ $activeSystem = 'portal'; // Use portal context for now or create a new one
                     </table>
                 </div>
             </div>
-        </div>
-    </main>
-</body>
-</html>
+<?php require_once 'components/layout_end.php'; ?>
