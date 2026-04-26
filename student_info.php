@@ -77,7 +77,6 @@ foreach ($students as $s) {
 
 $pageTitle = 'สารสนเทศนักเรียน';
 $activeSystem = 'portal'; // Use portal context for now or create a new one
-?>
 require_once 'components/layout_start.php';
 ?>
 

@@ -36,7 +36,6 @@ $rolesThai = [
 ];
 
 $pageTitle = 'สารสนเทศครูและบุคลากร';
-?>
 require_once 'components/layout_start.php';
 ?>
 
