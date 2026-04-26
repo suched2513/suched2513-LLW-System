@@ -135,7 +135,10 @@ $subMenus = [
                 <li class="nav-item <?= $activeSystem === 'assembly' ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= $activeSystem === 'assembly' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-users-viewfinder"></i>
-                        <p>เช็คชื่อเข้าแถว <i class="nav-arrow fas fa-angle-left"></i></p>
+                        <p>
+                            เช็คชื่อเข้าแถว 
+                            <i class="nav-arrow fas fa-chevron-right"></i>
+                        </p>
                     </a>
                     <ul class="nav nav-treeview">
                         <?php foreach ($subMenus['assembly'] as $sub): 
@@ -155,7 +158,10 @@ $subMenus = [
                 <li class="nav-item <?= in_array($activeSystem, ['behavior', 'homeroom']) ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= in_array($activeSystem, ['behavior', 'homeroom']) ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-user-graduate"></i>
-                        <p>งานที่ปรึกษา & พฤติกรรม <i class="nav-arrow fas fa-angle-left"></i></p>
+                        <p>
+                            งานที่ปรึกษา & พฤติกรรม 
+                            <i class="nav-arrow fas fa-chevron-right"></i>
+                        </p>
                     </a>
                     <ul class="nav nav-treeview">
                         <li class="nav-item">
@@ -181,7 +187,10 @@ $subMenus = [
                 <li class="nav-item <?= $activeSystem === 'info' ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= $activeSystem === 'info' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-address-book"></i>
-                        <p>สารสนเทศนักเรียน/ครู <i class="nav-arrow fas fa-angle-left"></i></p>
+                        <p>
+                            สารสนเทศนักเรียน/ครู 
+                            <i class="nav-arrow fas fa-chevron-right"></i>
+                        </p>
                     </a>
                     <ul class="nav nav-treeview">
                         <?php foreach ($subMenus['info'] as $sub): ?>
@@ -201,8 +210,11 @@ $subMenus = [
                 <!-- Class Attendance -->
                 <li class="nav-item <?= $activeSystem === 'attendance' ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= $activeSystem === 'attendance' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-user-check"></i>
-                        <p>ระบบเช็คชื่อวิชาเรียน <i class="nav-arrow fas fa-angle-left"></i></p>
+                        <i class="nav-icon fas fa-chalkboard-user"></i>
+                        <p>
+                            ระบบเช็คชื่อวิชาเรียน 
+                            <i class="nav-arrow fas fa-chevron-right"></i>
+                        </p>
                     </a>
                     <ul class="nav nav-treeview">
                         <?php foreach ($subMenus['attendance'] as $sub): 
@@ -221,8 +233,11 @@ $subMenus = [
                 <!-- Supervision & PLC -->
                 <li class="nav-item <?= in_array($activeSystem, ['supervision', 'plc']) ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= in_array($activeSystem, ['supervision', 'plc']) ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-book-reader"></i>
-                        <p>นิเทศ & PLC <i class="nav-arrow fas fa-angle-left"></i></p>
+                        <i class="nav-icon fas fa-book-open-reader"></i>
+                        <p>
+                            นิเทศ & PLC 
+                            <i class="nav-arrow fas fa-chevron-right"></i>
+                        </p>
                     </a>
                     <ul class="nav nav-treeview">
                         <?php foreach ($subMenus['supervision'] as $sub): 
@@ -253,7 +268,10 @@ $subMenus = [
                 <li class="nav-item <?= $activeSystem === 'budget' ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= $activeSystem === 'budget' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-hand-holding-usd"></i>
-                        <p>ระบบบริหารงบประมาณ <i class="nav-arrow fas fa-angle-left"></i></p>
+                        <p>
+                            ระบบบริหารงบประมาณ 
+                            <i class="nav-arrow fas fa-chevron-right"></i>
+                        </p>
                     </a>
                     <ul class="nav nav-treeview">
                         <?php foreach ($subMenus['budget'] as $sub): ?>
@@ -271,7 +289,10 @@ $subMenus = [
                 <li class="nav-item <?= $activeSystem === 'chromebook' ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= $activeSystem === 'chromebook' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-laptop-code"></i>
-                        <p>จัดการ Chromebook <i class="nav-arrow fas fa-angle-left"></i></p>
+                        <p>
+                            จัดการ Chromebook 
+                            <i class="nav-arrow fas fa-chevron-right"></i>
+                        </p>
                     </a>
                     <ul class="nav nav-treeview">
                         <?php foreach ($subMenus['chromebook'] as $sub): ?>
@@ -292,7 +313,10 @@ $subMenus = [
                 <li class="nav-item <?= in_array($activeSystem, ['wfh', 'teacher_leave', 'leave']) ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= in_array($activeSystem, ['wfh', 'teacher_leave', 'leave']) ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-user-clock"></i>
-                        <p>ลงเวลา & การลา <i class="nav-arrow fas fa-angle-left"></i></p>
+                        <p>
+                            ลงเวลา & การลา 
+                            <i class="nav-arrow fas fa-chevron-right"></i>
+                        </p>
                     </a>
                     <ul class="nav nav-treeview">
                         <?php foreach ($subMenus['wfh'] as $sub): 
