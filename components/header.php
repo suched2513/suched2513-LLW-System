@@ -66,6 +66,17 @@
             flex: 0 0 auto !important;
         }
         
+        /* Indent Sub-menus */
+        .nav-treeview > .nav-item > .nav-link {
+            padding-left: 2.5rem !important;
+            font-size: 0.85rem !important;
+        }
+        .nav-treeview > .nav-item > .nav-link i {
+            font-size: 0.75rem !important;
+            width: 1rem !important;
+            text-align: center;
+        }
+        
         /* Custom scrollbar */
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
