@@ -209,41 +209,9 @@ $activeSystem = 'portal';
 $statsMonth = $statsMonth ?? date('Y-m');
 $statsMonthLabel = $statsMonthLabel ?? date('F Y');
 ?>
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Executive Dashboard | LLW</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { font-family: 'Prompt', sans-serif; background: #f0f4f8; }
-        .exec-banner { 
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
-            border-radius: 2.5rem; padding: 3rem; color: white; 
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-            position: relative; overflow: hidden;
-        }
-        .exec-banner::after {
-            content: ''; position: absolute; top: -50%; right: -20%; width: 60%; height: 200%;
-            background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%); transform: rotate(-15deg);
-        }
-        .glass-card { 
-            background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px);
-            border-radius: 2rem; border: 1px solid rgba(255,255,255,0.5);
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); transition: all 0.3s;
-        }
-        .glass-card:hover { transform: translateY(-5px); box-shadow: 0 20px 35px -5px rgba(0,0,0,0.1); }
-        .stat-badge { font-size: 9px; font-weight: 900; letter-spacing: 0.1em; padding: 4px 10px; border-radius: 10px; text-transform: uppercase; }
-    </style>
-</head>
-<body class="flex min-h-screen">
-    <?php if (file_exists('components/sidebar.php')) include 'components/sidebar.php'; ?>
+require_once 'components/layout_start.php';
+?>
     
-    <main class="flex-1 min-h-screen overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-12 transition-all duration-500">
         
         <?= $updateMessage ?>
 
@@ -529,5 +497,4 @@ $statsMonthLabel = $statsMonthLabel ?? date('F Y');
             });
         }
     </script>
-</body>
-</html>
+<?php require_once 'components/layout_end.php'; ?>
