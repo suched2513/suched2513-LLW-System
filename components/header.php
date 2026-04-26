@@ -48,6 +48,24 @@
             color: #fff !important;
         }
         
+        /* Sidebar Scroll Fix */
+        .app-sidebar {
+            height: 100vh !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        .sidebar-wrapper {
+            flex: 1 1 auto !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+        }
+        .sidebar-brand {
+            flex: 0 0 auto !important;
+        }
+        .sidebar-footer {
+            flex: 0 0 auto !important;
+        }
+        
         /* Custom scrollbar */
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
