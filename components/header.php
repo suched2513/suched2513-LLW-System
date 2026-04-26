@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th" class="h-full bg-slate-50">
+<html lang="th" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,8 +14,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
-    <!-- Bootstrap 5 (required for modals in leave_system) -->
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Bootstrap 5 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    
+    <!-- AdminLTE 4 (Bootstrap 5) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-beta2/dist/css/adminlte.min.css">
+
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
 
@@ -23,24 +30,23 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- AdminLTE JS -->
+    <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-beta2/dist/js/adminlte.min.js"></script>
 
     <style>
-        body { font-family: 'Prompt', sans-serif; }
-        .sidebar-item-active { 
-            background: linear-gradient(135deg, #4f46e5, #4338ca); 
-            color: white;
-            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.3);
+        :root {
+            --bs-body-font-family: 'Prompt', sans-serif !important;
         }
-        .glass { 
-            background: rgba(255, 255, 255, 0.7); 
-            backdrop-filter: blur(16px); 
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+        body { 
+            font-family: 'Prompt', sans-serif !important; 
         }
-        .premium-shadow {
-            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+        .brand-link {
+            text-decoration: none !important;
         }
-        .transition-all { transition-duration: 0.4s; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+        .sidebar-menu .nav-link.active {
+            background-color: #0d6efd !important;
+            color: #fff !important;
+        }
         
         /* Custom scrollbar */
         ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -50,13 +56,29 @@
 
         @media print {
             .no-print { display: none !important; }
-            body { background: white; color: black; }
+            body { background: white !important; color: black !important; }
         }
     </style>
 </head>
-<body class="h-full overflow-hidden flex flex-col sm:flex-row bg-slate-50 font-['Prompt']">
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+    <div class="app-wrapper">
     <script>
-        if (localStorage.getItem('sidebarState') === 'collapsed' && window.innerWidth > 1024) {
-            document.body.classList.add('sidebar-collapsed');
-        }
+        // Persistence for AdminLTE 4 Sidebar
+        document.addEventListener("DOMContentLoaded", function() {
+            const body = document.body;
+            const sidebarState = localStorage.getItem('sidebarState');
+            if (sidebarState === 'collapsed') {
+                body.classList.add('sidebar-collapse');
+            }
+            
+            // Listen for toggle clicks to save state
+            document.querySelectorAll('[data-lte-toggle="sidebar"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    setTimeout(() => {
+                        const state = body.classList.contains('sidebar-collapse') ? 'collapsed' : 'expanded';
+                        localStorage.setItem('sidebarState', state);
+                    }, 300);
+                });
+            });
+        });
     </script>

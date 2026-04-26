@@ -1,15 +1,15 @@
 <?php
 /**
- * layout_start.php — Premium Layout Wrapper for LLW System
+ * layout_start.php — AdminLTE 4 Layout Wrapper for LLW System
  */
 require_once __DIR__ . '/header.php';
 require_once __DIR__ . '/sidebar.php';
 
-// Breadcrumb data
+// Breadcrumb logic
 $breadcrumbs = [];
-$breadcrumbs[] = ['label' => 'LLW', 'url' => $base_path . '/index.php', 'icon' => 'bi-house-fill'];
+$breadcrumbs[] = ['label' => 'Home', 'url' => $base_path . '/index.php', 'icon' => 'fas fa-home'];
 $systemLabels = [
-    'attendance' => 'เช็คชื่อนักเ���ียน',
+    'attendance' => 'เช็คชื่อนักเรียน',
     'chromebook' => 'Chromebook',
     'wfh'        => 'ลงเวลาปฏิบัติงาน',
     'leave'      => 'ขออนุญาตออกนอก',
@@ -24,83 +24,95 @@ if (isset($pageTitle)) {
 }
 ?>
 
-<style>
-    .mesh-bg {
-        background-color: #f8fafc;
-        background-image:
-            radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.04) 0, transparent 50%),
-            radial-gradient(at 50% 0%, rgba(99, 102, 241, 0.04) 0, transparent 50%),
-            radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.04) 0, transparent 50%);
-    }
-    .glass-header {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-bottom: 1px solid rgba(241, 245, 249, 0.8);
-    }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-</style>
+<!-- Top Navbar -->
+<nav class="app-header navbar navbar-expand bg-body shadow-sm">
+    <div class="container-fluid">
+        <!-- Start navbar links -->
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button">
+                    <i class="fas fa-bars"></i>
+                </a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+                <a href="<?= $base_path ?>/index.php" class="nav-link">Home</a>
+            </li>
+        </ul>
+        
+        <!-- End navbar links -->
+        <ul class="navbar-nav ms-auto">
+            <!-- Notifications Dropdown -->
+            <li class="nav-item dropdown">
+                <a class="nav-link" data-bs-toggle="dropdown" href="#">
+                    <i class="fas fa-bell"></i>
+                    <span class="navbar-badge badge text-bg-warning">3</span>
+                </a>
+                <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                    <span class="dropdown-item dropdown-header">3 Notifications</span>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item">
+                        <i class="fas fa-envelope me-2"></i> 4 new messages
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item dropdown-footer">See All Notifications</a>
+                </div>
+            </li>
+            
+            <!-- User Menu -->
+            <li class="nav-item dropdown user-menu">
+                <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                    <span class="d-none d-md-inline"><?= htmlspecialchars($userName) ?></span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                    <!-- User image -->
+                    <li class="user-header text-bg-primary">
+                        <p>
+                            <?= htmlspecialchars($userName) ?> - <?= $roleName ?>
+                        </p>
+                    </li>
+                    <!-- Menu Footer-->
+                    <li class="user-footer">
+                        <a href="<?= $base_path ?>/change_password.php" class="btn btn-default btn-flat">Profile</a>
+                        <a href="<?= $base_path ?>/logout.php" class="btn btn-default btn-flat float-end">Sign out</a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</nav>
 
-<main class="flex-1 flex flex-col h-full overflow-hidden mesh-bg relative">
-
-    <!-- Top Header -->
-    <header class="h-16 sm:h-20 flex-shrink-0 flex items-center justify-between px-4 sm:px-6 lg:px-10 glass-header no-print z-40 sticky top-0 sidebar-transition">
-        <div class="flex items-center gap-3 sm:gap-4 lg:gap-6 min-w-0">
-            <button onclick="toggleSidebar()" class="p-2 sm:p-3 text-slate-500 hover:bg-slate-100/80 rounded-xl sm:rounded-2xl transition-all flex-shrink-0">
-                <i class="bi bi-list text-xl sm:text-2xl"></i>
-            </button>
-            <div class="flex flex-col min-w-0">
-                <!-- Breadcrumb (hidden on very small screens) -->
-                <nav class="hidden sm:flex items-center gap-1.5 text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 overflow-hidden">
-                    <?php foreach ($breadcrumbs as $i => $bc): ?>
-                        <?php if ($i > 0): ?>
-                            <i class="bi bi-chevron-right text-[8px] text-slate-300 flex-shrink-0"></i>
-                        <?php endif; ?>
-                        <?php if (isset($bc['url']) && $i < count($breadcrumbs) - 1): ?>
-                            <a href="<?= $bc['url'] ?>" class="hover:text-indigo-600 transition-colors flex items-center gap-1 truncate">
-                                <?php if (isset($bc['icon'])): ?><i class="bi <?= $bc['icon'] ?> text-xs"></i><?php endif; ?>
-                                <?= htmlspecialchars($bc['label']) ?>
-                            </a>
-                        <?php else: ?>
-                            <span class="text-slate-500 truncate"><?= htmlspecialchars($bc['label']) ?></span>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </nav>
-                <h1 class="text-base sm:text-lg lg:text-xl font-black text-slate-800 tracking-tight leading-tight truncate"><?= htmlspecialchars($pageTitle ?? 'LLW Management') ?></h1>
-            </div>
-        </div>
-
-        <div class="flex items-center gap-2 sm:gap-4 lg:gap-6 flex-shrink-0">
-            <!-- Calendar Widget -->
-            <div class="hidden lg:flex items-center gap-3 px-4 sm:px-5 py-2 sm:py-2.5 bg-white/50 rounded-xl sm:rounded-2xl border border-slate-200/50 text-slate-500 text-[11px] sm:text-xs font-bold transition-all hover:bg-white hover:shadow-xl hover:shadow-indigo-100/40 hover:-translate-y-0.5">
-                <i class="bi bi-calendar3 text-indigo-500"></i>
-                <span><?= date('D, d M Y') ?></span>
-            </div>
-
-            <!-- Quick Tools -->
-            <div class="flex items-center gap-1 sm:gap-2">
-                <button class="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg sm:rounded-xl transition-all border border-transparent hover:border-indigo-100 relative">
-                    <i class="bi bi-bell text-lg sm:text-xl"></i>
-                    <span class="absolute top-2 right-2 sm:top-3 sm:right-3 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
-                    <span class="absolute top-2 right-2 sm:top-3 sm:right-3 w-2 h-2 bg-rose-500 rounded-full"></span>
-                </button>
-                <button class="hidden sm:flex w-9 h-9 sm:w-11 sm:h-11 items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg sm:rounded-xl transition-all border border-transparent hover:border-indigo-100">
-                    <i class="bi bi-gear text-lg sm:text-xl"></i>
-                </button>
-            </div>
-
-            <div class="hidden sm:block w-px h-8 bg-slate-200 mx-1 sm:mx-2"></div>
-
-            <!-- Profile Thumbnail -->
-            <div class="hidden sm:flex items-center gap-3">
-                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center text-white text-sm sm:text-md font-black shadow-lg shadow-indigo-200/50">
-                    <?= mb_substr($_SESSION['firstname'] ?? 'U', 0, 1) ?>
+<!-- Main Content Wrapper -->
+<main class="app-main">
+    <!-- Content Header (Page header) -->
+    <div class="app-content-header">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-sm-6">
+                    <h3 class="mb-0"><?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></h3>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-end">
+                        <?php foreach ($breadcrumbs as $i => $bc): ?>
+                            <?php if ($i < count($breadcrumbs) - 1): ?>
+                                <li class="breadcrumb-item">
+                                    <a href="<?= $bc['url'] ?? '#' ?>">
+                                        <?php if (isset($bc['icon'])): ?><i class="<?= $bc['icon'] ?> me-1"></i><?php endif; ?>
+                                        <?= htmlspecialchars($bc['label']) ?>
+                                    </a>
+                                </li>
+                            <?php else: ?>
+                                <li class="breadcrumb-item active" aria-current="page">
+                                    <?= htmlspecialchars($bc['label']) ?>
+                                </li>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </ol>
                 </div>
             </div>
         </div>
-    </header>
-
-    <!-- Scrollable Content Area -->
-    <div class="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-12 scroll-smooth">
-        <!-- Page Content Starts Here -->
+    </div>
+    
+    <!-- Main Content -->
+    <div class="app-content">
+        <div class="container-fluid">
+            <!-- Page Content Starts Here -->
