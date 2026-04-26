@@ -208,7 +208,6 @@ try {
 $activeSystem = 'portal';
 $statsMonth = $statsMonth ?? date('Y-m');
 $statsMonthLabel = $statsMonthLabel ?? date('F Y');
-?>
 require_once 'components/layout_start.php';
 ?>
     
