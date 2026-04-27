@@ -23,11 +23,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch();
 
             if ($user && password_verify($password, $user['password'])) {
-                $_SESSION['user_id']   = $user['id'];
+                $_SESSION['user_id']   = $user['user_id'];
                 $_SESSION['username']  = $user['username'];
-                $_SESSION['full_name'] = $user['full_name'];
+                $_SESSION['full_name'] = trim($user['firstname'] . ' ' . $user['lastname']);
                 $_SESSION['role']      = $user['role'];
-                $_SESSION['department'] = $user['department'];
+                $_SESSION['department'] = $user['department'] ?? '';
 
                 _redirect_by_role($user['role']);
             } else {

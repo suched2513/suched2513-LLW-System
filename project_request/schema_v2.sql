@@ -2,7 +2,7 @@
 ALTER TABLE llw_users MODIFY COLUMN role ENUM('admin', 'teacher', 'director', 'budget_officer', 'super_admin', 'wfh_admin', 'wfh_staff', 'cb_admin', 'att_teacher') NOT NULL;
 
 -- Add missing columns if they don't exist in central auth
--- ALTER TABLE llw_users ADD COLUMN department VARCHAR(100) AFTER lastname;
+ALTER TABLE llw_users ADD COLUMN IF NOT EXISTS department VARCHAR(100) AFTER lastname;
 
 -- 8. Audit Logs
 CREATE TABLE IF NOT EXISTS audit_logs (
