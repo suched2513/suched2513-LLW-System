@@ -13,11 +13,15 @@ if ($_SERVER['REQUEST_METHOD']=== 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action==='create') {
         $pw = password_hash($_POST['password'], PASSWORD_DEFAULT);
-        $s = $db->prepare("INSERT INTO users (username,password,full_name,role,department_id,owner_name) VALUES (?,?,?,?,?,?)");
-        $s->execute([$_POST['username'],$pw,$_POST['full_name'],$_POST['role'],$_POST['dept_id']?:null,$_POST['owner_name']]);
+        $fullName = trim($_POST['full_name'] ?? '');
+        $parts = preg_split('/\s+/', $fullName, 2);
+        $firstname = $parts[0] ?? '';
+        $lastname  = $parts[1] ?? '';
+        $s = $db->prepare("INSERT INTO llw_users (username,password,firstname,lastname,role,department_id,owner_name,status) VALUES (?,?,?,?,?,?,?, 'active')");
+        $s->execute([$_POST['username'],$pw,$firstname,$lastname,$_POST['role'],$_POST['dept_id']?:null,$_POST['owner_name']]);
         flashMessage('success','สร้างผู้ใช้เรียบร้อย');
     } elseif ($action==='toggle') {
-        $db->prepare("UPDATE users SET is_active=NOT is_active WHERE id=?")->execute([$_POST['user_id']]);
+        $db->prepare("UPDATE llw_users SET status=IF(status='active','inactive','active') WHERE user_id=?")->execute([$_POST['user_id']]);
         flashMessage('success','อัปเดตสถานะเรียบร้อย');
     }
     header('Location: /admin/users.php'); exit;
