@@ -60,7 +60,7 @@ if ($isLoggedIn) {
                 ['url' => 'teacher_leave/index.php', 'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์', 'color' => 'rose'],
                 ['url' => 'plc_system/dashboard.php', 'icon' => 'bi-journal-richtext', 'label' => 'PLC Online', 'color' => 'violet'],
                 ['url' => 'behavior/dashboard.php', 'icon' => 'bi-journal-text', 'label' => 'พฤติกรรม', 'color' => 'violet'],
-                ['url' => 'homeroom/index.php', 'icon' => 'bi-mortarboard-fill', 'label' => 'ระบบครูที่ปรึกษา', 'color' => 'indigo'],
+                ['url' => 'school_project/admin/dashboard.php', 'icon' => 'bi-cash-coin', 'label' => 'งบประมาณ SBMS', 'color' => 'amber'],
                 // ['url' => 'cleanliness/index.php', 'icon' => 'bi-stars', 'label' => 'ประเมินความสะอาด', 'color' => 'emerald'],
             ];
             break;
@@ -72,7 +72,7 @@ if ($isLoggedIn) {
                 ['url' => 'teacher_leave/index.php', 'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์', 'color' => 'indigo'],
                 ['url' => 'plc_system/dashboard.php', 'icon' => 'bi-journal-richtext', 'label' => 'PLC Online', 'color' => 'violet'],
                 ['url' => 'behavior/dashboard.php', 'icon' => 'bi-journal-text', 'label' => 'พฤติกรรม', 'color' => 'violet'],
-                ['url' => 'homeroom/index.php', 'icon' => 'bi-mortarboard-fill', 'label' => 'ระบบครูที่ปรึกษา', 'color' => 'indigo'],
+                ['url' => 'school_project/admin/dashboard.php', 'icon' => 'bi-cash-coin', 'label' => 'งบประมาณ SBMS', 'color' => 'amber'],
                 // ['url' => 'cleanliness/index.php', 'icon' => 'bi-stars', 'label' => 'ประเมินความสะอาด', 'color' => 'emerald'],
             ];
             break;
@@ -84,7 +84,7 @@ if ($isLoggedIn) {
                 ['url' => 'teacher_leave/index.php',         'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์',  'color' => 'amber'],
                 ['url' => 'plc_system/dashboard.php',        'icon' => 'bi-journal-richtext',  'label' => 'PLC Online',    'color' => 'violet'],
                 ['url' => 'behavior/dashboard.php',        'icon' => 'bi-journal-text',      'label' => 'พฤติกรรม',       'color' => 'violet'],
-                ['url' => 'homeroom/index.php',            'icon' => 'bi-mortarboard-fill',  'label' => 'ครูที่ปรึกษา',    'color' => 'indigo'],
+                ['url' => 'school_project/index.php',       'icon' => 'bi-cash-coin',         'label' => 'งบประมาณ SBMS',    'color' => 'amber'],
             ];
             break;
         case 'cb_admin':
@@ -452,11 +452,11 @@ if ($isLoggedIn) {
                 'delay'    => 1.0,
             ],
             [
-                'url'      => 'budget_system/index.php',
+                'url'      => 'school_project/index.php',
                 'icon'     => 'bi-cash-coin',
                 'bgIcon'   => 'bi-wallet2',
-                'title'    => 'ระบบบริหารงบประมาณ',
-                'desc'     => 'จัดการงบประมาณโครงการ บันทึกรายรับ-รายจ่าย และติดตามสถานะงบประมาณรายปี',
+                'title'    => 'ระบบบริหารงบประมาณ (SBMS)',
+                'desc'     => 'จัดการโครงการ ขอดำเนินการ เบิกจ่ายงบประมาณ และพิมพ์เอกสารอนุมัติ (2569)',
                 'color'    => 'amber',
                 'gradient' => 'from-amber-500 to-orange-500',
                 'delay'    => 1.1,
