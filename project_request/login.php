@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } catch (Exception $e) {
             error_log($e->getMessage());
-            $error = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+            $error = 'DB Error: ' . $e->getMessage();
         }
     }
 }
