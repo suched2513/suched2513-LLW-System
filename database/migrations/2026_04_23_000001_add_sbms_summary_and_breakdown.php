@@ -10,10 +10,17 @@ require_once __DIR__ . '/../../config/database.php';
 
 return [
     'up' => function (PDO $pdo) {
+        // ตรวจว่ามีตาราง sbms_disbursements หรือไม่ — หากไม่มี (เช่นถูก remove_sbms_tables
+        // migration ลบไปแล้ว หรือ production ยังไม่เคยสร้าง) ให้ข้ามทั้งหมด
+        $exists = $pdo->query("SHOW TABLES LIKE 'sbms_disbursements'")->fetchColumn();
+        if (!$exists) {
+            return;
+        }
+
         // 1. Add Breakdown columns to sbms_disbursements (supporting input_11 to input_1015 style)
         // For simplicity and flexibility, we'll add a JSON column for itemized expenses
         // but also specific columns for common summary fields
-        $pdo->exec("ALTER TABLE sbms_disbursements 
+        $pdo->exec("ALTER TABLE sbms_disbursements
             ADD COLUMN IF NOT EXISTS expense_items JSON NULL AFTER amount,
             ADD COLUMN IF NOT EXISTS total_spent_before DECIMAL(15,2) DEFAULT 0 AFTER expense_items,
             ADD COLUMN IF NOT EXISTS balance_remaining DECIMAL(15,2) DEFAULT 0 AFTER total_spent_before
