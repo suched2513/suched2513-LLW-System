@@ -17,11 +17,23 @@ $pdo = getPdo();
 $departments = [];
 try {
     $departments = $pdo->query("SELECT * FROM departments ORDER BY order_no")->fetchAll();
-    if (empty($departments)) {
-        $departments = $pdo->query("SELECT dept_id as id, dept_name as name FROM wfh_departments")->fetchAll();
-    }
 } catch (Exception $e) {
-    $message = "เกิดข้อผิดพลาดในการดึงข้อมูลฝ่าย: " . $e->getMessage();
+    try {
+        $departments = $pdo->query("SELECT dept_id as id, dept_name as name FROM wfh_departments")->fetchAll();
+    } catch (Exception $e2) {
+        $departments = [];
+    }
+}
+
+// Hardcoded fallback if still empty
+if (empty($departments)) {
+    $departments = [
+        ['id' => 1, 'name' => 'กลุ่มบริหารวิชาการ'],
+        ['id' => 2, 'name' => 'กลุ่มบริหารงบประมาณและบุคลากร'],
+        ['id' => 3, 'name' => 'กลุ่มบริหารงานทั่วไป'],
+        ['id' => 4, 'name' => 'กลุ่มบริหารกิจการนักเรียน'],
+        ['id' => 5, 'name' => 'ฝ่ายอำนวยการ']
+    ];
 }
 
 $message = isset($_GET['msg']) ? $_GET['msg'] : '';
