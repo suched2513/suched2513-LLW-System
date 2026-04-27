@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+:root {
+  --primary: #1a56db;
+  --primary-light: #e8f0fe;
+  --sidebar-bg: #1e293b;
+  --sidebar-text: #cbd5e1;
+  --sidebar-active: #2563eb;
+}
+* { box-sizing: border-box; }
+body { font-family: 'Sarabun', sans-serif; font-size: 15px; background: #f8fafc; color: #1e293b; margin: 0; }
+.sidebar { width: 240px; min-height: 100vh; background: var(--sidebar-bg); position: fixed; top: 0; left: 0; z-index: 100; transition: transform .3s; }
+.sidebar-brand { padding: 20px 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.sidebar-brand h6 { color: #fff; margin: 0; font-size: 14px; font-weight: 600; }
+.sidebar-brand small { color: var(--sidebar-text); font-size: 12px; }
+.sidebar-nav { padding: 12px 0; }
+.nav-section { padding: 8px 16px 4px; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+.sidebar-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 16px; color: var(--sidebar-text); text-decoration: none; font-size: 14px; transition: all .2s; }
+.sidebar-nav a:hover, .sidebar-nav a.active { background: rgba(255,255,255,.08); color: #fff; border-right: 3px solid var(--sidebar-active); }
+.sidebar-nav a i { width: 20px; text-align: center; font-size: 15px; }
+.main-content { margin-left: 240px; min-height: 100vh; }
+.topbar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 99; }
+.topbar-title { font-weight: 600; font-size: 16px; }
+.page-content { padding: 24px; }
+.card { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+.card-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 600; font-size: 15px; }
+.card-body { padding: 20px; }
+.stat-card { border-radius: 12px; padding: 20px; color: #fff; }
+.stat-card .stat-value { font-size: 32px; font-weight: 700; }
+.stat-card .stat-label { font-size: 13px; opacity: .85; }
+.stat-card .stat-icon { font-size: 36px; opacity: .3; }
+.btn { border-radius: 8px; font-family: 'Sarabun', sans-serif; font-size: 14px; padding: 8px 16px; }
+.btn-primary { background: var(--primary); border-color: var(--primary); }
+.badge { border-radius: 6px; font-size: 12px; padding: 4px 8px; font-weight: 500; }
+.table th { background: #f8fafc; font-weight: 600; font-size: 13px; }
+.table td { vertical-align: middle; font-size: 14px; }
+.form-label { font-weight: 500; font-size: 14px; margin-bottom: 4px; }
+.form-control, .form-select { border-radius: 8px; border-color: #e2e8f0; font-family: 'Sarabun', sans-serif; font-size: 14px; }
+.form-control:focus, .form-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,86,219,.15); }
+.wizard-steps { display: flex; margin-bottom: 28px; }
+.wizard-step { flex: 1; text-align: center; position: relative; }
+.wizard-step:not(:last-child)::after { content:''; position: absolute; top: 18px; left: 50%; width: 100%; height: 2px; background: #e2e8f0; z-index: 0; }
+.step-circle { width: 36px; height: 36px; border-radius: 50%; background: #e2e8f0; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; position: relative; z-index: 1; }
+.step-circle.active { background: var(--primary); color: #fff; }
+.step-circle.done { background: #10b981; color: #fff; }
+.step-label { font-size: 12px; margin-top: 6px; color: #64748b; }
+.step-label.active { color: var(--primary); font-weight: 600; }
+.notification-badge { background: #ef4444; color: #fff; border-radius: 50%; width: 18px; height: 18px; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; }
+.progress-bar-custom { height: 8px; border-radius: 4px; background: #e2e8f0; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
+.progress-fill.good { background: #10b981; }
+.progress-fill.warning { background: #f59e0b; }
+.progress-fill.danger { background: #ef4444; }
+@media(max-width:768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main-content { margin-left: 0; }
+}

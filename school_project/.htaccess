@@ -1,0 +1,9 @@
+Options -Indexes
+<FilesMatch "\.(sql|md|json|lock)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+<FilesMatch "^\.">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
