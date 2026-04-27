@@ -19,7 +19,6 @@ elseif (strpos($full_url, '/assembly/') !== false)          $activeSystem = 'ass
 elseif (strpos($full_url, '/behavior/') !== false)          $activeSystem = 'behavior';
 elseif (strpos($full_url, '/homeroom/') !== false)          $activeSystem = 'homeroom';
 elseif (strpos($full_url, '/teacher_leave/') !== false)     $activeSystem = 'teacher_leave';
-elseif (strpos($full_url, '/project_request/') !== false)     $activeSystem = 'budget';
 elseif (strpos($full_url, '/user/') !== false || strpos($full_url, '/admin/') !== false) $activeSystem = 'wfh';
 elseif (basename($full_url) === 'leave_system.php')         $activeSystem = 'leave';
 elseif (basename($full_url) === 'student_info.php' || basename($full_url) === 'teacher_info.php') $activeSystem = 'info';
@@ -92,12 +91,6 @@ $subMenus = [
     ],
     'homeroom' => [
         ['icon' => 'fas fa-tachometer-alt', 'label' => 'ระบบที่ปรึกษา', 'url' => $base_path . '/homeroom/index.php'],
-    ],
-    'budget' => [
-        ['icon' => 'fas fa-tachometer-alt', 'label' => 'สรุปงบประมาณ', 'url' => $base_path . '/project_request/admin/dashboard.php'],
-        ['icon' => 'fas fa-tasks',          'label' => 'จัดการโครงการ', 'url' => $base_path . '/project_request/admin/projects.php'],
-        ['icon' => 'fas fa-file-earmark-arrow-up-fill', 'label' => 'นำเข้างบประมาณ', 'url' => $base_path . '/project_request/admin/import_v2.php'],
-        ['icon' => 'fas fa-file-alt',       'label' => 'ยื่นขออนุมัติ', 'url' => $base_path . '/project_request/disbursements.php'],
     ],
     'info' => [
         ['icon' => 'fas fa-users',          'label' => 'ข้อมูลนักเรียน',   'url' => $base_path . '/student_info.php'],
@@ -266,23 +259,6 @@ $subMenus = [
                 <!-- 4. ADMINISTRATION & ASSETS -->
                 <li class="nav-header">งานบริหารและทรัพยากร</li>
 
-                <!-- Budget -->
-                <li class="nav-item <?= $activeSystem === 'budget' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'budget' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-hand-holding-usd"></i>
-                        <p>ระบบบริหารงบประมาณ <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['budget'] as $sub): ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
 
                 <!-- Chromebook -->
                 <li class="nav-item <?= $activeSystem === 'chromebook' ? 'menu-open' : '' ?>">
