@@ -18,8 +18,7 @@ elseif (strpos($full_url, '/plc_system/') !== false)        $activeSystem = 'plc
 elseif (strpos($full_url, '/assembly/') !== false)          $activeSystem = 'assembly';
 elseif (strpos($full_url, '/behavior/') !== false)          $activeSystem = 'behavior';
 elseif (strpos($full_url, '/homeroom/') !== false)          $activeSystem = 'homeroom';
-elseif (strpos($full_url, '/teacher_leave/') !== false)     $activeSystem = 'teacher_leave';
-elseif (strpos($full_url, '/user/') !== false || strpos($full_url, '/admin/') !== false) $activeSystem = 'wfh';
+elseif (strpos($full_url, '/school_project/') !== false)     $activeSystem = 'budget';
 elseif (basename($full_url) === 'leave_system.php')         $activeSystem = 'leave';
 elseif (basename($full_url) === 'student_info.php' || basename($full_url) === 'teacher_info.php') $activeSystem = 'info';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
@@ -256,8 +255,33 @@ $subMenus = [
                     </ul>
                 </li>
 
-                <!-- 4. ADMINISTRATION & ASSETS -->
-                <li class="nav-header">งานบริหารและทรัพยากร</li>
+                <!-- Budget (SBMS 2569) -->
+                <li class="nav-item <?= $activeSystem === 'budget' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'budget' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-hand-holding-usd"></i>
+                        <p>ระบบบริหารงบประมาณ <i class="nav-arrow fas fa-angle-left"></i></p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="<?= $base_path ?>/school_project/admin/dashboard.php" class="nav-link">
+                                <i class="nav-icon fas fa-tachometer-alt"></i>
+                                <p>สรุปงบประมาณ</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= $base_path ?>/school_project/admin/budget_list.php" class="nav-link">
+                                <i class="nav-icon fas fa-tasks"></i>
+                                <p>จัดการโครงการ</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= $base_path ?>/school_project/teacher/request_form.php" class="nav-link">
+                                <i class="nav-icon fas fa-file-alt"></i>
+                                <p>ยื่นขออนุมัติ</p>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
 
 
                 <!-- Chromebook -->
