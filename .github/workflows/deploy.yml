@@ -81,6 +81,34 @@ jobs:
           }
           PHPEOF
 
+      # ─── 2.5 สร้าง school_project/config/db.php ────────────
+      - name: Generate school_project/config/db.php
+        run: |
+          cat > school_project/config/db.php << 'PHPEOF'
+          <?php
+          $parentConfig = __DIR__ . '/../../config/database.php';
+          if (file_exists($parentConfig) && !function_exists('getPdo')) {
+              require_once $parentConfig;
+          }
+          if (!defined('DB_HOST')) define('DB_HOST', '${{ secrets.DB_HOST }}');
+          if (!defined('DB_USER')) define('DB_USER', '${{ secrets.DB_USER }}');
+          if (!defined('DB_PASS')) define('DB_PASS', '${{ secrets.DB_PASS }}');
+          if (!defined('DB_NAME')) define('DB_NAME', '${{ secrets.DB_NAME }}');
+          function getDB(): PDO {
+              static $pdo = null;
+              if ($pdo !== null) return $pdo;
+              if (function_exists('getPdo')) { $pdo = getPdo(); return $pdo; }
+              try {
+                  $pdo = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER, DB_PASS, [
+                      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                      PDO::ATTR_EMULATE_PREPARES => false,
+                  ]);
+              } catch (PDOException $e) { die('ไม่สามารถเชื่อมต่อฐานข้อมูลได้'); }
+              return $pdo;
+          }
+          PHPEOF
+
       # ─── 3. ลบไฟล์ที่ไม่ต้องการใน production ────────────────
       - name: Remove test/debug files
         run: |
