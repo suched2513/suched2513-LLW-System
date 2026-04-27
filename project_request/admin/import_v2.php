@@ -10,7 +10,7 @@ session_start();
 
 $pageTitle = 'นำเข้างบประมาณ (v2)';
 $pageSubtitle = 'นำเข้าผ่านไฟล์ CSV เพื่อความเสถียรสูงสุด';
-require_once __DIR__ . '/../components/layout_start.php';
+require_once __DIR__ . '/../../components/layout_start.php';
 require_once __DIR__ . '/../config/db.php';
 
 $pdo = getPdo();
@@ -246,4 +246,4 @@ if ($step === 3 && isset($_POST['mapping'])) {
     </div>
 </div>
 
-<?php require_once __DIR__ . '/../components/layout_end.php'; ?>
+<?php require_once __DIR__ . '/../../components/layout_end.php'; ?>
