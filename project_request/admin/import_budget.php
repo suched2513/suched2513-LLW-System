@@ -243,26 +243,35 @@ function insertBudget($pdo, $row, $mapping, $dept_id, $fiscal_year) {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-                <?php 
                 $fields = [
-                    'project_group'   => 'หมวด / กลุ่มโครงการ',
-                    'project_name'    => 'ชื่อโครงการ (สำคัญ)',
-                    'activity'        => 'กิจกรรม (สำคัญ)',
-                    'budget_subsidy'  => 'งบเงินอุดหนุน',
-                    'budget_quality'  => 'งบพัฒนาคุณภาพผู้เรียน',
-                    'budget_revenue'  => 'เงินรายได้สถานศึกษา',
-                    'budget_operation'=> 'งบงานประจำ',
-                    'budget_reserve'  => 'เงินสำรองจ่าย',
-                    'owner_name'      => 'ผู้รับผิดชอบ (ชื่อครู)'
+                    'project_group'   => ['label' => 'หมวด / กลุ่มโครงการ', 'keywords' => ['หมวด', 'กลุ่มโครงการ', 'group']],
+                    'project_name'    => ['label' => 'ชื่อโครงการ (สำคัญ)', 'keywords' => ['ชื่อโครงการ', 'โครงการ', 'project_name']],
+                    'activity'        => ['label' => 'กิจกรรม (สำคัญ)', 'keywords' => ['กิจกรรม', 'activity']],
+                    'budget_subsidy'  => ['label' => 'งบเงินอุดหนุน', 'keywords' => ['อุดหนุน', 'subsidy']],
+                    'budget_quality'  => ['label' => 'งบพัฒนาคุณภาพผู้เรียน', 'keywords' => ['พัฒนาคุณภาพ', 'quality']],
+                    'budget_revenue'  => ['label' => 'เงินรายได้สถานศึกษา', 'keywords' => ['รายได้', 'revenue']],
+                    'budget_operation'=> ['label' => 'งบงานประจำ', 'keywords' => ['งานประจำ', 'operation']],
+                    'budget_reserve'  => ['label' => 'เงินสำรองจ่าย', 'keywords' => ['สำรอง', 'reserve']],
+                    'owner_name'      => ['label' => 'ผู้รับผิดชอบ (ชื่อครู)', 'keywords' => ['ผู้รับผิดชอบ', 'owner', 'ครู']]
                 ];
-                foreach ($fields as $key => $label): 
+                foreach ($fields as $key => $f): 
+                    $label = $f['label'];
+                    $keywords = $f['keywords'];
                 ?>
                 <div class="flex flex-col gap-2">
                     <label class="text-[11px] font-black text-slate-500 uppercase tracking-widest px-1"><?= $label ?></label>
                     <select name="mapping[<?= $key ?>]" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-4 focus:ring-blue-100 outline-none transition-all">
                         <option value="">-- ไม่เลือก --</option>
-                        <?php foreach ($headers as $idx => $h): ?>
-                        <option value="<?= $idx ?>" <?= (strpos($h, $label) !== false || strpos($h, $key) !== false) ? 'selected' : '' ?>>
+                        <?php foreach ($headers as $idx => $h): 
+                            $isMatch = false;
+                            foreach ($keywords as $kw) {
+                                if (strpos($h, $kw) !== false) {
+                                    $isMatch = true;
+                                    break;
+                                }
+                            }
+                        ?>
+                        <option value="<?= $idx ?>" <?= $isMatch ? 'selected' : '' ?>>
                             คอลัมน์ <?= $idx + 1 ?>: <?= htmlspecialchars($h) ?>
                         </option>
                         <?php endforeach; ?>
