@@ -55,7 +55,7 @@ if ($step === 2 && !empty($_FILES['budget_file']['tmp_name'])) {
         $headers = [];
         if (($handle = fopen($targetPath, "r")) !== FALSE) {
             // Find first non-empty row as header
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+            while (($data = fgetcsv($handle, 1000, ",", '"', "\\")) !== FALSE) {
                 if (!empty(array_filter($data))) {
                     $headers = $data;
                     break;
@@ -87,11 +87,11 @@ if ($step === 3 && isset($_POST['mapping'])) {
     try {
         if (($handle = fopen($tempFile, "r")) !== FALSE) {
             // Skip rows until data starts (after header)
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+            while (($data = fgetcsv($handle, 1000, ",", '"', "\\")) !== FALSE) {
                 if (!empty(array_filter($data))) break; // Skip up to header row
             }
             
-            while (($row = fgetcsv($handle, 1000, ",")) !== FALSE) {
+            while (($row = fgetcsv($handle, 1000, ",", '"', "\\")) !== FALSE) {
                 // Handle Merged Project Name
                 $p_name_idx = $mapping['project_name'];
                 if (empty($row[$p_name_idx]) && !empty($last_project_name)) {
