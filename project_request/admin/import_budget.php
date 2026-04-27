@@ -41,17 +41,29 @@ if ($step === 2 && !empty($_FILES['budget_file']['tmp_name'])) {
         $_SESSION['import_temp_file'] = $targetPath;
         $tempFile = $targetPath;
         
-        // Read headers
+        // Read headers - Scan for the first non-empty row as headers
         $headers = [];
         if (strpos($fileName, '.csv') !== false) {
             if (($handle = fopen($targetPath, "r")) !== FALSE) {
-                $headers = fgetcsv($handle, 1000, ",");
+                while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                    if (!empty(array_filter($data))) {
+                        $headers = $data;
+                        break;
+                    }
+                }
                 fclose($handle);
             }
         } elseif ($hasSpreadsheet) {
             $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($targetPath);
             $worksheet = $spreadsheet->getActiveSheet();
-            $headers = $worksheet->rangeToArray('A1:' . $worksheet->getHighestColumn() . '1', NULL, TRUE, FALSE)[0];
+            $allRows = $worksheet->toArray();
+            foreach ($allRows as $idx => $row) {
+                if (!empty(array_filter($row))) {
+                    $headers = $row;
+                    $_SESSION['import_header_row_idx'] = $idx; // Remember which row was the header
+                    break;
+                }
+            }
         } else {
             $message = 'ระบบไม่รองรับไฟล์ Excel กรุณาติดตั้ง PhpSpreadsheet หรือใช้ไฟล์ CSV';
             $step = 1;
@@ -75,7 +87,12 @@ if ($step === 3 && isset($_POST['mapping'])) {
 
     if (strpos($tempFile, '.csv') !== false) {
         if (($handle = fopen($tempFile, "r")) !== FALSE) {
-            $headers = fgetcsv($handle, 1000, ","); // Skip header
+            // Skip rows until header
+            $header_idx = $_SESSION['import_header_row_idx'] ?? 0;
+            for ($i = 0; $i <= $header_idx; $i++) {
+                fgetcsv($handle, 1000, ",");
+            }
+            
             while (($row = fgetcsv($handle, 1000, ",")) !== FALSE) {
                 // Carry over merged cell values
                 if (empty($row[$mapping['project_group']]) && !empty($last_project_group)) $row[$mapping['project_group']] = $last_project_group;
@@ -96,7 +113,12 @@ if ($step === 3 && isset($_POST['mapping'])) {
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tempFile);
         $worksheet = $spreadsheet->getActiveSheet();
         $rows = $worksheet->toArray();
-        array_shift($rows); // Skip header
+        $header_idx = $_SESSION['import_header_row_idx'] ?? 0;
+        
+        // Remove all rows up to and including header
+        for ($i = 0; $i <= $header_idx; $i++) {
+            array_shift($rows);
+        }
 
         foreach ($rows as $row) {
              // Carry over merged cell values
