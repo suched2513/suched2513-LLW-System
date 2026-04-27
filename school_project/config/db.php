@@ -1,24 +1,15 @@
 <?php
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'lalomwittaya');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_CHARSET', 'utf8mb4');
+$parentConfig = __DIR__ . '/../../config/database.php';
+if (file_exists($parentConfig) && !function_exists('getPdo')) {
+    require_once $parentConfig;
+}
 
-function getDB() {
+function getDB(): PDO {
     static $pdo = null;
-    if ($pdo === null) {
-        try {
-            $dsn = "mysql:host=".DB_HOST.";dbname=".DB_NAME.";charset=".DB_CHARSET;
-            $options = [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-            ];
-            $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
-        } catch (PDOException $e) {
-            die(json_encode(['error' => 'Database connection failed: ' . $e->getMessage()]));
-        }
+    if ($pdo !== null) return $pdo;
+    if (function_exists('getPdo')) {
+        $pdo = getPdo();
+        return $pdo;
     }
     return $pdo;
 }
