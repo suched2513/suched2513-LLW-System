@@ -57,6 +57,12 @@ if ($step === 2 && !empty($_FILES['budget_file']['tmp_name'])) {
             // Find first non-empty row as header
             while (($data = fgetcsv($handle, 1000, ",", '"', "\\")) !== FALSE) {
                 if (!empty(array_filter($data))) {
+                    // Convert encoding if not UTF-8
+                    foreach ($data as $idx => $val) {
+                        if (!mb_check_encoding($val, 'UTF-8')) {
+                            $data[$idx] = mb_convert_encoding($val, 'UTF-8', 'TIS-620, Windows-874');
+                        }
+                    }
                     $headers = $data;
                     break;
                 }
@@ -102,6 +108,13 @@ if ($step === 3 && isset($_POST['mapping'])) {
             }
             
             while (($row = fgetcsv($handle, 1000, ",", '"', "\\")) !== FALSE) {
+                // Convert encoding if not UTF-8
+                foreach ($row as $idx => $val) {
+                    if (!mb_check_encoding($val, 'UTF-8')) {
+                        $row[$idx] = mb_convert_encoding($val, 'UTF-8', 'TIS-620, Windows-874');
+                    }
+                }
+                
                 // Handle Merged Project Name
                 $p_name_idx = $mapping['project_name'];
                 if (empty($row[$p_name_idx]) && !empty($last_project_name)) {
