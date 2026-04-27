@@ -35,16 +35,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } catch (Exception $e) {
             error_log($e->getMessage());
-            $error = 'DB Error: ' . $e->getMessage();
+            $error = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
         }
     }
 }
 
 function _redirect_by_role(string $role): void {
     $map = [
-        'admin'    => '/admin/dashboard.php',
-        'teacher'  => '/teacher/dashboard.php',
-        'director' => '/director/pending.php',
+        'admin'          => '/admin/dashboard.php',
+        'teacher'        => '/teacher/dashboard.php',
+        'director'       => '/dashboard/director.php',
+        'budget_officer' => '/dashboard/budget_officer.php',
     ];
     
     $target = $map[$role] ?? '/index.php';

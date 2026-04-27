@@ -14,7 +14,9 @@ if ($role === 'admin') {
 } elseif ($role === 'teacher') {
     header('Location: ' . BASE_URL . '/teacher/dashboard.php');
 } elseif ($role === 'director') {
-    header('Location: ' . BASE_URL . '/director/pending.php');
+    header('Location: ' . BASE_URL . '/dashboard/director.php');
+} elseif ($role === 'budget_officer') {
+    header('Location: ' . BASE_URL . '/dashboard/budget_officer.php');
 } else {
     header('Location: ' . BASE_URL . '/login.php');
 }
