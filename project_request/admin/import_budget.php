@@ -85,6 +85,7 @@ if ($step === 3 && isset($_POST['mapping'])) {
     $last_project_group = '';
     $last_project_name = '';
 
+try {
     if (strpos($tempFile, '.csv') !== false) {
         if (($handle = fopen($tempFile, "r")) !== FALSE) {
             // Skip rows until header
@@ -122,11 +123,11 @@ if ($step === 3 && isset($_POST['mapping'])) {
 
         foreach ($rows as $row) {
              // Carry over merged cell values
-             if (empty($row[$mapping['project_group']]) && !empty($last_project_group)) $row[$mapping['project_group']] = $last_project_group;
-             if (empty($row[$mapping['project_name']]) && !empty($last_project_name)) $row[$mapping['project_name']] = $last_project_name;
+             if (empty($row[$mapping['project_group'] ?? '']) && !empty($last_project_group)) $row[$mapping['project_group']] = $last_project_group;
+             if (empty($row[$mapping['project_name'] ?? '']) && !empty($last_project_name)) $row[$mapping['project_name']] = $last_project_name;
              
-             if (!empty($row[$mapping['project_group']])) $last_project_group = $row[$mapping['project_group']];
-             if (!empty($row[$mapping['project_name']])) $last_project_name = $row[$mapping['project_name']];
+             if (!empty($row[$mapping['project_group'] ?? ''])) $last_project_group = $row[$mapping['project_group']];
+             if (!empty($row[$mapping['project_name'] ?? ''])) $last_project_name = $row[$mapping['project_name']];
 
             if (insertBudget($pdo, $row, $mapping, $dept_id, $fiscal_year)) {
                 $count++;
@@ -140,6 +141,10 @@ if ($step === 3 && isset($_POST['mapping'])) {
     $step = 1;
     if (file_exists($tempFile)) unlink($tempFile);
     unset($_SESSION['import_temp_file']);
+} catch (Exception $e) {
+    $message = "เกิดข้อผิดพลาดในการบันทึกข้อมูล: " . $e->getMessage();
+    $step = 2; // Stay on mapping step to allow fix
+}
 }
 
 function insertBudget($pdo, $row, $mapping, $dept_id, $fiscal_year) {
