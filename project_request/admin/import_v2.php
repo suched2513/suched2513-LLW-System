@@ -162,9 +162,16 @@ if ($step === 3 && isset($_POST['mapping'])) {
                 <div>
                     <label class="block text-xs font-bold text-slate-400 mb-2">ฝ่าย</label>
                     <select name="department_id" class="w-full bg-slate-50 p-4 rounded-xl border border-slate-100 font-bold" required>
-                        <?php foreach ($departments as $d): ?>
-                            <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['name']) ?></option>
-                        <?php endforeach; ?>
+                        <?php if (empty($departments)): ?>
+                            <option value="1">กลุ่มบริหารวิชาการ</option>
+                            <option value="2">กลุ่มบริหารงบประมาณและบุคลากร</option>
+                            <option value="3">กลุ่มบริหารงานทั่วไป</option>
+                            <option value="4">กลุ่มบริหารกิจการนักเรียน</option>
+                        <?php else: ?>
+                            <?php foreach ($departments as $d): ?>
+                                <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['name']) ?></option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </select>
                 </div>
                 <div>
