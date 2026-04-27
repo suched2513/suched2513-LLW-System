@@ -6,17 +6,22 @@
 
 return [
     'up' => function (PDO $pdo) {
-        // 1. เพิ่มคอลัมน์ gender, academic_year, semester
-        $pdo->exec("ALTER TABLE att_students 
-            ADD COLUMN gender ENUM('ชาย', 'หญิง') NULL AFTER name,
-            ADD COLUMN academic_year INT DEFAULT 2567 AFTER classroom,
-            ADD COLUMN semester INT DEFAULT 1 AFTER academic_year
-        ");
+        $cols = $pdo->query("SHOW COLUMNS FROM att_students")->fetchAll(PDO::FETCH_COLUMN);
 
-        // 2. พยายามเดาเพศจากคำนำหน้าชื่อ (ครอบคลุม ด.ช., ด.ญ., ฯลฯ)
+        if (!in_array('gender', $cols)) {
+            $pdo->exec("ALTER TABLE att_students ADD COLUMN gender ENUM('ชาย', 'หญิง') NULL AFTER name");
+        }
+        if (!in_array('academic_year', $cols)) {
+            $pdo->exec("ALTER TABLE att_students ADD COLUMN academic_year INT DEFAULT 2567 AFTER classroom");
+        }
+        if (!in_array('semester', $cols)) {
+            $pdo->exec("ALTER TABLE att_students ADD COLUMN semester INT DEFAULT 1 AFTER academic_year");
+        }
+
+        // เดาเพศจากคำนำหน้าชื่อ (ครอบคลุม ด.ช., ด.ญ., ฯลฯ) — เฉพาะแถวที่ยังเป็น NULL
         $pdo->exec("UPDATE att_students SET gender = 'ชาย' WHERE gender IS NULL AND (name LIKE 'เด็กชาย%' OR name LIKE 'นาย%' OR name LIKE 'ด.ช.%' OR name LIKE 'ดช.%')");
         $pdo->exec("UPDATE att_students SET gender = 'หญิง' WHERE gender IS NULL AND (name LIKE 'เด็กหญิง%' OR name LIKE 'นางสาว%' OR name LIKE 'นาง%' OR name LIKE 'ด.ญ.%' OR name LIKE 'ดญ.%')");
-        
+
         return true;
     },
 

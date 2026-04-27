@@ -49,6 +49,7 @@ function listFiles(string $dir): array {
 $action = '';
 if (isset($_GET['run']))  $action = 'run';
 if (isset($_GET['seed'])) $action = 'seed';
+if (isset($_GET['skip'])) $action = 'skip';
 
 // ── Default: แสดง status ───────────────────────────────────
 if ($action === '') {
@@ -72,8 +73,34 @@ if ($action === '') {
     echo "\n";
     echo "Pending: $pending migration(s)\n\n";
     echo "Actions:\n";
-    echo "  ?run=1   → run pending migrations\n";
-    echo "  ?seed=1  → run seeds (idempotent)\n";
+    echo "  ?run=1                 → run pending migrations\n";
+    echo "  ?seed=1                → run seeds (idempotent)\n";
+    echo "  ?skip=<migration_name> → mark a migration as executed WITHOUT running it\n";
+    echo "                            (ใช้เมื่อ schema มีอยู่แล้วและ migration ไม่ idempotent)\n";
+    exit;
+}
+
+// ── Action: skip — mark migration as run without executing ────
+if ($action === 'skip') {
+    $name = trim($_GET['skip']);
+    if ($name === '' || $name === '1') {
+        http_response_code(400);
+        echo "ระบุชื่อ migration ที่จะ skip ผ่าน ?skip=<name>\n";
+        exit;
+    }
+
+    $file = $migrationsDir . '/' . $name . '.php';
+    if (!file_exists($file)) {
+        http_response_code(404);
+        echo "ไม่เจอไฟล์ migration: $name\n";
+        exit;
+    }
+
+    $batch = (int)$pdo->query("SELECT COALESCE(MAX(batch),0) FROM _migrations")->fetchColumn() + 1;
+    $stmt = $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, ?)");
+    $stmt->execute([$name, $batch]);
+    echo "✓ Marked as executed (batch=$batch): $name\n";
+    echo "ต่อด้วย ?run=1 เพื่อรัน migration ที่เหลือ\n";
     exit;
 }
 
