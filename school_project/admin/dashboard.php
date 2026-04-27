@@ -8,8 +8,13 @@ require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../includes/layout.php';
 requireRole(['admin']);
 $db = getDB();
-$stats = ['users'=>$db->query("SELECT COUNT(*) FROM users WHERE is_active=1")->fetchColumn(),'projects'=>$db->query("SELECT COUNT(*) FROM budget_projects WHERE is_active=1")->fetchColumn(),'requests'=>$db->query("SELECT COUNT(*) FROM project_requests")->fetchColumn(),'pending'=>$db->query("SELECT COUNT(*) FROM project_requests WHERE status='submitted'")->fetchColumn()];
-$recentLogs = $db->query("SELECT al.*,u.full_name FROM audit_logs al LEFT JOIN users u ON al.user_id=u.id ORDER BY al.created_at DESC LIMIT 10")->fetchAll();
+$stats = [
+    'users'    => $db->query("SELECT COUNT(*) FROM llw_users WHERE status='active'")->fetchColumn(),
+    'projects' => $db->query("SELECT COUNT(*) FROM budget_projects WHERE is_active=1")->fetchColumn(),
+    'requests' => $db->query("SELECT COUNT(*) FROM project_requests")->fetchColumn(),
+    'pending'  => $db->query("SELECT COUNT(*) FROM project_requests WHERE status='submitted'")->fetchColumn()
+];
+$recentLogs = $db->query("SELECT al.*, CONCAT(u.firstname, ' ', u.lastname) AS full_name FROM audit_logs al LEFT JOIN llw_users u ON al.user_id=u.user_id ORDER BY al.created_at DESC LIMIT 10")->fetchAll();
 renderHead('Admin Dashboard');
 echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('Admin Dashboard'); echo '<div class="page-content">'; showFlash();
 ?>
