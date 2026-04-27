@@ -128,8 +128,16 @@ if ($step === 3 && isset($_POST['mapping'])) {
 
 <div class="max-w-4xl mx-auto">
     <div class="bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100">
-        <h3 class="text-2xl font-black text-slate-800">นำเข้าข้อมูล (เวอร์ชันเสถียร)</h3>
-        <p class="text-slate-400 font-medium mb-8">กรุณาใช้ไฟล์ .CSV ในการนำเข้าข้อมูล</p>
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h3 class="text-2xl font-black text-slate-800">นำเข้าข้อมูล (เวอร์ชันเสถียร)</h3>
+                <p class="text-slate-400 font-medium">กรุณาใช้ไฟล์ .CSV ในการนำเข้าข้อมูล</p>
+            </div>
+            <a href="<?= BASE_URL ?>/assets/budget_template.csv" download class="bg-emerald-50 text-emerald-600 px-6 py-3 rounded-2xl font-black text-xs border border-emerald-100 hover:bg-emerald-100 transition-all flex items-center gap-2">
+                <i class="bi bi-file-earmark-arrow-down"></i>
+                ดาวน์โหลดไฟล์แม่แบบ (.CSV)
+            </a>
+        </div>
 
         <?php if ($message): ?>
             <div class="mb-6 p-4 bg-blue-50 text-blue-600 rounded-2xl font-bold"><?= htmlspecialchars($message) ?></div>
