@@ -30,7 +30,7 @@ try {
 
 $message = '';
 $step = isset($_POST['step']) ? (int)$_POST['step'] : 1;
-$tempFile = $_SESSION['import_temp_file'] ?? '';
+$tempFile = isset($_SESSION['import_temp_file']) ? $_SESSION['import_temp_file'] : '';
 
 if ($step === 2 && !empty($_FILES['budget_file']['tmp_name'])) {
     // Save file to a temp location
@@ -92,7 +92,7 @@ try {
     if (strpos($tempFile, '.csv') !== false) {
         if (($handle = fopen($tempFile, "r")) !== FALSE) {
             // Skip rows until header
-            $header_idx = $_SESSION['import_header_row_idx'] ?? 0;
+            $header_idx = isset($_SESSION['import_header_row_idx']) ? $_SESSION['import_header_row_idx'] : 0;
             for ($i = 0; $i <= $header_idx; $i++) {
                 fgetcsv($handle, 1000, ",");
             }
@@ -117,7 +117,7 @@ try {
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tempFile);
         $worksheet = $spreadsheet->getActiveSheet();
         $rows = $worksheet->toArray();
-        $header_idx = $_SESSION['import_header_row_idx'] ?? 0;
+        $header_idx = isset($_SESSION['import_header_row_idx']) ? $_SESSION['import_header_row_idx'] : 0;
         
         // Remove all rows up to and including header
         for ($i = 0; $i <= $header_idx; $i++) {
@@ -126,11 +126,11 @@ try {
 
         foreach ($rows as $row) {
              // Carry over merged cell values
-             if (empty($row[$mapping['project_group'] ?? '']) && !empty($last_project_group)) $row[$mapping['project_group']] = $last_project_group;
-             if (empty($row[$mapping['project_name'] ?? '']) && !empty($last_project_name)) $row[$mapping['project_name']] = $last_project_name;
+             if (empty($row[isset($mapping['project_group']) ? $mapping['project_group'] : '']) && !empty($last_project_group)) $row[$mapping['project_group']] = $last_project_group;
+             if (empty($row[isset($mapping['project_name']) ? $mapping['project_name'] : '']) && !empty($last_project_name)) $row[$mapping['project_name']] = $last_project_name;
              
-             if (!empty($row[$mapping['project_group'] ?? ''])) $last_project_group = $row[$mapping['project_group']];
-             if (!empty($row[$mapping['project_name'] ?? ''])) $last_project_name = $row[$mapping['project_name']];
+             if (!empty($row[isset($mapping['project_group']) ? $mapping['project_group'] : ''])) $last_project_group = $row[$mapping['project_group']];
+             if (!empty($row[isset($mapping['project_name']) ? $mapping['project_name'] : ''])) $last_project_name = $row[$mapping['project_name']];
 
             if (insertBudget($pdo, $row, $mapping, $dept_id, $fiscal_year)) {
                 $count++;
@@ -152,8 +152,8 @@ try {
 
 function insertBudget($pdo, $row, $mapping, $dept_id, $fiscal_year) {
     // Map indices
-    $p_name = $row[$mapping['project_name']] ?? '';
-    $activity = $row[$mapping['activity']] ?? '';
+    $p_name = isset($row[$mapping['project_name']]) ? $row[$mapping['project_name']] : '';
+    $activity = isset($row[$mapping['activity']]) ? $row[$mapping['activity']] : '';
     
     if (empty($p_name) || empty($activity)) return false;
 
@@ -168,15 +168,15 @@ function insertBudget($pdo, $row, $mapping, $dept_id, $fiscal_year) {
     $stmt = $pdo->prepare($sql);
     return $stmt->execute([
         $dept_id,
-        $row[$mapping['project_group']] ?? '',
+        isset($row[$mapping['project_group']]) ? $row[$mapping['project_group']] : '',
         $p_name,
         $activity,
-        (float)($row[$mapping['budget_subsidy']] ?? 0),
-        (float)($row[$mapping['budget_quality']] ?? 0),
-        (float)($row[$mapping['budget_revenue']] ?? 0),
-        (float)($row[$mapping['budget_operation']] ?? 0),
-        (float)($row[$mapping['budget_reserve']] ?? 0),
-        $row[$mapping['owner_name']] ?? '',
+        (float)(isset($row[$mapping['budget_subsidy']]) ? $row[$mapping['budget_subsidy']] : 0),
+        (float)(isset($row[$mapping['budget_quality']]) ? $row[$mapping['budget_quality']] : 0),
+        (float)(isset($row[$mapping['budget_revenue']]) ? $row[$mapping['budget_revenue']] : 0),
+        (float)(isset($row[$mapping['budget_operation']]) ? $row[$mapping['budget_operation']] : 0),
+        (float)(isset($row[$mapping['budget_reserve']]) ? $row[$mapping['budget_reserve']] : 0),
+        isset($row[$mapping['owner_name']]) ? $row[$mapping['owner_name']] : '',
         $fiscal_year
     ]);
 }
