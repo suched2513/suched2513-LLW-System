@@ -70,11 +70,20 @@ if ($step === 3 && isset($_POST['mapping'])) {
     
     $count = 0;
     $skipped = 0;
+    $last_project_group = '';
+    $last_project_name = '';
 
     if (strpos($tempFile, '.csv') !== false) {
         if (($handle = fopen($tempFile, "r")) !== FALSE) {
             $headers = fgetcsv($handle, 1000, ","); // Skip header
             while (($row = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                // Carry over merged cell values
+                if (empty($row[$mapping['project_group']]) && !empty($last_project_group)) $row[$mapping['project_group']] = $last_project_group;
+                if (empty($row[$mapping['project_name']]) && !empty($last_project_name)) $row[$mapping['project_name']] = $last_project_name;
+                
+                if (!empty($row[$mapping['project_group']])) $last_project_group = $row[$mapping['project_group']];
+                if (!empty($row[$mapping['project_name']])) $last_project_name = $row[$mapping['project_name']];
+
                 if (insertBudget($pdo, $row, $mapping, $dept_id, $fiscal_year)) {
                     $count++;
                 } else {
@@ -90,6 +99,13 @@ if ($step === 3 && isset($_POST['mapping'])) {
         array_shift($rows); // Skip header
 
         foreach ($rows as $row) {
+             // Carry over merged cell values
+             if (empty($row[$mapping['project_group']]) && !empty($last_project_group)) $row[$mapping['project_group']] = $last_project_group;
+             if (empty($row[$mapping['project_name']]) && !empty($last_project_name)) $row[$mapping['project_name']] = $last_project_name;
+             
+             if (!empty($row[$mapping['project_group']])) $last_project_group = $row[$mapping['project_group']];
+             if (!empty($row[$mapping['project_name']])) $last_project_name = $row[$mapping['project_name']];
+
             if (insertBudget($pdo, $row, $mapping, $dept_id, $fiscal_year)) {
                 $count++;
             } else {
