@@ -19,9 +19,12 @@ function requireLogin() {
 function requireRole($roles) {
     requireLogin();
     if (!is_array($roles)) $roles = [$roles];
+    // Always allow super_admin
+    if (($_SESSION['role'] ?? '') === 'super_admin') return;
+    
     if (!in_array($_SESSION['role'], $roles)) {
         http_response_code(403);
-        die('<div style="text-align:center;padding:50px;font-family:sans-serif"><h2>ไม่มีสิทธิ์เข้าถึง</h2><a href="' . BASE_URL . '/index.php">กลับหน้าหลัก</a></div>');
+        die('<div style="text-align:center;padding:50px;font-family:sans-serif"><h2>ไม่มีสิทธิ์เข้าถึง</h2><p>บทบาทของคุณคือ: ' . htmlspecialchars($_SESSION['role'] ?? 'guest') . '</p><a href="' . BASE_URL . '/index.php">กลับหน้าหลัก</a></div>');
     }
 }
 

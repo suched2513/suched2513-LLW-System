@@ -16,9 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $s->execute([$username]);
         $user = $s->fetch();
         if ($user && password_verify($password, $user['password'])) {
-            $_SESSION['user_id']   = $user['id'];
+            $_SESSION['user_id']   = $user['user_id'];
             $_SESSION['username']  = $user['username'];
-            $_SESSION['full_name'] = $user['full_name'];
+            $_SESSION['full_name'] = $user['firstname'] . ' ' . $user['lastname'];
             $_SESSION['role']      = $user['role'];
             $_SESSION['dept_id']   = $user['department_id'];
             $_SESSION['owner_name']= $user['owner_name'];
