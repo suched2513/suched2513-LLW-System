@@ -92,6 +92,34 @@ jobs:
           }
           PHPEOF
 
+      - name: Generate school_project/config/db.php
+        if: ${{ github.event.inputs.skip_config == 'false' }}
+        run: |
+          cat > school_project/config/db.php << 'PHPEOF'
+          <?php
+          $parentConfig = __DIR__ . '/../../config/database.php';
+          if (file_exists($parentConfig) && !function_exists('getPdo')) {
+              require_once $parentConfig;
+          }
+          if (!defined('DB_HOST')) define('DB_HOST', '${{ secrets.DB_HOST }}');
+          if (!defined('DB_USER')) define('DB_USER', '${{ secrets.DB_USER }}');
+          if (!defined('DB_PASS')) define('DB_PASS', '${{ secrets.DB_PASS }}');
+          if (!defined('DB_NAME')) define('DB_NAME', '${{ secrets.DB_NAME }}');
+          function getDB(): PDO {
+              static $pdo = null;
+              if ($pdo !== null) return $pdo;
+              if (function_exists('getPdo')) { $pdo = getPdo(); return $pdo; }
+              try {
+                  $pdo = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8mb4', DB_USER, DB_PASS, [
+                      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                      PDO::ATTR_EMULATE_PREPARES => false,
+                  ]);
+              } catch (PDOException $e) { die('ไม่สามารถเชื่อมต่อฐานข้อมูลได้'); }
+              return $pdo;
+          }
+          PHPEOF
+
       - name: Generate config/db_central.php
         if: ${{ github.event.inputs.skip_config == 'false' }}
         run: |
@@ -141,6 +169,9 @@ jobs:
       - name: Remove test/debug files
         run: |
           rm -f test_*.php fix_*.php md.txt
+          rm -f school_project/llw_integration.sql
+          rm -f school_project/schema.sql
+          rm -f school_project/seed.sql
           rm -rf .git .github .gitignore
           rm -f *.md
           echo "✅ Cleaned up test/debug files"
