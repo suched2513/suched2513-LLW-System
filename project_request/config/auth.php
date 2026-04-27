@@ -30,18 +30,19 @@ function checkRole($allowedRoles) {
     $allowed = is_array($allowedRoles) ? $allowedRoles : [$allowedRoles];
     
     if (!in_array($userRole, $allowed)) {
-        // Redirect to their respective dashboard or login
-        if ($userRole === 'admin') {
-            header('Location: ' . BASE_URL . '/admin/dashboard.php');
-        } elseif ($userRole === 'teacher') {
-            header('Location: ' . BASE_URL . '/teacher/dashboard.php');
-        } elseif ($userRole === 'director') {
-            header('Location: ' . BASE_URL . '/dashboard/director.php');
-        } elseif ($userRole === 'budget_officer') {
-            header('Location: ' . BASE_URL . '/dashboard/budget_officer.php');
-        } else {
-            header('Location: ' . BASE_URL . '/login.php');
-        }
+        // Use a unified redirector
+        $map = [
+            'admin'          => '/admin/dashboard.php',
+            'super_admin'    => '/admin/dashboard.php',
+            'wfh_admin'      => '/admin/dashboard.php',
+            'teacher'        => '/teacher/dashboard.php',
+            'att_teacher'    => '/teacher/dashboard.php',
+            'wfh_staff'      => '/teacher/dashboard.php',
+            'director'       => '/dashboard/director.php',
+            'budget_officer' => '/dashboard/budget_officer.php',
+        ];
+        $target = $map[$userRole] ?? '/login.php';
+        header('Location: ' . BASE_URL . $target);
         exit();
     }
 }
