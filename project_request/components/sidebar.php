@@ -5,7 +5,8 @@ $current_page = $_SERVER['PHP_SELF'];
 
 $menu = [];
 
-if ($role === 'admin') {
+// Normalize role for menu display
+if (in_array($role, ['admin', 'super_admin', 'wfh_admin'])) {
     $menu = [
         ['label' => 'Dashboard', 'icon' => 'bi-grid-fill', 'url' => '/admin/dashboard.php'],
         ['label' => 'รายงานภาพรวม', 'icon' => 'bi-graph-up-arrow', 'url' => '/reports/budget_overview.php'],
@@ -15,7 +16,7 @@ if ($role === 'admin') {
         ['label' => 'จัดการฝ่าย/กลุ่มงาน', 'icon' => 'bi-building-fill', 'url' => '/admin/departments.php'],
         ['label' => 'ตั้งค่าผู้ลงนาม', 'icon' => 'bi-pen-fill', 'url' => '/admin/signatories.php'],
     ];
-} elseif ($role === 'teacher') {
+} elseif (in_array($role, ['teacher', 'att_teacher', 'wfh_staff'])) {
     $menu = [
         ['label' => 'Dashboard', 'icon' => 'bi-grid-fill', 'url' => '/teacher/dashboard.php'],
         ['label' => 'โครงการที่รับผิดชอบ', 'icon' => 'bi-folder-fill', 'url' => '/teacher/my_projects.php'],
