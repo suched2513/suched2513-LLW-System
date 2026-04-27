@@ -13,7 +13,17 @@ if ($hasSpreadsheet) {
 }
 
 $pdo = getPdo();
-$departments = $pdo->query("SELECT * FROM departments ORDER BY order_no")->fetchAll();
+$departments = [];
+try {
+    $departments = $pdo->query("SELECT * FROM departments ORDER BY order_no")->fetchAll();
+} catch (Exception $e) {
+    // Try fallback to wfh_departments if departments doesn't exist
+    try {
+        $departments = $pdo->query("SELECT dept_id as id, dept_name as name FROM wfh_departments")->fetchAll();
+    } catch (Exception $e2) {
+        $message = "ไม่พบตารางข้อมูลฝ่าย กรุณารันไฟล์ schema.sql ในฐานข้อมูลก่อนใช้งาน";
+    }
+}
 
 $message = '';
 $step = isset($_POST['step']) ? (int)$_POST['step'] : 1;
