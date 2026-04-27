@@ -111,7 +111,9 @@ $subMenus = [
     <!-- Sidebar Brand -->
     <div class="sidebar-brand">
         <a href="<?= $base_path ?>/index.php" class="brand-link">
-            <span class="brand-text font-weight-light">LLW <strong>Platinum</strong></span>
+            <span class="brand-text font-weight-light">
+                <?= ($activeSystem === 'budget') ? 'SBMS <strong>2569</strong>' : 'LLW <strong>Platinum</strong>' ?>
+            </span>
         </a>
     </div>
 
