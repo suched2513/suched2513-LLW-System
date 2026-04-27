@@ -255,27 +255,30 @@ $subMenus = [
                     </ul>
                 </li>
 
+                <!-- 4. ADMINISTRATION & ASSETS -->
+                <li class="nav-header">งานบริหารและทรัพยากร</li>
+
                 <!-- Budget (SBMS 2569) -->
                 <li class="nav-item <?= $activeSystem === 'budget' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'budget' ? 'active' : '' ?>">
+                    <a href="<?= $base_path ?>/school_project/admin/dashboard.php" class="nav-link <?= $activeSystem === 'budget' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-hand-holding-usd"></i>
                         <p>ระบบบริหารงบประมาณ <i class="nav-arrow fas fa-angle-left"></i></p>
                     </a>
                     <ul class="nav nav-treeview">
                         <li class="nav-item">
-                            <a href="<?= $base_path ?>/school_project/admin/dashboard.php" class="nav-link">
+                            <a href="<?= $base_path ?>/school_project/admin/dashboard.php" class="nav-link <?= isLinkActive($base_path . '/school_project/admin/dashboard.php') ? 'active' : '' ?>">
                                 <i class="nav-icon fas fa-tachometer-alt"></i>
                                 <p>สรุปงบประมาณ</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="<?= $base_path ?>/school_project/admin/budget_list.php" class="nav-link">
+                            <a href="<?= $base_path ?>/school_project/admin/budget_list.php" class="nav-link <?= isLinkActive($base_path . '/school_project/admin/budget_list.php') ? 'active' : '' ?>">
                                 <i class="nav-icon fas fa-tasks"></i>
                                 <p>จัดการโครงการ</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="<?= $base_path ?>/school_project/teacher/request_form.php" class="nav-link">
+                            <a href="<?= $base_path ?>/school_project/teacher/request_form.php" class="nav-link <?= isLinkActive($base_path . '/school_project/teacher/request_form.php') ? 'active' : '' ?>">
                                 <i class="nav-icon fas fa-file-alt"></i>
                                 <p>ยื่นขออนุมัติ</p>
                             </a>
