@@ -19,7 +19,7 @@ elseif (strpos($full_url, '/assembly/') !== false)          $activeSystem = 'ass
 elseif (strpos($full_url, '/behavior/') !== false)          $activeSystem = 'behavior';
 elseif (strpos($full_url, '/homeroom/') !== false)          $activeSystem = 'homeroom';
 elseif (strpos($full_url, '/teacher_leave/') !== false)     $activeSystem = 'teacher_leave';
-elseif (strpos($full_url, '/budget_system/') !== false)     $activeSystem = 'budget';
+elseif (strpos($full_url, '/project_request/') !== false)     $activeSystem = 'budget';
 elseif (strpos($full_url, '/user/') !== false || strpos($full_url, '/admin/') !== false) $activeSystem = 'wfh';
 elseif (basename($full_url) === 'leave_system.php')         $activeSystem = 'leave';
 elseif (basename($full_url) === 'student_info.php' || basename($full_url) === 'teacher_info.php') $activeSystem = 'info';
@@ -94,10 +94,10 @@ $subMenus = [
         ['icon' => 'fas fa-tachometer-alt', 'label' => 'ระบบที่ปรึกษา', 'url' => $base_path . '/homeroom/index.php'],
     ],
     'budget' => [
-        ['icon' => 'fas fa-tachometer-alt', 'label' => 'สรุปงบประมาณ', 'url' => $base_path . '/budget_system/index.php'],
-        ['icon' => 'fas fa-tasks',          'label' => 'จัดการโครงการ', 'url' => $base_path . '/budget_system/projects.php'],
-        ['icon' => 'fas fa-file-alt',       'label' => 'ยื่นขออนุมัติ', 'url' => $base_path . '/budget_system/disbursements.php'],
-        ['icon' => 'fas fa-history',        'label' => 'ประวัติเบิกจ่าย', 'url' => $base_path . '/budget_system/transactions.php'],
+        ['icon' => 'fas fa-tachometer-alt', 'label' => 'สรุปงบประมาณ', 'url' => $base_path . '/project_request/admin/dashboard.php'],
+        ['icon' => 'fas fa-tasks',          'label' => 'จัดการโครงการ', 'url' => $base_path . '/project_request/admin/projects.php'],
+        ['icon' => 'fas fa-file-earmark-arrow-up-fill', 'label' => 'นำเข้างบประมาณ', 'url' => $base_path . '/project_request/admin/import_v2.php'],
+        ['icon' => 'fas fa-file-alt',       'label' => 'ยื่นขออนุมัติ', 'url' => $base_path . '/project_request/disbursements.php'],
     ],
     'info' => [
         ['icon' => 'fas fa-users',          'label' => 'ข้อมูลนักเรียน',   'url' => $base_path . '/student_info.php'],
