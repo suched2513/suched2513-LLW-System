@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     auditLog($reqId?'update':'create','project_request',$currentReqId);
     if ($action==='submit') {
         // notify director
-        $directors = $db->query("SELECT id FROM users WHERE role IN ('director','budget_officer') AND is_active=1")->fetchAll();
+        $directors = $db->query("SELECT user_id AS id FROM llw_users WHERE role IN ('director','budget_officer','super_admin') AND status='active'")->fetchAll();
         foreach ($directors as $d) addNotification($d['id'],'pending_approval','มีคำขอดำเนินโครงการใหม่','จาก '.$u['full_name'],$currentReqId,'project_request');
         flashMessage('success','ส่งคำขอเรียบร้อยแล้ว รอผู้อำนวยการอนุมัติ');
         header('Location: /teacher/request_list.php'); exit;

@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD']=== 'POST') {
     }
     header('Location: /admin/users.php'); exit;
 }
-$users = $db->query("SELECT u.*,d.name AS dept_name FROM users u LEFT JOIN departments d ON u.department_id=d.id ORDER BY u.role,u.full_name")->fetchAll();
+$users = $db->query("SELECT u.*, user_id AS id, CONCAT(firstname, ' ', lastname) AS full_name, d.name AS dept_name FROM llw_users u LEFT JOIN departments d ON u.department_id=d.id ORDER BY u.role, u.firstname")->fetchAll();
 renderHead('จัดการผู้ใช้');
 echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('จัดการผู้ใช้'); echo '<div class="page-content">'; showFlash();
 ?>
