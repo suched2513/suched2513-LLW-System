@@ -84,6 +84,16 @@ if ($step === 3 && isset($_POST['mapping'])) {
     $skipped = 0;
     $last_project_name = '';
     
+    // Auto-fix schema if missing columns (Robust version)
+    $cols = ['activity' => 'VARCHAR(255)', 'budget_reserve' => 'DECIMAL(15,2) DEFAULT 0', 'project_group' => 'VARCHAR(255)'];
+    foreach ($cols as $col => $type) {
+        try {
+            $pdo->exec("ALTER TABLE budget_projects ADD $col $type");
+        } catch (Exception $e) {
+            // Already exists or other issue - ignore
+        }
+    }
+    
     try {
         if (($handle = fopen($tempFile, "r")) !== FALSE) {
             // Skip rows until data starts (after header)
