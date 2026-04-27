@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($username && $password) {
         try {
             $pdo = getPdo();
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? LIMIT 1");
+            $stmt = $pdo->prepare("SELECT * FROM llw_users WHERE username = ? LIMIT 1");
             $stmt->execute([$username]);
             $user = $stmt->fetch();
 

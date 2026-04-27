@@ -12,31 +12,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
     if ($action === 'save') {
-        $id = $_POST['id'] ?? '';
+        $user_id = $_POST['id'] ?? '';
         $username = trim($_POST['username']);
-        $full_name = trim($_POST['full_name']);
+        $firstname = trim($_POST['firstname']);
+        $lastname = trim($_POST['lastname']);
         $role = $_POST['role'];
         $dept = $_POST['department'];
         $password = $_POST['password'] ?? '';
 
         try {
-            if ($id) {
+            if ($user_id) {
                 // Update
                 if (!empty($password)) {
-                    $sql = "UPDATE users SET username=?, password=?, full_name=?, role=?, department=? WHERE id=?";
+                    $sql = "UPDATE llw_users SET username=?, password=?, firstname=?, lastname=?, role=?, department=? WHERE user_id=?";
                     $stmt = $pdo->prepare($sql);
-                    $stmt->execute([$username, password_hash($password, PASSWORD_BCRYPT), $full_name, $role, $dept, $id]);
+                    $stmt->execute([$username, password_hash($password, PASSWORD_BCRYPT), $firstname, $lastname, $role, $dept, $user_id]);
                 } else {
-                    $sql = "UPDATE users SET username=?, full_name=?, role=?, department=? WHERE id=?";
+                    $sql = "UPDATE llw_users SET username=?, firstname=?, lastname=?, role=?, department=? WHERE user_id=?";
                     $stmt = $pdo->prepare($sql);
-                    $stmt->execute([$username, $full_name, $role, $dept, $id]);
+                    $stmt->execute([$username, $firstname, $lastname, $role, $dept, $user_id]);
                 }
                 $message = 'อัปเดตข้อมูลสำเร็จ';
             } else {
                 // Insert
-                $sql = "INSERT INTO users (username, password, full_name, role, department) VALUES (?, ?, ?, ?, ?)";
+                $sql = "INSERT INTO llw_users (username, password, firstname, lastname, role, department, status) VALUES (?, ?, ?, ?, ?, ?, 'active')";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$username, password_hash($password, PASSWORD_BCRYPT), $full_name, $role, $dept]);
+                $stmt->execute([$username, password_hash($password, PASSWORD_BCRYPT), $firstname, $lastname, $role, $dept]);
                 $message = 'เพิ่มผู้ใช้สำเร็จ';
             }
         } catch (Exception $e) {
@@ -44,13 +45,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'delete') {
         $id = $_POST['id'];
-        $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$id]);
+        $pdo->prepare("DELETE FROM llw_users WHERE user_id = ?")->execute([$id]);
         $message = 'ลบผู้ใช้สำเร็จ';
     }
 }
 
 // Fetch Users
-$stmt = $pdo->query("SELECT * FROM users ORDER BY role, full_name");
+$stmt = $pdo->query("SELECT *, CONCAT(firstname, ' ', lastname) as full_name FROM llw_users ORDER BY role, firstname");
 $users = $stmt->fetchAll();
 ?>
 
@@ -114,7 +115,7 @@ $users = $stmt->fetchAll();
                             </button>
                             <form method="POST" onsubmit="return confirm('ยืนยันการลบผู้ใช้งาน?')">
                                 <input type="hidden" name="action" value="delete">
-                                <input type="hidden" name="id" value="<?= $u['id'] ?>">
+                                <input type="hidden" name="id" value="<?= $u['user_id'] ?>">
                                 <button type="submit" class="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all">
                                     <i class="bi bi-trash"></i>
                                 </button>
@@ -150,9 +151,15 @@ $users = $stmt->fetchAll();
                 <input type="password" name="password" id="password" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-4 focus:ring-blue-100 outline-none transition-all">
             </div>
 
-            <div>
-                <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">ชื่อ-นามสกุล</label>
-                <input type="text" name="full_name" id="fullName" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-4 focus:ring-blue-100 outline-none transition-all" required>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">ชื่อ</label>
+                    <input type="text" name="firstname" id="firstname" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-4 focus:ring-blue-100 outline-none transition-all" required>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">นามสกุล</label>
+                    <input type="text" name="lastname" id="lastname" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-4 focus:ring-blue-100 outline-none transition-all" required>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -183,7 +190,8 @@ function openModal() {
     document.getElementById('userId').value = '';
     document.getElementById('username').value = '';
     document.getElementById('password').value = '';
-    document.getElementById('fullName').value = '';
+    document.getElementById('firstname').value = '';
+    document.getElementById('lastname').value = '';
     document.getElementById('role').value = 'teacher';
     document.getElementById('dept').value = '';
     document.getElementById('password').required = true;
@@ -199,12 +207,13 @@ function closeModal() {
 
 function editUser(user) {
     document.getElementById('modalTitle').innerText = 'แก้ไขผู้ใช้งาน';
-    document.getElementById('userId').value = user.id;
+    document.getElementById('userId').value = user.user_id;
     document.getElementById('username').value = user.username;
     document.getElementById('password').value = '';
     document.getElementById('password').required = false;
     document.getElementById('pwdLabel').style.display = 'inline';
-    document.getElementById('fullName').value = user.full_name;
+    document.getElementById('firstname').value = user.firstname;
+    document.getElementById('lastname').value = user.lastname;
     document.getElementById('role').value = user.role;
     document.getElementById('dept').value = user.department;
     document.getElementById('userModal').classList.remove('hidden');
