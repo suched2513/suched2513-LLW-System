@@ -11,7 +11,7 @@ if (in_array($role, ['admin', 'super_admin', 'wfh_admin'])) {
         ['label' => 'Dashboard', 'icon' => 'bi-grid-fill', 'url' => '/admin/dashboard.php'],
         ['label' => 'รายงานภาพรวม', 'icon' => 'bi-graph-up-arrow', 'url' => '/reports/budget_overview.php'],
         ['label' => 'Audit Logs', 'icon' => 'bi-shield-lock-fill', 'url' => '/reports/audit_log.php'],
-        ['label' => 'นำเข้างบประมาณ', 'icon' => 'bi-file-earmark-arrow-up-fill', 'url' => '/admin/import_budget.php'],
+        ['label' => 'นำเข้างบประมาณ', 'icon' => 'bi-file-earmark-arrow-up-fill', 'url' => '/admin/import_v2.php'],
         ['label' => 'จัดการผู้ใช้งาน', 'icon' => 'bi-people-fill', 'url' => '/admin/users.php'],
         ['label' => 'จัดการฝ่าย/กลุ่มงาน', 'icon' => 'bi-building-fill', 'url' => '/admin/departments.php'],
         ['label' => 'ตั้งค่าผู้ลงนาม', 'icon' => 'bi-pen-fill', 'url' => '/admin/signatories.php'],
