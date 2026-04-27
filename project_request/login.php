@@ -40,15 +40,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-function _redirect_by_role(string $role): void {
+function _redirect_by_role(?string $role): void {
+    // Map central system roles to this app's dashboards
     $map = [
         'admin'          => '/admin/dashboard.php',
+        'super_admin'    => '/admin/dashboard.php',
+        'wfh_admin'      => '/admin/dashboard.php',
         'teacher'        => '/teacher/dashboard.php',
+        'att_teacher'    => '/teacher/dashboard.php',
+        'wfh_staff'      => '/teacher/dashboard.php',
         'director'       => '/dashboard/director.php',
         'budget_officer' => '/dashboard/budget_officer.php',
     ];
     
-    $target = $map[$role] ?? '/index.php';
+    $target = $map[$role] ?? null;
+    
+    // If role is unknown, default based on role hierarchy or show error
+    if (!$target) {
+        // Clear session to prevent loop if role is truly invalid for this app
+        session_destroy();
+        header('Location: ' . BASE_URL . '/login.php?error=invalid_role');
+        exit();
+    }
+    
     header('Location: ' . BASE_URL . $target);
     exit();
 }

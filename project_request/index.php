@@ -9,15 +9,24 @@ checkLogin();
 
 $role = $_SESSION['role'] ?? '';
 
-if ($role === 'admin') {
-    header('Location: ' . BASE_URL . '/admin/dashboard.php');
-} elseif ($role === 'teacher') {
-    header('Location: ' . BASE_URL . '/teacher/dashboard.php');
-} elseif ($role === 'director') {
-    header('Location: ' . BASE_URL . '/dashboard/director.php');
-} elseif ($role === 'budget_officer') {
-    header('Location: ' . BASE_URL . '/dashboard/budget_officer.php');
+$map = [
+    'admin'          => '/admin/dashboard.php',
+    'super_admin'    => '/admin/dashboard.php',
+    'wfh_admin'      => '/admin/dashboard.php',
+    'teacher'        => '/teacher/dashboard.php',
+    'att_teacher'    => '/teacher/dashboard.php',
+    'wfh_staff'      => '/teacher/dashboard.php',
+    'director'       => '/dashboard/director.php',
+    'budget_officer' => '/dashboard/budget_officer.php',
+];
+
+$target = $map[$role] ?? null;
+
+if ($target) {
+    header('Location: ' . BASE_URL . $target);
 } else {
-    header('Location: ' . BASE_URL . '/login.php');
+    // If logged in but role not recognized, go to login with error
+    session_destroy();
+    header('Location: ' . BASE_URL . '/login.php?error=unauthorized_role');
 }
 exit();
