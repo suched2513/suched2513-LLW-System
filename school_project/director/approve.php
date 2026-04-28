@@ -24,18 +24,19 @@ $items = $db->prepare("SELECT * FROM request_items WHERE request_id=? ORDER BY i
 $items->execute([$id]); $itemList = $items->fetchAll();
 
 // Determine next step logic
-$steps = ['budget', 'procurement', 'finance', 'deputy', 'director', 'completed'];
+$steps = ['submitted', 'budget_approved', 'procurement_approved', 'finance_approved', 'deputy_approved', 'completed'];
 $currentIndex = array_search($req['current_step'], $steps);
 
 // Role mapping to steps
 $roleStepMap = [
-    'budget_officer' => 'budget',
-    'procurement_head' => 'procurement',
-    'finance_head' => 'finance',
-    'deputy_director' => 'deputy',
-    'director' => 'director',
-    'admin' => $req['current_step'], // Admin can do current step
-    'super_admin' => $req['current_step']
+    'budget_officer' => 'submitted',
+    'wfh_admin' => 'submitted',
+    'procurement_head' => 'budget_approved',
+    'finance_head' => 'procurement_approved',
+    'deputy_director' => 'finance_approved',
+    'director' => 'deputy_approved',
+    'super_admin' => $req['current_step'],
+    'admin' => $req['current_step']
 ];
 $myCanApprove = ($roleStepMap[$u['role']] ?? '') === $req['current_step'];
 
@@ -59,19 +60,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $myCanApprove) {
         $sql = "UPDATE project_requests SET current_step=?, status=?";
         $params = [$nextStep, $status];
         
-        if ($req['current_step'] === 'budget') {
+        if ($req['current_step'] === 'submitted') {
             $sql .= ", budget_ok_at=NOW(), budget_user_id=?, budget_note=?";
             array_push($params, $u['id'], $note);
-        } elseif ($req['current_step'] === 'procurement') {
+        } elseif ($req['current_step'] === 'budget_approved') {
             $sql .= ", proc_ok_at=NOW(), proc_user_id=?, proc_note=?";
             array_push($params, $u['id'], $note);
-        } elseif ($req['current_step'] === 'finance') {
+        } elseif ($req['current_step'] === 'procurement_approved') {
             $sql .= ", fin_ok_at=NOW(), fin_user_id=?, fin_note=?";
             array_push($params, $u['id'], $note);
-        } elseif ($req['current_step'] === 'deputy') {
+        } elseif ($req['current_step'] === 'finance_approved') {
             $sql .= ", deputy_ok_at=NOW(), deputy_user_id=?, deputy_note=?";
             array_push($params, $u['id'], $note);
-        } elseif ($req['current_step'] === 'director') {
+        } elseif ($req['current_step'] === 'deputy_approved') {
             $sql .= ", approved_at=NOW(), director_note=?";
             array_push($params, $note);
         }
