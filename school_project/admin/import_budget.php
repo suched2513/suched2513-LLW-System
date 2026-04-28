@@ -18,7 +18,34 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         $s = $db->prepare("INSERT INTO budget_projects (department_id,fiscal_year,project_group,project_name,activity,budget_subsidy,budget_quality,budget_revenue,budget_operation,budget_reserve,owner_name) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
         $s->execute([$deptId,$fy,$_POST['project_group'],$_POST['project_name'],$_POST['activity'],$_POST['budget_subsidy']??0,$_POST['budget_quality']??0,$_POST['budget_revenue']??0,$_POST['budget_operation']??0,$_POST['budget_reserve']??0,$_POST['owner_name']]);
         flashMessage('success','เพิ่มโครงการเรียบร้อย');
-        header('Location: /admin/import_budget.php'); exit;
+        header('Location: ' . BASE_URL . '/admin/import_budget.php'); exit;
+    }
+    if ($action==='csv' && isset($_FILES['csv_file'])) {
+        $file = $_FILES['csv_file']['tmp_name'];
+        if (($handle = fopen($file, "r")) !== FALSE) {
+            fgetcsv($handle); // Skip header
+            $count = 0;
+            $db->beginTransaction();
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                if (count($data) < 9) continue;
+                $deptName = trim($data[0]);
+                $deptId = $deptMap[$deptName] ?? null;
+                if (!$deptId) continue;
+                
+                $s = $db->prepare("INSERT INTO budget_projects (department_id,fiscal_year,project_group,project_name,activity,budget_subsidy,budget_quality,budget_revenue,owner_name) VALUES (?,?,?,?,?,?,?,?,?)");
+                $s->execute([
+                    $deptId, (int)$data[1], $data[2], $data[3], $data[4],
+                    (float)$data[5], (float)$data[6], (float)$data[7], $data[8]
+                ]);
+                $count++;
+            }
+            $db->commit();
+            fclose($handle);
+            flashMessage('success', "Import สำเร็จ $count รายการ");
+        } else {
+            flashMessage('danger', "ไม่สามารถเปิดไฟล์ได้");
+        }
+        header('Location: ' . BASE_URL . '/admin/import_budget.php'); exit;
     }
 }
 renderHead('Import งบประมาณ');
@@ -55,13 +82,26 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card mb-3">
-      <div class="card-header"><i class="bi bi-info-circle me-2"></i>วิธี Import CSV</div>
+    <div class="card">
+      <div class="card-header"><i class="bi bi-upload me-2"></i>อัปโหลดไฟล์ CSV</div>
       <div class="card-body">
-        <p style="font-size:13px">สร้างไฟล์ CSV มีคอลัมน์ดังนี้:</p>
-        <code style="font-size:11px;display:block;background:#f8fafc;padding:8px;border-radius:6px">department,fiscal_year,project_group,project_name,activity,budget_subsidy,budget_quality,budget_revenue,owner_name</code>
+        <form method="POST" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="<?=csrfToken()?>">
+          <input type="hidden" name="action" value="csv">
+          <div class="mb-3">
+            <label class="form-label">เลือกไฟล์ .csv</label>
+            <input type="file" name="csv_file" class="form-control" accept=".csv" required>
+          </div>
+          <button type="submit" class="btn btn-success w-100"><i class="bi bi-file-earmark-arrow-up me-1"></i>Import CSV</button>
+        </form>
         <hr>
-        <p style="font-size:12px;color:#64748b">หลังจากติดตั้ง PhpSpreadsheet ด้วย Composer สามารถ import ไฟล์ Excel ได้โดยตรง</p>
+        <p style="font-size:13px" class="fw-bold mb-1 text-primary"><i class="bi bi-info-circle me-1"></i>วิธีเตรียมไฟล์ CSV</p>
+        <p style="font-size:12px" class="mb-2">เรียงลำดับคอลัมน์ดังนี้ (คั่นด้วยคอมม่า):</p>
+        <code style="font-size:10px;display:block;background:#f8fafc;padding:8px;border-radius:6px;word-break:break-all">department,fiscal_year,project_group,project_name,activity,budget_subsidy,budget_quality,budget_revenue,owner_name</code>
+        <div class="mt-2 small text-muted">
+          * ชื่อฝ่าย (department) ต้องตรงกับที่มีในระบบ<br>
+          * ไฟล์ต้องเป็น UTF-8 (แนะนำใช้ Google Sheets แล้ว Download as CSV)
+        </div>
       </div>
     </div>
   </div>
