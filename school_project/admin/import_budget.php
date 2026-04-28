@@ -48,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         header('Location: ' . BASE_URL . '/admin/import_budget.php'); exit;
     }
 }
+$recentProjects = $db->query("SELECT bp.*, d.name AS dept_name FROM budget_projects bp JOIN departments d ON bp.department_id=d.id ORDER BY bp.id DESC LIMIT 5")->fetchAll();
 renderHead('Import งบประมาณ');
 echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('Import งบประมาณ'); echo '<div class="page-content">'; showFlash();
 ?>
@@ -109,6 +110,35 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
           * ไฟล์ต้องเป็น UTF-8 (แนะนำใช้ Google Sheets แล้ว Download as CSV)
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-clock-history me-2"></i>โครงการที่เพิ่มล่าสุด 5 รายการ</span>
+    <a href="<?=BASE_URL?>/admin/budget_list.php" class="btn btn-sm btn-link text-decoration-none">ดูทั้งหมด →</a>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-sm mb-0" style="font-size:13px">
+        <thead class="table-light"><tr><th class="ps-3">ปีงบ</th><th>ชื่อโครงการ</th><th>ฝ่าย</th><th>ผู้รับผิดชอบ</th><th class="text-end pe-3">รวมงบประมาณ</th></tr></thead>
+        <tbody>
+          <?php if (empty($recentProjects)): ?>
+            <tr><td colspan="5" class="text-center py-3 text-muted">ยังไม่มีข้อมูลโครงการในระบบ</td></tr>
+          <?php endif; ?>
+          <?php foreach ($recentProjects as $p): ?>
+          <?php $total = $p['budget_subsidy']+$p['budget_quality']+$p['budget_revenue']+$p['budget_operation']+$p['budget_reserve']; ?>
+          <tr>
+            <td class="ps-3"><?=$p['fiscal_year']?></td>
+            <td><div class="fw-semibold"><?=h($p['project_name'])?></div></td>
+            <td><?=h($p['dept_name'])?></td>
+            <td><?=h($p['owner_name'])?></td>
+            <td class="text-end pe-3 fw-bold text-primary"><?=formatMoney($total)?></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
