@@ -25,7 +25,14 @@ function requireRole($roles) {
     if ($currentRole === 'super_admin' || $currentRole === 'admin') return;
     
     // Map platform roles to local roles for comparison
-    $map = ['att_teacher'=>'teacher','wfh_admin'=>'budget_officer','wfh_staff'=>'teacher'];
+    $map = [
+        'att_teacher'=>'teacher',
+        'wfh_admin'=>'budget_officer',
+        'wfh_staff'=>'teacher',
+        'procurement_head'=>'procurement_head',
+        'finance_head'=>'finance_head',
+        'deputy_director'=>'deputy_director'
+    ];
     $mappedRole = $map[$currentRole] ?? $currentRole;
     
     if (!in_array($currentRole, $roles) && !in_array($mappedRole, $roles)) {
@@ -71,13 +78,25 @@ function roleLabel($r) {
         'admin'=>'ผู้ดูแลระบบ','super_admin'=>'ผู้ดูแลระบบสูงสุด',
         'teacher'=>'ครู','att_teacher'=>'ครู',
         'head'=>'หัวหน้าฝ่าย',
-        'budget_officer'=>'เจ้าหน้าที่งบประมาณ','wfh_admin'=>'เจ้าหน้าที่งบประมาณ',
+        'budget_officer'=>'เจ้าหน้าที่งบประมาณ (แผนงาน)','wfh_admin'=>'เจ้าหน้าที่งบประมาณ',
+        'procurement_head'=>'หัวหน้าพัสดุ',
+        'finance_head'=>'หัวหน้าการเงิน',
+        'deputy_director'=>'รองผู้อำนวยการ',
         'director'=>'ผู้อำนวยการ'
     ];
     return $map[$r] ?? $r;
 }
 function statusLabel($s) {
-    $map = ['draft'=>'ร่าง','submitted'=>'รออนุมัติ','approved'=>'อนุมัติ','rejected'=>'ปฏิเสธ'];
+    $map = [
+        'draft'=>'ร่าง',
+        'submitted'=>'รอฝ่ายงบประมาณ',
+        'budget_approved'=>'รอฝ่ายพัสดุ',
+        'procurement_approved'=>'รอฝ่ายการเงิน',
+        'finance_approved'=>'รอ รอง ผอ.',
+        'deputy_approved'=>'รอ ผอ. อนุมัติ',
+        'approved'=>'อนุมัติแล้ว',
+        'rejected'=>'ปฏิเสธ'
+    ];
     return $map[$s] ?? $s;
 }
 function statusBadge($s) {

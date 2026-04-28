@@ -6,7 +6,22 @@ require_once __DIR__ . '/../config/constants.php';
 requireLogin();
 $id = (int)($_GET['id'] ?? 0);
 $db = getDB();
-$req = $db->prepare("SELECT pr.*,bp.project_name,bp.activity,d.name AS dept_name,CONCAT(u.firstname,' ',u.lastname) AS teacher_name FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id JOIN departments d ON bp.department_id=d.id JOIN llw_users u ON pr.user_id=u.user_id WHERE pr.id=?");
+$req = $db->prepare("SELECT pr.*,bp.project_name,bp.activity,d.name AS dept_name,
+    CONCAT(u.firstname,' ',u.lastname) AS teacher_name,
+    CONCAT(ub.firstname,' ',ub.lastname) AS budget_signer,
+    CONCAT(up.firstname,' ',up.lastname) AS proc_signer,
+    CONCAT(uf.firstname,' ',uf.lastname) AS fin_signer,
+    CONCAT(ud.firstname,' ',ud.lastname) AS deputy_signer,
+    (SELECT CONCAT(firstname,' ',lastname) FROM llw_users WHERE role='super_admin' LIMIT 1) AS director_signer
+    FROM project_requests pr 
+    JOIN budget_projects bp ON pr.budget_project_id=bp.id 
+    JOIN departments d ON bp.department_id=d.id 
+    JOIN llw_users u ON pr.user_id=u.user_id 
+    LEFT JOIN llw_users ub ON pr.budget_user_id=ub.user_id
+    LEFT JOIN llw_users up ON pr.proc_user_id=up.user_id
+    LEFT JOIN llw_users uf ON pr.fin_user_id=uf.user_id
+    LEFT JOIN llw_users ud ON pr.deputy_user_id=ud.user_id
+    WHERE pr.id=?");
 $req->execute([$id]); $r = $req->fetch();
 if (!$r) die('ไม่พบข้อมูล');
 $items = $db->prepare("SELECT * FROM request_items WHERE request_id=? ORDER BY item_order");
@@ -14,6 +29,12 @@ $items->execute([$id]); $itemList = $items->fetchAll();
 $sigs = $db->query("SELECT * FROM signatories WHERE is_active=1 ORDER BY order_no")->fetchAll();
 $sigMap = [];
 foreach ($sigs as $s) $sigMap[$s['role_label']] = $s;
+
+// Helper to show signature
+function sigBlock($name, $date, $label = '') {
+    if (!$date) return "ลงชื่อ.................................<br>( " . ($name ?: '.................................') . " )<br>" . $label;
+    return "<div style='color:#1a56db;font-weight:bold'>[ลงนามดิจิทัลแล้ว]</div>ลงชื่อ " . h($name) . "<br>(" . formatDate($date) . ")<br>" . $label;
+}
 auditLog('download','project_request',$id);
 
 // Check PhpWord available
@@ -74,26 +95,24 @@ h2{text-align:center;font-size:18pt}
       <strong>ความเห็นของหัวหน้าฝ่ายแผนงาน</strong><br><br>
       □ อยู่ในแผน □ ไม่อยู่ในแผน<br>
       งบประมาณที่ได้รับ.................บาท<br>ใช้ไปแล้ว.................บาท<br>คงเหลือ.................บาท<br>ขอใช้ครั้งนี้.................บาท<br>คงเหลือสุทธิ.................บาท<br>เห็นควรดำเนินการ<br><br>
-      ลงชื่อ.................................<br>(<?= h($sigMap['หัวหน้าแผนงาน']['full_name'] ?? '') ?>)<br>หัวหน้างานแผนงาน
+      <?= sigBlock($r['budget_signer'] ?: $sigMap['หัวหน้าแผนงาน']['full_name'], $r['budget_ok_at'], 'หัวหน้างานแผนงาน') ?>
     </td>
     <td width="33%" style="vertical-align:top;padding:12px">
       <strong>การดำเนินงานของฝ่ายพัสดุ</strong><br><br>
       พัสดุตามรายการที่เสนอ<br>เห็นควร<br>□ จัดซื้อ/จัดจ้างได้<br>□ ไม่สามารถจัดซื้อ/จัดจ้างได้<br><br><br>
-      ลงชื่อ.................................<br>(<?= h($sigMap['หัวหน้าพัสดุ']['full_name'] ?? '') ?>)<br>หัวหน้าเจ้าหน้าที่พัสดุ
+      <?= sigBlock($r['proc_signer'] ?: $sigMap['หัวหน้าพัสดุ']['full_name'], $r['proc_ok_at'], 'หัวหน้าเจ้าหน้าที่พัสดุ') ?>
     </td>
     <td width="33%" style="vertical-align:top;padding:12px">
       <strong>การตรวจสอบและรับรอง</strong><br><br>
       ได้ทำการตรวจสอบรายการตามเสนอแล้ว<br>เห็นควร □ อนุมัติ □ ไม่อนุมัติ โดยใช้เงิน<br>□ เงินอุดหนุน □ พัฒนาคุณภาพผู้เรียน<br>□ เงินรายได้สถานศึกษา □ เงินสำรองจ่าย<br><br>
-      ลงชื่อ.................................<br>(<?= h($sigMap['หัวหน้าการเงิน']['full_name'] ?? '') ?>)<br>หัวหน้างานการเงิน
+      <?= sigBlock($r['fin_signer'] ?: $sigMap['หัวหน้าการเงิน']['full_name'], $r['fin_ok_at'], 'หัวหน้างานการเงิน') ?>
     </td>
   </tr>
 </table>
 <div style="text-align:center;margin-top:30px">
   <p>อนุมัติ</p>
   <br><br>
-  <p>ลงชื่อ..........................................</p>
-  <p>(<?= h($sigMap['ผู้อำนวยการโรงเรียน']['full_name'] ?? '') ?>)</p>
-  <p><?= h($sigMap['ผู้อำนวยการโรงเรียน']['position'] ?? '') ?></p>
+  <?= sigBlock($r['director_signer'] ?: $sigMap['ผู้อำนวยการโรงเรียน']['full_name'], $r['approved_at'], $sigMap['ผู้อำนวยการโรงเรียน']['position']) ?>
 </div>
 </body></html>
 <?php

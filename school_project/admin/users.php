@@ -19,7 +19,16 @@ if ($_SERVER['REQUEST_METHOD']=== 'POST') {
         $lastname  = $parts[1] ?? '';
         
         // Map budget role to llw_role
-        $roleMap = ['teacher'=>'att_teacher', 'head'=>'att_teacher', 'budget_officer'=>'wfh_admin', 'director'=>'super_admin', 'admin'=>'super_admin'];
+        $roleMap = [
+            'teacher' => 'att_teacher',
+            'head' => 'att_teacher',
+            'budget_officer' => 'wfh_admin',
+            'procurement_head' => 'procurement_head',
+            'finance_head' => 'finance_head',
+            'deputy_director' => 'deputy_director',
+            'director' => 'super_admin',
+            'admin' => 'super_admin'
+        ];
         $llwRole = $roleMap[$_POST['role']] ?? 'att_teacher';
         
         $s = $db->prepare("INSERT INTO llw_users (username,password,firstname,lastname,role,department_id,owner_name,status) VALUES (?,?,?,?,?,?,?, 'active')");
@@ -47,7 +56,16 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
 <div class="mb-2"><label class="form-label">ชื่อ-สกุล</label><input type="text" name="full_name" class="form-control" required></div>
 <div class="mb-2"><label class="form-label">ชื่อในระบบงบ (owner_name)</label><input type="text" name="owner_name" class="form-control" placeholder="ต้องตรงกับชื่อในงบประมาณ"></div>
 <div class="mb-2"><label class="form-label">สิทธิ์</label>
-<select name="role" class="form-select"><option value="teacher">ครู</option><option value="head">หัวหน้าฝ่าย</option><option value="budget_officer">เจ้าหน้าที่งบ</option><option value="director">ผู้อำนวยการ</option><option value="admin">Admin</option></select></div>
+<select name="role" class="form-select">
+    <option value="teacher">ครู</option>
+    <option value="head">หัวหน้าฝ่าย</option>
+    <option value="budget_officer">เจ้าหน้าที่งบ (หัวหน้าแผนงาน)</option>
+    <option value="procurement_head">หัวหน้าเจ้าหน้าที่พัสดุ</option>
+    <option value="finance_head">หัวหน้างานการเงิน</option>
+    <option value="deputy_director">รองผู้อำนวยการ</option>
+    <option value="director">ผู้อำนวยการ</option>
+    <option value="admin">Admin</option>
+</select></div>
 <div class="mb-3"><label class="form-label">ฝ่าย</label>
 <select name="dept_id" class="form-select"><option value="">-- ไม่ระบุ --</option>
 <?php foreach ($depts as $d): ?><option value="<?=$d['id']?>"><?=h($d['name'])?></option><?php endforeach; ?>
