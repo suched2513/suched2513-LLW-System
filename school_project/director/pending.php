@@ -15,14 +15,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     $status = $action==='approve' ? 'approved' : 'rejected';
     $s = $db->prepare("UPDATE project_requests SET status=?,director_note=?,approved_at=NOW() WHERE id=?");
     $s->execute([$status,$note,$id]);
-    $req = $db->query("SELECT pr.user_id,bp.project_name FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id WHERE pr.id=$id")->fetch();
+    $stmt2 = $db->prepare("SELECT pr.user_id,bp.project_name FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id WHERE pr.id=?");
+    $stmt2->execute([$id]); $req = $stmt2->fetch();
     if ($req) addNotification($req['user_id'],$status,$status==='approved'?'คำขอได้รับอนุมัติ':'คำขอถูกปฏิเสธ',$req['project_name'],$id,'project_request');
     auditLog($action,'project_request',$id,['status'=>'submitted'],['status'=>$status,'note'=>$note]);
     flashMessage('success', $status==='approved'?'อนุมัติคำขอเรียบร้อย':'ปฏิเสธคำขอเรียบร้อย');
-    header('Location: /director/pending.php'); exit;
+    header('Location: ' . BASE_URL . '/director/pending.php'); exit;
 }
 
-$requests = $db->query("SELECT pr.*,bp.project_name,bp.activity,u.full_name AS teacher_name,d.name AS dept_name FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id JOIN users u ON pr.user_id=u.id JOIN departments d ON bp.department_id=d.id WHERE pr.status='submitted' ORDER BY pr.created_at ASC")->fetchAll();
+$requests = $db->query("SELECT pr.*,bp.project_name,bp.activity,CONCAT(u.firstname,' ',u.lastname) AS teacher_name,d.name AS dept_name FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id JOIN llw_users u ON pr.user_id=u.user_id JOIN departments d ON bp.department_id=d.id WHERE pr.status='submitted' ORDER BY pr.created_at ASC")->fetchAll();
 renderHead('รออนุมัติ');
 echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('คำขอรออนุมัติ'); echo '<div class="page-content">'; showFlash();
 ?>

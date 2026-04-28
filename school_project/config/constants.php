@@ -4,7 +4,7 @@ define('SCHOOL_DISTRICT', 'อำเภอภูสิงห์');
 define('SCHOOL_PROVINCE', 'จังหวัดศรีสะเกษ');
 define('SCHOOL_FULL', SCHOOL_NAME . ' ' . SCHOOL_DISTRICT . ' ' . SCHOOL_PROVINCE);
 define('FISCAL_YEAR', 2569);
-define('BASE_URL', '');
+define('BASE_URL', '/school_project');
 define('UPLOAD_PATH', __DIR__ . '/../uploads/');
 define('EXPORT_PATH', __DIR__ . '/../uploads/exports/');
 define('SESSION_TIMEOUT', 7200);

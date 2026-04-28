@@ -8,7 +8,7 @@ requireRole(['teacher','head','admin','budget_officer','director']);
 $u = getCurrentUser();
 $db = getDB();
 $id = (int)($_GET['id'] ?? 0);
-$req = $db->prepare("SELECT pr.*,bp.project_name,bp.activity,d.name AS dept_name,u2.full_name AS teacher_name,bp.budget_subsidy,bp.budget_quality,bp.budget_revenue FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id JOIN departments d ON bp.department_id=d.id JOIN users u2 ON pr.user_id=u2.id WHERE pr.id=?");
+$req = $db->prepare("SELECT pr.*,bp.project_name,bp.activity,d.name AS dept_name,CONCAT(u2.firstname,' ',u2.lastname) AS teacher_name,bp.budget_subsidy,bp.budget_quality,bp.budget_revenue FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id JOIN departments d ON bp.department_id=d.id JOIN llw_users u2 ON pr.user_id=u2.user_id WHERE pr.id=?");
 $req->execute([$id]); $r = $req->fetch();
 if (!$r) { flashMessage('danger','ไม่พบข้อมูล'); header('Location: /index.php'); exit; }
 $items = $db->prepare("SELECT * FROM request_items WHERE request_id=? ORDER BY item_order");

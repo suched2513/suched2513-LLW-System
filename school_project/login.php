@@ -4,7 +4,7 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/config/auth.php';
 require_once __DIR__ . '/config/constants.php';
 
-if (isset($_SESSION['user_id'])) { header('Location: /index.php'); exit; }
+if (isset($_SESSION['user_id'])) { header('Location: ' . BASE_URL . '/index.php'); exit; }
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -25,8 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['last_activity'] = time();
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
             auditLog('login');
-            $redirects = ['admin'=>'/admin/dashboard.php','director'=>'/dashboard/director.php','budget_officer'=>'/dashboard/budget_officer.php','teacher'=>'/teacher/my_projects.php','head'=>'/teacher/my_projects.php'];
-            header('Location: ' . ($redirects[$user['role']] ?? '/index.php'));
+            $redirects = ['admin'=>BASE_URL.'/admin/dashboard.php','director'=>BASE_URL.'/dashboard/director.php','budget_officer'=>BASE_URL.'/dashboard/budget_officer.php','teacher'=>BASE_URL.'/teacher/my_projects.php','head'=>BASE_URL.'/teacher/my_projects.php'];
+            header('Location: ' . ($redirects[$user['role']] ?? BASE_URL . '/index.php'));
             exit;
         } else { $error = 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'; }
     } else { $error = 'กรุณากรอกข้อมูลให้ครบ'; }

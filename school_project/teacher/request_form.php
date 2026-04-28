@@ -83,10 +83,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         $directors = $db->query("SELECT user_id AS id FROM llw_users WHERE role IN ('director','budget_officer','super_admin') AND status='active'")->fetchAll();
         foreach ($directors as $d) addNotification($d['id'],'pending_approval','มีคำขอดำเนินโครงการใหม่','จาก '.$u['full_name'],$currentReqId,'project_request');
         flashMessage('success','ส่งคำขอเรียบร้อยแล้ว รอผู้อำนวยการอนุมัติ');
-        header('Location: /teacher/request_list.php'); exit;
+        header('Location: ' . BASE_URL . '/teacher/request_list.php'); exit;
     }
     flashMessage('success','บันทึก draft เรียบร้อย');
-    header('Location: /teacher/request_form.php?req_id='.$currentReqId); exit;
+    header('Location: ' . BASE_URL . '/teacher/request_form.php?req_id='.$currentReqId); exit;
 }
 
 renderHead('ขอดำเนินโครงการ');

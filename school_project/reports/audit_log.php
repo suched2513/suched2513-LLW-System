@@ -7,7 +7,8 @@ require_once __DIR__ . '/../includes/layout.php';
 requireRole(['admin']);
 $db = getDB();
 $limit = 100;
-$logs = $db->query("SELECT al.*,u.full_name FROM audit_logs al LEFT JOIN users u ON al.user_id=u.id ORDER BY al.created_at DESC LIMIT $limit")->fetchAll();
+$stmtLogs = $db->prepare("SELECT al.*,CONCAT(u.firstname,' ',u.lastname) AS full_name FROM audit_logs al LEFT JOIN llw_users u ON al.user_id=u.user_id ORDER BY al.created_at DESC LIMIT ?");
+$stmtLogs->execute([$limit]); $logs = $stmtLogs->fetchAll();
 renderHead('Log ระบบ');
 echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('Log ระบบ'); echo '<div class="page-content">'; showFlash();
 ?>

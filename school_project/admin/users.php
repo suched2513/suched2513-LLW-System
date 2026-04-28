@@ -17,14 +17,20 @@ if ($_SERVER['REQUEST_METHOD']=== 'POST') {
         $parts = preg_split('/\s+/', $fullName, 2);
         $firstname = $parts[0] ?? '';
         $lastname  = $parts[1] ?? '';
+        
+        // Map budget role to llw_role
+        $roleMap = ['teacher'=>'att_teacher', 'head'=>'att_teacher', 'budget_officer'=>'wfh_admin', 'director'=>'super_admin', 'admin'=>'super_admin'];
+        $llwRole = $roleMap[$_POST['role']] ?? 'att_teacher';
+        
         $s = $db->prepare("INSERT INTO llw_users (username,password,firstname,lastname,role,department_id,owner_name,status) VALUES (?,?,?,?,?,?,?, 'active')");
-        $s->execute([$_POST['username'],$pw,$firstname,$lastname,$_POST['role'],$_POST['dept_id']?:null,$_POST['owner_name']]);
+        $s->execute([$_POST['username'],$pw,$firstname,$lastname,$llwRole,$_POST['dept_id']?:null,$_POST['owner_name']]);
         flashMessage('success','สร้างผู้ใช้เรียบร้อย');
     } elseif ($action==='toggle') {
-        $db->prepare("UPDATE llw_users SET status=IF(status='active','inactive','active') WHERE user_id=?")->execute([$_POST['user_id']]);
+        $uid = (int)$_POST['user_id'];
+        $db->prepare("UPDATE llw_users SET status=CASE WHEN status='active' THEN 'inactive' ELSE 'active' END WHERE user_id=?")->execute([$uid]);
         flashMessage('success','อัปเดตสถานะเรียบร้อย');
     }
-    header('Location: /admin/users.php'); exit;
+    header('Location: ' . BASE_URL . '/admin/users.php'); exit;
 }
 $users = $db->query("SELECT u.*, user_id AS id, CONCAT(firstname, ' ', lastname) AS full_name, d.name AS dept_name FROM llw_users u LEFT JOIN departments d ON u.department_id=d.id ORDER BY u.role, u.firstname")->fetchAll();
 renderHead('จัดการผู้ใช้');
@@ -61,13 +67,13 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
 <td><?=h($u['username'])?></td>
 <td><span class="badge bg-info text-dark"><?=roleLabel($u['role'])?></span></td>
 <td><?=h($u['dept_name']??'ไม่ระบุ')?></td>
-<td class="text-center"><?=$u['is_active']?'<span class="badge bg-success">ใช้งาน</span>':'<span class="badge bg-secondary">ปิดใช้</span>'?></td>
+<td class="text-center"><?=$u['status']==='active'?'<span class="badge bg-success">ใช้งาน</span>':'<span class="badge bg-secondary">ปิดใช้</span>'?></td>
 <td class="text-center">
 <form method="POST" class="d-inline">
 <input type="hidden" name="csrf_token" value="<?=csrfToken()?>">
 <input type="hidden" name="action" value="toggle">
-<input type="hidden" name="user_id" value="<?=$u['id']?>">
-<button type="submit" class="btn btn-sm btn-outline-<?=$u['is_active']?'warning':'success'?>"><?=$u['is_active']?'ปิด':'เปิด'?></button>
+<input type="hidden" name="user_id" value="<?=$u['user_id']?>">
+<button type="submit" class="btn btn-sm btn-outline-<?=$u['status']==='active'?'warning':'success'?>"><?=$u['status']==='active'?'ปิด':'เปิด'?></button>
 </form>
 </td>
 </tr>

@@ -1,14 +1,17 @@
 <?php
+session_start();
+require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../config/layout.php';
+require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/../includes/layout.php';
 requireRole(['director','admin']);
 $db  = getDB();
 $id  = (int)($_GET['id'] ?? 0);
 
-$stmt = $db->prepare("SELECT pr.*, bp.project_name, bp.activity, u.full_name AS teacher_name, u.id AS teacher_id, d.name AS dept_name
+$stmt = $db->prepare("SELECT pr.*, bp.project_name, bp.activity, CONCAT(u.firstname,' ',u.lastname) AS teacher_name, u.user_id AS teacher_id, d.name AS dept_name
   FROM project_requests pr
   JOIN budget_projects bp ON pr.budget_project_id=bp.id
-  JOIN users u ON pr.user_id=u.id
+  JOIN llw_users u ON pr.user_id=u.user_id
   JOIN departments d ON bp.department_id=d.id
   WHERE pr.id=?");
 $stmt->execute([$id]);
@@ -27,19 +30,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status = $action === 'approve' ? 'approved' : 'rejected';
         $db->prepare("UPDATE project_requests SET status=?,director_note=?,approved_at=NOW() WHERE id=?")->execute([$status,$note,$id]);
         addNotification($req['teacher_id'], $status, $status === 'approved' ? 'คำขอของคุณได้รับการอนุมัติ' : 'คำขอของคุณถูกปฏิเสธ', $req['project_name'] . ($note ? ': '.$note : ''), $id, 'project_request');
-        logAction($action, 'project_request', $id);
-        header('Location: pending.php?done=1'); exit;
+        auditLog($action, 'project_request', $id);
+        header('Location: ' . BASE_URL . '/director/pending.php'); exit;
     }
 }
 
-$csrf = csrfToken();
 renderHead('พิจารณาคำขอ');
+echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('พิจารณาคำขอ'); echo '<div class="page-content">';
 ?>
-<div class="d-flex">
-<?php renderSidebar(); ?>
-<div class="main">
-<?php renderTopbar('พิจารณาคำขอ'); ?>
-<div class="content">
 
 <div class="row g-3">
   <div class="col-lg-8">
@@ -50,7 +48,7 @@ renderHead('พิจารณาคำขอ');
           <dt class="col-4 text-muted">โครงการ</dt><dd class="col-8"><?= h($req['project_name']) ?></dd>
           <dt class="col-4 text-muted">ฝ่าย</dt><dd class="col-8"><?= h($req['dept_name']) ?></dd>
           <dt class="col-4 text-muted">ผู้ขอ</dt><dd class="col-8"><?= h($req['teacher_name']) ?></dd>
-          <dt class="col-4 text-muted">วันที่ขอ</dt><dd class="col-8"><?= thDate($req['request_date']) ?></dd>
+          <dt class="col-4 text-muted">วันที่ขอ</dt><dd class="col-8"><?= formatDate($req['request_date']) ?></dd>
           <dt class="col-4 text-muted">ประเภท</dt><dd class="col-8"><?= $req['proc_type'] === 'hire' ? 'จัดจ้าง' : 'จัดซื้อ' ?></dd>
           <dt class="col-4 text-muted">เหตุผล</dt><dd class="col-8"><?= nl2br(h($req['reason'])) ?></dd>
         </dl>
@@ -86,7 +84,7 @@ renderHead('พิจารณาคำขอ');
         <div class="alert alert-secondary">คำขอนี้มีสถานะ: <strong><?= h($req['status']) ?></strong></div>
         <?php else: ?>
         <form method="post">
-          <input type="hidden" name="csrf_token" value="<?= h($csrf) ?>">
+          <input type="hidden" name="csrf_token" value="<?= csrfToken() ?>">
           <div class="mb-3">
             <label class="form-label">หมายเหตุ (ถ้ามี)</label>
             <textarea name="director_note" class="form-control" rows="3" placeholder="ระบุเหตุผลหรือข้อแนะนำ"></textarea>
@@ -102,15 +100,12 @@ renderHead('พิจารณาคำขอ');
         </form>
         <?php endif; ?>
         <hr>
-        <a href="<?= APP_URL ?>/documents/gen_memo.php?id=<?= $id ?>" target="_blank" class="btn btn-outline-primary w-100 mb-2"><i class="bi bi-file-word me-1"></i> บันทึกขออนุมัติ</a>
-        <a href="<?= APP_URL ?>/documents/gen_committee.php?id=<?= $id ?>" target="_blank" class="btn btn-outline-secondary w-100 mb-2"><i class="bi bi-file-word me-1"></i> บันทึกแต่งตั้งคณะกรรมการ</a>
-        <a href="<?= APP_URL ?>/documents/gen_delivery.php?id=<?= $id ?>" target="_blank" class="btn btn-outline-secondary w-100"><i class="bi bi-file-word me-1"></i> ใบส่งมอบงาน</a>
+        <a href="/documents/gen_memo.php?id=<?= $id ?>" target="_blank" class="btn btn-outline-primary w-100 mb-2"><i class="bi bi-file-word me-1"></i> บันทึกขออนุมัติ</a>
+        <a href="/documents/gen_committee.php?id=<?= $id ?>" target="_blank" class="btn btn-outline-secondary w-100 mb-2"><i class="bi bi-file-word me-1"></i> บันทึกแต่งตั้งคณะกรรมการ</a>
+        <a href="/documents/gen_delivery.php?id=<?= $id ?>" target="_blank" class="btn btn-outline-secondary w-100"><i class="bi bi-file-word me-1"></i> ใบส่งมอบงาน</a>
       </div>
     </div>
   </div>
 </div>
 
-</div>
-</div>
-</div>
-<?php renderFoot(); ?>
+<?php echo '</div></div></div>'; renderFooter(); ?>

@@ -8,7 +8,7 @@ requireRole(['admin','director','budget_officer']);
 $db = getDB();
 $filter = $_GET['status'] ?? '';
 $dept = (int)($_GET['dept'] ?? 0);
-$sql = "SELECT pr.*,bp.project_name,u.full_name AS teacher_name,d.name AS dept_name FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id JOIN users u ON pr.user_id=u.id JOIN departments d ON bp.department_id=d.id WHERE 1=1";
+$sql = "SELECT pr.*,bp.project_name,CONCAT(u.firstname,' ',u.lastname) AS teacher_name,d.name AS dept_name FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id JOIN llw_users u ON pr.user_id=u.user_id JOIN departments d ON bp.department_id=d.id WHERE 1=1";
 $params = [];
 if ($filter) { $sql .= " AND pr.status=?"; $params[] = $filter; }
 if ($dept) { $sql .= " AND d.id=?"; $params[] = $dept; }

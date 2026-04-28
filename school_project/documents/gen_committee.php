@@ -6,7 +6,7 @@ require_once __DIR__ . '/../config/constants.php';
 requireLogin();
 $id = (int)($_GET['id'] ?? 0);
 $db = getDB();
-$req = $db->prepare("SELECT pr.*,bp.project_name,bp.activity,d.name AS dept_name,u.full_name AS teacher_name FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id JOIN departments d ON bp.department_id=d.id JOIN users u ON pr.user_id=u.id WHERE pr.id=?");
+$req = $db->prepare("SELECT pr.*,bp.project_name,bp.activity,d.name AS dept_name,CONCAT(u.firstname,' ',u.lastname) AS teacher_name FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id JOIN departments d ON bp.department_id=d.id JOIN llw_users u ON pr.user_id=u.user_id WHERE pr.id=?");
 $req->execute([$id]); $r = $req->fetch();
 if (!$r) die('ไม่พบข้อมูล');
 $committee = $db->prepare("SELECT * FROM request_committee WHERE request_id=? ORDER BY member_order");

@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     }
     header('Location: /admin/departments.php'); exit;
 }
-$depts = $db->query("SELECT d.*,COUNT(u.id) AS user_count FROM departments d LEFT JOIN users u ON u.department_id=d.id GROUP BY d.id ORDER BY d.order_no")->fetchAll();
+$depts = $db->query("SELECT d.*,COUNT(u.user_id) AS user_count FROM departments d LEFT JOIN llw_users u ON u.department_id=d.id GROUP BY d.id ORDER BY d.order_no")->fetchAll();
 renderHead('จัดการฝ่าย');
 echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('จัดการฝ่าย'); echo '<div class="page-content">'; showFlash();
 ?>

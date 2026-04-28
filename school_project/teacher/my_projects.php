@@ -8,16 +8,22 @@ requireRole(['teacher','head']);
 $u = getCurrentUser();
 $db = getDB();
 
-// ดึงโครงการที่ตัวเองรับผิดชอบ
+// ดึงโครงการที่ตัวเองรับผิดชอบ - ใช้ user_id จาก llw_users
+$ownerName = $u['owner_name'] ?? '';
 $sql = "SELECT bp.*, d.name AS dept_name,
         pr.id AS req_id, pr.status AS req_status, pr.amount_requested, pr.proc_type
         FROM budget_projects bp
         JOIN departments d ON bp.department_id=d.id
         LEFT JOIN project_requests pr ON pr.budget_project_id=bp.id AND pr.user_id=?
-        WHERE bp.owner_name LIKE ? AND bp.is_active=1 AND bp.fiscal_year=?
-        ORDER BY bp.department_id, bp.id";
+        WHERE bp.is_active=1 AND bp.fiscal_year=?";
+$params = [$u['id'], FISCAL_YEAR];
+if ($ownerName) {
+    $sql .= " AND bp.owner_name LIKE ?";
+    $params[] = '%'.$ownerName.'%';
+}
+$sql .= " ORDER BY bp.department_id, bp.id";
 $s = $db->prepare($sql);
-$s->execute([$u['id'], '%'.$u['owner_name'].'%', FISCAL_YEAR]);
+$s->execute($params);
 $projects = $s->fetchAll();
 
 renderHead('โครงการของฉัน');
