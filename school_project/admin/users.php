@@ -31,9 +31,13 @@ if ($_SERVER['REQUEST_METHOD']=== 'POST') {
         ];
         $llwRole = $roleMap[$_POST['role']] ?? 'att_teacher';
         
-        $s = $db->prepare("INSERT INTO llw_users (username,password,firstname,lastname,role,department_id,owner_name,status) VALUES (?,?,?,?,?,?,?, 'active')");
-        $s->execute([$_POST['username'],$pw,$firstname,$lastname,$llwRole,$_POST['dept_id']?:null,$_POST['owner_name']]);
-        flashMessage('success','สร้างผู้ใช้เรียบร้อย');
+        try {
+            $s = $db->prepare("INSERT INTO llw_users (username,password,firstname,lastname,role,department_id,owner_name,status) VALUES (?,?,?,?,?,?,?, 'active')");
+            $s->execute([$_POST['username'],$pw,$firstname,$lastname,$llwRole,$_POST['dept_id']?:null,$_POST['owner_name']]);
+            flashMessage('success','สร้างผู้ใช้เรียบร้อย');
+        } catch (Exception $e) {
+            flashMessage('danger', 'เกิดข้อผิดพลาด: ' . $e->getMessage());
+        }
     } elseif ($action==='toggle') {
         $uid = (int)$_POST['user_id'];
         $db->prepare("UPDATE llw_users SET status=CASE WHEN status='active' THEN 'inactive' ELSE 'active' END WHERE user_id=?")->execute([$uid]);
