@@ -98,6 +98,12 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
         <p style="font-size:13px" class="fw-bold mb-1 text-primary"><i class="bi bi-info-circle me-1"></i>วิธีเตรียมไฟล์ CSV</p>
         <p style="font-size:12px" class="mb-2">เรียงลำดับคอลัมน์ดังนี้ (คั่นด้วยคอมม่า):</p>
         <code style="font-size:10px;display:block;background:#f8fafc;padding:8px;border-radius:6px;word-break:break-all">department,fiscal_year,project_group,project_name,activity,budget_subsidy,budget_quality,budget_revenue,owner_name</code>
+        <hr>
+        <div class="d-grid">
+          <a href="<?=BASE_URL?>/assets/sample_projects.csv" class="btn btn-sm btn-outline-info" download>
+            <i class="bi bi-download me-1"></i>ดาวน์โหลดไฟล์ตัวอย่าง CSV
+          </a>
+        </div>
         <div class="mt-2 small text-muted">
           * ชื่อฝ่าย (department) ต้องตรงกับที่มีในระบบ<br>
           * ไฟล์ต้องเป็น UTF-8 (แนะนำใช้ Google Sheets แล้ว Download as CSV)
