@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../includes/layout.php';
-requireRole(['admin','director','budget_officer']);
+requireRole(['admin','director','budget_officer','procurement_head','finance_head','deputy_director']);
 $db = getDB();
 $dept = (int)($_GET['dept'] ?? 0);
 $fy = (int)($_GET['fy'] ?? FISCAL_YEAR);

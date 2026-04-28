@@ -19,13 +19,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_id']   = $user['user_id'];
             $_SESSION['username']  = $user['username'];
             $_SESSION['full_name'] = $user['firstname'] . ' ' . $user['lastname'];
+            $_SESSION['llw_role']  = $user['role'];
             $_SESSION['role']      = $user['role'];
             $_SESSION['dept_id']   = $user['department_id'];
             $_SESSION['owner_name']= $user['owner_name'];
             $_SESSION['last_activity'] = time();
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
             auditLog('login');
-            $redirects = ['admin'=>BASE_URL.'/admin/dashboard.php','director'=>BASE_URL.'/dashboard/director.php','budget_officer'=>BASE_URL.'/dashboard/budget_officer.php','teacher'=>BASE_URL.'/teacher/my_projects.php','head'=>BASE_URL.'/teacher/my_projects.php'];
+            
+            $redirects = [
+                'admin'            => BASE_URL.'/admin/dashboard.php',
+                'super_admin'      => BASE_URL.'/admin/dashboard.php',
+                'director'         => BASE_URL.'/dashboard/director.php',
+                'budget_officer'   => BASE_URL.'/dashboard/budget_officer.php',
+                'wfh_admin'        => BASE_URL.'/dashboard/budget_officer.php',
+                'procurement_head' => BASE_URL.'/director/pending.php',
+                'finance_head'     => BASE_URL.'/director/pending.php',
+                'deputy_director'  => BASE_URL.'/director/pending.php',
+                'teacher'          => BASE_URL.'/teacher/my_projects.php',
+                'att_teacher'      => BASE_URL.'/teacher/my_projects.php'
+            ];
             header('Location: ' . ($redirects[$user['role']] ?? BASE_URL . '/index.php'));
             exit;
         } else { $error = 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'; }
