@@ -15,24 +15,50 @@ function navLink($path, $icon, $label, $active) {
 }
 function renderSidebar($activePage = '') {
     $u = getCurrentUser(); $role = $u['role'];
-    $notifs = getUnreadNotifications($u['id']); $nCount = count($notifs);
+    // Map platform role to local functional role for sidebar display
+    $displayRole = $role;
+    if ($role === 'wfh_admin') $displayRole = 'budget_officer';
+    if (in_array($role, ['procurement_head', 'finance_head', 'deputy_director'])) $displayRole = 'approver';
+    
     echo '<div class="sidebar" id="sidebar">';
     echo '<div class="sidebar-brand"><h6><i class="bi bi-mortarboard-fill me-2"></i>' . SCHOOL_NAME . '</h6>';
     echo '<small>' . SCHOOL_DISTRICT . ' ' . SCHOOL_PROVINCE . '</small></div>';
     echo '<div class="sidebar-nav">';
-    if ($role === 'director') { echo '<div class="nav-section">ภาพรวม</div>'; echo navLink('/dashboard/director.php','bi-speedometer2','Dashboard',$activePage); echo navLink('/director/pending.php','bi-hourglass-split','รออนุมัติ',$activePage); }
-    elseif ($role === 'budget_officer') { echo '<div class="nav-section">ภาพรวม</div>'; echo navLink('/dashboard/budget_officer.php','bi-speedometer2','Dashboard',$activePage); echo navLink('/admin/all_requests.php','bi-inbox','คำขอทั้งหมด',$activePage); echo navLink('/admin/budget_list.php','bi-table','งบประมาณ',$activePage); }
-    elseif ($role === 'admin') { echo '<div class="nav-section">ภาพรวม</div>'; echo navLink('/admin/dashboard.php','bi-speedometer2','Dashboard',$activePage); echo navLink('/admin/all_requests.php','bi-inbox','คำขอทั้งหมด',$activePage); echo navLink('/admin/budget_list.php','bi-table','งบประมาณ',$activePage); }
-    else { echo '<div class="nav-section">โครงการของฉัน</div>'; echo navLink('/teacher/my_projects.php','bi-folder2-open','โครงการของฉัน',$activePage); echo navLink('/teacher/request_list.php','bi-list-check','ประวัติคำขอ',$activePage); }
-    if (in_array($role, ['admin','director','budget_officer'])) {
+    
+    if (in_array($role, ['admin', 'super_admin'])) {
+        echo '<div class="nav-section">ภาพรวม</div>';
+        echo navLink('/admin/dashboard.php','bi-speedometer2','Dashboard',$activePage);
+        echo navLink('/admin/all_requests.php','bi-inbox','คำขอทั้งหมด',$activePage);
+        echo navLink('/admin/budget_list.php','bi-table','งบประมาณ',$activePage);
+        echo navLink('/director/pending.php','bi-hourglass-split','รออนุมัติ',$activePage);
+    }
+    elseif ($displayRole === 'budget_officer') {
+        echo '<div class="nav-section">ภาพรวม</div>';
+        echo navLink('/dashboard/budget_officer.php','bi-speedometer2','Dashboard',$activePage);
+        echo navLink('/director/pending.php','bi-hourglass-split','รออนุมัติ',$activePage);
+        echo navLink('/admin/all_requests.php','bi-inbox','คำขอทั้งหมด',$activePage);
+        echo navLink('/admin/budget_list.php','bi-table','งบประมาณ',$activePage);
+    }
+    elseif ($displayRole === 'approver' || $role === 'director') {
+        echo '<div class="nav-section">ภาพรวม</div>';
+        if ($role === 'director') echo navLink('/dashboard/director.php','bi-speedometer2','Dashboard',$activePage);
+        echo navLink('/director/pending.php','bi-hourglass-split','รออนุมัติ',$activePage);
+        echo navLink('/admin/all_requests.php','bi-inbox','ประวัติคำขอ',$activePage);
+    }
+    else {
+        echo '<div class="nav-section">โครงการของฉัน</div>';
+        echo navLink('/teacher/my_projects.php','bi-folder2-open','โครงการของฉัน',$activePage);
+        echo navLink('/teacher/request_list.php','bi-list-check','ประวัติคำขอ',$activePage);
+    }
+
+    if (in_array($role, ['admin','super_admin','budget_officer','wfh_admin'])) {
         echo '<div class="nav-section">รายงาน</div>';
         echo navLink('/reports/budget_overview.php','bi-bar-chart','ภาพรวมงบประมาณ',$activePage);
         echo navLink('/reports/project_progress.php','bi-clipboard-data','ความคืบหน้า',$activePage);
-        echo navLink('/reports/project_overdue.php','bi-exclamation-triangle','โครงการค้าง',$activePage);
         echo navLink('/reports/annual_summary.php','bi-file-earmark-bar-graph','สรุปประจำปี',$activePage);
-        if ($role==='admin') echo navLink('/reports/audit_log.php','bi-shield-check','Log ระบบ',$activePage);
     }
-    if ($role === 'admin') {
+
+    if (in_array($role, ['admin', 'super_admin'])) {
         echo '<div class="nav-section">ตั้งค่า</div>';
         echo navLink('/admin/users.php','bi-people','จัดการผู้ใช้',$activePage);
         echo navLink('/admin/departments.php','bi-building','ฝ่าย',$activePage);
