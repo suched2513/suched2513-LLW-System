@@ -39,6 +39,11 @@ $roleStepMap = [
     'admin' => $req['current_step']
 ];
 $myCanApprove = ($roleStepMap[$u['role']] ?? '') === $req['current_step'];
+if (isset($_GET['debug'])) {
+    echo "<pre>";
+    print_r(['user_role' => $u['role'], 'current_step' => $req['current_step'], 'can_approve' => $myCanApprove]);
+    echo "</pre>";
+}
 
 // POST approve/reject
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $myCanApprove) {
@@ -220,11 +225,13 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
     <div class="card border-primary shadow-sm mb-3">
       <div class="card-header bg-primary text-white">ดำเนินการลงนาม</div>
       <div class="card-body">
-        <?php if (!$myCanApprove): ?>
+        <?php 
+        $canApproveThis = (bool)($myCanApprove ?? false);
+        if (!$canApproveThis): ?>
           <div class="alert alert-warning small">
             <i class="bi bi-exclamation-triangle me-1"></i> 
-            ขณะนี้อยู่ในขั้นตอนของ <strong><?= statusLabel($req['current_step']) ?></strong><br>
-            คุณล็อกอินในฐานะ <strong><?= roleLabel($u['role']) ?></strong> ไม่มีสิทธิ์ลงนามในขั้นตอนนี้
+            ขณะนี้อยู่ในขั้นตอนของ <strong><?= statusLabel($req['current_step'] ?? '') ?></strong><br>
+            คุณล็อกอินในฐานะ <strong><?= roleLabel($u['role'] ?? 'guest') ?></strong> ไม่มีสิทธิ์ลงนามในขั้นตอนนี้
           </div>
         <?php else: ?>
           <form method="post" id="approveForm">
