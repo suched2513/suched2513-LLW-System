@@ -1,5 +1,5 @@
 <?php
-require_once 'school_project/config/db.php';
+require_once 'config/db.php';
 $db = getDB();
 $users = $db->query("SELECT user_id, username, firstname, role FROM llw_users")->fetchAll();
 echo "<table border='1'><tr><th>ID</th><th>User</th><th>Name</th><th>Role</th></tr>";
