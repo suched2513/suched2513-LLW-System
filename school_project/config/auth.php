@@ -19,7 +19,7 @@ function requireLogin() {
 function requireRole($roles) {
     requireLogin();
     if (!is_array($roles)) $roles = [$roles];
-    $currentRole = $_SESSION['role'] ?? $_SESSION['llw_role'] ?? '';
+    $currentRole = $_SESSION['llw_role'] ?? $_SESSION['role'] ?? '';
     
     // Always allow super_admin
     if ($currentRole === 'super_admin' || $currentRole === 'admin') return;
@@ -51,7 +51,7 @@ function getCurrentUser() {
         'id'        => $_SESSION['user_id'] ?? null,
         'username'  => $_SESSION['username'] ?? null,
         'full_name' => $fullName,
-        'role'      => $_SESSION['role'] ?? $_SESSION['llw_role'] ?? null,
+        'role'      => $_SESSION['llw_role'] ?? $_SESSION['role'] ?? null,
         'dept_id'   => $_SESSION['dept_id'] ?? null,
         'owner_name'=> $_SESSION['owner_name'] ?? null,
     ];
