@@ -22,26 +22,51 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     }
     if ($action==='csv' && isset($_FILES['csv_file'])) {
         $file = $_FILES['csv_file']['tmp_name'];
+        $count = 0; $errors = []; $line = 1;
+        
         if (($handle = fopen($file, "r")) !== FALSE) {
-            fgetcsv($handle); // Skip header
-            $count = 0;
+            // Detect delimiter
+            $firstLine = fgets($handle);
+            $delimiter = (strpos($firstLine, ';') !== false) ? ';' : ',';
+            rewind($handle);
+            
+            fgetcsv($handle, 1000, $delimiter); // Skip header
             $db->beginTransaction();
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                if (count($data) < 9) continue;
+            while (($data = fgetcsv($handle, 1000, $delimiter)) !== FALSE) {
+                $line++;
+                if (empty(array_filter($data))) continue; // Skip empty rows
+                if (count($data) < 9) {
+                    $errors[] = "บรรทัดที่ $line: ข้อมูลไม่ครบ (มี ".count($data)." คอลัมน์ จากที่ต้องการ 9)";
+                    continue;
+                }
+                
                 $deptName = trim($data[0]);
                 $deptId = $deptMap[$deptName] ?? null;
-                if (!$deptId) continue;
                 
-                $s = $db->prepare("INSERT INTO budget_projects (department_id,fiscal_year,project_group,project_name,activity,budget_subsidy,budget_quality,budget_revenue,owner_name) VALUES (?,?,?,?,?,?,?,?,?)");
-                $s->execute([
-                    $deptId, (int)$data[1], $data[2], $data[3], $data[4],
-                    (float)$data[5], (float)$data[6], (float)$data[7], $data[8]
-                ]);
-                $count++;
+                if (!$deptId) {
+                    $errors[] = "บรรทัดที่ $line: ไม่พบฝ่ายชื่อ '$deptName' ในระบบ (กรุณาเช็คตัวสะกด)";
+                    continue;
+                }
+                
+                try {
+                    $s = $db->prepare("INSERT INTO budget_projects (department_id,fiscal_year,project_group,project_name,activity,budget_subsidy,budget_quality,budget_revenue,owner_name) VALUES (?,?,?,?,?,?,?,?,?)");
+                    $s->execute([
+                        $deptId, (int)$data[1], $data[2], $data[3], $data[4],
+                        (float)$data[5], (float)$data[6], (float)$data[7], $data[8]
+                    ]);
+                    $count++;
+                } catch (Exception $e) {
+                    $errors[] = "บรรทัดที่ $line: เกิดข้อผิดพลาด SQL - " . $e->getMessage();
+                }
             }
             $db->commit();
             fclose($handle);
-            flashMessage('success', "Import สำเร็จ $count รายการ");
+            
+            if ($count > 0) flashMessage('success', "นำเข้าสำเร็จ $count รายการ");
+            if (!empty($errors)) {
+                $_SESSION['import_errors'] = $errors;
+                if ($count === 0) flashMessage('danger', "ไม่สามารถนำเข้าข้อมูลได้ กรุณาตรวจสอบข้อผิดพลาดด้านล่าง");
+            }
         } else {
             flashMessage('danger', "ไม่สามารถเปิดไฟล์ได้");
         }
@@ -50,7 +75,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 }
 $recentProjects = $db->query("SELECT bp.*, d.name AS dept_name FROM budget_projects bp JOIN departments d ON bp.department_id=d.id ORDER BY bp.id DESC LIMIT 5")->fetchAll();
 renderHead('Import งบประมาณ');
-echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('Import งบประมาณ'); echo '<div class="page-content">'; showFlash();
+echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('Import งบประมาณ'); echo '<div class="page-content">'; 
+showFlash();
+if (!empty($_SESSION['import_errors'])) {
+    echo '<div class="alert alert-danger shadow-sm">';
+    echo '<h6 class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>พบข้อผิดพลาดในการนำเข้า:</h6><ul class="mb-0 small">';
+    foreach ($_SESSION['import_errors'] as $err) echo '<li>'.h($err).'</li>';
+    echo '</ul><div class="mt-2 text-dark small"><strong>คำแนะนำ:</strong> ตรวจสอบว่าชื่อฝ่ายสะกดตรงกันเป๊ะ และไฟล์เซฟเป็น UTF-8 (แนะนำ Google Sheets)</div></div>';
+    unset($_SESSION['import_errors']);
+}
 ?>
 <div class="row g-4">
   <div class="col-md-8">
