@@ -116,14 +116,14 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
 <td class="text-center"><?=$u['status']==='active'?'<span class="badge bg-success">ใช้งาน</span>':'<span class="badge bg-secondary">ปิดใช้</span>'?></td>
 <td class="text-center">
   <div class="btn-group">
-    <button class="btn btn-sm btn-outline-primary" onclick='editUser(<?= json_encode([
+    <button class="btn btn-sm btn-outline-primary" data-user-json='<?= h(json_encode([
         "id" => $u['user_id'],
         "full_name" => $u['full_name'],
         "username" => $u['username'],
         "owner_name" => $u['owner_name'],
         "role" => $rKey,
         "dept_id" => $u['department_id']
-    ]) ?>)'>แก้ไข</button>
+    ])) ?>' onclick="editUser(this)">แก้ไข</button>
     <form method="POST" class="d-inline">
       <input type="hidden" name="csrf_token" value="<?=csrfToken()?>">
       <input type="hidden" name="action" value="toggle">
@@ -182,15 +182,19 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
 </div>
 
 <script>
-const editModal = new bootstrap.Modal(document.getElementById('editModal'));
-function editUser(u) {
+let editModalObj = null;
+function editUser(btn) {
+    if (!editModalObj) {
+        editModalObj = new bootstrap.Modal(document.getElementById('editModal'));
+    }
+    const u = JSON.parse(btn.getAttribute('data-user-json'));
     document.getElementById('edit_user_id').value = u.id;
     document.getElementById('edit_username').value = u.username;
     document.getElementById('edit_full_name').value = u.full_name;
     document.getElementById('edit_owner_name').value = u.owner_name;
     document.getElementById('edit_role').value = u.role;
     document.getElementById('edit_dept_id').value = u.dept_id || '';
-    editModal.show();
+    editModalObj.show();
 }
 </script>
 
