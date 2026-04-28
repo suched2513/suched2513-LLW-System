@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../includes/layout.php';
-requireRole(['teacher','head']);
+requireRole(['teacher','head','admin','budget_officer']);
 $u = getCurrentUser();
 $db = getDB();
 

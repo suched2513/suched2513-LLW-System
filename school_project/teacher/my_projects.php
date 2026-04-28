@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../includes/layout.php';
-requireRole(['teacher','head']);
+requireRole(['teacher','head','admin','budget_officer']);
 $u = getCurrentUser();
 $db = getDB();
 
@@ -86,15 +86,15 @@ showFlash();
           </td>
           <td class="text-center">
             <?php if (!$p['req_id']): ?>
-              <a href="/teacher/request_form.php?project_id=<?= $p['id'] ?>" class="btn btn-sm btn-primary">
+              <a href="<?= BASE_URL ?>/teacher/request_form.php?project_id=<?= $p['id'] ?>" class="btn btn-sm btn-primary">
                 <i class="bi bi-plus-circle me-1"></i>ขอดำเนินการ
               </a>
             <?php elseif ($p['req_status']==='draft'): ?>
-              <a href="/teacher/request_form.php?req_id=<?= $p['req_id'] ?>" class="btn btn-sm btn-warning">
+              <a href="<?= BASE_URL ?>/teacher/request_form.php?req_id=<?= $p['req_id'] ?>" class="btn btn-sm btn-warning">
                 <i class="bi bi-pencil me-1"></i>แก้ไข
               </a>
             <?php else: ?>
-              <a href="/teacher/request_view.php?id=<?= $p['req_id'] ?>" class="btn btn-sm btn-outline-primary">
+              <a href="<?= BASE_URL ?>/teacher/request_view.php?id=<?= $p['req_id'] ?>" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-eye me-1"></i>ดูรายละเอียด
               </a>
             <?php endif; ?>

@@ -30,11 +30,11 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
           <td class="text-center">
             <?php if (in_array($r['status'],['submitted','approved'])): ?>
             <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">เอกสาร</button>
-            <ul class="dropdown-menu"><li><a class="dropdown-item" href="/documents/gen_memo.php?id=<?=$r['id']?>" target="_blank"><i class="bi bi-file-word me-2 text-primary"></i>บันทึกขออนุมัติ</a></li>
-            <li><a class="dropdown-item" href="/documents/gen_committee.php?id=<?=$r['id']?>" target="_blank"><i class="bi bi-file-word me-2 text-primary"></i>แต่งตั้งกรรมการ</a></li>
-            <li><a class="dropdown-item" href="/documents/gen_delivery.php?id=<?=$r['id']?>" target="_blank"><i class="bi bi-file-word me-2 text-primary"></i>ใบส่งมอบงาน</a></li></ul></div>
+            <ul class="dropdown-menu"><li><a class="dropdown-item" href="<?= BASE_URL ?>/documents/gen_memo.php?id=<?=$r['id']?>" target="_blank"><i class="bi bi-file-word me-2 text-primary"></i>บันทึกขออนุมัติ</a></li>
+            <li><a class="dropdown-item" href="<?= BASE_URL ?>/documents/gen_committee.php?id=<?=$r['id']?>" target="_blank"><i class="bi bi-file-word me-2 text-primary"></i>แต่งตั้งกรรมการ</a></li>
+            <li><a class="dropdown-item" href="<?= BASE_URL ?>/documents/gen_delivery.php?id=<?=$r['id']?>" target="_blank"><i class="bi bi-file-word me-2 text-primary"></i>ใบส่งมอบงาน</a></li></ul></div>
             <?php elseif ($r['status']==='draft'): ?>
-            <a href="/teacher/request_form.php?req_id=<?=$r['id']?>" class="btn btn-sm btn-warning"><i class="bi bi-pencil me-1"></i>แก้ไข</a>
+            <a href="<?= BASE_URL ?>/teacher/request_form.php?req_id=<?=$r['id']?>" class="btn btn-sm btn-warning"><i class="bi bi-pencil me-1"></i>แก้ไข</a>
             <?php else: ?><span class="text-muted small">-</span><?php endif; ?>
           </td>
         </tr>
