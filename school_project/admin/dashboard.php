@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../includes/layout.php';
-requireRole(['admin']);
+requireRole(['admin','budget_officer']);
 $db = getDB();
 $stats = [
     'users'    => $db->query("SELECT COUNT(*) FROM llw_users WHERE status='active'")->fetchColumn(),
