@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../includes/layout.php';
-requireRole(['admin','budget_officer']);
+requireRole(['admin','super_admin','budget_officer']);
 $db = getDB();
 $stats = [
     'users'    => $db->query("SELECT COUNT(*) FROM llw_users WHERE status='active'")->fetchColumn(),
@@ -24,10 +24,10 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
 </div>
 <div class="row g-3">
   <div class="col-md-4"><div class="card"><div class="card-header">Quick Links</div><div class="card-body"><div class="d-grid gap-2">
-    <a href="/admin/users.php" class="btn btn-outline-primary"><i class="bi bi-people me-2"></i>จัดการผู้ใช้</a>
-    <a href="/admin/import_budget.php" class="btn btn-outline-success"><i class="bi bi-upload me-2"></i>Import งบประมาณ</a>
-    <a href="/admin/settings.php" class="btn btn-outline-secondary"><i class="bi bi-gear me-2"></i>ตั้งค่าระบบ</a>
-    <a href="/admin/all_requests.php" class="btn btn-outline-info"><i class="bi bi-inbox me-2"></i>คำขอทั้งหมด</a>
+    <a href="<?= BASE_URL ?>/admin/users.php" class="btn btn-outline-primary"><i class="bi bi-people me-2"></i>จัดการผู้ใช้</a>
+    <a href="<?= BASE_URL ?>/admin/import_budget.php" class="btn btn-outline-success"><i class="bi bi-upload me-2"></i>Import งบประมาณ</a>
+    <a href="<?= BASE_URL ?>/admin/settings.php" class="btn btn-outline-secondary"><i class="bi bi-gear me-2"></i>ตั้งค่าระบบ</a>
+    <a href="<?= BASE_URL ?>/admin/all_requests.php" class="btn btn-outline-info"><i class="bi bi-inbox me-2"></i>คำขอทั้งหมด</a>
   </div></div></div></div>
   <div class="col-md-8"><div class="card"><div class="card-header">Log ล่าสุด</div><div class="card-body p-0">
     <table class="table table-sm mb-0">

@@ -4,13 +4,31 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../includes/layout.php';
-requireRole(['director','admin']);
+requireRole(['director','admin','super_admin']);
 $db = getDB();
 $fy = FISCAL_YEAR;
 $stmtStats = $db->prepare("SELECT COUNT(*) AS total, SUM(status='submitted') AS submitted, SUM(status='approved') AS approved, SUM(status='rejected') AS rejected FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id WHERE bp.fiscal_year=?");
 $stmtStats->execute([$fy]); $stats = $stmtStats->fetch();
-$stmtBu = $db->prepare("SELECT * FROM v_budget_usage WHERE fiscal_year=? ORDER BY usage_pct DESC");
-$stmtBu->execute([$fy]); $budgetUsage = $stmtBu->fetchAll();
+
+// Query direct แทน VIEW
+try {
+    $stmtBu = $db->prepare("
+        SELECT d.name AS department_name,
+            COALESCE(SUM(bp.budget_subsidy+bp.budget_quality+bp.budget_revenue+bp.budget_operation+bp.budget_reserve),0) AS alloc_total,
+            COALESCE(SUM(pa.amount_requested),0) AS used_total
+        FROM departments d
+        LEFT JOIN budget_projects bp ON bp.department_id=d.id AND bp.fiscal_year=?
+        LEFT JOIN (SELECT budget_project_id,SUM(amount_requested) AS amount_requested FROM project_requests WHERE status='approved' GROUP BY budget_project_id) pa ON pa.budget_project_id=bp.id
+        GROUP BY d.id,d.name ORDER BY d.order_no
+    ");
+    $stmtBu->execute([$fy]);
+    $budgetUsage = $stmtBu->fetchAll();
+    foreach ($budgetUsage as &$b) {
+        $b['usage_pct'] = $b['alloc_total'] > 0 ? round($b['used_total']/$b['alloc_total']*100,1) : 0;
+    }
+    unset($b);
+} catch (Exception $e) { $budgetUsage = []; error_log($e->getMessage()); }
+
 $stmtPending = $db->prepare("SELECT pr.*,bp.project_name,bp.activity,CONCAT(u.firstname,' ',u.lastname) AS teacher_name,d.name AS dept_name FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id JOIN llw_users u ON pr.user_id=u.user_id JOIN departments d ON bp.department_id=d.id WHERE pr.status='submitted' ORDER BY pr.created_at ASC LIMIT 5");
 $stmtPending->execute(); $pending = $stmtPending->fetchAll();
 $stmtOverdue = $db->prepare("SELECT bp.*,d.name AS dept_name,DATEDIFF(NOW(),bp.created_at) AS days_ago FROM budget_projects bp JOIN departments d ON bp.department_id=d.id LEFT JOIN project_requests pr ON pr.budget_project_id=bp.id WHERE bp.is_active=1 AND bp.fiscal_year=? AND pr.id IS NULL AND DATEDIFF(NOW(),bp.created_at)>30 LIMIT 5");
@@ -48,7 +66,7 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
 <div class="card mb-4">
   <div class="card-header d-flex justify-content-between align-items-center">
     <span><i class="bi bi-hourglass-split me-2"></i>รายการรออนุมัติ</span>
-    <a href="/director/pending.php" class="btn btn-sm btn-outline-primary">ดูทั้งหมด</a>
+    <a href="<?= BASE_URL ?>/director/pending.php" class="btn btn-sm btn-outline-primary">ดูทั้งหมด</a>
   </div>
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
@@ -59,7 +77,7 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
         <td class="ps-4"><div style="font-size:14px;font-weight:500"><?=h($r['project_name'])?></div><div style="font-size:12px;color:#64748b"><?=h($r['dept_name'])?></div></td>
         <td><?=h($r['teacher_name'])?></td>
         <td class="text-end fw-semibold text-primary"><?=formatMoney($r['amount_requested'])?></td>
-        <td class="text-center"><a href="/director/pending.php" class="btn btn-sm btn-success">พิจารณา</a></td>
+        <td class="text-center"><a href="<?= BASE_URL ?>/director/pending.php" class="btn btn-sm btn-success">พิจารณา</a></td>
       </tr>
       <?php endforeach; ?>
       </tbody>

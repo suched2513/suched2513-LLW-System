@@ -4,15 +4,44 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../includes/layout.php';
-requireRole(['budget_officer','admin','director']);
+requireRole(['budget_officer','wfh_admin','admin','director','super_admin']);
 $db = getDB();
 $fy = FISCAL_YEAR;
-$stmtBu = $db->prepare("SELECT * FROM v_budget_usage WHERE fiscal_year=? ORDER BY department_name");
-$stmtBu->execute([$fy]); $budgetUsage = $stmtBu->fetchAll();
-$totalAlloc = array_sum(array_column($budgetUsage,'alloc_total'));
-$totalUsed = array_sum(array_column($budgetUsage,'used_total'));
+
+// Query direct แทน VIEW
+try {
+    $stmtBu = $db->prepare("
+        SELECT 
+            d.name AS department_name,
+            COALESCE(SUM(bp.budget_subsidy + bp.budget_quality + bp.budget_revenue + bp.budget_operation + bp.budget_reserve), 0) AS alloc_total,
+            COALESCE(SUM(pr_approved.amount_requested), 0) AS used_total,
+            COALESCE(SUM(bp.budget_subsidy + bp.budget_quality + bp.budget_revenue + bp.budget_operation + bp.budget_reserve), 0) 
+                - COALESCE(SUM(pr_approved.amount_requested), 0) AS remain_total
+        FROM departments d
+        LEFT JOIN budget_projects bp ON bp.department_id = d.id AND bp.fiscal_year = ?
+        LEFT JOIN (
+            SELECT budget_project_id, SUM(amount_requested) AS amount_requested
+            FROM project_requests WHERE status = 'approved' GROUP BY budget_project_id
+        ) pr_approved ON pr_approved.budget_project_id = bp.id
+        GROUP BY d.id, d.name
+        ORDER BY d.order_no, d.name
+    ");
+    $stmtBu->execute([$fy]);
+    $budgetUsage = $stmtBu->fetchAll();
+    // Add usage_pct
+    foreach ($budgetUsage as &$b) {
+        $b['usage_pct'] = $b['alloc_total'] > 0 ? round($b['used_total'] / $b['alloc_total'] * 100, 1) : 0;
+    }
+    unset($b);
+} catch (Exception $e) {
+    $budgetUsage = [];
+    error_log($e->getMessage());
+}
+
+$totalAlloc = array_sum(array_column($budgetUsage, 'alloc_total'));
+$totalUsed  = array_sum(array_column($budgetUsage, 'used_total'));
 $totalRemain = $totalAlloc - $totalUsed;
-$usagePct = $totalAlloc > 0 ? round($totalUsed/$totalAlloc*100,1) : 0;
+$usagePct = $totalAlloc > 0 ? round($totalUsed / $totalAlloc * 100, 1) : 0;
 
 renderHead('Dashboard ฝ่ายงบประมาณ');
 echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('Dashboard ฝ่ายงบประมาณ'); echo '<div class="page-content">'; showFlash();
@@ -27,7 +56,7 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
 <div class="card mb-4">
   <div class="card-header d-flex justify-content-between">
     <span><i class="bi bi-bar-chart-horizontal me-2"></i>ยอดงบรายฝ่าย</span>
-    <a href="/reports/budget_overview.php" class="btn btn-sm btn-outline-primary">รายงานเต็ม</a>
+    <a href="<?= BASE_URL ?>/reports/budget_overview.php" class="btn btn-sm btn-outline-primary">รายงานเต็ม</a>
   </div>
   <div class="card-body">
     <?php foreach ($budgetUsage as $b): ?>

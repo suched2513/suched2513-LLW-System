@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <title>เข้าสู่ระบบ | <?= SCHOOL_NAME ?></title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<link rel="stylesheet" href="/assets/css/style.css">
+<link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css">
 <style>
 body{background:linear-gradient(135deg,#1e293b 0%,#1a56db 100%);min-height:100vh;display:flex;align-items:center;}
 .login-card{width:100%;max-width:420px;margin:auto;}

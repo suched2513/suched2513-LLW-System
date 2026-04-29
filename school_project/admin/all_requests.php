@@ -43,9 +43,9 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
       <?php if(in_array($r['status'],['submitted','approved'])): ?>
       <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">เอกสาร</button>
       <ul class="dropdown-menu">
-        <li><a class="dropdown-item" href="/documents/gen_memo.php?id=<?=$r['id']?>" target="_blank">บันทึกขออนุมัติ</a></li>
-        <li><a class="dropdown-item" href="/documents/gen_committee.php?id=<?=$r['id']?>" target="_blank">แต่งตั้งกรรมการ</a></li>
-        <li><a class="dropdown-item" href="/documents/gen_delivery.php?id=<?=$r['id']?>" target="_blank">ใบส่งมอบงาน</a></li>
+        <li><a class="dropdown-item" href="<?= BASE_URL ?>/documents/gen_memo.php?id=<?=$r['id']?>" target="_blank">บันทึกขออนุมัติ</a></li>
+        <li><a class="dropdown-item" href="<?= BASE_URL ?>/documents/gen_committee.php?id=<?=$r['id']?>" target="_blank">แต่งตั้งกรรมการ</a></li>
+        <li><a class="dropdown-item" href="<?= BASE_URL ?>/documents/gen_delivery.php?id=<?=$r['id']?>" target="_blank">ใบส่งมอบงาน</a></li>
       </ul></div>
       <?php else: ?><span class="text-muted small">-</span><?php endif; ?>
     </td>

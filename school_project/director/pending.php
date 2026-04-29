@@ -8,18 +8,20 @@ requireRole(['director','admin','budget_officer','procurement_head','finance_hea
 $u = getCurrentUser();
 $db = getDB();
 
-// Determine which step this user can approve
+// Determine which step this user can approve (match actual DB values)
 $roleStepMap = [
-    'budget_officer' => 'budget',
-    'procurement_head' => 'procurement',
-    'finance_head' => 'finance',
-    'deputy_director' => 'deputy',
-    'director' => 'director',
-    'admin' => 'all', // Admin can see all
-    'super_admin' => 'all'
+    'budget_officer' => 'submitted',
+    'wfh_admin'      => 'submitted',
+    'procurement_head' => 'budget_approved',
+    'finance_head'   => 'procurement_approved',
+    'deputy_director'=> 'finance_approved',
+    'director'       => 'deputy_approved',
+    'admin'          => 'all',
+    'super_admin'    => 'all'
 ];
 $myStep = $roleStepMap[$u['role']] ?? '';
 
+$params = [];
 $sql = "SELECT pr.*,bp.project_name,bp.activity,CONCAT(u.firstname,' ',u.lastname) AS teacher_name,d.name AS dept_name 
         FROM project_requests pr 
         JOIN budget_projects bp ON pr.budget_project_id=bp.id 
@@ -28,11 +30,14 @@ $sql = "SELECT pr.*,bp.project_name,bp.activity,CONCAT(u.firstname,' ',u.lastnam
         WHERE pr.status NOT IN ('approved','rejected','draft')";
 
 if ($myStep !== 'all' && $myStep !== '') {
-    $sql .= " AND pr.current_step = " . $db->quote($myStep);
+    $sql .= " AND pr.current_step = ?";
+    $params[] = $myStep;
 }
 
 $sql .= " ORDER BY pr.created_at ASC";
-$requests = $db->query($sql)->fetchAll();
+$stmt = $db->prepare($sql);
+$stmt->execute($params);
+$requests = $stmt->fetchAll();
 renderHead('รออนุมัติ');
 echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('คำขอรออนุมัติ'); echo '<div class="page-content">'; showFlash();
 ?>

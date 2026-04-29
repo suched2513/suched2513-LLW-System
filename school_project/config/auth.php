@@ -105,9 +105,11 @@ function statusBadge($s) {
     return '<span class="badge bg-'.$c.'">'.statusLabel($s).'</span>';
 }
 function formatMoney($n) { return number_format((float)$n, 2); }
-function formatDate($d) {
+function formatDate($d, $showTime = false) {
     if (!$d) return '-';
     $months = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
     $t = strtotime($d);
-    return date('j', $t) . ' ' . $months[(int)date('n', $t)] . ' ' . (date('Y', $t) + 543);
+    $result = date('j', $t) . ' ' . $months[(int)date('n', $t)] . ' ' . (date('Y', $t) + 543);
+    if ($showTime) $result .= ' ' . date('H:i', $t) . ' น.';
+    return $result;
 }
