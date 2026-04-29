@@ -15,7 +15,9 @@ $redirects = [
     'finance_head'     => '/director/pending.php',
     'deputy_director'  => '/director/pending.php',
     'teacher'          => '/teacher/my_projects.php',
-    'att_teacher'      => '/teacher/my_projects.php'
+    'att_teacher'      => '/teacher/my_projects.php',
+    'wfh_staff'        => '/teacher/my_projects.php',
+    'cb_admin'         => '/teacher/my_projects.php'
 ];
 $target = $redirects[$role] ?? null;
 if (!$target) {

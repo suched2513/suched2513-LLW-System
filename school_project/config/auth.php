@@ -29,6 +29,7 @@ function requireRole($roles) {
         'att_teacher'=>'teacher',
         'wfh_admin'=>'budget_officer',
         'wfh_staff'=>'teacher',
+        'cb_admin'=>'teacher',
         'procurement_head'=>'procurement_head',
         'finance_head'=>'finance_head',
         'deputy_director'=>'deputy_director'

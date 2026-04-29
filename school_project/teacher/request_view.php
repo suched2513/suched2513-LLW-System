@@ -10,7 +10,7 @@ $db = getDB();
 $id = (int)($_GET['id'] ?? 0);
 $req = $db->prepare("SELECT pr.*,bp.project_name,bp.activity,d.name AS dept_name,CONCAT(u2.firstname,' ',u2.lastname) AS teacher_name,bp.budget_subsidy,bp.budget_quality,bp.budget_revenue FROM project_requests pr JOIN budget_projects bp ON pr.budget_project_id=bp.id JOIN departments d ON bp.department_id=d.id JOIN llw_users u2 ON pr.user_id=u2.user_id WHERE pr.id=?");
 $req->execute([$id]); $r = $req->fetch();
-if (!$r) { flashMessage('danger','ไม่พบข้อมูล'); header('Location: /index.php'); exit; }
+if (!$r) { flashMessage('danger','ไม่พบข้อมูล'); header('Location: ' . BASE_URL . '/index.php'); exit; }
 $items = $db->prepare("SELECT * FROM request_items WHERE request_id=? ORDER BY item_order");
 $items->execute([$id]); $itemList = $items->fetchAll();
 $committee = $db->prepare("SELECT * FROM request_committee WHERE request_id=? ORDER BY member_order");
@@ -22,9 +22,9 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
   <div><?=statusBadge($r['status'])?></div>
   <?php if (in_array($r['status'],['submitted','approved'])): ?>
   <div class="d-flex gap-2">
-    <a href="/documents/gen_memo.php?id=<?=$r['id']?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-word me-1"></i>บันทึกขออนุมัติ</a>
-    <a href="/documents/gen_committee.php?id=<?=$r['id']?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-word me-1"></i>แต่งตั้งกรรมการ</a>
-    <a href="/documents/gen_delivery.php?id=<?=$r['id']?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-word me-1"></i>ใบส่งมอบ</a>
+    <a href="<?= BASE_URL ?>/documents/gen_memo.php?id=<?=$r['id']?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-word me-1"></i>บันทึกขออนุมัติ</a>
+    <a href="<?= BASE_URL ?>/documents/gen_committee.php?id=<?=$r['id']?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-word me-1"></i>แต่งตั้งกรรมการ</a>
+    <a href="<?= BASE_URL ?>/documents/gen_delivery.php?id=<?=$r['id']?>" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-word me-1"></i>ใบส่งมอบ</a>
   </div>
   <?php endif; ?>
 </div>
