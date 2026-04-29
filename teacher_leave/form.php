@@ -63,7 +63,7 @@ require_once '../components/layout_start.php';
             <!-- Body Details -->
             <div class="space-y-6 pt-4">
                 <div class="leading-loose text-slate-700 font-medium">
-                    ข้าพเจ้า <span class="font-bold border-b border-dashed border-slate-400 px-4"><?= $_SESSION['fullname'] ?></span>
+                    ข้าพเจ้า <span class="font-bold border-b border-dashed border-slate-400 px-4"><?= htmlspecialchars($_SESSION['fullname'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
                     ตำแหน่ง <span class="font-bold border-b border-dashed border-slate-400 px-4" id="display_position">กำลังโหลด...</span>
                     สังกัด <span class="font-bold border-b border-dashed border-slate-400 px-4" id="display_dept">กำลังโหลด...</span>
                 </div>

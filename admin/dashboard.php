@@ -18,21 +18,27 @@ $activeSystem = 'wfh';
 $today = date('Y-m-d');
 
 // Statistics
-$total_users      = $conn->query("SELECT COUNT(*) as c FROM wfh_users WHERE role='user'")->fetch_assoc()['c'];
-$checkedin_today  = $conn->query("SELECT COUNT(*) as c FROM wfh_timelogs WHERE log_date='$today' AND check_in_time IS NOT NULL")->fetch_assoc()['c'];
-$late_today       = $conn->query("SELECT COUNT(*) as c FROM wfh_timelogs WHERE log_date='$today' AND check_in_status='มาสาย'")->fetch_assoc()['c'];
-$not_yet          = $total_users - $checkedin_today;
+$total_users     = $conn->query("SELECT COUNT(*) as c FROM wfh_users WHERE role='user'")->fetch_assoc()['c'];
+$s1 = $conn->prepare("SELECT COUNT(*) as c FROM wfh_timelogs WHERE log_date=? AND check_in_time IS NOT NULL");
+$s1->bind_param('s', $today); $s1->execute();
+$checkedin_today = $s1->get_result()->fetch_assoc()['c']; $s1->close();
+
+$s2 = $conn->prepare("SELECT COUNT(*) as c FROM wfh_timelogs WHERE log_date=? AND check_in_status='มาสาย'");
+$s2->bind_param('s', $today); $s2->execute();
+$late_today = $s2->get_result()->fetch_assoc()['c']; $s2->close();
+$not_yet    = $total_users - $checkedin_today;
 
 // Today's logs
-$stmt = $conn->query("
+$s3 = $conn->prepare("
     SELECT u.firstname, u.lastname, u.pos_id, d.dept_name, t.check_in_time, t.check_out_time, t.check_in_status
     FROM wfh_timelogs t
     JOIN wfh_users u ON t.user_id = u.user_id
     LEFT JOIN wfh_departments d ON u.dept_id = d.dept_id
-    WHERE t.log_date = '$today'
+    WHERE t.log_date = ?
     ORDER BY t.check_in_time ASC
 ");
-$today_logs = $stmt->fetch_all(MYSQLI_ASSOC);
+$s3->bind_param('s', $today); $s3->execute();
+$today_logs = $s3->get_result()->fetch_all(MYSQLI_ASSOC); $s3->close();
 
 require_once '../components/layout_start.php';
 ?>

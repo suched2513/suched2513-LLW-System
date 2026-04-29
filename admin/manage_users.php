@@ -10,27 +10,37 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 $msg = '';
 
 // ===== เพิ่มผู้ใช้ =====
+$allowed_roles = ['admin', 'user'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'add') {
-        $un   = $conn->real_escape_string($_POST['username']);
-        $pw   = md5($_POST['password']);
-        $fn   = $conn->real_escape_string($_POST['firstname']);
-        $ln   = $conn->real_escape_string($_POST['lastname']);
-        $pos  = $conn->real_escape_string($_POST['position']);
-        $dept = (int)$_POST['dept_id'];
-        $role = $_POST['role'];
-        $conn->query("INSERT INTO wfh_users (username,password,firstname,lastname,position,dept_id,role) VALUES ('$un','$pw','$fn','$ln','$pos',$dept,'$role')");
+        $un   = trim($_POST['username'] ?? '');
+        $pw   = password_hash($_POST['password'] ?? '', PASSWORD_BCRYPT);
+        $fn   = trim($_POST['firstname'] ?? '');
+        $ln   = trim($_POST['lastname'] ?? '');
+        $pos  = trim($_POST['position'] ?? '');
+        $dept = (int)($_POST['dept_id'] ?? 0);
+        $role = in_array($_POST['role'] ?? '', $allowed_roles) ? $_POST['role'] : 'user';
+        $stmt = $conn->prepare("INSERT INTO wfh_users (username,password,firstname,lastname,position,dept_id,role) VALUES (?,?,?,?,?,?,?)");
+        $stmt->bind_param('sssssis', $un, $pw, $fn, $ln, $pos, $dept, $role);
+        $stmt->execute();
+        $stmt->close();
         $msg = 'เพิ่มผู้ใช้สำเร็จ';
 
     } elseif ($_POST['action'] === 'delete') {
         $uid = (int)$_POST['user_id'];
-        $conn->query("DELETE FROM wfh_users WHERE user_id=$uid AND role!='admin'");
+        $stmt = $conn->prepare("DELETE FROM wfh_users WHERE user_id=? AND role!='admin'");
+        $stmt->bind_param('i', $uid);
+        $stmt->execute();
+        $stmt->close();
         $msg = 'warning:ลบผู้ใช้เรียบร้อยแล้ว';
 
     } elseif ($_POST['action'] === 'reset_pw') {
         $uid = (int)$_POST['user_id'];
-        $pw  = md5('123456');
-        $conn->query("UPDATE wfh_users SET password='$pw' WHERE user_id=$uid");
+        $pw  = password_hash('123456', PASSWORD_BCRYPT);
+        $stmt = $conn->prepare("UPDATE wfh_users SET password=? WHERE user_id=?");
+        $stmt->bind_param('si', $pw, $uid);
+        $stmt->execute();
+        $stmt->close();
         $msg = 'info:รีเซ็ตรหัสผ่านเป็น 123456 แล้ว';
     }
 }

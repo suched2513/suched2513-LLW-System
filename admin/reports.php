@@ -8,21 +8,27 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 
 // ฟิลเตอร์
 $filter_month = $_GET['month'] ?? date('Y-m');
-$filter_dept  = $_GET['dept']  ?? '';
+$filter_dept  = (int)($_GET['dept'] ?? 0);
 
-$where = "WHERE DATE_FORMAT(t.log_date,'%Y-%m') = '$filter_month'";
-if ($filter_dept) $where .= " AND u.dept_id = " . (int)$filter_dept;
-
-$logs = $conn->query("
+$base_sql = "
     SELECT u.firstname, u.lastname, u.position, d.dept_name,
            t.log_date, t.check_in_time, t.check_out_time, t.check_in_status,
            t.check_in_lat, t.check_in_lng
     FROM wfh_timelogs t
     JOIN wfh_users u ON t.user_id = u.user_id
     LEFT JOIN wfh_departments d ON u.dept_id = d.dept_id
-    $where
-    ORDER BY t.log_date DESC, t.check_in_time ASC
-")->fetch_all(MYSQLI_ASSOC);
+    WHERE DATE_FORMAT(t.log_date,'%Y-%m') = ?";
+
+if ($filter_dept) {
+    $stmt = $conn->prepare($base_sql . " AND u.dept_id = ? ORDER BY t.log_date DESC, t.check_in_time ASC");
+    $stmt->bind_param('si', $filter_month, $filter_dept);
+} else {
+    $stmt = $conn->prepare($base_sql . " ORDER BY t.log_date DESC, t.check_in_time ASC");
+    $stmt->bind_param('s', $filter_month);
+}
+$stmt->execute();
+$logs = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
 
 $departments = $conn->query("SELECT * FROM wfh_departments")->fetch_all(MYSQLI_ASSOC);
 ?>
@@ -76,7 +82,7 @@ $departments = $conn->query("SELECT * FROM wfh_departments")->fetch_all(MYSQLI_A
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">เดือน</label>
-                <input type="month" class="form-control" name="month" value="<?= $filter_month ?>">
+                <input type="month" class="form-control" name="month" value="<?= htmlspecialchars($filter_month, ENT_QUOTES, 'UTF-8') ?>">
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">ฝ่าย/กลุ่มงาน</label>
@@ -96,7 +102,7 @@ $departments = $conn->query("SELECT * FROM wfh_departments")->fetch_all(MYSQLI_A
     <!-- Title for print -->
     <div class="text-center mb-3" style="display:none;" id="print-title">
         <h5>รายงานการลงเวลาปฏิบัติงาน WFH - โรงเรียนละลมวิทยา</h5>
-        <p class="text-muted small">เดือน <?= $filter_month ?></p>
+        <p class="text-muted small">เดือน <?= htmlspecialchars($filter_month, ENT_QUOTES, 'UTF-8') ?></p>
     </div>
 
     <div class="card card-custom p-3">
@@ -132,7 +138,7 @@ $departments = $conn->query("SELECT * FROM wfh_departments")->fetch_all(MYSQLI_A
                         </td>
                         <td class="no-print">
                             <?php if ($r['check_in_lat']): ?>
-                                <a href="https://maps.google.com/?q=<?= $r['check_in_lat'] ?>,<?= $r['check_in_lng'] ?>" target="_blank" class="btn btn-sm btn-outline-danger">
+                                <a href="https://maps.google.com/?q=<?= htmlspecialchars($r['check_in_lat'], ENT_QUOTES, 'UTF-8') ?>,<?= htmlspecialchars($r['check_in_lng'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" class="btn btn-sm btn-outline-danger">
                                     <i class="bi bi-geo-alt-fill"></i>
                                 </a>
                             <?php else: ?>-<?php endif; ?>

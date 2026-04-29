@@ -507,8 +507,8 @@ require_once __DIR__ . '/components/layout_start.php';
 
 <script>
 const BASE_URL = '<?= $base_path ?>/api/supervision/';
-const APP_ROLE = '<?= $_SESSION['llw_role'] ?>';
-const APP_USER_ID = '<?= $_SESSION['user_id'] ?>';
+const APP_ROLE = <?= json_encode($_SESSION['llw_role'] ?? '') ?>;
+const APP_USER_ID = <?= json_encode((int)($_SESSION['user_id'] ?? 0)) ?>;
 const ITEMS_DESC = [
     "การจัดทำแผนการจัดการเรียนรู้ที่เน้นผู้เรียนเป็นสำคัญ",
     "การวิเคราะห์ผู้เรียนรายบุคคล",

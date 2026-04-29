@@ -11,9 +11,10 @@ if (isset($_SESSION['llw_role'])) {
     }
 }
 
-// Fallback to legacy WFH session
+// Fallback: ถ้ามี user_id แต่ยังไม่ redirect (เช่น session เก่าก่อนรวมระบบ)
 if (isset($_SESSION['user_id'])) {
-    header($_SESSION['role'] === 'admin'
+    $fb_role = $_SESSION['llw_role'] ?? $_SESSION['role'] ?? '';
+    header(in_array($fb_role, ['super_admin', 'wfh_admin', 'admin'])
         ? "Location: admin/dashboard.php"
         : "Location: user/dashboard.php");
     exit();

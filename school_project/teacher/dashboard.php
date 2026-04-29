@@ -1,8 +1,11 @@
 <?php
+session_start();
+require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../config/layout.php';
+require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/../includes/layout.php';
 requireLogin();
-$u  = currentUser();
+$u  = getCurrentUser();
 $db = getDB();
 
 // สถิติ
@@ -21,7 +24,7 @@ $stmt = $db->prepare("
   WHERE bp.owner_name LIKE ? AND bp.is_active=1
   ORDER BY bp.department_id, bp.id
 ");
-$stmt->execute(['%' . $u['name'] . '%']);
+$stmt->execute(['%' . $u['full_name'] . '%']);
 $projects = $stmt->fetchAll();
 
 // แจ้งเตือนล่าสุด
@@ -30,12 +33,8 @@ $stmt->execute([$u['id']]);
 $notifs = $stmt->fetchAll();
 
 renderHead('Dashboard ของฉัน');
+echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('Dashboard ของฉัน'); echo '<div class="page-content">'; showFlash();
 ?>
-<div class="d-flex">
-<?php renderSidebar(); ?>
-<div class="main">
-<?php renderTopbar('Dashboard ของฉัน'); ?>
-<div class="content">
 
   <!-- Metric cards -->
   <div class="row g-3 mb-4">
@@ -71,7 +70,7 @@ renderHead('Dashboard ของฉัน');
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
           โครงการของฉัน
-          <a href="<?= APP_URL ?>/teacher/my_projects.php" class="btn btn-sm btn-outline-primary">ดูทั้งหมด</a>
+          <a href="<?= BASE_URL ?>/teacher/my_projects.php" class="btn btn-sm btn-outline-primary">ดูทั้งหมด</a>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
@@ -99,9 +98,9 @@ renderHead('Dashboard ของฉัน');
                 </td>
                 <td>
                   <?php if (!$p['req_id'] || $p['req_status'] === 'draft'): ?>
-                  <a href="<?= APP_URL ?>/teacher/request_form.php?bp_id=<?= $p['id'] ?><?= $p['req_id'] ? '&req_id='.$p['req_id'] : '' ?>" class="btn btn-sm btn-primary">ขอดำเนินการ</a>
+                  <a href="<?= BASE_URL ?>/teacher/request_form.php?bp_id=<?= $p['id'] ?><?= $p['req_id'] ? '&req_id='.$p['req_id'] : '' ?>" class="btn btn-sm btn-primary">ขอดำเนินการ</a>
                   <?php else: ?>
-                  <a href="<?= APP_URL ?>/teacher/request_view.php?id=<?= $p['req_id'] ?>" class="btn btn-sm btn-outline-secondary">ดู</a>
+                  <a href="<?= BASE_URL ?>/teacher/request_view.php?id=<?= $p['req_id'] ?>" class="btn btn-sm btn-outline-secondary">ดู</a>
                   <?php endif; ?>
                 </td>
               </tr>
@@ -125,7 +124,7 @@ renderHead('Dashboard ของฉัน');
             <div class="flex-grow-1">
               <div style="font-size:13px;font-weight:500"><?= h($n['title']) ?></div>
               <div style="font-size:12px;color:#6b7280"><?= h($n['message']) ?></div>
-              <div style="font-size:11px;color:#9ca3af"><?= thDate($n['created_at']) ?></div>
+              <div style="font-size:11px;color:#9ca3af"><?= formatDate($n['created_at'], true) ?></div>
             </div>
             <?php if (!$n['is_read']): ?><span class="badge bg-primary" style="height:fit-content;font-size:10px">ใหม่</span><?php endif; ?>
           </div>
@@ -135,7 +134,4 @@ renderHead('Dashboard ของฉัน');
     </div>
   </div>
 
-</div>
-</div>
-</div>
-<?php renderFoot(); ?>
+<?php echo '</div></div></div>'; renderFooter(); ?>
