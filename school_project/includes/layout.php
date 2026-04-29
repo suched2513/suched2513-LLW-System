@@ -51,7 +51,7 @@ function renderSidebar($activePage = '') {
         echo navLink('/teacher/request_list.php','bi-list-check','ประวัติคำขอ',$activePage);
     }
 
-    if (in_array($role, ['admin','super_admin','budget_officer','wfh_admin'])) {
+    if (in_array($role, ['admin','super_admin','budget_officer','wfh_admin','director','procurement_head','finance_head','deputy_director'])) {
         echo '<div class="nav-section">รายงาน</div>';
         echo navLink('/reports/budget_overview.php','bi-bar-chart','ภาพรวมงบประมาณ',$activePage);
         echo navLink('/reports/project_progress.php','bi-clipboard-data','ความคืบหน้า',$activePage);

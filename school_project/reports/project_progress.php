@@ -4,11 +4,32 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../includes/layout.php';
-requireRole(['admin','director','budget_officer']);
+requireRole(['admin','super_admin','director','budget_officer','wfh_admin','procurement_head','finance_head','deputy_director']);
 $db = getDB();
 $fy = (int)($_GET['fy'] ?? FISCAL_YEAR);
-$s = $db->prepare("SELECT * FROM v_project_status_summary WHERE fiscal_year=? ORDER BY department_name");
-$s->execute([$fy]); $rows = $s->fetchAll();
+
+try {
+    $stmt = $db->prepare("
+        SELECT 
+            d.name AS department_name,
+            COUNT(bp.id) AS total_projects,
+            SUM(CASE WHEN pr.id IS NULL THEN 1 ELSE 0 END) AS no_request,
+            SUM(CASE WHEN pr.status = 'draft' THEN 1 ELSE 0 END) AS cnt_draft,
+            SUM(CASE WHEN pr.status = 'submitted' THEN 1 ELSE 0 END) AS cnt_submitted,
+            SUM(CASE WHEN pr.status = 'approved' THEN 1 ELSE 0 END) AS cnt_approved,
+            SUM(CASE WHEN pr.status = 'rejected' THEN 1 ELSE 0 END) AS cnt_rejected
+        FROM departments d
+        LEFT JOIN budget_projects bp ON bp.department_id = d.id AND bp.fiscal_year = ?
+        LEFT JOIN project_requests pr ON pr.budget_project_id = bp.id
+        GROUP BY d.id, d.name
+        ORDER BY d.order_no, d.name
+    ");
+    $stmt->execute([$fy]);
+    $rows = $stmt->fetchAll();
+} catch (Exception $e) {
+    $rows = [];
+    error_log($e->getMessage());
+}
 renderHead('ความคืบหน้าโครงการ');
 echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('รายงานความคืบหน้าโครงการ'); echo '<div class="page-content">'; showFlash();
 ?>
