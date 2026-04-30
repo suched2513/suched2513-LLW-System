@@ -47,7 +47,12 @@ require_once __DIR__ . '/../config/database.php';
             <div class="mb-4">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">รหัสนักเรียน (5 หลัก)</label>
                 <input type="text" id="studentLoginId" placeholder="เช่น 12345" required
-                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-center text-lg font-bold tracking-widest focus:ring-2 focus:ring-violet-500 outline-none transition-all">
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-center text-lg font-bold tracking-widest focus:ring-2 focus:ring-violet-500 outline-none transition-all">
+            </div>
+            <div class="mb-6">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เลขบัตรประชาชน 13 หลัก</label>
+                <input type="password" id="studentCitizenId" placeholder="เลขบัตรประชาชน" required
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-center text-sm font-bold tracking-widest focus:ring-2 focus:ring-violet-500 outline-none transition-all">
             </div>
             <button type="submit" id="btnStudentLogin"
                 class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3.5 rounded-2xl font-black shadow-lg shadow-blue-200/50 hover:shadow-blue-300/50 hover:scale-[1.01] transition-all flex items-center justify-center gap-2">
@@ -114,6 +119,9 @@ require_once __DIR__ . '/../config/database.php';
                         </div>
                     </div>
                 </div>
+                <!-- Bus System Sync Panel -->
+                <?php include_once __DIR__ . '/../bus_system/student_tab.php'; ?>
+
                 <!-- Assembly & Discipline Sync Panel -->
                 <div id="sectionAssemblySync" class="hidden mt-6 text-left fade-in">
                     <div class="bg-gradient-to-br from-indigo-50/50 to-blue-50/50 rounded-2xl p-4 border border-indigo-100/30">
@@ -202,8 +210,30 @@ document.getElementById('studentLoginForm').onsubmit = async function(e) {
     document.getElementById('btnStudentLoginSpinner').classList.remove('hidden');
 
     try {
-        const res = await fetch(basePath + '/behavior/api/get_student_focus.php?sid=' + encodeURIComponent(sid) + '&mode=student');
-        const data = await res.json();
+        const citizenId = document.getElementById('studentCitizenId').value.trim();
+        if (!citizenId || citizenId.length !== 13) {
+            Swal.fire('กรุณากรอกเลขบัตรประชาชน 13 หลัก', '', 'warning');
+            document.getElementById('btnStudentLogin').disabled = false;
+            document.getElementById('btnStudentLoginSpinner').classList.add('hidden');
+            return;
+        }
+
+        const res = await fetch(basePath + '/api/bus/student_auth.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sid: sid, citizen_id: citizenId })
+        });
+        const authData = await res.json();
+        
+        if (authData.status !== 'success') {
+            Swal.fire({ icon: 'error', title: 'เข้าสู่ระบบไม่สำเร็จ', text: authData.message || 'ข้อมูลไม่ถูกต้อง' });
+            document.getElementById('btnStudentLogin').disabled = false;
+            document.getElementById('btnStudentLoginSpinner').classList.add('hidden');
+            return;
+        }
+
+        const res2 = await fetch(basePath + '/behavior/api/get_student_focus.php?sid=' + encodeURIComponent(sid) + '&mode=student');
+        const data = await res2.json();
 
         document.getElementById('btnStudentLogin').disabled = false;
         document.getElementById('btnStudentLoginSpinner').classList.add('hidden');
@@ -216,6 +246,7 @@ document.getElementById('studentLoginForm').onsubmit = async function(e) {
         renderStudentView(data, sid);
         loadAssemblySync(sid); // Fetch assembly data
         loadAttendanceSync(sid); // Fetch subject attendance
+        loadBusData(sid); // Fetch bus data
 
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('studentScreen').classList.remove('hidden');

@@ -302,6 +302,55 @@ body { font-family:'Prompt',sans-serif; }
     <?php endif; ?>
     <?php endif; /* end registered */ ?>
 
+    <!-- Quick Menu -->
+    <div>
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">เมนู</p>
+        <div class="grid grid-cols-2 gap-3">
+            <a href="/bus/register.php"
+               class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-3 active:bg-orange-50 transition-colors group">
+                <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0 group-active:bg-orange-200">
+                    <i class="bi bi-bus-front-fill text-orange-500 text-lg"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="font-black text-slate-700 text-sm leading-tight">เลือกสายรถ</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">ลงทะเบียน / เปลี่ยนสาย</p>
+                </div>
+            </a>
+            <a href="#history"
+               class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-3 active:bg-blue-50 transition-colors group">
+                <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 group-active:bg-blue-200">
+                    <i class="bi bi-receipt text-blue-500 text-lg"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="font-black text-slate-700 text-sm leading-tight">ประวัติการชำระ</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5"><?= count($history) ?> รายการ</p>
+                </div>
+            </a>
+            <?php if ($reg && $reg['status'] === 'active' && (!$cancelReq || $cancelReq['status'] === 'rejected')): ?>
+            <button onclick="showCancelModal()"
+                class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100 flex items-center gap-3 active:bg-rose-50 transition-colors group text-left">
+                <div class="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i class="bi bi-x-circle-fill text-rose-400 text-lg"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="font-black text-rose-600 text-sm leading-tight">ขอยกเลิก</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">ส่งคำขอยกเลิกบริการ</p>
+                </div>
+            </button>
+            <?php endif; ?>
+            <a href="/index.php"
+               class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-3 active:bg-slate-50 transition-colors group">
+                <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i class="bi bi-grid-fill text-slate-400 text-lg"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="font-black text-slate-700 text-sm leading-tight">หน้าหลัก LLW</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">กลับระบบโรงเรียน</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
     <!-- Payment History -->
     <?php if (!empty($history)): ?>
     <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">

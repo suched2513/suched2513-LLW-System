@@ -108,6 +108,7 @@ $modules = [
     ['url'=>'homeroom/index.php',              'icon'=>'bi-mortarboard-fill',    'bgIcon'=>'bi-mortarboard',          'title'=>'ระบบครูที่ปรึกษา',   'short'=>'ที่ปรึกษา', 'desc'=>'ศูนย์กลางการดูแลหนักเรียนประจำชั้น ติดตามการเข้าแถว พฤติกรรม',                     'color'=>'indigo', 'gradient'=>'from-indigo-600 to-violet-700',  'delay'=>1.0],
     ['url'=>'school_project/index.php',        'icon'=>'bi-cash-coin',           'bgIcon'=>'bi-wallet2',              'title'=>'ระบบงบประมาณ (SBMS)', 'short'=>'งบประมาณ',  'desc'=>'จัดการโครงการ ขอดำเนินการ เบิกจ่ายงบประมาณ และพิมพ์เอกสารอนุมัติ (2569)',       'color'=>'amber',  'gradient'=>'from-amber-500 to-orange-500',   'delay'=>1.1],
     ['url'=>'bus/admin/dashboard.php',         'icon'=>'bi-bus-front-fill',      'bgIcon'=>'bi-bus-front',            'title'=>'ระบบจัดการรถรับส่ง', 'short'=>'รถรับส่ง',    'desc'=>'จัดการสายรถรับส่ง ลงทะเบียนนักเรียน และบันทึกการชำระเงินค่าบริการ',             'color'=>'orange', 'gradient'=>'from-orange-500 to-amber-500',   'delay'=>1.2],
+    ['url'=>'bus/index.php',                   'icon'=>'bi-person-badge-fill',   'bgIcon'=>'bi-person-badge',         'title'=>'พอร์ทัลนักเรียน (รถ)', 'short'=>'นักเรียนรถ',  'desc'=>'นักเรียนลงทะเบียนและติดตามการใช้บริการรถรับส่ง ตรวจสอบยอดชำระเงิน',           'color'=>'orange', 'gradient'=>'from-amber-500 to-orange-600',   'delay'=>1.3, 'isPublic'=>true],
 ];
 ?>
 <!DOCTYPE html>
