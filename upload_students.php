@@ -2,7 +2,7 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 session_start();
-require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: /login.php'); exit(); }
 
 try {
@@ -14,6 +14,7 @@ $msg = ''; $type = ''; $count = 0; $preview = [];
 
 // ── IMPORT ──
 if (($_POST['action'] ?? '') === 'import' && !empty($_POST['json_data'])) {
+    csrf_verify();
     $rows = json_decode($_POST['json_data'], true) ?? [];
     try {
         $stmt = $pdo->prepare("INSERT INTO att_students (student_id,name,classroom) VALUES(?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),classroom=VALUES(classroom)");
@@ -155,6 +156,7 @@ try {
         <p class="text-xs text-blue-200 mt-0.5">กด "ยืนยันนำเข้า" เพื่อบันทึกลงฐานข้อมูล</p>
       </div>
       <form method="POST">
+        <?= csrf_field() ?>
         <input type="hidden" name="action" value="import">
         <input type="hidden" name="json_data" value="<?= htmlspecialchars(json_encode($preview, JSON_UNESCAPED_UNICODE)) ?>">
         <button class="bg-white text-blue-600 px-6 py-2 rounded-2xl font-black text-sm hover:bg-blue-50 transition shadow-lg">
@@ -190,6 +192,7 @@ try {
   <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
     <h2 class="font-black text-slate-700 mb-4">เลือกไฟล์ CSV</h2>
     <form method="POST" enctype="multipart/form-data" class="space-y-4">
+      <?= csrf_field() ?>
       <input type="hidden" name="action" value="preview">
       <div class="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center hover:border-indigo-400 transition-colors">
         <p class="text-slate-400 text-sm mb-3">เลือกไฟล์ CSV จากเครื่องของคุณ</p>
@@ -210,6 +213,7 @@ try {
         <p class="text-xs text-emerald-600 mt-1">อัพเดทรายชื่อนักเรียนใน Assembly, Behavior, Chromebook ให้ตรงกับ att_students</p>
       </div>
       <form method="POST" onsubmit="return confirm('ยืนยัน Sync รายชื่อไปทุกระบบ?')">
+        <?= csrf_field() ?>
         <input type="hidden" name="action" value="sync_all">
         <button type="submit" class="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-emerald-700 transition shadow-lg shadow-emerald-200 whitespace-nowrap">
           🔄 Sync ทุกระบบเดี๋ยวนี้

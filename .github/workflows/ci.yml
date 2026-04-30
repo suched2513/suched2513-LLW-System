@@ -1,0 +1,50 @@
+name: "🔍 Static Analysis (PHPStan)"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  phpstan:
+    name: "PHPStan Level 3"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "7.4"
+          tools: composer
+
+      - name: Create stub config files
+        run: |
+          mkdir -p config school_project/config
+          cat > config/database.php << 'PHPEOF'
+          <?php
+          define('DB_HOST', 'localhost');
+          define('DB_USER', 'root');
+          define('DB_PASS', '');
+          define('DB_NAME', 'llw_db');
+          function getWfhConn(): mysqli { return new mysqli(); }
+          function getPdo(): PDO { return new PDO('sqlite::memory:'); }
+          PHPEOF
+          cat > school_project/config/db.php << 'PHPEOF'
+          <?php
+          function getDB(): PDO { return new PDO('sqlite::memory:'); }
+          PHPEOF
+          cat > school_project/config/constants.php << 'PHPEOF'
+          <?php
+          define('BASE_URL', 'http://localhost');
+          define('APP_NAME', 'LLW');
+          PHPEOF
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=512M

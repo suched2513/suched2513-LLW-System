@@ -1,0 +1,39 @@
+parameters:
+    level: 3
+    paths:
+        - admin
+        - api
+        - assembly
+        - attendance_system
+        - behavior
+        - chromebook
+        - cleanliness
+        - components
+        - includes
+        - plc_system
+        - school_project
+        - supervision.php
+        - teacher_leave
+        - user
+        - central_dashboard.php
+        - change_password.php
+        - config.php
+        - import_students.php
+        - index_wfh.php
+        - leave_system.php
+        - login.php
+        - logout.php
+        - manage_users.php
+        - upload_students.php
+    excludePaths:
+        - database/*
+        - school_project/config/db.php
+        - school_project/config/constants.php
+        - attendance_system/index.php
+        - attendance_system/logout.php
+    ignoreErrors:
+        - '#Unsafe usage of new static#'
+        - '#Variable variables#'
+    phpVersion: 70400
+    checkMissingIterableValueType: false
+    reportUnmatchedIgnoredErrors: false

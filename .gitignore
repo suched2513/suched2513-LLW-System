@@ -44,7 +44,7 @@ nuclear_*.php
 repair_*.php
 smart_reset.php
 seed_admin.php
+run_seed.php
 find_apache.*
-# run_pending.php (Temporarily allowed for production fix)
 *.txt
 *.bat

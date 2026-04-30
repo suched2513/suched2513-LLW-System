@@ -4,7 +4,7 @@
  * เข้าถึงได้: super_admin เท่านั้น
  */
 session_start();
-require_once 'config/database.php';
+require_once __DIR__ . '/config.php';
 
 if (!isset($_SESSION['llw_role']) || $_SESSION['llw_role'] !== 'super_admin') {
     header('Location: login.php'); exit();
@@ -16,6 +16,7 @@ $msgType = 'success';
 
 // ─── POST Actions ────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'create') {
@@ -269,6 +270,7 @@ $roleLabel = [
                             <!-- Toggle Status -->
                             <?php if (!$isMe): ?>
                             <form method="POST" class="inline">
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="toggle_status">
                                 <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
                                 <input type="hidden" name="new_status" value="<?= $u['status'] === 'active' ? 'inactive' : 'active' ?>">
@@ -311,6 +313,7 @@ $roleLabel = [
             </div>
         </div>
         <form method="POST" class="p-8 space-y-4">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="create">
             <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -367,6 +370,7 @@ $roleLabel = [
             </div>
         </div>
         <form method="POST" class="p-8 space-y-4">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="reset_password">
             <input type="hidden" name="user_id" id="reset-uid">
             <div>
@@ -437,6 +441,7 @@ $roleLabel = [
 
 <!-- Delete form (hidden) -->
 <form id="delete-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
     <input type="hidden" name="action" value="delete">
     <input type="hidden" name="user_id" id="delete-uid">
 </form>
@@ -456,7 +461,7 @@ function confirmClear() {
         if (r.isConfirmed) {
             const f = document.createElement('form');
             f.method = 'POST';
-            f.innerHTML = '<input type="hidden" name="action" value="clear_users">';
+            f.innerHTML = '<input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="action" value="clear_users">';
             document.body.appendChild(f);
             f.submit();
         }

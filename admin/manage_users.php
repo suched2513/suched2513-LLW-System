@@ -12,6 +12,7 @@ $msg = '';
 // ===== เพิ่มผู้ใช้ =====
 $allowed_roles = ['admin', 'user'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    csrf_verify();
     if ($_POST['action'] === 'add') {
         $un   = trim($_POST['username'] ?? '');
         $pw   = password_hash($_POST['password'] ?? '', PASSWORD_BCRYPT);
@@ -89,6 +90,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
 
         <form method="POST" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="add">
             
             <div class="space-y-1">
@@ -194,6 +196,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <td class="px-8 py-4 text-right">
                             <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <form method="POST" class="inline" onsubmit="return confirm('รีเซ็ตรหัสผ่านเป็น 123456?')">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="reset_pw">
                                     <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
                                     <button class="w-8 h-8 flex items-center justify-center bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-600 hover:text-white transition-all shadow-sm">
@@ -202,6 +205,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                                 </form>
                                 <?php if ($u['role'] !== 'admin'): ?>
                                 <form method="POST" class="inline" onsubmit="return confirm('ยืนยันการลบ?')">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
                                     <button class="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-all shadow-sm">

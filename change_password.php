@@ -16,6 +16,7 @@ $msg = '';
 $msgType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
     $current_pass = $_POST['current_password'] ?? '';
     $new_pass     = $_POST['new_password'] ?? '';
     $confirm_pass = $_POST['confirm_password'] ?? '';
@@ -78,6 +79,7 @@ require_once __DIR__ . '/components/layout_start.php';
     <!-- Change Password Form -->
     <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 p-8 sm:p-10">
         <form method="POST" class="space-y-6">
+            <?= csrf_field() ?>
             <div>
                 <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 ml-1">รหัสผ่านปัจจุบัน (Current Password)</label>
                 <div class="relative group">

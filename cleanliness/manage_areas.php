@@ -15,6 +15,7 @@ $classrooms = ['ม.1/1', 'ม.1/2', 'ม.2/1', 'ม.2/2', 'ม.3/1', 'ม.3/2',
 
 // 1. Process Form
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
     try {
         $action = $_POST['action'] ?? '';
         $name = $_POST['name'] ?? '';
@@ -83,6 +84,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             </h3>
             
             <form method="POST" id="areaForm" class="space-y-6">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" id="formAction" value="add">
                 <input type="hidden" name="id" id="areaId" value="">
 

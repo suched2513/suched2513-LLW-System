@@ -18,6 +18,7 @@ $error         = '';
 
 // ── Handle Self-Enrollment POST ───────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['student_db_id'], $_POST['subject_id'])) {
+    csrf_verify();
     if ($_POST['action'] === 'self_enroll') {
         $db_id  = (int)$_POST['student_db_id'];
         $sub_id = (int)$_POST['subject_id'];
@@ -320,6 +321,7 @@ if ($student_code !== '') {
                         <p class="text-[11px] text-slate-400 font-bold"><i class="bi bi-person-fill"></i> <?= htmlspecialchars($ev['teacher_name']) ?> &nbsp;·&nbsp; ห้อง <?= $ev['classroom'] ?></p>
                     </div>
                     <form method="POST" class="flex-shrink-0">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="self_unenroll">
                         <input type="hidden" name="student_db_id" value="<?= $student_info['id'] ?>">
                         <input type="hidden" name="subject_id" value="<?= $ev['id'] ?>">
@@ -356,6 +358,7 @@ if ($student_code !== '') {
                         </p>
                     </div>
                     <form method="POST" class="flex-shrink-0">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="self_enroll">
                         <input type="hidden" name="student_db_id" value="<?= $student_info['id'] ?>">
                         <input type="hidden" name="subject_id" value="<?= $av['id'] ?>">

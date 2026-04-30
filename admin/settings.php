@@ -9,6 +9,7 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 
 $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
     if (isset($_POST['regular_time_in'])) {
         $time_in   = $_POST['regular_time_in'];
         $time_late = $_POST['late_time'];
@@ -73,6 +74,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             </div>
             
             <form method="POST" class="space-y-6">
+                <?= csrf_field() ?>
                 <div>
                     <label class="block text-sm font-black text-slate-700 mb-2">เวลาเริ่มงานปกติ</label>
                     <input type="time" name="regular_time_in" value="<?= $settings['regular_time_in'] ?>" 
@@ -105,6 +107,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </div>
 
                 <form method="POST" class="space-y-6">
+                    <?= csrf_field() ?>
                     <div>
                         <label class="block text-sm font-black mb-2 opacity-80">ชื่อ-สกุล ผอ. (ใช้แสดงในเอกสาร)</label>
                         <input type="text" name="boss_name" value="<?= htmlspecialchars($settings['boss_name'] ?? '') ?>" 
@@ -149,6 +152,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <?php endif; ?>
 
                 <form method="POST" class="space-y-6">
+                    <?= csrf_field() ?>
                     <div>
                         <label class="block text-sm font-black text-slate-700 mb-2"><?= $hasPIN ? 'เปลี่ยน PIN ใหม่' : 'ตั้ง PIN ใหม่' ?></label>
                         <input type="password" name="boss_pin" maxlength="6" 

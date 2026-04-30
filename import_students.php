@@ -39,6 +39,7 @@ if (($_POST['do'] ?? '') === 'add_student') {
 }
 
 // ── Import CSV ──
+if ($_SERVER['REQUEST_METHOD'] === 'POST') csrf_verify();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'import' && !empty($_POST['json_data'])) {
     $data = json_decode($_POST['json_data'], true);
     if ($data) {
@@ -165,6 +166,7 @@ require_once __DIR__ . '/components/layout_start.php';
                 <h3 class="font-black text-slate-800">เพิ่มนักเรียนรายบุคคล</h3>
             </div>
             <form method="POST" class="space-y-4">
+                <?= csrf_field() ?>
                 <input type="hidden" name="do" value="add_student">
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">รหัสนักเรียน</label>
@@ -201,6 +203,7 @@ require_once __DIR__ . '/components/layout_start.php';
                 <h3 class="font-black text-slate-800">นำเข้าด้วยไฟล์ CSV</h3>
             </div>
             <form method="POST" enctype="multipart/form-data" class="space-y-4">
+                <?= csrf_field() ?>
                 <input type="hidden" name="do" value="preview">
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">เลือกไฟล์ CSV</label>
@@ -233,6 +236,7 @@ require_once __DIR__ . '/components/layout_start.php';
                 </div>
             </div>
             <form method="POST">
+                <?= csrf_field() ?>
                 <input type="hidden" name="do" value="import">
                 <input type="hidden" name="json_data" value='<?= htmlspecialchars(json_encode($preview, JSON_UNESCAPED_UNICODE)) ?>'>
                 <button type="submit" class="bg-white text-blue-600 px-6 py-2.5 rounded-2xl text-sm font-black hover:bg-blue-50 transition shadow-lg">

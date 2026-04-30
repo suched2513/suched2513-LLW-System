@@ -3,7 +3,7 @@
  * central_dashboard.php — The "Super Dashboard" for LLW Platinum
  */
 session_start();
-require_once 'config/database.php';
+require_once __DIR__ . '/config.php';
 
 // Authentication Check
 if (!isset($_SESSION['llw_role']) || $_SESSION['llw_role'] !== 'super_admin') {
@@ -28,6 +28,7 @@ $currentSemester = (int)($_GET['semester'] ?? 1);
 // --- Handle Web Migration (One-click Update) ---
 $updateMessage = '';
 if (isset($_POST['run_migration'])) {
+    csrf_verify();
     try {
         $migrationFile = __DIR__ . '/database/migrations/2026_04_23_000002_enhance_student_demographics.php';
         if (file_exists($migrationFile)) {
@@ -239,6 +240,7 @@ require_once 'components/layout_start.php';
                     </form>
                     <?php if(!$hasDemographics): ?>
                     <form action="" method="POST">
+                        <?= csrf_field() ?>
                         <button name="run_migration" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black px-6 py-3 rounded-2xl transition-all shadow-lg shadow-indigo-500/20">
                             <i class="bi bi-rocket-takeoff mr-2"></i> อัปเดตระบบ v2
                         </button>
@@ -358,7 +360,7 @@ require_once 'components/layout_start.php';
                     </div>
                     <h4 class="text-xl font-black text-slate-800 tracking-tighter"><?= htmlspecialchars($room['classroom']) ?></h4>
                     <p class="text-[10px] font-bold text-slate-400 mt-1 truncate" title="<?= htmlspecialchars($room['advisors']) ?>">
-                        <?= $room['advisors'] ? 'ครู' . $room['advisors'] : 'ยังไม่ระบุครูที่ปรึกษา' ?>
+                        <?= $room['advisors'] ? 'ครู' . htmlspecialchars($room['advisors'], ENT_QUOTES, 'UTF-8') : 'ยังไม่ระบุครูที่ปรึกษา' ?>
                     </p>
                     
                     <div class="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">

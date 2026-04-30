@@ -325,7 +325,8 @@ function hexToRgb($hex) {
 
         <!-- Form -->
         <form method="POST" class="space-y-6">
-            
+            <?= csrf_field() ?>
+
             <div>
                 <label class="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Username / ชื่อผู้ใช้งาน</label>
                 <div class="relative group">

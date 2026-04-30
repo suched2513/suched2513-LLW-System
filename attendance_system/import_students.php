@@ -14,6 +14,7 @@ $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY 
 
 // -- Handle Actions --
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
     $do = $_POST['do'] ?? '';
 
     // -- Add/Update single student --
@@ -125,6 +126,7 @@ require_once __DIR__ . '/components/layout_start.php';
                 </div>
 
                 <form method="POST" enctype="multipart/form-data" id="importForm" class="space-y-6">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="do" value="preview">
                     
                     <div id="dropZone" class="drop-zone rounded-[32px] p-10 flex flex-col items-center justify-center cursor-pointer group">
@@ -163,6 +165,7 @@ require_once __DIR__ . '/components/layout_start.php';
                         </div>
                     </div>
                     <form method="POST">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="do" value="import">
                         <input type="hidden" name="json_data" value='<?= json_encode($preview, JSON_UNESCAPED_UNICODE) ?>'>
                         <button type="submit" class="bg-white text-indigo-600 px-8 py-3 rounded-2xl font-black text-sm hover:scale-105 active:scale-95 transition-all shadow-xl shadow-indigo-900/20">
@@ -210,6 +213,7 @@ require_once __DIR__ . '/components/layout_start.php';
                     <h3 class="font-black text-slate-800">เพิ่มรายบุคคล</h3>
                 </div>
                 <form method="POST" class="space-y-5">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="do" value="add_student">
                     <div class="space-y-1">
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">เลขประจำตัว</label>
@@ -313,6 +317,7 @@ require_once __DIR__ . '/components/layout_start.php';
             <h3 class="font-black text-xl text-slate-800">แก้ไขข้อมูล</h3>
         </div>
         <form method="POST" class="space-y-6">
+            <?= csrf_field() ?>
             <input type="hidden" name="do" value="edit_student">
             <input type="hidden" name="student_db_id" id="edit-id">
             <div class="space-y-1">
