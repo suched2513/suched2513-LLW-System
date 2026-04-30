@@ -53,6 +53,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $msg = 'แก้ไขข้อมูลเรียบร้อยแล้ว';
             }
+        } elseif ($action === 'import_csv') {
+            if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+                $err = 'กรุณาเลือกไฟล์ CSV';
+            } else {
+                $mime = mime_content_type($_FILES['csv_file']['tmp_name']);
+                $ext  = strtolower(pathinfo($_FILES['csv_file']['name'], PATHINFO_EXTENSION));
+                if (!in_array($ext, ['csv', 'txt']) || !in_array($mime, ['text/plain','text/csv','application/csv','application/octet-stream'])) {
+                    $err = 'กรุณาอัพโหลดไฟล์ .csv เท่านั้น';
+                } else {
+                    $handle = fopen($_FILES['csv_file']['tmp_name'], 'r');
+                    // Detect and strip BOM (UTF-8 BOM from Excel)
+                    $bom = fread($handle, 3);
+                    if ($bom !== "\xEF\xBB\xBF") rewind($handle);
+
+                    $stmtInsert = $pdo->prepare("INSERT INTO bus_students (student_id, fullname, classroom, national_id_hash, national_id_masked, is_active) VALUES (?,?,?,?,?,1)");
+                    $stmtUpdate = $pdo->prepare("UPDATE bus_students SET national_id_hash=?, national_id_masked=?, is_active=1 WHERE student_id=?");
+                    $stmtCheck  = $pdo->prepare("SELECT id, fullname FROM bus_students WHERE student_id=?");
+
+                    $countNew = $countUpd = $countSkip = 0;
+                    $rowNum   = 0;
+                    $skipHead = false;
+
+                    while (($row = fgetcsv($handle)) !== false) {
+                        $rowNum++;
+                        // Auto-skip header row if first cell looks like a label
+                        if ($rowNum === 1 && !is_numeric(preg_replace('/\D/', '', $row[0] ?? ''))) {
+                            $skipHead = true;
+                            continue;
+                        }
+                        $sid = trim($row[0] ?? '');
+                        $nid = preg_replace('/\D/', '', $row[1] ?? '');
+
+                        if ($sid === '' || strlen($nid) !== 13) {
+                            $countSkip++;
+                            continue;
+                        }
+
+                        $hash    = password_hash($nid, PASSWORD_BCRYPT);
+                        $masked  = busMaskNid($nid);
+                        $name    = trim($row[2] ?? '');
+                        $class   = trim($row[3] ?? '');
+
+                        $stmtCheck->execute([$sid]);
+                        $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+                        if ($existing) {
+                            $stmtUpdate->execute([$hash, $masked, $sid]);
+                            $countUpd++;
+                        } elseif ($name !== '') {
+                            $stmtInsert->execute([$sid, $name, $class, $hash, $masked]);
+                            $countNew++;
+                        } else {
+                            $countSkip++;
+                        }
+                    }
+                    fclose($handle);
+                    $msg = "นำเข้า CSV สำเร็จ: เพิ่มใหม่ {$countNew} คน · อัพเดทรหัส {$countUpd} คน · ข้ามไป {$countSkip} แถว";
+                }
+            }
         } elseif ($action === 'import_att') {
             // Import from att_students (only those not yet in bus_students)
             $rows = $pdo->query("
@@ -157,7 +216,27 @@ require_once __DIR__ . '/../../components/layout_start.php';
           </form>
 
           <hr>
-          <!-- Import from att_students -->
+
+          <!-- Import CSV (primary) -->
+          <div class="mb-2">
+            <p class="fw-black small mb-2"><i class="fas fa-file-csv me-1 text-success"></i>นำเข้าจากไฟล์ CSV</p>
+            <p class="text-muted small mb-2">คอลัมน์: <code>รหัสนักเรียน, เลขบัตรประชาชน, ชื่อ-นามสกุล, ห้อง</code></p>
+            <a href="/bus/admin/students_template.csv" class="btn btn-outline-success btn-sm w-100 mb-2 fw-bold">
+              <i class="fas fa-download me-1"></i> ดาวน์โหลด Template CSV
+            </a>
+            <form method="POST" enctype="multipart/form-data">
+              <?= csrf_field() ?>
+              <input type="hidden" name="action" value="import_csv">
+              <input type="file" name="csv_file" accept=".csv,.txt" class="form-control form-control-sm mb-2" required>
+              <button type="submit" class="btn btn-success w-100 fw-bold small">
+                <i class="fas fa-upload me-1"></i> อัพโหลด CSV
+              </button>
+            </form>
+          </div>
+
+          <hr>
+
+          <!-- Import from att_students (fallback) -->
           <form method="POST" onsubmit="return confirm('นำเข้าข้อมูลนักเรียนจากระบบเช็คชื่อ? (เฉพาะที่ยังไม่มีในระบบรถ)')">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="import_att">
