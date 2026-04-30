@@ -56,8 +56,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } catch (Exception $e) {
         error_log($e->getMessage());
-        $err = 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+        $err = 'เกิดข้อผิดพลาด: ' . $e->getMessage();
     }
+}
+
+// Check tables exist
+$tablesOk = true;
+try {
+    $pdo->query("SELECT 1 FROM bus_routes LIMIT 1");
+} catch (Exception $e) {
+    $tablesOk = false;
 }
 
 // Fetch routes with registration counts
@@ -84,6 +92,13 @@ $activeSystem = 'bus';
 require_once __DIR__ . '/../../components/layout_start.php';
 ?>
 
+<?php if (!$tablesOk): ?>
+<div class="alert alert-warning border-0">
+  <i class="fas fa-database me-2"></i>
+  <strong>ตารางฐานข้อมูลยังไม่ถูกสร้าง</strong> —
+  <a href="/bus/admin/migrate.php" class="alert-link">คลิกที่นี่เพื่อสร้างตาราง Bus System</a>
+</div>
+<?php endif; ?>
 <?php if ($msg): ?>
 <div class="alert alert-success alert-dismissible fade show"><i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($msg) ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 <?php endif; ?>
