@@ -37,7 +37,7 @@ try {
         $cStmt = $pdo->prepare("
             SELECT * FROM bus_cancel_requests
             WHERE registration_id = ?
-            ORDER BY requested_at DESC LIMIT 1
+            ORDER BY created_at DESC LIMIT 1
         ");
         $cStmt->execute([$reg['id']]);
         $cancelReq = $cStmt->fetch(PDO::FETCH_ASSOC);
@@ -49,8 +49,8 @@ try {
         FROM bus_payments p
         JOIN bus_registrations r ON r.id = p.registration_id
         JOIN bus_routes rt ON rt.id = r.route_id
-        WHERE p.student_id = ?
-        ORDER BY p.payment_date DESC, p.created_at DESC
+        WHERE r.student_id = ?
+        ORDER BY p.paid_at DESC
         LIMIT 20
     ");
     $histStmt->execute([$busId]);
@@ -253,8 +253,8 @@ function thDate(string $d, array $m): string {
         <i class="bi <?= $cricon ?> flex-shrink-0"></i>
         <div>
             <p class="font-black"><?= $crlabel ?></p>
-            <?php if ($cancelReq['process_note']): ?>
-            <p class="text-xs mt-0.5 opacity-80"><?= htmlspecialchars($cancelReq['process_note']) ?></p>
+            <?php if ($cancelReq['admin_note']): ?>
+            <p class="text-xs mt-0.5 opacity-80"><?= htmlspecialchars($cancelReq['admin_note']) ?></p>
             <?php endif; ?>
         </div>
     </div>
@@ -280,9 +280,9 @@ function thDate(string $d, array $m): string {
             <div class="flex items-center justify-between px-5 py-3.5">
                 <div>
                     <p class="font-bold text-sm text-slate-700"><?= number_format($h['amount'], 0) ?> บาท</p>
-                    <p class="text-[10px] text-slate-400"><?= thDate($h['payment_date'], $thaiMonths) ?> · <?= htmlspecialchars($h['received_by']) ?></p>
-                    <?php if ($h['notes']): ?>
-                    <p class="text-[10px] text-slate-300 italic"><?= htmlspecialchars($h['notes']) ?></p>
+                    <p class="text-[10px] text-slate-400"><?= thDate($h['paid_at'], $thaiMonths) ?></p>
+                    <?php if ($h['note']): ?>
+                    <p class="text-[10px] text-slate-300 italic"><?= htmlspecialchars($h['note']) ?></p>
                     <?php endif; ?>
                 </div>
                 <div class="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center">
