@@ -115,8 +115,8 @@ body { font-family:'Prompt',sans-serif; }
         </div>
         <div class="flex items-center gap-2">
             <div class="text-right">
-                <div class="font-bold text-xs leading-tight max-w-[130px] truncate"><?= htmlspecialchars($name) ?></div>
-                <div class="text-orange-100 text-[10px]"><?= htmlspecialchars($class) ?></div>
+                <div class="font-bold text-xs leading-tight max-w-[130px] truncate"><?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?></div>
+                <div class="text-orange-100 text-[10px]"><?= htmlspecialchars($class, ENT_QUOTES, 'UTF-8') ?></div>
             </div>
             <a href="/bus/logout.php" title="ออกจากระบบ"
                class="w-8 h-8 bg-white/15 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/30">
@@ -143,13 +143,13 @@ body { font-family:'Prompt',sans-serif; }
         <div class="absolute right-8 -top-4 w-16 h-16 bg-white/5 rounded-full pointer-events-none"></div>
         <div class="relative flex items-start justify-between">
             <div class="flex-1 min-w-0">
-                <p class="text-orange-100 text-[10px] font-bold uppercase tracking-wider"><?= htmlspecialchars($semLabel) ?></p>
-                <h2 class="text-xl font-black mt-0.5 leading-snug truncate"><?= htmlspecialchars($name) ?></h2>
+                <p class="text-orange-100 text-[10px] font-bold uppercase tracking-wider"><?= htmlspecialchars($semLabel, ENT_QUOTES, 'UTF-8') ?></p>
+                <h2 class="text-xl font-black mt-0.5 leading-snug truncate"><?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?></h2>
                 <p class="text-orange-100 text-xs mt-1.5 flex items-center gap-1.5">
                     <i class="bi bi-mortarboard-fill"></i>
-                    <?= htmlspecialchars($class) ?>
+                    <?= htmlspecialchars($class, ENT_QUOTES, 'UTF-8') ?>
                     <span class="opacity-60">·</span>
-                    รหัส <?= htmlspecialchars($studentSid) ?>
+                    รหัส <?= htmlspecialchars($studentSid, ENT_QUOTES, 'UTF-8') ?>
                 </p>
             </div>
             <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center border border-white/30 flex-shrink-0 ml-3">
@@ -158,7 +158,7 @@ body { font-family:'Prompt',sans-serif; }
         </div>
         <!-- Semester pill -->
         <div class="mt-4 inline-flex items-center gap-1.5 bg-white/20 border border-white/20 rounded-full px-3 py-1 text-[10px] font-bold">
-            <i class="bi bi-calendar3"></i> <?= htmlspecialchars($semLabel) ?>
+            <i class="bi bi-calendar3"></i> <?= htmlspecialchars($semLabel, ENT_QUOTES, 'UTF-8') ?>
         </div>
     </div>
 

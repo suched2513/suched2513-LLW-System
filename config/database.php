@@ -16,6 +16,11 @@ define('DB_USER', 'root');
 define('DB_PASS', '');          // ← แก้ตรงนี้ถ้าเปลี่ยน password
 define('DB_NAME', 'llw_db');   // ← ฐานข้อมูลรวมเพียง 1 ฐาน
 
+// ─── Charset: บังคับ UTF-8 ทุกฟังก์ชัน PHP (ป้องกัน htmlspecialchars ใช้ ISO-8859-1) ──
+ini_set('default_charset', 'UTF-8');
+mb_internal_encoding('UTF-8');
+mb_http_output('UTF-8');
+
 // ─── Timezone ──────────────────────────────────────────────────────
 date_default_timezone_set('Asia/Bangkok');
 

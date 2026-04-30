@@ -103,12 +103,12 @@ header('Content-Type: text/html; charset=UTF-8');
             </a>
             <div>
                 <div class="font-black text-sm leading-tight">เลือกสายรถ</div>
-                <div class="text-orange-100 text-[9px] font-bold"><?= htmlspecialchars($semLabel) ?></div>
+                <div class="text-orange-100 text-[9px] font-bold"><?= htmlspecialchars($semLabel, ENT_QUOTES, 'UTF-8') ?></div>
             </div>
         </div>
         <div class="text-right">
-            <div class="font-bold text-xs leading-tight truncate max-w-[130px]"><?= htmlspecialchars($name) ?></div>
-            <div class="text-orange-100 text-[10px]"><?= htmlspecialchars($class) ?></div>
+            <div class="font-bold text-xs leading-tight truncate max-w-[130px]"><?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?></div>
+            <div class="text-orange-100 text-[10px]"><?= htmlspecialchars($class, ENT_QUOTES, 'UTF-8') ?></div>
         </div>
     </div>
 </header>
