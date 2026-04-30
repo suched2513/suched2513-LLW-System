@@ -19,8 +19,8 @@ elseif (strpos($full_url, '/assembly/') !== false)          $activeSystem = 'ass
 elseif (strpos($full_url, '/behavior/') !== false)          $activeSystem = 'behavior';
 elseif (strpos($full_url, '/homeroom/') !== false)          $activeSystem = 'homeroom';
 elseif (strpos($full_url, '/school_project/') !== false)     $activeSystem = 'budget';
-elseif (basename($full_url) === 'leave_system.php')         $activeSystem = 'leave';
 elseif (basename($full_url) === 'student_info.php' || basename($full_url) === 'teacher_info.php') $activeSystem = 'info';
+elseif (strpos($full_url, '/bus/admin/') !== false || strpos($full_url, '/bus/finance/') !== false) $activeSystem = 'bus';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
 
 /**
@@ -42,7 +42,9 @@ $roleName = [
     'wfh_admin'   => 'WFH Admin',
     'wfh_staff'   => 'Personnel',
     'cb_admin'    => 'Device Manager',
-    'att_teacher' => 'Academic Staff'
+    'att_teacher' => 'Academic Staff',
+    'bus_admin'   => 'Bus Administrator',
+    'bus_finance' => 'Bus Finance'
 ][$userRole] ?? 'Staff Member';
 
 // Sub-menu definitions per module
@@ -95,6 +97,14 @@ $subMenus = [
         ['icon' => 'fas fa-users',          'label' => 'ข้อมูลนักเรียน',   'url' => $base_path . '/student_info.php'],
         ['icon' => 'fas fa-address-card',   'label' => 'ข้อมูลครูและบุคลากร', 'url' => $base_path . '/teacher_info.php'],
     ],
+    'bus' => [
+        ['icon' => 'fas fa-tachometer-alt',       'label' => 'ภาพรวมระบบ',       'url' => $base_path . '/bus/admin/dashboard.php'],
+        ['icon' => 'fas fa-bus',                  'label' => 'จัดการสายรถ',       'url' => $base_path . '/bus/admin/routes.php',   'roles' => ['super_admin','bus_admin']],
+        ['icon' => 'fas fa-user-graduate',        'label' => 'รายชื่อนักเรียน',   'url' => $base_path . '/bus/admin/students.php', 'roles' => ['super_admin','bus_admin']],
+        ['icon' => 'fas fa-chart-bar',            'label' => 'รายงาน',             'url' => $base_path . '/bus/admin/reports.php',  'roles' => ['super_admin','bus_admin']],
+        ['icon' => 'fas fa-file-invoice-dollar',  'label' => 'บันทึกการชำระเงิน', 'url' => $base_path . '/bus/finance/payments.php',       'roles' => ['super_admin','bus_admin','bus_finance']],
+        ['icon' => 'fas fa-times-circle',         'label' => 'คำขอยกเลิก',        'url' => $base_path . '/bus/finance/cancellations.php',  'roles' => ['super_admin','bus_admin','bus_finance']],
+    ],
 ];
 
 ?>
@@ -124,6 +134,12 @@ $subMenus = [
                 </li>
                 <?php if ($userRole === 'super_admin'): ?>
                 <li class="nav-item">
+                    <a href="<?= $base_path ?>/bus/admin/dashboard.php" class="nav-link <?= $activeSystem === 'bus' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-bus text-warning"></i>
+                        <p class="font-weight-bold text-warning">ระบบรถรับส่งนักเรียน</p>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="<?= $base_path ?>/manage_users.php" class="nav-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-user-shield"></i>
                         <p>จัดการผู้ใช้งานระบบ</p>
@@ -136,6 +152,7 @@ $subMenus = [
                     </a>
                 </li>
                 <?php endif; ?>
+
 
                 <!-- 2. ADVISOR & STUDENT -->
                 <li class="nav-header">งานนักเรียนและที่ปรึกษา</li>

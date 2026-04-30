@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $role      = $_POST['role'];
         $password  = $_POST['password'];
 
-        $allowed_roles = ['super_admin','wfh_admin','wfh_staff','cb_admin','att_teacher'];
+        $allowed_roles = ['super_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance'];
         if (!in_array($role, $allowed_roles)) {
             $msg = 'Role ไม่ถูกต้อง'; $msgType = 'error';
         } elseif (strlen($password) < 6) {
@@ -106,6 +106,8 @@ $roleLabel = [
     'wfh_staff'   => ['label' => 'WFH Staff',   'color' => 'bg-emerald-100 text-emerald-700'],
     'cb_admin'    => ['label' => 'CB Admin',     'color' => 'bg-cyan-100 text-cyan-700'],
     'att_teacher' => ['label' => 'ครูผู้สอน',   'color' => 'bg-rose-100 text-rose-700'],
+    'bus_admin'   => ['label' => 'Bus Admin',    'color' => 'bg-orange-100 text-orange-700'],
+    'bus_finance' => ['label' => 'Bus Finance',  'color' => 'bg-amber-100 text-amber-700'],
 ];
 ?>
 <!DOCTYPE html>
@@ -336,6 +338,8 @@ $roleLabel = [
                     <option value="att_teacher">ครูผู้สอน (Attendance)</option>
                     <option value="wfh_admin">WFH Admin / ผอ.</option>
                     <option value="cb_admin">CB Admin (Chromebook)</option>
+                    <option value="bus_admin">Bus Admin (รถรับส่ง)</option>
+                    <option value="bus_finance">Bus Finance (การเงินรถรับส่ง)</option>
                     <option value="super_admin">Super Admin</option>
                 </select>
             </div>
