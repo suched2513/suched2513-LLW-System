@@ -92,6 +92,13 @@ foreach (array_keys($tables) as $tbl) {
     $exists = $pdo->query("SHOW TABLES LIKE '$tbl'")->rowCount() > 0;
     $results[$tbl] = ['exists' => $exists, 'created' => false, 'error' => ''];
 }
+// Check village column
+try {
+    $hasVillage = $pdo->query("SHOW COLUMNS FROM bus_students LIKE 'village'")->rowCount() > 0;
+    $results['_village_col'] = ['exists' => $hasVillage, 'created' => false, 'error' => ''];
+} catch (Exception $e) {
+    $results['_village_col'] = ['exists' => false, 'created' => false, 'error' => ''];
+}
 
 // Run if POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'run') {
@@ -116,6 +123,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'run')
         } catch (Exception $e) {
             $results[$tbl]['error'] = $e->getMessage();
         }
+    }
+
+    // Schema updates: add village column if missing
+    try {
+        $hasVillage = $pdo->query("SHOW COLUMNS FROM bus_students LIKE 'village'")->rowCount() > 0;
+        if (!$hasVillage) {
+            $pdo->exec("ALTER TABLE bus_students ADD COLUMN village VARCHAR(200) NULL DEFAULT NULL AFTER classroom");
+        }
+        $results['_village_col'] = ['exists' => true, 'created' => !$hasVillage, 'error' => ''];
+    } catch (Exception $e) {
+        $results['_village_col'] = ['exists' => false, 'created' => false, 'error' => $e->getMessage()];
     }
 }
 

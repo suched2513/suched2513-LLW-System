@@ -11,8 +11,22 @@ $class      = $_SESSION['bus_student_class'];
 $semester   = busGetSemester();
 $semLabel   = busSemesterLabel($semester);
 
+// Handle village update POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_village') {
+    csrf_verify();
+    $newVillage = trim($_POST['village'] ?? '');
+    try {
+        $pdo->prepare("UPDATE bus_students SET village = ? WHERE id = ?")->execute([$newVillage ?: null, $busId]);
+        header('Location: /bus/dashboard.php?msg=' . urlencode('บันทึกข้อมูลบ้านเรียบร้อยแล้ว') . '&t=ok');
+        exit();
+    } catch (Exception $e) {
+        error_log($e->getMessage());
+    }
+}
+
 $flash     = $_GET['msg'] ?? '';
 $flashType = $_GET['t'] ?? 'ok';
+$village   = '';
 
 $reg = null; $paid = 0.0; $cancelReq = null;
 try {
@@ -48,6 +62,10 @@ try {
     $history = $histStmt->fetchAll(PDO::FETCH_ASSOC);
 
     $hasRoutes = (bool)$pdo->query("SELECT 1 FROM bus_routes WHERE is_active=1 LIMIT 1")->fetchColumn();
+
+    $vStmt = $pdo->prepare("SELECT village FROM bus_students WHERE id = ? LIMIT 1");
+    $vStmt->execute([$busId]);
+    $village = (string)($vStmt->fetchColumn() ?: '');
 } catch (Exception $e) {
     error_log($e->getMessage());
     $history = []; $hasRoutes = false;
@@ -63,6 +81,7 @@ function thDate(string $d, array $m): string {
     $t = strtotime($d);
     return date('j', $t) . ' ' . $m[(int)date('n', $t)] . ' ' . ((int)date('Y', $t) + 543);
 }
+header('Content-Type: text/html; charset=UTF-8');
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
@@ -142,6 +161,59 @@ body { font-family:'Prompt',sans-serif; }
             <i class="bi bi-calendar3"></i> <?= htmlspecialchars($semLabel) ?>
         </div>
     </div>
+
+    <!-- Village Card -->
+    <?php if (!$village): ?>
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3.5">
+        <div class="flex items-center gap-2 mb-2.5">
+            <i class="bi bi-geo-alt-fill text-amber-500"></i>
+            <p class="font-black text-amber-700 text-sm">กรุณาระบุบ้านที่อยู่ของคุณ</p>
+        </div>
+        <p class="text-[11px] text-amber-600 mb-2.5">เพื่อให้เจ้าหน้าที่ทราบว่าคุณอยู่บ้านไหน และรถสายไหนที่เหมาะสม</p>
+        <form method="POST" class="flex gap-2">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="update_village">
+            <input type="text" name="village" required placeholder="เช่น บ้านประชาพัฒนา, หมู่ 5..."
+                   class="flex-1 bg-white border border-amber-200 rounded-xl px-3 py-2.5 text-sm font-bold
+                          focus:ring-2 focus:ring-amber-400 outline-none transition-all">
+            <button type="submit"
+                class="px-4 py-2 bg-amber-500 text-white rounded-xl font-black text-xs flex-shrink-0
+                       shadow-sm shadow-amber-200 active:scale-95 transition-transform">
+                บันทึก
+            </button>
+        </form>
+    </div>
+    <?php else: ?>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 px-4 py-3">
+        <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i class="bi bi-geo-alt-fill text-emerald-500 text-xs"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">บ้านของฉัน</p>
+                    <p class="font-bold text-slate-700 text-sm truncate"><?= htmlspecialchars($village, ENT_QUOTES, 'UTF-8') ?></p>
+                </div>
+            </div>
+            <button onclick="document.getElementById('villageEditForm').classList.toggle('hidden')"
+                    class="w-8 h-8 bg-slate-50 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-100 active:bg-slate-100">
+                <i class="bi bi-pencil text-slate-400 text-xs"></i>
+            </button>
+        </div>
+        <form id="villageEditForm" method="POST" class="hidden mt-2.5 flex gap-2">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="update_village">
+            <input type="text" name="village" value="<?= htmlspecialchars($village, ENT_QUOTES, 'UTF-8') ?>"
+                   placeholder="ชื่อบ้าน/หมู่บ้าน..."
+                   class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold
+                          focus:ring-2 focus:ring-orange-400 outline-none">
+            <button type="submit"
+                class="px-4 py-2 bg-orange-500 text-white rounded-xl font-black text-xs flex-shrink-0">
+                บันทึก
+            </button>
+        </form>
+    </div>
+    <?php endif; ?>
 
     <?php if (!$reg): ?>
     <!-- ══ NOT REGISTERED ══ -->

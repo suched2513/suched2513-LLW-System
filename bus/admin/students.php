@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $sid      = trim($_POST['student_id'] ?? '');
             $fullname = trim($_POST['fullname'] ?? '');
             $class    = trim($_POST['classroom'] ?? '');
+            $village  = trim($_POST['village'] ?? '') ?: null;
             $nid      = preg_replace('/\D/', '', $_POST['national_id'] ?? '');
 
             if ($sid === '' || $fullname === '' || strlen($nid) !== 13) {
@@ -28,14 +29,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $hash   = password_hash($nid, PASSWORD_BCRYPT);
                 $masked = busMaskNid($nid);
-                $stmt   = $pdo->prepare("INSERT INTO bus_students (student_id, fullname, classroom, national_id_hash, national_id_masked) VALUES (?,?,?,?,?)");
-                $stmt->execute([$sid, $fullname, $class, $hash, $masked]);
+                $stmt   = $pdo->prepare("INSERT INTO bus_students (student_id, fullname, classroom, village, national_id_hash, national_id_masked) VALUES (?,?,?,?,?,?)");
+                $stmt->execute([$sid, $fullname, $class, $village, $hash, $masked]);
                 $msg = 'เพิ่มนักเรียนเรียบร้อยแล้ว';
             }
         } elseif ($action === 'edit') {
             $id       = (int)($_POST['stu_id'] ?? 0);
             $fullname = trim($_POST['fullname'] ?? '');
             $class    = trim($_POST['classroom'] ?? '');
+            $village  = trim($_POST['village'] ?? '') ?: null;
             $nidRaw   = preg_replace('/\D/', '', $_POST['national_id'] ?? '');
             $isActive = isset($_POST['is_active']) ? 1 : 0;
 
@@ -45,11 +47,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (strlen($nidRaw) === 13) {
                     $hash   = password_hash($nidRaw, PASSWORD_BCRYPT);
                     $masked = busMaskNid($nidRaw);
-                    $pdo->prepare("UPDATE bus_students SET fullname=?, classroom=?, national_id_hash=?, national_id_masked=?, is_active=? WHERE id=?")
-                        ->execute([$fullname, $class, $hash, $masked, $isActive, $id]);
+                    $pdo->prepare("UPDATE bus_students SET fullname=?, classroom=?, village=?, national_id_hash=?, national_id_masked=?, is_active=? WHERE id=?")
+                        ->execute([$fullname, $class, $village, $hash, $masked, $isActive, $id]);
                 } else {
-                    $pdo->prepare("UPDATE bus_students SET fullname=?, classroom=?, is_active=? WHERE id=?")
-                        ->execute([$fullname, $class, $isActive, $id]);
+                    $pdo->prepare("UPDATE bus_students SET fullname=?, classroom=?, village=?, is_active=? WHERE id=?")
+                        ->execute([$fullname, $class, $village, $isActive, $id]);
                 }
                 $msg = 'แก้ไขข้อมูลเรียบร้อยแล้ว';
             }
@@ -67,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $bom = fread($handle, 3);
                     if ($bom !== "\xEF\xBB\xBF") rewind($handle);
 
-                    $stmtInsert = $pdo->prepare("INSERT INTO bus_students (student_id, fullname, classroom, national_id_hash, national_id_masked, is_active) VALUES (?,?,?,?,?,1)");
+                    $stmtInsert = $pdo->prepare("INSERT INTO bus_students (student_id, fullname, classroom, village, national_id_hash, national_id_masked, is_active) VALUES (?,?,?,?,?,?,1)");
                     $stmtUpdate = $pdo->prepare("UPDATE bus_students SET national_id_hash=?, national_id_masked=?, is_active=1 WHERE student_id=?");
                     $stmtCheck  = $pdo->prepare("SELECT id, fullname FROM bus_students WHERE student_id=?");
 
@@ -94,6 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $masked  = busMaskNid($nid);
                         $name    = trim($row[2] ?? '');
                         $class   = trim($row[3] ?? '');
+                        $village = trim($row[4] ?? '') ?: null;
 
                         $stmtCheck->execute([$sid]);
                         $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
@@ -102,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $stmtUpdate->execute([$hash, $masked, $sid]);
                             $countUpd++;
                         } elseif ($name !== '') {
-                            $stmtInsert->execute([$sid, $name, $class, $hash, $masked]);
+                            $stmtInsert->execute([$sid, $name, $class, $village, $hash, $masked]);
                             $countNew++;
                         } else {
                             $countSkip++;
@@ -141,8 +144,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Fetch students
 try {
-    $where   = $search !== '' ? 'WHERE (student_id LIKE ? OR fullname LIKE ? OR classroom LIKE ?)' : '';
-    $params  = $search !== '' ? ["%$search%", "%$search%", "%$search%"] : [];
+    $where   = $search !== '' ? 'WHERE (student_id LIKE ? OR fullname LIKE ? OR classroom LIKE ? OR village LIKE ?)' : '';
+    $params  = $search !== '' ? ["%$search%", "%$search%", "%$search%", "%$search%"] : [];
 
     $total   = (int)$pdo->prepare("SELECT COUNT(*) FROM bus_students $where")->execute($params) ? $pdo->prepare("SELECT COUNT(*) FROM bus_students $where")->execute($params) : 0;
 
@@ -199,6 +202,11 @@ require_once __DIR__ . '/../../components/layout_start.php';
             <div class="mb-3">
               <label class="form-label fw-bold small">ห้องเรียน</label>
               <input type="text" name="classroom" id="fClass" class="form-control" maxlength="50" placeholder="เช่น ม.1/1">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold small">บ้าน / หมู่บ้าน</label>
+              <input type="text" name="village" id="fVillage" class="form-control" maxlength="200" placeholder="เช่น บ้านประชาพัฒนา">
+              <div class="form-text">ใช้สำหรับรายงานสรุปตามพื้นที่</div>
             </div>
             <div class="mb-3">
               <label class="form-label fw-bold small">เลขบัตรประชาชน 13 หลัก <span class="text-danger">*</span></label>
@@ -268,6 +276,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
               <thead class="table-light">
                 <tr>
                   <th class="text-xs fw-bold text-uppercase text-muted ps-4">นักเรียน</th>
+                  <th class="text-xs fw-bold text-uppercase text-muted">บ้าน</th>
                   <th class="text-xs fw-bold text-uppercase text-muted">บัตรประชาชน</th>
                   <th class="text-xs fw-bold text-uppercase text-muted text-center">สถานะ</th>
                   <th class="text-xs fw-bold text-uppercase text-muted text-end pe-4">จัดการ</th>
@@ -280,6 +289,9 @@ require_once __DIR__ . '/../../components/layout_start.php';
                     <div class="fw-bold"><?= htmlspecialchars($s['fullname']) ?></div>
                     <div class="small text-muted">รหัส <?= htmlspecialchars($s['student_id']) ?><?= $s['classroom'] ? ' · ' . htmlspecialchars($s['classroom']) : '' ?></div>
                   </td>
+                  <td class="small <?= $s['village'] ? 'text-dark' : 'text-muted' ?>">
+                    <?= $s['village'] ? htmlspecialchars($s['village']) : '<span class="text-muted fst-italic">ไม่ระบุ</span>' ?>
+                  </td>
                   <td class="small text-muted font-monospace"><?= htmlspecialchars($s['national_id_masked']) ?></td>
                   <td class="text-center">
                     <span class="badge bg-<?= $s['is_active'] ? 'success' : 'secondary' ?> bg-opacity-10 text-<?= $s['is_active'] ? 'success' : 'secondary' ?> fw-bold">
@@ -288,7 +300,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
                   </td>
                   <td class="text-end pe-4">
                     <button type="button"
-                      onclick="editStu(<?= htmlspecialchars(json_encode(['id'=>$s['id'],'student_id'=>$s['student_id'],'fullname'=>$s['fullname'],'classroom'=>$s['classroom'],'is_active'=>$s['is_active']]), ENT_QUOTES) ?>)"
+                      onclick="editStu(<?= htmlspecialchars(json_encode(['id'=>$s['id'],'student_id'=>$s['student_id'],'fullname'=>$s['fullname'],'classroom'=>$s['classroom'],'village'=>$s['village'] ?? '','is_active'=>$s['is_active']]), ENT_QUOTES) ?>)"
                       class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></button>
                   </td>
                 </tr>
@@ -325,6 +337,7 @@ function editStu(s) {
     document.getElementById('fSid').readOnly = true;
     document.getElementById('fFullname').value = s.fullname;
     document.getElementById('fClass').value = s.classroom ?? '';
+    document.getElementById('fVillage').value = s.village ?? '';
     document.getElementById('fNid').placeholder = 'เว้นว่างถ้าไม่ต้องการเปลี่ยนรหัสผ่าน';
     document.getElementById('nidHint').textContent = 'ถ้าไม่กรอก รหัสผ่านเดิมจะยังคงอยู่';
     document.getElementById('fActive').checked = s.is_active == 1;

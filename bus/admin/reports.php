@@ -40,7 +40,7 @@ try {
 
     $regStmt = $pdo->prepare("
         SELECT reg.id, reg.status, reg.registered_at,
-               s.student_id, s.fullname, s.classroom,
+               s.student_id, s.fullname, s.classroom, s.village,
                rt.route_code, rt.route_name, rt.price,
                COALESCE(SUM(p.amount),0) as paid
         FROM bus_registrations reg
@@ -59,6 +59,21 @@ try {
     $totalPrice  = array_sum(array_column($registrations, 'price'));
     $totalPaid   = array_sum(array_column($registrations, 'paid'));
     $totalUnpaid = $totalPrice - $totalPaid;
+
+    // Village distribution: route → village → count (active only)
+    $vDistStmt = $pdo->prepare("
+        SELECT rt.route_code, rt.route_name,
+               COALESCE(NULLIF(TRIM(s.village),''), 'ไม่ระบุ') AS village,
+               COUNT(*) AS cnt
+        FROM bus_registrations reg
+        JOIN bus_students s ON s.id = reg.student_id
+        JOIN bus_routes rt ON rt.id = reg.route_id
+        WHERE reg.semester = ? AND reg.status = 'active'
+        GROUP BY rt.id, village
+        ORDER BY rt.route_code, cnt DESC
+    ");
+    $vDistStmt->execute([$filterSem]);
+    $villageDist = $vDistStmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (Exception $e) {
     error_log($e->getMessage());
@@ -163,6 +178,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
               <th class="text-xs fw-bold text-uppercase text-muted ps-4">#</th>
               <th class="text-xs fw-bold text-uppercase text-muted">นักเรียน</th>
               <th class="text-xs fw-bold text-uppercase text-muted">ห้อง</th>
+              <th class="text-xs fw-bold text-uppercase text-muted">บ้าน</th>
               <th class="text-xs fw-bold text-uppercase text-muted">สายรถ</th>
               <th class="text-xs fw-bold text-uppercase text-muted text-center">สถานะ</th>
               <th class="text-xs fw-bold text-uppercase text-muted text-end">ราคา</th>
@@ -183,6 +199,9 @@ require_once __DIR__ . '/../../components/layout_start.php';
                 <div class="small text-muted"><?= htmlspecialchars($r['student_id']) ?></div>
               </td>
               <td class="small"><?= htmlspecialchars($r['classroom']) ?></td>
+              <td class="small <?= $r['village'] ? '' : 'text-muted fst-italic' ?>">
+                <?= $r['village'] ? htmlspecialchars($r['village']) : 'ไม่ระบุ' ?>
+              </td>
               <td class="small"><?= htmlspecialchars($r['route_code']) ?> <?= htmlspecialchars($r['route_name']) ?></td>
               <td class="text-center"><span class="badge bg-<?= $statusClass ?> bg-opacity-10 text-<?= $statusClass ?> fw-bold"><?= $statusLabel ?></span></td>
               <td class="text-end fw-bold"><?= number_format($r['price'], 0) ?></td>
@@ -204,6 +223,59 @@ require_once __DIR__ . '/../../components/layout_start.php';
       <?php endif; ?>
     </div>
   </div>
+
+  <!-- Village Distribution -->
+  <?php if (!empty($villageDist)): ?>
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-0">
+      <h6 class="fw-black mb-0"><i class="fas fa-map-marker-alt me-2 text-success"></i>สรุปตามบ้าน (เฉพาะที่ใช้งานอยู่)</h6>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="text-xs fw-bold text-uppercase text-muted ps-4">สายรถ</th>
+              <th class="text-xs fw-bold text-uppercase text-muted">บ้าน / หมู่บ้าน</th>
+              <th class="text-xs fw-bold text-uppercase text-muted text-center">จำนวน</th>
+              <th class="text-xs fw-bold text-uppercase text-muted pe-4">สัดส่วน</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php
+            // Compute total per route for percentage
+            $routeTotals = [];
+            foreach ($villageDist as $vd) {
+                $key = $vd['route_code'];
+                $routeTotals[$key] = ($routeTotals[$key] ?? 0) + $vd['cnt'];
+            }
+            $lastRoute = '';
+            foreach ($villageDist as $vd):
+                $routeKey = $vd['route_code'];
+                $pct = $routeTotals[$routeKey] > 0 ? round($vd['cnt'] / $routeTotals[$routeKey] * 100) : 0;
+                $isNewRoute = $routeKey !== $lastRoute;
+                $lastRoute  = $routeKey;
+            ?>
+            <tr <?= $isNewRoute ? 'class="table-active"' : '' ?>>
+              <td class="ps-4 fw-bold small"><?= $isNewRoute ? htmlspecialchars($vd['route_code'] . ' ' . $vd['route_name']) : '' ?></td>
+              <td class="fw-bold"><?= htmlspecialchars($vd['village']) ?></td>
+              <td class="text-center"><span class="badge bg-primary bg-opacity-10 text-primary fw-black"><?= $vd['cnt'] ?></span></td>
+              <td class="pe-4">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress flex-grow-1" style="height:6px">
+                    <div class="progress-bar bg-success" style="width:<?= $pct ?>%"></div>
+                  </div>
+                  <small class="text-muted fw-bold" style="min-width:2.5rem"><?= $pct ?>%</small>
+                </div>
+              </td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
 
 </div>
 

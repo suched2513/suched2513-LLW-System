@@ -75,6 +75,7 @@ try {
 
 $err      = htmlspecialchars($_GET['err'] ?? '', ENT_QUOTES, 'UTF-8');
 $semLabel = busSemesterLabel($semester);
+header('Content-Type: text/html; charset=UTF-8');
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
