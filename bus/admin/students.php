@@ -135,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } catch (Exception $e) {
         error_log($e->getMessage());
-        $err = 'เกิดข้อผิดพลาด กรุณาลองใหม่: ' . (str_contains($e->getMessage(), 'Duplicate') ? 'รหัสนักเรียนนี้มีอยู่แล้ว' : '');
+        $err = 'เกิดข้อผิดพลาด กรุณาลองใหม่' . (strpos($e->getMessage(), 'Duplicate') !== false ? ': รหัสนักเรียนนี้มีอยู่แล้ว' : '');
     }
 }
 
@@ -221,7 +221,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
           <div class="mb-2">
             <p class="fw-black small mb-2"><i class="fas fa-file-csv me-1 text-success"></i>นำเข้าจากไฟล์ CSV</p>
             <p class="text-muted small mb-2">คอลัมน์: <code>รหัสนักเรียน, เลขบัตรประชาชน, ชื่อ-นามสกุล, ห้อง</code></p>
-            <a href="/bus/admin/students_template.csv" class="btn btn-outline-success btn-sm w-100 mb-2 fw-bold">
+            <a href="/bus/admin/students_template.php" class="btn btn-outline-success btn-sm w-100 mb-2 fw-bold">
               <i class="fas fa-download me-1"></i> ดาวน์โหลด Template CSV
             </a>
             <form method="POST" enctype="multipart/form-data">
