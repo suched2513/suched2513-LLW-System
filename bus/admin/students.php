@@ -121,20 +121,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 SELECT a.student_id, a.name as fullname, a.classroom
                 FROM att_students a
                 WHERE a.student_id NOT IN (SELECT student_id FROM bus_students)
+                  AND LPAD(a.student_id, 5, '0') NOT IN (SELECT student_id FROM bus_students)
                 ORDER BY a.classroom, a.student_id
             ")->fetchAll(PDO::FETCH_ASSOC);
 
-            $defaultNid = '0000000000000'; // placeholder — staff must update
+            $defaultNid = '0000000000000';
             $hash       = password_hash($defaultNid, PASSWORD_BCRYPT);
             $masked     = '0-0000-xxxxx-xx-0';
 
             $stmt = $pdo->prepare("INSERT INTO bus_students (student_id, fullname, classroom, national_id_hash, national_id_masked, is_active) VALUES (?,?,?,?,?,0)");
             $count = 0;
             foreach ($rows as $r) {
-                $stmt->execute([$r['student_id'], $r['fullname'], $r['classroom'], $hash, $masked]);
+                $stmt->execute([str_pad(preg_replace('/\D/', '', $r['student_id']), 5, '0', STR_PAD_LEFT) ?: $r['student_id'], $r['fullname'], $r['classroom'], $hash, $masked]);
                 $count++;
             }
             $msg = "นำเข้าข้อมูล {$count} คนเรียบร้อยแล้ว (ต้องอัพเดทเลขบัตรประชาชนก่อนเปิดใช้งาน)";
+
+        } elseif ($action === 'sync_and_fix') {
+            $pdo->beginTransaction();
+
+            // Update fullname + classroom from att_students (match on raw or padded student_id)
+            $synced = $pdo->exec(
+                "UPDATE bus_students b
+                 JOIN att_students a ON a.student_id = b.student_id
+                                    OR LPAD(a.student_id, 5, '0') = b.student_id
+                 SET b.fullname = a.name, b.classroom = a.classroom"
+            );
+
+            // Pad purely-numeric student IDs to 5 digits
+            $padded = $pdo->exec(
+                "UPDATE bus_students
+                 SET student_id = LPAD(student_id, 5, '0')
+                 WHERE student_id REGEXP '^[0-9]+\$' AND CHAR_LENGTH(student_id) < 5"
+            );
+
+            $pdo->commit();
+            $msg = "ซิงค์ชื่อ-ห้อง {$synced} คน · เติม 0 นำหน้ารหัส {$padded} คน";
         }
     } catch (Exception $e) {
         error_log($e->getMessage());
@@ -251,6 +273,20 @@ require_once __DIR__ . '/../../components/layout_start.php';
             <button type="submit" class="btn btn-outline-secondary w-100 fw-bold small">
               <i class="fas fa-file-import me-1"></i> นำเข้าจากระบบเช็คชื่อ (att_students)
             </button>
+          </form>
+
+          <hr>
+
+          <!-- Fix garbled names + pad student IDs -->
+          <form method="POST" onsubmit="return confirm('อัปเดตชื่อ-ห้องทุกคนจาก att_students และเติม 0 นำหน้ารหัสนักเรียน?\n\nหมายเหตุ: ชื่อที่ไม่มีในระบบเช็คชื่อจะไม่ถูกแก้ไข')">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="sync_and_fix">
+            <button type="submit" class="btn btn-warning w-100 fw-bold small">
+              <i class="fas fa-sync-alt me-1"></i> ซิงค์ชื่อ + เติม 0 รหัสนักเรียน
+            </button>
+            <div class="form-text text-warning-emphasis mt-1">
+              แก้ชื่อภาษาต่างดาว + รหัส เช่น 4853 → 04853
+            </div>
           </form>
         </div>
       </div>
