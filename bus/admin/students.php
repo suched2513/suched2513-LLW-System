@@ -173,6 +173,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = "ลบรายชื่อภาษาต่างดาว {$deleted} คน";
             if ($skipped > 0) $msg .= " · ข้าม {$skipped} คน (มีการลงทะเบียนแล้ว — ใช้ปุ่ม 'ซิงค์ชื่อ' แทน)";
 
+        } elseif ($action === 'dedup') {
+            // Find pairs: old short ID (e.g. "4853") and padded version ("04853") both exist
+            $pairs = $pdo->query("
+                SELECT b_old.id   AS old_id,  b_old.student_id AS old_sid,
+                       b_old.national_id_hash AS old_hash,
+                       b_new.id   AS new_id,  b_new.student_id AS new_sid
+                FROM   bus_students b_old
+                JOIN   bus_students b_new
+                       ON  b_new.student_id = LPAD(b_old.student_id, 5, '0')
+                       AND b_new.id        != b_old.id
+                WHERE  b_old.student_id REGEXP '^[0-9]+\$'
+                  AND  CHAR_LENGTH(b_old.student_id) < 5
+            ")->fetchAll(PDO::FETCH_ASSOC);
+
+            $deleted = $merged = $skipped = 0;
+            $chkReg  = $pdo->prepare("SELECT COUNT(*) FROM bus_registrations WHERE student_id = ?");
+            $movReg  = $pdo->prepare("UPDATE bus_registrations SET student_id = ? WHERE student_id = ?");
+            $delStu  = $pdo->prepare("DELETE FROM bus_students WHERE id = ?");
+
+            $pdo->beginTransaction();
+            foreach ($pairs as $pair) {
+                $chkReg->execute([$pair['old_id']]);
+                $hasReg = (int)$chkReg->fetchColumn() > 0;
+
+                if (!$hasReg) {
+                    // No registrations on old record — safe to delete directly
+                    $delStu->execute([$pair['old_id']]);
+                    $deleted++;
+                } else {
+                    // Old has registrations — move them to the padded record then delete old
+                    try {
+                        $pdo->exec("SAVEPOINT sp{$pair['old_id']}");
+                        $movReg->execute([$pair['new_id'], $pair['old_id']]);
+                        $delStu->execute([$pair['old_id']]);
+                        $pdo->exec("RELEASE SAVEPOINT sp{$pair['old_id']}");
+                        $merged++;
+                    } catch (Exception $e2) {
+                        $pdo->exec("ROLLBACK TO SAVEPOINT sp{$pair['old_id']}");
+                        error_log('dedup skip '.$pair['old_sid'].': '.$e2->getMessage());
+                        $skipped++;
+                    }
+                }
+            }
+            $pdo->commit();
+
+            if ($deleted + $merged === 0 && $skipped === 0) {
+                $msg = 'ไม่พบรายชื่อซ้ำ';
+            } else {
+                $msg = "ลบรายชื่อซ้ำแล้ว: {$deleted} คน";
+                if ($merged  > 0) $msg .= " · โอนการลงทะเบียนและลบ {$merged} คน";
+                if ($skipped > 0) $msg .= " · ข้าม {$skipped} คน (มีข้อมูลซ้อนทับกัน — แก้เองได้)";
+            }
+
         } elseif ($action === 'activate_all') {
             $activated = $pdo->exec("UPDATE bus_students SET is_active = 1 WHERE is_active = 0");
             $msg = "เปิดใช้งาน {$activated} คนเรียบร้อยแล้ว (รหัสผ่านชั่วคราว: 0000000000000)";
@@ -283,6 +336,17 @@ require_once __DIR__ . '/../../components/layout_start.php';
               <button type="submit" class="btn btn-primary fw-bold flex-fill"><i class="fas fa-save me-1"></i><span id="stuBtnLabel">เพิ่มนักเรียน</span></button>
               <button type="button" class="btn btn-light fw-bold" onclick="resetStuForm()">ยกเลิก</button>
             </div>
+          </form>
+
+          <hr>
+
+          <!-- Deduplicate: remove old short-ID records that have a padded twin -->
+          <form method="POST" onsubmit="return confirm('ลบรายชื่อที่ซ้ำกัน?\n\nระบบจะเก็บรหัส 5 หลัก (เช่น 04853) และลบรหัสสั้น (เช่น 4853)\nถ้ารหัสสั้นมีการลงทะเบียน จะโอนข้อมูลไปยังรหัส 5 หลักก่อนลบ')">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="dedup">
+            <button type="submit" class="btn btn-outline-danger w-100 fw-bold small">
+              <i class="fas fa-copy me-1"></i> ลบรายชื่อซ้ำ (4853 / 04853)
+            </button>
           </form>
 
           <hr>
