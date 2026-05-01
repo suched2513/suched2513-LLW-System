@@ -169,6 +169,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = "ลบรายชื่อภาษาต่างดาว {$deleted} คน";
             if ($skipped > 0) $msg .= " · ข้าม {$skipped} คน (มีการลงทะเบียนแล้ว — ใช้ปุ่ม 'ซิงค์ชื่อ' แทน)";
 
+        } elseif ($action === 'activate_all') {
+            $activated = $pdo->exec("UPDATE bus_students SET is_active = 1 WHERE is_active = 0");
+            $msg = "เปิดใช้งาน {$activated} คนเรียบร้อยแล้ว (รหัสผ่านชั่วคราว: 0000000000000)";
+
         } elseif ($action === 'sync_and_fix') {
             $pdo->beginTransaction();
 
@@ -274,6 +278,20 @@ require_once __DIR__ . '/../../components/layout_start.php';
             <div class="d-flex gap-2">
               <button type="submit" class="btn btn-primary fw-bold flex-fill"><i class="fas fa-save me-1"></i><span id="stuBtnLabel">เพิ่มนักเรียน</span></button>
               <button type="button" class="btn btn-light fw-bold" onclick="resetStuForm()">ยกเลิก</button>
+            </div>
+          </form>
+
+          <hr>
+
+          <!-- Activate all inactive students -->
+          <form method="POST" onsubmit="return confirm('เปิดใช้งานนักเรียนทุกคนที่ยังปิดอยู่?\n\nรหัสผ่านชั่วคราวคือ: 0000000000000')">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="activate_all">
+            <button type="submit" class="btn btn-success w-100 fw-bold small">
+              <i class="fas fa-user-check me-1"></i> เปิดใช้งานทุกคน
+            </button>
+            <div class="form-text mt-1">
+              เปิดเฉพาะที่ยังปิดอยู่ · password ชั่วคราว: <code>0000000000000</code>
             </div>
           </form>
 
