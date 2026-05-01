@@ -24,19 +24,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $firstname = trim($_POST['firstname']);
         $lastname  = trim($_POST['lastname']);
         $role      = $_POST['role'];
-        $password  = $_POST['password'];
 
         $allowed_roles = ['super_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance'];
         if (!in_array($role, $allowed_roles)) {
             $msg = 'Role ไม่ถูกต้อง'; $msgType = 'error';
-        } elseif (strlen($password) < 6) {
-            $msg = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'; $msgType = 'error';
         } else {
             try {
-                $hash = password_hash($password, PASSWORD_BCRYPT);
-                $stmt = $pdo->prepare("INSERT INTO llw_users (username,firstname,lastname,password,role,status) VALUES (?,?,?,?,?, 'active')");
+                $hash = password_hash('123456', PASSWORD_BCRYPT);
+                $stmt = $pdo->prepare("INSERT INTO llw_users (username,firstname,lastname,password,role,status,force_password_change) VALUES (?,?,?,?,?,'active',1)");
                 $stmt->execute([$username, $firstname, $lastname, $hash, $role]);
-                $msg = "เพิ่มผู้ใช้ {$firstname} {$lastname} สำเร็จแล้ว";
+                $msg = "เพิ่มผู้ใช้ {$firstname} {$lastname} สำเร็จแล้ว (รหัสผ่านเริ่มต้น: 123456)";
             } catch (PDOException $e) {
                 if ($e->getCode() == 23000) {
                     $msg = 'Username นี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น'; $msgType = 'error';
@@ -65,10 +62,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'; $msgType = 'error';
         } else {
             $hash = password_hash($newp, PASSWORD_BCRYPT);
-            $stmt = $pdo->prepare("UPDATE llw_users SET password = ? WHERE user_id = ?");
+            $stmt = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 1 WHERE user_id = ?");
             $stmt->execute([$hash, $uid]);
-            $msg = 'รีเซ็ตรหัสผ่านเรียบร้อย';
+            $msg = 'รีเซ็ตรหัสผ่านเรียบร้อย (ผู้ใช้ต้องเปลี่ยนรหัสผ่านในครั้งถัดไป)';
         }
+    }
+
+    if ($action === 'reset_default') {
+        $uid  = (int)$_POST['user_id'];
+        $hash = password_hash('123456', PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 1 WHERE user_id = ?");
+        $stmt->execute([$hash, $uid]);
+        $msg = 'รีเซ็ตเป็นรหัสผ่านเริ่มต้น (123456) เรียบร้อย';
+    }
+
+    if ($action === 'reset_all_default') {
+        $myId = (int)$_SESSION['user_id'];
+        $hash = password_hash('123456', PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 1 WHERE user_id != ?");
+        $stmt->execute([$hash, $myId]);
+        $msg = 'รีเซ็ตรหัสผ่านทุกบัญชี (ยกเว้นคุณ) เป็น 123456 เรียบร้อย';
     }
 
     if ($action === 'delete') {
@@ -96,8 +109,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ─── Fetch Users ────────────────────────────────────────────────
 $users = $pdo->query("SELECT * FROM llw_users ORDER BY role, firstname")->fetchAll(PDO::FETCH_ASSOC);
-$totalUsers   = count($users);
-$activeUsers  = count(array_filter($users, fn($u) => $u['status'] === 'active'));
+$totalUsers    = count($users);
+$activeUsers   = count(array_filter($users, fn($u) => $u['status'] === 'active'));
+$pendingChange = count(array_filter($users, fn($u) => !empty($u['force_password_change'])));
 
 $roleLabel = [
     'super_admin' => ['label' => 'Super Admin', 'color' => 'bg-purple-100 text-purple-700'],
@@ -179,6 +193,10 @@ $roleLabel = [
                 <?= htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') ?>
             </div>
             <?php endif; ?>
+            <button onclick="confirmResetAll()"
+                class="flex items-center gap-2 bg-amber-100 text-amber-600 px-6 py-3 rounded-2xl font-bold hover:bg-amber-500 hover:text-white transition-all">
+                <i class="bi bi-arrow-repeat text-lg"></i> Reset รหัสทั้งหมด
+            </button>
             <button onclick="confirmClear()"
                 class="flex items-center gap-2 bg-rose-100 text-rose-500 px-6 py-3 rounded-2xl font-bold hover:bg-rose-500 hover:text-white transition-all">
                 <i class="bi bi-trash3 text-lg"></i> ล้างทั้งหมด
@@ -195,7 +213,7 @@ $roleLabel = [
     </header>
 
     <!-- Stats -->
-    <div class="grid grid-cols-2 gap-6 mb-8 max-w-md">
+    <div class="grid grid-cols-3 gap-4 mb-8 max-w-xl">
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ผู้ใช้ทั้งหมด</p>
             <p class="text-4xl font-black text-slate-800 mt-1"><?= $totalUsers ?></p>
@@ -203,6 +221,10 @@ $roleLabel = [
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ใช้งานอยู่</p>
             <p class="text-4xl font-black text-emerald-600 mt-1"><?= $activeUsers ?></p>
+        </div>
+        <div class="bg-amber-50 rounded-2xl shadow-sm border border-amber-100 p-5">
+            <p class="text-[10px] font-black text-amber-500 uppercase tracking-widest">รอเปลี่ยนรหัส</p>
+            <p class="text-4xl font-black text-amber-600 mt-1"><?= $pendingChange ?></p>
         </div>
     </div>
 
@@ -257,15 +279,32 @@ $roleLabel = [
                             <span class="w-2 h-2 bg-slate-300 rounded-full"></span> ปิดใช้งาน
                         </span>
                         <?php endif; ?>
+                        <?php if (!empty($u['force_password_change'])): ?>
+                        <span class="mt-1 flex items-center gap-1 text-amber-500 text-[10px] font-black">
+                            <i class="bi bi-exclamation-triangle-fill"></i> รอเปลี่ยนรหัส
+                        </span>
+                        <?php endif; ?>
                     </td>
                     <td class="px-6 py-5 text-xs text-slate-500 font-medium">
                         <?= $u['last_login'] ? date('d/m/').((int)date('Y')+543).' '.date('H:i', strtotime($u['last_login'])) : '—' ?>
                     </td>
                     <td class="px-6 py-5 text-center">
                         <div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                            <!-- Reset Password -->
+                            <!-- Reset to Default 123456 -->
+                            <?php if (!$isMe): ?>
+                            <form method="POST" class="inline">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="reset_default">
+                                <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
+                                <button type="submit"
+                                    class="w-8 h-8 bg-slate-100 text-slate-500 rounded-xl flex items-center justify-center hover:bg-indigo-500 hover:text-white transition-all" title="Reset รหัสเป็น 123456">
+                                    <i class="bi bi-arrow-repeat text-xs"></i>
+                                </button>
+                            </form>
+                            <?php endif; ?>
+                            <!-- Reset Password (custom) -->
                             <button onclick="openReset(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['firstname'], ENT_QUOTES) ?>')"
-                                class="w-8 h-8 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center hover:bg-amber-500 hover:text-white transition-all" title="รีเซ็ตรหัสผ่าน">
+                                class="w-8 h-8 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center hover:bg-amber-500 hover:text-white transition-all" title="ตั้งรหัสผ่านเอง">
                                 <i class="bi bi-key-fill text-xs"></i>
                             </button>
                             <!-- Toggle Status -->
@@ -342,9 +381,12 @@ $roleLabel = [
                     <option value="super_admin">Super Admin</option>
                 </select>
             </div>
-            <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">รหัสผ่าน</label>
-                <input type="password" name="password" required autocomplete="new-password" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="อย่างน้อย 6 ตัวอักษร">
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                <i class="bi bi-info-circle-fill text-amber-500 flex-shrink-0 mt-0.5"></i>
+                <div>
+                    <p class="text-amber-800 font-black text-xs">รหัสผ่านเริ่มต้น: <span class="font-mono bg-amber-100 px-1.5 py-0.5 rounded-lg">123456</span></p>
+                    <p class="text-amber-600 text-[10px] mt-0.5">ผู้ใช้จะถูกบังคับให้เปลี่ยนรหัสผ่านเมื่อ Login ครั้งแรก</p>
+                </div>
             </div>
             <div class="flex gap-3 pt-2">
                 <button type="button" onclick="document.getElementById('modal-add').classList.add('hidden')"
@@ -450,6 +492,27 @@ $roleLabel = [
 </form>
 
 <script>
+function confirmResetAll() {
+    Swal.fire({
+        title: 'Reset รหัสผ่านทุกบัญชี?',
+        html: 'รหัสผ่านของ<b>ทุกบัญชี (ยกเว้นคุณ)</b> จะถูกเปลี่ยนเป็น <b class="font-mono">123456</b><br><small class="text-amber-600 font-bold">ผู้ใช้ทุกคนต้องเปลี่ยนรหัสผ่านใน Login ครั้งถัดไป</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f59e0b',
+        confirmButtonText: 'ยืนยัน Reset ทั้งหมด',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) {
+            const f = document.createElement('form');
+            f.method = 'POST';
+            f.innerHTML = '<input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="action" value="reset_all_default">';
+            document.body.appendChild(f);
+            f.submit();
+        }
+    });
+}
+
 function confirmClear() {
     Swal.fire({
         title: 'ล้างข้อมูลผู้ใช้ทั้งหมด?',

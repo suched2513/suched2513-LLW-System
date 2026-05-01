@@ -15,6 +15,9 @@ $pdo = getPdo();
 $msg = '';
 $msgType = 'success';
 
+// Forced mode: ถูก redirect มาจาก login เพราะยังไม่ได้เปลี่ยนรหัสผ่าน
+$forcedMode = !empty($_SESSION['force_password_change']);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $current_pass = $_POST['current_password'] ?? '';
@@ -23,7 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user_id      = $_SESSION['user_id'];
 
     try {
-        // ดึงข้อมูลรหัสผ่านปัจจุบันมาตรวจสอบ
         $stmt = $pdo->prepare("SELECT password FROM llw_users WHERE user_id = ?");
         $stmt->execute([$user_id]);
         $user = $stmt->fetch();
@@ -31,22 +33,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$user) {
             $msg = 'ไม่พบข้อมูลผู้ใช้งาน';
             $msgType = 'error';
-        } elseif (!password_verify($current_pass, $user['password'])) {
+        } elseif (!$forcedMode && !password_verify($current_pass, $user['password'])) {
             $msg = 'รหัสผ่านปัจจุบันไม่ถูกต้อง';
             $msgType = 'error';
         } elseif (strlen($new_pass) < 6) {
             $msg = 'รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร';
             $msgType = 'error';
+        } elseif ($new_pass === '123456') {
+            $msg = 'กรุณาตั้งรหัสผ่านใหม่ที่ไม่ใช่ 123456';
+            $msgType = 'error';
         } elseif ($new_pass !== $confirm_pass) {
             $msg = 'การยืนยันรหัสผ่านไม่ตรงกัน';
             $msgType = 'error';
         } else {
-            // อัปเดตรหัสผ่านใหม่
             $new_hash = password_hash($new_pass, PASSWORD_BCRYPT);
-            $update = $pdo->prepare("UPDATE llw_users SET password = ? WHERE user_id = ?");
+            $update = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 0 WHERE user_id = ?");
             $update->execute([$new_hash, $user_id]);
+            $_SESSION['force_password_change'] = 0;
             $msg = 'เปลี่ยนรหัสผ่านสำเร็จแล้ว';
             $msgType = 'success';
+
+            // Forced mode: redirect ไปหน้างานทันที
+            if ($forcedMode) {
+                $map = [
+                    'super_admin' => '/central_dashboard.php',
+                    'wfh_admin'   => '/admin/dashboard.php',
+                    'wfh_staff'   => '/user/dashboard.php',
+                    'cb_admin'    => '/chromebook/index.php',
+                    'att_teacher' => '/attendance_system/dashboard.php',
+                    'bus_admin'   => '/bus/admin/dashboard.php',
+                    'bus_finance' => '/bus/admin/dashboard.php',
+                ];
+                header('Location: ' . $base_path . ($map[$_SESSION['llw_role']] ?? '/index.php')); exit();
+            }
         }
     } catch (Exception $e) {
         error_log($e->getMessage());
@@ -55,8 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pageTitle = 'เปลี่ยนรหัสผ่าน';
-$pageSubtitle = 'ความปลอดภัยของบัญชีผู้ใช้งาน';
+$pageTitle = $forcedMode ? 'ตั้งรหัสผ่านครั้งแรก' : 'เปลี่ยนรหัสผ่าน';
+$pageSubtitle = $forcedMode ? 'กรุณาตั้งรหัสผ่านส่วนตัวก่อนใช้งานระบบ' : 'ความปลอดภัยของบัญชีผู้ใช้งาน';
 $activeSystem = 'portal';
 
 require_once __DIR__ . '/components/layout_start.php';
@@ -78,19 +97,32 @@ require_once __DIR__ . '/components/layout_start.php';
 
     <!-- Change Password Form -->
     <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-100/50 border border-slate-100 p-8 sm:p-10">
+
+        <?php if ($forcedMode): ?>
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
+            <i class="bi bi-exclamation-triangle-fill text-amber-500 text-lg flex-shrink-0 mt-0.5"></i>
+            <div>
+                <p class="text-amber-800 font-black text-sm">กรุณาตั้งรหัสผ่านใหม่ก่อนใช้งาน</p>
+                <p class="text-amber-600 text-xs mt-0.5">รหัสผ่านใหม่จะใช้กับ<strong>ทุกระบบงาน</strong>ของโรงเรียน กรุณาจดจำไว้และอย่าแชร์ให้ผู้อื่น</p>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <form method="POST" class="space-y-6">
             <?= csrf_field() ?>
+            <?php if (!$forcedMode): ?>
             <div>
                 <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 ml-1">รหัสผ่านปัจจุบัน (Current Password)</label>
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
                         <i class="bi bi-lock"></i>
                     </div>
-                    <input type="password" name="current_password" required 
+                    <input type="password" name="current_password" required
                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-4 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                            placeholder="ระบุรหัสผ่านที่คุณใช้อยู่ขณะนี้">
                 </div>
             </div>
+            <?php endif; ?>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                 <div>

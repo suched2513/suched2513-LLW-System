@@ -105,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['fullname']  = trim($user['firstname'] . ' ' . $user['lastname']);
             $_SESSION['llw_role']  = $user['role'];
             $_SESSION['role']      = in_array($user['role'], ['super_admin','wfh_admin']) ? 'admin' : 'user';
+            $_SESSION['force_password_change'] = (int)($user['force_password_change'] ?? 0);
 
             if (in_array($user['role'], ['att_teacher','super_admin'])) {
                 $t = $conn->prepare("SELECT id, name FROM att_teachers WHERE username = ? LIMIT 1");
@@ -116,6 +117,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $u = $conn->prepare("UPDATE llw_users SET last_login = NOW() WHERE user_id = ?");
             $u->bind_param('i', $user['user_id']); $u->execute(); $u->close();
+
+            // Force password change on first login
+            if (!empty($user['force_password_change'])) {
+                header('Location: ' . $base_path . '/change_password.php'); exit();
+            }
 
             _redirect_by_role($user['role']);
         } else {
