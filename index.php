@@ -79,6 +79,20 @@ if ($isLoggedIn) {
         case 'cb_admin':
             $quickAccess = [['url' => 'chromebook/index.php', 'icon' => 'bi-laptop', 'label' => 'Chromebook', 'color' => 'cyan']];
             break;
+        case 'bus_admin':
+            $quickAccess = [
+                ['url' => 'bus/admin/dashboard.php', 'icon' => 'bi-speedometer2', 'label' => 'Bus Dashboard', 'color' => 'orange'],
+                ['url' => 'bus/admin/students.php',  'icon' => 'bi-people-fill',  'label' => 'รายชื่อนักเรียน', 'color' => 'blue'],
+                ['url' => 'bus/admin/routes.php',    'icon' => 'bi-bus-front',    'label' => 'จัดการสายรถ',   'color' => 'amber'],
+            ];
+            break;
+        case 'bus_finance':
+            $quickAccess = [
+                ['url' => 'bus/admin/dashboard.php',    'icon' => 'bi-speedometer2',       'label' => 'Bus Dashboard', 'color' => 'orange'],
+                ['url' => 'bus/finance/payments.php',   'icon' => 'bi-cash-coin',          'label' => 'บันทึกการเงิน', 'color' => 'emerald'],
+                ['url' => 'bus/finance/cancellations.php','icon' => 'bi-x-circle-fill',    'label' => 'คำขอยกเลิก',   'color' => 'rose'],
+            ];
+            break;
         default:
             $quickAccess = [['url' => 'user/dashboard.php', 'icon' => 'bi-geo-alt-fill', 'label' => 'ลงเวลา', 'color' => 'emerald']];
     }

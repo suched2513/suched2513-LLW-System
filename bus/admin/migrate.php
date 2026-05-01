@@ -85,6 +85,21 @@ $tables = [
         INDEX idx_registration_id (registration_id),
         INDEX idx_status (status)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+    'bus_payment_slips' => "CREATE TABLE IF NOT EXISTS bus_payment_slips (
+        id              INT AUTO_INCREMENT PRIMARY KEY,
+        registration_id INT           NOT NULL,
+        amount          DECIMAL(10,2) NOT NULL,
+        slip_image      VARCHAR(500)  NOT NULL,
+        note            TEXT          NULL,
+        status          ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+        admin_note      TEXT          NULL,
+        reviewed_by     INT           NULL,
+        reviewed_at     DATETIME      NULL,
+        created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_registration_id (registration_id),
+        INDEX idx_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 ];
 
 // Check current status
@@ -92,6 +107,10 @@ foreach (array_keys($tables) as $tbl) {
     $exists = $pdo->query("SHOW TABLES LIKE '$tbl'")->rowCount() > 0;
     $results[$tbl] = ['exists' => $exists, 'created' => false, 'error' => ''];
 }
+// Check slips upload directory
+$slipsDirCheck = __DIR__ . '/../../uploads/slips/';
+$results['_slips_dir'] = ['exists' => is_dir($slipsDirCheck), 'created' => false, 'error' => ''];
+
 // Check village column
 try {
     $hasVillage = $pdo->query("SHOW COLUMNS FROM bus_students LIKE 'village'")->rowCount() > 0;
@@ -123,6 +142,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'run')
         } catch (Exception $e) {
             $results[$tbl]['error'] = $e->getMessage();
         }
+    }
+
+    // Ensure uploads/slips directory exists
+    $slipsDir = __DIR__ . '/../../uploads/slips/';
+    if (!is_dir($slipsDir)) {
+        mkdir($slipsDir, 0755, true);
+        $results['_slips_dir'] = ['exists' => false, 'created' => true, 'error' => ''];
+    } else {
+        $results['_slips_dir'] = ['exists' => true, 'created' => false, 'error' => ''];
     }
 
     // Schema updates: add village column if missing

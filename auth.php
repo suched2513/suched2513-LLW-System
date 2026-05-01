@@ -66,6 +66,8 @@ $roleMap = [
     'wfh_staff'   => 'user/dashboard.php',
     'cb_admin'    => 'chromebook/index.php',
     'att_teacher' => 'attendance_system/dashboard.php',
+    'bus_admin'   => 'bus/admin/dashboard.php',
+    'bus_finance' => 'bus/admin/dashboard.php',
 ];
 
 // ถ้ามี redirect param ใน session (จาก login.php) และ path ปลอดภัย

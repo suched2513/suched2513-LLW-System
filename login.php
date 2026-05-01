@@ -24,6 +24,7 @@ if (str_contains($redirect, 'chromebook'))       $ctx = 'chromebook';
 elseif (str_contains($redirect, 'attendance'))   $ctx = 'attendance';
 elseif (str_contains($redirect, 'admin') || str_contains($redirect, 'user/')) $ctx = 'wfh';
 elseif (str_contains($redirect, 'leave'))        $ctx = 'leave';
+elseif (str_contains($redirect, 'bus'))          $ctx = 'bus';
 
 $ctxMap = [
     'chromebook' => [
@@ -61,6 +62,15 @@ $ctxMap = [
         'shadow'   => 'shadow-rose-500/20',
         'accent'   => '#f43f5e',
         'badge'    => 'LEAVE SYSTEM',
+    ],
+    'bus' => [
+        'title'    => 'ระบบรถรับส่งนักเรียน',
+        'subtitle' => 'จัดการสายรถและบันทึกการชำระเงินค่าบริการ',
+        'icon'     => 'bi-bus-front-fill',
+        'grad'     => 'from-orange-500 to-amber-600',
+        'shadow'   => 'shadow-orange-500/20',
+        'accent'   => '#f97316',
+        'badge'    => 'BUS SYSTEM',
     ],
     'default' => [
         'title'    => 'LLW Platinum Portal',
@@ -131,6 +141,8 @@ function _redirect_by_role(string $role): void {
         'wfh_staff'   => '/user/dashboard.php',
         'cb_admin'    => '/chromebook/index.php',
         'att_teacher' => '/attendance_system/dashboard.php',
+        'bus_admin'   => '/bus/admin/dashboard.php',
+        'bus_finance' => '/bus/admin/dashboard.php',
     ];
     
     $target = $map[$role] ?? '/index.php';
