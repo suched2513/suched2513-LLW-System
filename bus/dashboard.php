@@ -66,9 +66,22 @@ try {
     $vStmt = $pdo->prepare("SELECT village FROM bus_students WHERE id = ? LIMIT 1");
     $vStmt->execute([$busId]);
     $village = (string)($vStmt->fetchColumn() ?: '');
+
+    $slips = [];
+    if ($reg) {
+        $slipStmt = $pdo->prepare("
+            SELECT id, amount, transfer_date, status, admin_note, created_at
+            FROM bus_payment_slips
+            WHERE registration_id = ?
+            ORDER BY created_at DESC
+            LIMIT 10
+        ");
+        $slipStmt->execute([$reg['id']]);
+        $slips = $slipStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 } catch (Exception $e) {
     error_log($e->getMessage());
-    $history = []; $hasRoutes = false;
+    $history = []; $hasRoutes = false; $slips = [];
 }
 
 $balance    = $reg ? max(0, (float)$reg['price'] - $paid) : 0;
@@ -339,7 +352,78 @@ body { font-family:'Prompt',sans-serif; }
                 <p class="text-[9px] text-rose-400">บาท</p>
             </div>
         </div>
+        <?php if ($reg['status'] === 'active'): ?>
+        <a href="/bus/upload_slip.php"
+           class="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-orange-500 to-amber-500
+                  text-white rounded-2xl font-black text-sm shadow-lg shadow-orange-200/60 active:scale-95 transition-transform">
+            <i class="bi bi-camera-fill text-base"></i> แนบสลิปโอนเงิน
+        </a>
+        <?php else: ?>
         <p class="text-[10px] text-slate-400 text-center">ติดต่อเจ้าหน้าที่การเงินเพื่อชำระเงินค่าบริการ</p>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <!-- Payment Slips Status -->
+    <?php if (!empty($slips)): ?>
+    <?php
+    $slipColorMap = [
+        'pending'  => ['amber',   'bi-hourglass-split',   'รอตรวจสอบ'],
+        'approved' => ['emerald', 'bi-check-circle-fill', 'อนุมัติแล้ว'],
+        'rejected' => ['rose',    'bi-x-circle-fill',     'ปฏิเสธ'],
+    ];
+    $hasPendingSlip = !empty(array_filter($slips, fn($s) => $s['status'] === 'pending'));
+    ?>
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-50">
+            <div class="flex items-center gap-2">
+                <i class="bi bi-image text-orange-400"></i>
+                <p class="font-black text-slate-700 text-sm">สลิปโอนเงินของคุณ</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <?php if ($hasPendingSlip): ?>
+                <span class="text-[9px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">รอตรวจสอบ</span>
+                <?php endif; ?>
+                <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full"><?= count($slips) ?></span>
+            </div>
+        </div>
+        <div class="divide-y divide-slate-50">
+            <?php foreach ($slips as $slip):
+                [$sc, $si, $sl] = $slipColorMap[$slip['status']] ?? $slipColorMap['pending'];
+            ?>
+            <div class="px-5 py-3.5">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-<?= $sc ?>-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <i class="bi <?= $si ?> text-<?= $sc ?>-500 text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-bold text-sm text-slate-700"><?= number_format((float)$slip['amount'], 0) ?> บาท</p>
+                        <p class="text-[10px] text-slate-400">
+                            ส่งเมื่อ <?= thDate($slip['created_at'], $thaiMonths) ?>
+                            <?php if ($slip['transfer_date']): ?> · โอน <?= thDate($slip['transfer_date'], $thaiMonths) ?><?php endif; ?>
+                        </p>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-black flex-shrink-0 bg-<?= $sc ?>-100 text-<?= $sc ?>-700">
+                        <?= $sl ?>
+                    </span>
+                </div>
+                <?php if ($slip['status'] === 'rejected' && $slip['admin_note']): ?>
+                <div class="mt-2 ml-12 bg-rose-50 rounded-xl px-3 py-2">
+                    <p class="text-[11px] text-rose-600"><i class="bi bi-chat-text me-1"></i><?= htmlspecialchars($slip['admin_note'], ENT_QUOTES, 'UTF-8') ?></p>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php if (!$isPaidFull && $reg['status'] === 'active'): ?>
+        <div class="px-5 py-3 border-t border-slate-50">
+            <a href="/bus/upload_slip.php"
+               class="w-full flex items-center justify-center gap-2 py-3 border-2 border-orange-200 text-orange-500 rounded-2xl
+                      font-black text-xs active:bg-orange-50 transition-colors">
+                <i class="bi bi-plus-circle-fill"></i> แนบสลิปเพิ่มเติม
+            </a>
+        </div>
+        <?php endif; ?>
     </div>
     <?php endif; ?>
 
@@ -398,6 +482,18 @@ body { font-family:'Prompt',sans-serif; }
                     <p class="text-[10px] text-slate-400 mt-0.5"><?= count($history) ?> รายการ</p>
                 </div>
             </a>
+            <?php if ($reg && $reg['status'] === 'active' && !$isPaidFull): ?>
+            <a href="/bus/upload_slip.php"
+               class="bg-white rounded-2xl p-4 shadow-sm border border-orange-100 flex items-center gap-3 active:bg-orange-50 transition-colors group">
+                <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0 group-active:bg-orange-200">
+                    <i class="bi bi-camera-fill text-orange-500 text-lg"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="font-black text-slate-700 text-sm leading-tight">แนบสลิปโอนเงิน</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">อัปโหลดหลักฐานการชำระ</p>
+                </div>
+            </a>
+            <?php endif; ?>
             <?php if ($reg && $reg['status'] === 'active' && (!$cancelReq || $cancelReq['status'] === 'rejected')): ?>
             <button onclick="showCancelModal()"
                 class="bg-white rounded-2xl p-4 shadow-sm border border-rose-100 flex items-center gap-3 active:bg-rose-50 transition-colors group text-left">
