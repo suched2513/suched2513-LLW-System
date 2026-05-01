@@ -19,6 +19,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sid = trim($_POST['student_id'] ?? '');
     $nid = trim($_POST['national_id'] ?? '');
     $nid = preg_replace('/\D/', '', $nid); // digits only
+    // Normalize student ID: if purely numeric, pad to 5 digits (e.g. 4853 → 04853)
+    if ($sid !== '' && ctype_digit($sid)) {
+        $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
+    }
 
     if ($sid === '' || strlen($nid) !== 13) {
         $error = 'กรุณากรอกรหัสนักเรียนและเลขบัตรประชาชน 13 หลักให้ถูกต้อง';
