@@ -137,6 +137,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $msg = "นำเข้าข้อมูล {$count} คนเรียบร้อยแล้ว (ต้องอัพเดทเลขบัตรประชาชนก่อนเปิดใช้งาน)";
 
+        } elseif ($action === 'delete_garbled') {
+            $pdo->beginTransaction();
+
+            // Detect garbled: names containing chars outside Thai (U+0E00–U+0E7F) and printable ASCII
+            $rows = $pdo->query("SELECT id, fullname FROM bus_students")->fetchAll(PDO::FETCH_ASSOC);
+            $toDelete = [];
+            foreach ($rows as $r) {
+                $invalid = preg_replace('/[\x{0020}-\x{007E}\x{0E00}-\x{0E7F}]/u', '', $r['fullname']);
+                if (mb_strlen($invalid, 'UTF-8') > 0) {
+                    $toDelete[] = (int)$r['id'];
+                }
+            }
+
+            $deleted = $skipped = 0;
+            if (!empty($toDelete)) {
+                $chk = $pdo->prepare("SELECT COUNT(*) FROM bus_registrations WHERE student_id = ?");
+                $del = $pdo->prepare("DELETE FROM bus_students WHERE id = ?");
+                foreach ($toDelete as $id) {
+                    $chk->execute([$id]);
+                    if ((int)$chk->fetchColumn() === 0) {
+                        $del->execute([$id]);
+                        $deleted++;
+                    } else {
+                        $skipped++;
+                    }
+                }
+            }
+
+            $pdo->commit();
+            $msg = "ลบรายชื่อภาษาต่างดาว {$deleted} คน";
+            if ($skipped > 0) $msg .= " · ข้าม {$skipped} คน (มีการลงทะเบียนแล้ว — ใช้ปุ่ม 'ซิงค์ชื่อ' แทน)";
+
         } elseif ($action === 'sync_and_fix') {
             $pdo->beginTransaction();
 
@@ -273,6 +305,20 @@ require_once __DIR__ . '/../../components/layout_start.php';
             <button type="submit" class="btn btn-outline-secondary w-100 fw-bold small">
               <i class="fas fa-file-import me-1"></i> นำเข้าจากระบบเช็คชื่อ (att_students)
             </button>
+          </form>
+
+          <hr>
+
+          <!-- Delete garbled names -->
+          <form method="POST" onsubmit="return confirm('ลบรายชื่อนักเรียนที่ชื่อเป็นภาษาต่างดาวทั้งหมด?\n\nนักเรียนที่มีการลงทะเบียนแล้วจะไม่ถูกลบ')">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="delete_garbled">
+            <button type="submit" class="btn btn-danger w-100 fw-bold small">
+              <i class="fas fa-trash-alt me-1"></i> ลบรายชื่อภาษาต่างดาวทั้งหมด
+            </button>
+            <div class="form-text text-danger mt-1">
+              ลบเฉพาะที่ยังไม่มีการลงทะเบียน
+            </div>
           </form>
 
           <hr>
