@@ -212,7 +212,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
           </tbody>
           <tfoot class="table-light fw-bold">
             <tr>
-              <td colspan="5" class="ps-4">รวม</td>
+              <td colspan="6" class="ps-4">รวม</td>
               <td class="text-end"><?= number_format($totalPrice, 0) ?></td>
               <td class="text-end text-success"><?= number_format($totalPaid, 0) ?></td>
               <td class="text-end pe-4 text-danger"><?= number_format($totalUnpaid, 0) ?></td>
