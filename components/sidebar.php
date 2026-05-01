@@ -132,13 +132,27 @@ $subMenus = [
                         <p>แดชบอร์ดกลาง</p>
                     </a>
                 </li>
-                <?php if ($userRole === 'super_admin'): ?>
-                <li class="nav-item">
-                    <a href="<?= $base_path ?>/bus/admin/dashboard.php" class="nav-link <?= $activeSystem === 'bus' ? 'active' : '' ?>">
+                <?php if (in_array($userRole, ['super_admin','bus_admin','bus_finance'])): ?>
+                <li class="nav-item <?= $activeSystem === 'bus' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'bus' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-bus text-warning"></i>
-                        <p class="font-weight-bold text-warning">ระบบรถรับส่งนักเรียน</p>
+                        <p class="text-warning">ระบบรถรับส่งนักเรียน <i class="nav-arrow fas fa-angle-left"></i></p>
                     </a>
+                    <ul class="nav nav-treeview">
+                        <?php foreach ($subMenus['bus'] as $sub):
+                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                        ?>
+                        <li class="nav-item">
+                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
+                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
+                                <p><?= $sub['label'] ?></p>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
                 </li>
+                <?php endif; ?>
+                <?php if ($userRole === 'super_admin'): ?>
                 <li class="nav-item">
                     <a href="<?= $base_path ?>/manage_users.php" class="nav-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-user-shield"></i>
