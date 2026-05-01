@@ -662,6 +662,7 @@ async function handleImport() {
 
     const formData = new FormData();
     formData.append('csv_file', fileInput.files[0]);
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
 
     Swal.fire({
         title: 'กำลังนำเข้าข้อมูล...',

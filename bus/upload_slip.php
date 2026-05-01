@@ -57,7 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = $errCodes[$file['error'] ?? UPLOAD_ERR_NO_FILE] ?? 'กรุณาแนบรูปสลิปการโอนเงิน';
     } else {
         $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        $mime         = mime_content_type($file['tmp_name']);
+        $finfo        = new finfo(FILEINFO_MIME_TYPE);
+        $mime         = $finfo->file($file['tmp_name']);
         $ext          = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $extMap       = ['jpg' => true, 'jpeg' => true, 'png' => true, 'gif' => true, 'webp' => true];
 

@@ -5,7 +5,7 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 session_start();
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config.php';
 
 // Auth guard: ต้องเป็น super_admin เท่านั้น
 if (!isset($_SESSION['llw_role']) || $_SESSION['llw_role'] !== 'super_admin') {
@@ -19,6 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['status' => 'error', 'message' => 'Method Not Allowed']);
     exit;
 }
+
+csrf_verify();
 
 if (!isset($_FILES['csv_file'])) {
     echo json_encode(['status' => 'error', 'message' => 'ไม่พบไฟล์ที่อัปโหลด']);
