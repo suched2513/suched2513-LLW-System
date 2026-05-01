@@ -67,6 +67,7 @@ function renderSidebar($activePage = '') {
         echo navLink('/admin/import_budget.php','bi-upload','Import งบประมาณ',$activePage);
     }
     echo '<div class="nav-section">บัญชี</div>';
+    echo '<a href="/index.php"><i class="bi bi-grid-fill"></i> กลับเมนูหลัก LLW</a>';
     echo '<a href="' . BASE_URL . '/logout.php"><i class="bi bi-box-arrow-right"></i> ออกจากระบบ</a>';
     echo '</div></div>';
 }
