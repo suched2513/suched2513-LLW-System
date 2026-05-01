@@ -39,7 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'teacher'          => BASE_URL.'/teacher/my_projects.php',
                 'att_teacher'      => BASE_URL.'/teacher/my_projects.php',
                 'wfh_staff'        => BASE_URL.'/teacher/my_projects.php',
-                'cb_admin'         => BASE_URL.'/teacher/my_projects.php'
+                'cb_admin'         => BASE_URL.'/teacher/my_projects.php',
+                'bus_admin'        => BASE_URL.'/teacher/my_projects.php',
+                'bus_finance'      => BASE_URL.'/teacher/my_projects.php'
             ];
             header('Location: ' . ($redirects[$user['role']] ?? BASE_URL . '/index.php'));
             exit;

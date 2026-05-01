@@ -32,7 +32,9 @@ function requireRole($roles) {
         'cb_admin'=>'teacher',
         'procurement_head'=>'procurement_head',
         'finance_head'=>'finance_head',
-        'deputy_director'=>'deputy_director'
+        'deputy_director'=>'deputy_director',
+        'bus_admin'=>'teacher',
+        'bus_finance'=>'teacher'
     ];
     $mappedRole = $map[$currentRole] ?? $currentRole;
     
