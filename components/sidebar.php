@@ -99,11 +99,11 @@ $subMenus = [
     ],
     'bus' => [
         ['icon' => 'fas fa-tachometer-alt',       'label' => 'ภาพรวมระบบ',       'url' => $base_path . '/bus/admin/dashboard.php'],
-        ['icon' => 'fas fa-bus',                  'label' => 'จัดการสายรถ',       'url' => $base_path . '/bus/admin/routes.php',   'roles' => ['super_admin','bus_admin']],
-        ['icon' => 'fas fa-user-graduate',        'label' => 'รายชื่อนักเรียน',   'url' => $base_path . '/bus/admin/students.php', 'roles' => ['super_admin','bus_admin']],
-        ['icon' => 'fas fa-chart-bar',            'label' => 'รายงาน',             'url' => $base_path . '/bus/admin/reports.php',  'roles' => ['super_admin','bus_admin']],
-        ['icon' => 'fas fa-file-invoice-dollar',  'label' => 'บันทึกการชำระเงิน', 'url' => $base_path . '/bus/finance/payments.php',       'roles' => ['super_admin','bus_admin','bus_finance']],
-        ['icon' => 'fas fa-times-circle',         'label' => 'คำขอยกเลิก',        'url' => $base_path . '/bus/finance/cancellations.php',  'roles' => ['super_admin','bus_admin','bus_finance']],
+        ['icon' => 'fas fa-bus',                  'label' => 'จัดการสายรถ',       'url' => $base_path . '/bus/admin/routes.php',   'roles' => ['super_admin','bus_admin','wfh_admin']],
+        ['icon' => 'fas fa-user-graduate',        'label' => 'รายชื่อนักเรียน',   'url' => $base_path . '/bus/admin/students.php', 'roles' => ['super_admin','bus_admin','wfh_admin']],
+        ['icon' => 'fas fa-chart-bar',            'label' => 'รายงาน',             'url' => $base_path . '/bus/admin/reports.php'],
+        ['icon' => 'fas fa-file-invoice-dollar',  'label' => 'บันทึกการชำระเงิน', 'url' => $base_path . '/bus/finance/payments.php',       'roles' => ['super_admin','bus_admin','bus_finance','wfh_admin']],
+        ['icon' => 'fas fa-times-circle',         'label' => 'คำขอยกเลิก',        'url' => $base_path . '/bus/finance/cancellations.php',  'roles' => ['super_admin','bus_admin','bus_finance','wfh_admin']],
     ],
 ];
 
@@ -132,7 +132,7 @@ $subMenus = [
                         <p>แดชบอร์ดกลาง</p>
                     </a>
                 </li>
-                <?php if (in_array($userRole, ['super_admin','bus_admin','bus_finance'])): ?>
+                <?php if (in_array($userRole, ['super_admin','bus_admin','bus_finance','wfh_admin','att_teacher'])): ?>
                 <li class="nav-item <?= $activeSystem === 'bus' ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= $activeSystem === 'bus' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-bus text-warning"></i>

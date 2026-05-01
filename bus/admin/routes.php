@@ -2,7 +2,7 @@
 session_start();
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../config.php';
-busRequireStaff(['bus_admin', 'super_admin']);
+busRequireStaff(['bus_admin', 'super_admin', 'wfh_admin']);
 
 $pdo      = getPdo();
 $semester = busGetSemester();

@@ -33,7 +33,7 @@ function busRequireStudent(): void {
     }
 }
 
-function busRequireStaff(array $roles = ['bus_admin', 'bus_finance', 'super_admin']): void {
+function busRequireStaff(array $roles = ['bus_admin', 'bus_finance', 'super_admin', 'wfh_admin']): void {
     if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], $roles, true)) {
         header('Location: /login.php');
         exit();
@@ -41,11 +41,11 @@ function busRequireStaff(array $roles = ['bus_admin', 'bus_finance', 'super_admi
 }
 
 function busCanAdmin(): bool {
-    return isset($_SESSION['llw_role']) && in_array($_SESSION['llw_role'], ['bus_admin', 'super_admin'], true);
+    return isset($_SESSION['llw_role']) && in_array($_SESSION['llw_role'], ['bus_admin', 'super_admin', 'wfh_admin'], true);
 }
 
 function busCanFinance(): bool {
-    return isset($_SESSION['llw_role']) && in_array($_SESSION['llw_role'], ['bus_admin', 'bus_finance', 'super_admin'], true);
+    return isset($_SESSION['llw_role']) && in_array($_SESSION['llw_role'], ['bus_admin', 'bus_finance', 'super_admin', 'wfh_admin'], true);
 }
 
 // Return student's total paid for a registration
