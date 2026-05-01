@@ -69,19 +69,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $bom = fread($handle, 3);
                     if ($bom !== "\xEF\xBB\xBF") rewind($handle);
 
-                    $stmtInsert = $pdo->prepare("INSERT INTO bus_students (student_id, fullname, classroom, village, national_id_hash, national_id_masked, is_active) VALUES (?,?,?,?,?,?,1)");
-                    $stmtUpdate = $pdo->prepare("UPDATE bus_students SET fullname=?, classroom=?, national_id_hash=?, national_id_masked=?, is_active=1 WHERE student_id=?");
-                    $stmtCheck  = $pdo->prepare("SELECT id, fullname, classroom FROM bus_students WHERE student_id=?");
+                    // UPSERT: insert new or update existing — atomic, no separate SELECT needed
+                    $stmtUpsert = $pdo->prepare("
+                        INSERT INTO bus_students
+                            (student_id, fullname, classroom, village, national_id_hash, national_id_masked, is_active)
+                        VALUES (?, ?, ?, ?, ?, ?, 1)
+                        ON DUPLICATE KEY UPDATE
+                            fullname          = IF(VALUES(fullname) != '', VALUES(fullname), fullname),
+                            classroom         = IF(VALUES(classroom) != '', VALUES(classroom), classroom),
+                            national_id_hash  = VALUES(national_id_hash),
+                            national_id_masked = VALUES(national_id_masked),
+                            is_active         = 1
+                    ");
 
                     $countNew = $countUpd = $countSkip = 0;
                     $rowNum   = 0;
-                    $skipHead = false;
 
                     while (($row = fgetcsv($handle)) !== false) {
                         $rowNum++;
                         // Auto-skip header row if first cell looks like a label
                         if ($rowNum === 1 && !is_numeric(preg_replace('/\D/', '', $row[0] ?? ''))) {
-                            $skipHead = true;
                             continue;
                         }
                         $sid = trim($row[0] ?? '');
@@ -102,21 +109,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $class   = trim($row[3] ?? '');
                         $village = trim($row[4] ?? '') ?: null;
 
-                        $stmtCheck->execute([$sid]);
-                        $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
-
-                        if ($existing) {
-                            // Use name/classroom from CSV if provided, else keep existing
-                            $updName  = $name  !== '' ? $name  : $existing['fullname'];
-                            $updClass = $class !== '' ? $class : $existing['classroom'];
-                            $stmtUpdate->execute([$updName, $updClass, $hash, $masked, $sid]);
-                            $countUpd++;
-                        } elseif ($name !== '') {
-                            $stmtInsert->execute([$sid, $name, $class, $village, $hash, $masked]);
-                            $countNew++;
-                        } else {
-                            $countSkip++;
-                        }
+                        $stmtUpsert->execute([$sid, $name, $class, $village, $hash, $masked]);
+                        // rowCount() = 1 for insert, 2 for update-changed, 0 for update-unchanged
+                        $affected = $stmtUpsert->rowCount();
+                        if ($affected === 1) $countNew++;
+                        else $countUpd++;
                     }
                     fclose($handle);
                     $msg = "นำเข้า CSV สำเร็จ: เพิ่มใหม่ {$countNew} คน · อัพเดทรหัส {$countUpd} คน · ข้ามไป {$countSkip} แถว";
