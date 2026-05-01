@@ -48,7 +48,7 @@ require_once '../components/layout_start.php';
     <!-- Premium Navigation Tabs -->
     <div class="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth">
         <a href="dashboard.php" class="px-8 py-3.5 bg-blue-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-blue-100 whitespace-nowrap transition-all border border-blue-600">Overview</a>
-        <a href="manage_users.php" class="px-8 py-3.5 bg-white text-slate-500 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] border border-slate-200/60 hover:bg-slate-50 transition-all whitespace-nowrap">Manage Users</a>
+        <a href="../manage_users.php" class="px-8 py-3.5 bg-white text-slate-500 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] border border-slate-200/60 hover:bg-slate-50 transition-all whitespace-nowrap">Manage Users</a>
         <a href="reports.php" class="px-8 py-3.5 bg-white text-slate-500 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] border border-slate-200/60 hover:bg-slate-50 transition-all whitespace-nowrap">Annual Reports</a>
         <a href="settings.php" class="px-8 py-3.5 bg-white text-slate-500 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] border border-slate-200/60 hover:bg-slate-50 transition-all whitespace-nowrap">System Settings</a>
     </div>

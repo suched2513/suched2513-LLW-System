@@ -152,13 +152,15 @@ $subMenus = [
                     </ul>
                 </li>
                 <?php endif; ?>
-                <?php if ($userRole === 'super_admin'): ?>
+                <?php if (in_array($userRole, ['super_admin', 'wfh_admin'])): ?>
                 <li class="nav-item">
                     <a href="<?= $base_path ?>/manage_users.php" class="nav-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-user-shield"></i>
                         <p>จัดการผู้ใช้งานระบบ</p>
                     </a>
                 </li>
+                <?php endif; ?>
+                <?php if ($userRole === 'super_admin'): ?>
                 <li class="nav-item">
                     <a href="<?= $base_path ?>/manage_advisors.php" class="nav-link <?= $current_page === 'manage_advisors.php' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-user-cog"></i>
