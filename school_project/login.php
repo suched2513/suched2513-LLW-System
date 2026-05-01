@@ -9,6 +9,7 @@ if (isset($_SESSION['user_id'])) { header('Location: ' . BASE_URL . '/index.php'
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
+    $username = ltrim($username, '@');
     $password = $_POST['password'] ?? '';
     if ($username && $password) {
         $db = getDB();

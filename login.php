@@ -88,6 +88,7 @@ $c = $ctxMap[$ctx];
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
+    $username = ltrim($username, '@'); // Strip '@' if user types it based on UI decorator
     $password = $_POST['password'] ?? '';
 
     if ($username && $password) {

@@ -6,7 +6,7 @@
 session_start();
 require_once __DIR__ . '/config.php';
 
-if (!isset($_SESSION['llw_role']) || $_SESSION['llw_role'] !== 'super_admin') {
+if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
     header('Location: login.php'); exit();
 }
 
@@ -34,8 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $hash = password_hash($password, PASSWORD_BCRYPT);
-                $stmt = $pdo->prepare("INSERT INTO llw_users (username,firstname,lastname,password,role,status) VALUES (?,?,?,?,'?','active')");
-                $stmt = $pdo->prepare("INSERT INTO llw_users (username,firstname,lastname,password,role,status) VALUES (?,?,?,?,?,'active')");
+                $stmt = $pdo->prepare("INSERT INTO llw_users (username,firstname,lastname,password,role,status) VALUES (?,?,?,?,?, 'active')");
                 $stmt->execute([$username, $firstname, $lastname, $hash, $role]);
                 $msg = "เพิ่มผู้ใช้ {$firstname} {$lastname} สำเร็จแล้ว";
             } catch (PDOException $e) {
