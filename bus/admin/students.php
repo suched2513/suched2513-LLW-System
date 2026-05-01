@@ -87,10 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     while (($row = fgetcsv($handle)) !== false) {
                         $rowNum++;
-                        // Auto-skip header row if first cell looks like a label
-                        if ($rowNum === 1 && !is_numeric(preg_replace('/\D/', '', $row[0] ?? ''))) {
-                            continue;
-                        }
                         $sid = trim($row[0] ?? '');
                         // Normalize: pad purely numeric student IDs to 5 digits (4853 → 04853)
                         if ($sid !== '' && ctype_digit($sid)) {
