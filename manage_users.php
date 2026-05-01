@@ -105,6 +105,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = 'ไม่สามารถล้างข้อมูลได้'; $msgType = 'error';
         }
     }
+
+    if ($action === 'edit_user') {
+        $uid       = (int)$_POST['user_id'];
+        $firstname = trim($_POST['firstname'] ?? '');
+        $lastname  = trim($_POST['lastname'] ?? '');
+        $role      = $_POST['role'] ?? '';
+        $allowed_roles = ['super_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance'];
+        if ($uid <= 0 || empty($firstname) || !in_array($role, $allowed_roles)) {
+            $msg = 'ข้อมูลไม่ถูกต้อง'; $msgType = 'error';
+        } else {
+            try {
+                $stmt = $pdo->prepare("UPDATE llw_users SET firstname=?, lastname=?, role=? WHERE user_id=?");
+                $stmt->execute([$firstname, $lastname, $role, $uid]);
+                $msg = "อัปเดตข้อมูล {$firstname} {$lastname} เรียบร้อยแล้ว";
+            } catch (Exception $e) {
+                error_log($e->getMessage());
+                $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+            }
+        }
+    }
 }
 
 // ─── Fetch Users ────────────────────────────────────────────────
@@ -289,7 +309,12 @@ $roleLabel = [
                         <?= $u['last_login'] ? date('d/m/').((int)date('Y')+543).' '.date('H:i', strtotime($u['last_login'])) : '—' ?>
                     </td>
                     <td class="px-6 py-5 text-center">
-                        <div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                        <div class="flex items-center justify-center gap-2">
+                            <!-- Edit Role / Name -->
+                            <button onclick="openEdit(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['firstname'], ENT_QUOTES) ?>', '<?= htmlspecialchars($u['lastname'], ENT_QUOTES) ?>', '<?= $u['role'] ?>')"
+                                class="w-8 h-8 bg-indigo-50 text-indigo-500 rounded-xl flex items-center justify-center hover:bg-indigo-500 hover:text-white transition-all" title="แก้ไขชื่อ / Role">
+                                <i class="bi bi-pencil-fill text-xs"></i>
+                            </button>
                             <!-- Reset to Default 123456 -->
                             <?php if (!$isMe): ?>
                             <form method="POST" class="inline">
@@ -297,7 +322,7 @@ $roleLabel = [
                                 <input type="hidden" name="action" value="reset_default">
                                 <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
                                 <button type="submit"
-                                    class="w-8 h-8 bg-slate-100 text-slate-500 rounded-xl flex items-center justify-center hover:bg-indigo-500 hover:text-white transition-all" title="Reset รหัสเป็น 123456">
+                                    class="w-8 h-8 bg-slate-100 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-500 hover:text-white transition-all" title="Reset รหัสเป็น 123456">
                                     <i class="bi bi-arrow-repeat text-xs"></i>
                                 </button>
                             </form>
@@ -484,6 +509,67 @@ $roleLabel = [
     </div>
 </div>
 
+<!-- Modal: Edit User (Role + Name) -->
+<div id="modal-edit" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-600 to-blue-600 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-pencil-fill"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">แก้ไขข้อมูลผู้ใช้</h5>
+                    <p id="edit-username-display" class="text-[10px] font-bold text-indigo-200 uppercase tracking-widest"></p>
+                </div>
+            </div>
+        </div>
+        <form method="POST" class="p-6 space-y-4">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="edit_user">
+            <input type="hidden" name="user_id" id="edit-uid">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">ชื่อ</label>
+                    <input type="text" name="firstname" id="edit-firstname" required
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
+                        placeholder="ชื่อ">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">นามสกุล</label>
+                    <input type="text" name="lastname" id="edit-lastname"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
+                        placeholder="นามสกุล">
+                </div>
+            </div>
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Role / สิทธิ์การใช้งาน</label>
+                <select name="role" id="edit-role" required
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all">
+                    <option value="wfh_staff">WFH Staff — บุคลากรทั่วไป (ลงเวลา)</option>
+                    <option value="att_teacher">ครูผู้สอน — เช็คชื่อ + ดูรายงานรถ</option>
+                    <option value="wfh_admin">WFH Admin — ผู้บริหาร / รองผอ.</option>
+                    <option value="cb_admin">CB Admin — จัดการ Chromebook</option>
+                    <option value="bus_admin">Bus Admin — จัดการระบบรถรับส่ง</option>
+                    <option value="bus_finance">Bus Finance — การเงินรถรับส่ง</option>
+                    <option value="super_admin">Super Admin — สิทธิ์สูงสุด</option>
+                </select>
+            </div>
+            <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 text-xs text-indigo-600">
+                <i class="bi bi-info-circle-fill me-1"></i>
+                การเปลี่ยน Role มีผลทันทีในครั้ง Login ถัดไป
+            </div>
+            <div class="flex gap-3 pt-1">
+                <button type="button" onclick="document.getElementById('modal-edit').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="submit"
+                    class="flex-[2] py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-200 hover:opacity-90 transition-all">
+                    <i class="bi bi-check-circle-fill mr-1"></i> บันทึก
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Delete form (hidden) -->
 <form id="delete-form" method="POST" class="hidden">
     <?= csrf_field() ?>
@@ -532,6 +618,15 @@ function confirmClear() {
             f.submit();
         }
     });
+}
+
+function openEdit(uid, firstname, lastname, role) {
+    document.getElementById('edit-uid').value = uid;
+    document.getElementById('edit-firstname').value = firstname;
+    document.getElementById('edit-lastname').value = lastname;
+    document.getElementById('edit-role').value = role;
+    document.getElementById('edit-username-display').textContent = firstname + ' ' + lastname;
+    document.getElementById('modal-edit').classList.remove('hidden');
 }
 
 function openReset(uid, name) {
