@@ -53,6 +53,10 @@ jobs:
           define('DB_PASS', '${{ secrets.DB_PASS }}');
           define('DB_NAME', '${{ secrets.DB_NAME }}');
 
+          ini_set('default_charset', 'UTF-8');
+          mb_internal_encoding('UTF-8');
+          mb_http_output('UTF-8');
+
           date_default_timezone_set('Asia/Bangkok');
 
           function getWfhConn(): mysqli
