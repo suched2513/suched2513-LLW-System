@@ -70,8 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($bom !== "\xEF\xBB\xBF") rewind($handle);
 
                     $stmtInsert = $pdo->prepare("INSERT INTO bus_students (student_id, fullname, classroom, village, national_id_hash, national_id_masked, is_active) VALUES (?,?,?,?,?,?,1)");
-                    $stmtUpdate = $pdo->prepare("UPDATE bus_students SET national_id_hash=?, national_id_masked=?, is_active=1 WHERE student_id=?");
-                    $stmtCheck  = $pdo->prepare("SELECT id, fullname FROM bus_students WHERE student_id=?");
+                    $stmtUpdate = $pdo->prepare("UPDATE bus_students SET fullname=?, classroom=?, national_id_hash=?, national_id_masked=?, is_active=1 WHERE student_id=?");
+                    $stmtCheck  = $pdo->prepare("SELECT id, fullname, classroom FROM bus_students WHERE student_id=?");
 
                     $countNew = $countUpd = $countSkip = 0;
                     $rowNum   = 0;
@@ -85,6 +85,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             continue;
                         }
                         $sid = trim($row[0] ?? '');
+                        // Normalize: pad purely numeric student IDs to 5 digits (4853 → 04853)
+                        if ($sid !== '' && ctype_digit($sid)) {
+                            $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
+                        }
                         $nid = preg_replace('/\D/', '', $row[1] ?? '');
 
                         if ($sid === '' || strlen($nid) !== 13) {
@@ -102,7 +106,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
                         if ($existing) {
-                            $stmtUpdate->execute([$hash, $masked, $sid]);
+                            // Use name/classroom from CSV if provided, else keep existing
+                            $updName  = $name  !== '' ? $name  : $existing['fullname'];
+                            $updClass = $class !== '' ? $class : $existing['classroom'];
+                            $stmtUpdate->execute([$updName, $updClass, $hash, $masked, $sid]);
                             $countUpd++;
                         } elseif ($name !== '') {
                             $stmtInsert->execute([$sid, $name, $class, $village, $hash, $masked]);
