@@ -13,24 +13,42 @@ if ($action) csrf_verify();
 
 // --- CRUD: TEACHERS ---
 if ($action === 'add_teacher') {
-    $name = trim($_POST['name']); $username = trim($_POST['username']); $password = $_POST['password'];
-    if (!$name || !$username || !$password) { $msg = 'กรุณากรอกข้อมูลให้ครบถ้วน'; $msgType = 'error'; } 
+    $uid = (int)($_POST['user_id'] ?? 0);
+    if (!$uid) { $msg = 'กรุณาเลือกผู้ใช้งานจากระบบ'; $msgType = 'error'; } 
     else {
-        $chk = $pdo->prepare("SELECT user_id FROM llw_users WHERE username=?");
-        $chk->execute([$username]);
-        if ($chk->fetch()) { $msg = "Username '$username' ถูกใช้งานแล้ว"; $msgType = 'error'; } 
+        // Fetch user info from central table
+        $stmt = $pdo->prepare("SELECT * FROM llw_users WHERE user_id = ?");
+        $stmt->execute([$uid]);
+        $user = $stmt->fetch();
+        
+        if (!$user) { $msg = 'ไม่พบผู้ใช้งานที่เลือก'; $msgType = 'error'; }
         else {
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $pdo->beginTransaction();
-            try {
-                $u = $pdo->prepare("INSERT INTO llw_users (username,password,firstname,lastname,role,status) VALUES (?,?,?,?,'att_teacher','active')");
-                $parts = explode(' ', $name, 2);
-                $u->execute([$username, $hash, $parts[0], $parts[1] ?? '']);
-                $uid = $pdo->lastInsertId();
-                $t = $pdo->prepare("INSERT INTO att_teachers (name,username,password,llw_user_id) VALUES (?,?,?,?)");
-                $t->execute([$name, $username, $hash, $uid]);
-                $pdo->commit(); $msg = "เพิ่มครู '$name' สำเร็จ";
-            } catch (Exception $e) { $pdo->rollBack(); $msg = 'เกิดข้อผิดพลาด: ' . $e->getMessage(); $msgType = 'error'; }
+            // Check if already a teacher
+            $chk = $pdo->prepare("SELECT id FROM att_teachers WHERE llw_user_id = ?");
+            $chk->execute([$uid]);
+            if ($chk->fetch()) { $msg = "ผู้ใช้งานนี้ถูกเพิ่มเป็นครูในระบบแล้ว"; $msgType = 'error'; } 
+            else {
+                $name = trim($user['firstname'] . ' ' . $user['lastname']);
+                $pdo->beginTransaction();
+                try {
+                    // 1. Link to att_teachers
+                    $t = $pdo->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, ?, ?)");
+                    $t->execute([$name, $user['username'], $user['password'], $uid]);
+                    
+                    // 2. Update role if needed (only if not super_admin)
+                    if (!in_array($user['role'], ['super_admin', 'att_teacher'])) {
+                        $u = $pdo->prepare("UPDATE llw_users SET role = 'att_teacher' WHERE user_id = ?");
+                        $u->execute([$uid]);
+                    }
+                    
+                    $pdo->commit(); 
+                    $msg = "เพิ่มครู '$name' เข้าสู่ระบบเรียบร้อย";
+                } catch (Exception $e) { 
+                    $pdo->rollBack(); 
+                    $msg = 'เกิดข้อผิดพลาด: ' . $e->getMessage(); 
+                    $msgType = 'error'; 
+                }
+            }
         }
     }
 } elseif ($action === 'delete_teacher') {
@@ -133,6 +151,15 @@ $filter_cls = $_GET['cls'] ?? '';
 
 try {
     $teachers   = $pdo->query("SELECT t.*, lu.username, lu.status as user_status, lu.last_login, COUNT(DISTINCT s.id) as s_count FROM att_teachers t LEFT JOIN llw_users lu ON lu.user_id = t.llw_user_id LEFT JOIN att_subjects s ON s.teacher_id = t.id GROUP BY t.id ORDER BY t.name")->fetchAll();
+    
+    // Available users for linking (only those not already in att_teachers)
+    $available_users = $pdo->query("
+        SELECT user_id, username, firstname, lastname 
+        FROM llw_users 
+        WHERE user_id NOT IN (SELECT llw_user_id FROM att_teachers WHERE llw_user_id IS NOT NULL)
+        ORDER BY firstname
+    ")->fetchAll();
+
     $subjects   = $pdo->query("SELECT s.*, t.name as t_name FROM att_subjects s JOIN att_teachers t ON t.id = s.teacher_id ORDER BY s.subject_code")->fetchAll();
     $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
@@ -209,28 +236,32 @@ require_once '../components/layout_start.php';
 
     <!-- ══ TEACHERS TAB ══ -->
     <div id="pane-teachers" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Form Add Teacher -->
+        <!-- Form Add Teacher (Linked Mode) -->
         <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex flex-col gap-6 h-fit">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl"><i class="bi bi-person-plus-fill"></i></div>
                 <h3 class="font-bold text-slate-800">เพิ่มครูเข้าในระบบ</h3>
             </div>
+            <p class="text-xs text-slate-400 -mt-2">เลือกจากบัญชีรายชื่อบุคลากรที่มีอยู่แล้วในระบบส่วนกลาง</p>
             <form method="POST" class="space-y-4">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="add_teacher">
                 <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ชื่อ-สกุล</label>
-                    <input type="text" name="name" required placeholder="นายสมชาย ใจดี" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">เลือกบุคลากร</label>
+                    <select name="user_id" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none appearance-none font-bold">
+                        <option value="">-- เลือกจากรายชื่อ --</option>
+                        <?php foreach($available_users as $au): ?>
+                            <option value="<?= $au['user_id'] ?>">
+                                <?= htmlspecialchars($au['firstname'] . ' ' . $au['lastname']) ?> (@<?= $au['username'] ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Username</label>
-                    <input type="text" name="username" required placeholder="teacher01" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:ring-2 focus:ring-blue-400 outline-none">
+                <div class="bg-slate-50 rounded-2xl p-4 border border-dashed border-slate-200">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">คำแนะนำ</p>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">ระบบจะใช้ Username และ Password เดียวกับที่ใช้ลงเวลาปฏิบัติงาน (WFH) หากไม่พบชื่อในรายการ กรุณาไปเพิ่มที่ <a href="/manage_users.php" class="text-indigo-600 underline">เมนูจัดการผู้ใช้</a> ก่อน</p>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Password</label>
-                    <input type="password" name="password" required placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
-                </div>
-                <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition mt-2">ยืนยันเพิ่มครู</button>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition mt-2">ยืนยันการเพิ่มครู</button>
             </form>
         </div>
 
