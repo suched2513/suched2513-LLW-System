@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * index.php — LLW Platinum Portal
  * Desktop: world-class landing  |  Mobile: native app shell
@@ -51,6 +51,7 @@ if ($isLoggedIn) {
                 ['url' => 'teacher_leave/index.php',          'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์',  'color' => 'rose'],
                 ['url' => 'plc_system/dashboard.php',         'icon' => 'bi-journal-richtext',    'label' => 'PLC Online',     'color' => 'violet'],
                 ['url' => 'behavior/dashboard.php',           'icon' => 'bi-journal-text',        'label' => 'พฤติกรรม',      'color' => 'violet'],
+                ['url' => 'edocument/index.php',              'icon' => 'bi-file-earmark-text',   'label' => 'e-สารบรรณ',    'color' => 'info'],
                 ['url' => 'school_project/admin/dashboard.php','icon'=> 'bi-cash-coin',           'label' => 'งบประมาณ SBMS', 'color' => 'amber'],
             ];
             break;
@@ -60,8 +61,8 @@ if ($isLoggedIn) {
                 ['url' => 'admin/reports.php',                'icon' => 'bi-bar-chart-fill',      'label' => 'รายงาน',        'color' => 'indigo'],
                 ['url' => 'supervision.php',                  'icon' => 'bi-mortarboard-fill',    'label' => 'นิเทศการสอน',   'color' => 'rose'],
                 ['url' => 'teacher_leave/index.php',          'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์',  'color' => 'indigo'],
-                ['url' => 'plc_system/dashboard.php',         'icon' => 'bi-journal-richtext',    'label' => 'PLC Online',     'color' => 'violet'],
                 ['url' => 'behavior/dashboard.php',           'icon' => 'bi-journal-text',        'label' => 'พฤติกรรม',      'color' => 'violet'],
+                ['url' => 'edocument/index.php',              'icon' => 'bi-file-earmark-text',   'label' => 'e-สารบรรณ',    'color' => 'info'],
                 ['url' => 'school_project/admin/dashboard.php','icon'=> 'bi-cash-coin',           'label' => 'งบประมาณ SBMS', 'color' => 'amber'],
             ];
             break;
@@ -120,6 +121,7 @@ $modules = [
     ['url'=>'behavior/dashboard.php',          'icon'=>'bi-journal-text',        'bgIcon'=>'bi-journal-bookmark-fill','title'=>'บันทึกพฤติกรรม',     'short'=>'พฤติกรรม',  'desc'=>'ระบบจัดการคะแนนความประพฤติ บันทึกความดี และพฤติกรรมด้านต่างๆ',                    'color'=>'violet', 'gradient'=>'from-violet-600 to-indigo-600',  'delay'=>0.8],
     ['url'=>'student/login.php',              'icon'=>'bi-mortarboard-fill',    'bgIcon'=>'bi-mortarboard',          'title'=>'พอร์ทัลนักเรียน',    'short'=>'นักเรียน',  'desc'=>'ดูเวลาเรียน สำรวจการเดินทาง ตรวจสอบสถานะรถรับส่ง และบริการสำหรับนักเรียน',   'color'=>'teal',   'gradient'=>'from-teal-500 to-cyan-500',      'delay'=>0.9,'isPublic'=>true],
     ['url'=>'homeroom/index.php',              'icon'=>'bi-mortarboard-fill',    'bgIcon'=>'bi-mortarboard',          'title'=>'ระบบครูที่ปรึกษา',   'short'=>'ที่ปรึกษา', 'desc'=>'ศูนย์กลางการดูแลหนักเรียนประจำชั้น ติดตามการเข้าแถว พฤติกรรม',                     'color'=>'indigo', 'gradient'=>'from-indigo-600 to-violet-700',  'delay'=>1.0],
+    ['url'=>'edocument/index.php',             'icon'=>'bi-file-earmark-text-fill', 'bgIcon'=>'bi-file-earmark-medical',  'title'=>'ระบบงาน e-สารบรรณ',  'short'=>'e-สารบรรณ',  'desc'=>'ระบบจัดการเอกสารราชการอิเล็กทรอนิกส์ หนังสือรับ-ส่ง คำสั่ง และบันทึกข้อความ',     'color'=>'info',   'gradient'=>'from-cyan-500 to-blue-500',      'delay'=>1.05],
     ['url'=>'school_project/index.php',        'icon'=>'bi-cash-coin',           'bgIcon'=>'bi-wallet2',              'title'=>'ระบบงบประมาณ (SBMS)', 'short'=>'งบประมาณ',  'desc'=>'จัดการโครงการ ขอดำเนินการ เบิกจ่ายงบประมาณ และพิมพ์เอกสารอนุมัติ (2569)',       'color'=>'amber',  'gradient'=>'from-amber-500 to-orange-500',   'delay'=>1.1],
     ['url'=>'bus/admin/dashboard.php',         'icon'=>'bi-bus-front-fill',      'bgIcon'=>'bi-bus-front',            'title'=>'ระบบจัดการรถรับส่ง', 'short'=>'รถรับส่ง',    'desc'=>'จัดการสายรถรับส่ง ลงทะเบียนนักเรียน และบันทึกการชำระเงินค่าบริการ',             'color'=>'orange', 'gradient'=>'from-orange-500 to-amber-500',   'delay'=>1.2],
     ['url'=>'bus/index.php',                   'icon'=>'bi-person-badge-fill',   'bgIcon'=>'bi-person-badge',         'title'=>'พอร์ทัลนักเรียน (รถ)', 'short'=>'นักเรียนรถ',  'desc'=>'นักเรียนลงทะเบียนและติดตามการใช้บริการรถรับส่ง ตรวจสอบยอดชำระเงิน',           'color'=>'orange', 'gradient'=>'from-amber-500 to-orange-600',   'delay'=>1.3, 'isPublic'=>true],
