@@ -34,7 +34,7 @@ function editDoc(id) {
                 $('#subject').val(data.subject);
                 $('#status').val(data.status);
                 $('#year_be').val(data.year_be);
-                $('#modalTitle').textContent = 'แก้ไขคำสั่ง';
+                $('#modalTitle').text('แก้ไขคำสั่ง');
                 fileList.innerHTML = '';
                 if (data.attachments) {
                     data.attachments.forEach(att => {

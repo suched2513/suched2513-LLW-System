@@ -28,7 +28,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         <?php 
         renderDocumentList('incoming', [
             'title' => 'รายการหนังสือรับ',
-            'table' => 'edoc_incoming_documents'
+            'table' => 'edoc_incoming'
         ]); 
         ?>
     </div>
@@ -56,7 +56,7 @@ function editDoc(id) {
                 $('#status').val(data.status);
                 $('#year_be').val(data.year_be);
                 
-                $('#modalTitle').textContent = 'แก้ไขหนังสือรับ';
+                $('#modalTitle').text('แก้ไขหนังสือรับ');
                 
                 // Render existing attachments
                 fileList.innerHTML = '';
@@ -68,7 +68,7 @@ function editDoc(id) {
                 
                 // Load involved users
                 loadUsers();
-                $.get('/ajax/documents.php', { action: 'get_involved_users', ref_id: id, ref_table: 'edoc_incoming_documents' }, function(invRes) {
+                $.get('/ajax/documents.php', { action: 'get_involved_users', ref_id: id, ref_table: 'edoc_incoming' }, function(invRes) {
                     if (invRes.success) {
                         const invUserIds = invRes.data.map(u => u.user_id);
                         $('#involved_users').val(invUserIds).trigger('change');

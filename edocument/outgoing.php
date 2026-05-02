@@ -22,7 +22,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         <?php 
         renderDocumentList('outgoing', [
             'title' => 'รายการหนังสือส่ง',
-            'table' => 'edoc_outgoing_documents'
+            'table' => 'edoc_outgoing'
         ]); 
         ?>
     </div>
@@ -48,7 +48,7 @@ function editDoc(id) {
                 $('#subject').val(data.subject);
                 $('#status').val(data.status);
                 $('#year_be').val(data.year_be);
-                $('#modalTitle').textContent = 'แก้ไขหนังสือส่ง';
+                $('#modalTitle').text('แก้ไขหนังสือส่ง');
                 fileList.innerHTML = '';
                 if (data.attachments) {
                     data.attachments.forEach(att => {
@@ -56,7 +56,7 @@ function editDoc(id) {
                     });
                 }
                 loadUsers();
-                $.get('/ajax/documents.php', { action: 'get_involved_users', ref_id: id, ref_table: 'edoc_outgoing_documents' }, function(invRes) {
+                $.get('/ajax/documents.php', { action: 'get_involved_users', ref_id: id, ref_table: 'edoc_outgoing' }, function(invRes) {
                     if (invRes.success) {
                         const invUserIds = invRes.data.map(u => u.user_id);
                         $('#involved_users').val(invUserIds).trigger('change');
