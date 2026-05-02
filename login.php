@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * login.php — LLW Platinum Login (Modern Dark Theme, Sarabun Font)
  */
@@ -264,7 +264,7 @@ function hexToRgb($hex) {
     <div class="relative z-10 max-w-xl">
         <div class="inline-flex items-center gap-2 px-3 py-1 bg-<?= explode('-',$c['grad'])[1] ?>/10 border border-<?= explode('-',$c['grad'])[1] ?>/20 rounded-full mb-6">
             <span class="w-2 h-2 rounded-full bg-<?= explode('-',$c['grad'])[1] ?> animate-pulse"></span>
-            <span class="text-[10px] font-black text-white tracking-[0.2em] uppercase"><?= htmlspecialchars($c['badge']) ?></span>
+            <span class="text-xs font-black text-white tracking-[0.2em] uppercase"><?= htmlspecialchars($c['badge']) ?></span>
         </div>
         
         <h1 class="text-6xl font-header font-black text-white leading-[1.1] mb-6">
@@ -315,7 +315,7 @@ function hexToRgb($hex) {
     </div>
 
     <!-- Bottom Footer -->
-    <div class="relative z-10 flex items-center justify-between text-slate-500 text-[10px] font-bold tracking-[0.2em] uppercase">
+    <div class="relative z-10 flex items-center justify-between text-slate-500 text-xs font-bold tracking-[0.2em] uppercase">
         <span>© 2026 Lalom Wittaya School</span>
         <div class="flex gap-6">
             <a href="#" class="hover:text-white transition-colors">Privacy Policy</a>
@@ -348,7 +348,7 @@ function hexToRgb($hex) {
             <?= csrf_field() ?>
 
             <div>
-                <label class="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Username / ชื่อผู้ใช้งาน</label>
+                <label class="block text-sm font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Username / ชื่อผู้ใช้งาน</label>
                 <div class="relative group">
                     <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-white transition-colors">
                         <i class="bi bi-person text-lg"></i>
@@ -359,8 +359,8 @@ function hexToRgb($hex) {
 
             <div>
                 <div class="flex items-center justify-between mb-2 px-1">
-                    <label class="block text-[11px] font-black text-slate-500 uppercase tracking-widest">Password / รหัสผ่าน</label>
-                    <a href="#" class="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors">ลืมรหัสผ่าน?</a>
+                    <label class="block text-sm font-black text-slate-500 uppercase tracking-widest">Password / รหัสผ่าน</label>
+                    <a href="#" class="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors">ลืมรหัสผ่าน?</a>
                 </div>
                 <div class="relative group">
                     <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-white transition-colors">
@@ -384,7 +384,7 @@ function hexToRgb($hex) {
         <!-- Divider -->
         <div class="flex items-center gap-4 my-8">
             <div class="flex-1 h-px bg-white/5"></div>
-            <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest">OR</span>
+            <span class="text-xs font-black text-slate-600 uppercase tracking-widest">OR</span>
             <div class="flex-1 h-px bg-white/5"></div>
         </div>
 
@@ -397,7 +397,7 @@ function hexToRgb($hex) {
 
         <!-- Footer -->
         <div class="mt-16 text-center">
-            <p class="text-[10px] font-black text-slate-700 uppercase tracking-[0.2em]">
+            <p class="text-xs font-black text-slate-700 uppercase tracking-[0.2em]">
                 Secure Portal • Version 2.0.4
             </p>
         </div>

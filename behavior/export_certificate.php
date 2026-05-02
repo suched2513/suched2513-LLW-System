@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * behavior/export_certificate.php — Elegant Behavior Achievement Certificate
  */
@@ -126,7 +126,7 @@ if ($netScore < 150) {
                 <div class="text-center w-64">
                     <div class="h-0.5 w-full bg-slate-200 mb-3"></div>
                     <p class="text-sm font-black text-slate-800 tracking-wider">ฝ่ายกิจการนักเรียน</p>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mt-1">Student Affairs Division</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase mt-1">Student Affairs Division</p>
                 </div>
 
                 <div class="flex flex-col items-center">
@@ -138,11 +138,11 @@ if ($netScore < 150) {
                 <div class="text-center w-64">
                     <div class="h-0.5 w-full bg-slate-200 mb-3"></div>
                     <p class="text-sm font-black text-slate-800 tracking-wider">โรงเรียนละลมวิทยา</p>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mt-1">Lalom Wittaya School</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase mt-1">Lalom Wittaya School</p>
                 </div>
             </div>
             
-            <p class="mt-12 text-[9px] text-slate-300 font-bold uppercase tracking-[0.5em]">Lalom Wittaya School Management System - Behavioral Records Module</p>
+            <p class="mt-12 text-xs text-slate-300 font-bold uppercase tracking-[0.5em]">Lalom Wittaya School Management System - Behavioral Records Module</p>
         </div>
     </div>
 

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * homeroom/log.php — สมุดบันทึกโฮมรูม (Platinum Edition)
  * ระบบบันทึกหัวข้อกิจกรรม, อัปเดตรูปภาพ และตรวจสอบสถิติรายสัปดาห์
@@ -40,10 +40,10 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </div>
                 <div>
                     <h3 class="text-lg font-black text-slate-800 leading-tight">เช็คชื่อนักเรียน</h3>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Attendance Correction</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Attendance Correction</p>
                 </div>
                 <div class="ml-auto">
-                    <span id="att-count" class="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-lg">0 คน</span>
+                    <span id="att-count" class="px-2 py-1 bg-indigo-50 text-indigo-600 text-xs font-black rounded-lg">0 คน</span>
                 </div>
             </div>
             
@@ -58,19 +58,19 @@ require_once __DIR__ . '/../components/layout_start.php';
             <div class="p-4 bg-slate-50/80 border-t border-slate-100">
                 <div class="grid grid-cols-4 gap-1">
                     <div class="text-center">
-                        <div class="text-[9px] font-black text-emerald-500 uppercase">มา</div>
+                        <div class="text-xs font-black text-emerald-500 uppercase">มา</div>
                         <div id="count-มา" class="text-sm font-black text-slate-700">0</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-[9px] font-black text-rose-500 uppercase">ขาด</div>
+                        <div class="text-xs font-black text-rose-500 uppercase">ขาด</div>
                         <div id="count-ขาด" class="text-sm font-black text-slate-700">0</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-[9px] font-black text-amber-500 uppercase">ลา</div>
+                        <div class="text-xs font-black text-amber-500 uppercase">ลา</div>
                         <div id="count-ลา" class="text-sm font-black text-slate-700">0</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-[9px] font-black text-indigo-500 uppercase">สาย</div>
+                        <div class="text-xs font-black text-indigo-500 uppercase">สาย</div>
                         <div id="count-สาย" class="text-sm font-black text-slate-700">0</div>
                     </div>
                 </div>
@@ -87,7 +87,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </div>
                 <div>
                     <h2 class="text-lg font-black text-slate-800 leading-tight">บันทึกกิจกรรมประจำวัน</h2>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Daily Activity Log</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Daily Activity Log</p>
                 </div>
             </div>
             
@@ -95,7 +95,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <!-- Select Class & Date -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">ห้องเรียน</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">ห้องเรียน</label>
                         <select id="sel-class" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                             <?php 
                             // ดึงห้องเรียนทั้งหมดที่มีนักเรียนอยู่ เพื่อให้เห็นทุกห้อง
@@ -106,20 +106,20 @@ require_once __DIR__ . '/../components/layout_start.php';
                         </select>
                     </div>
                     <div>
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">วันที่กิจกรรม</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">วันที่กิจกรรม</label>
                         <input type="date" id="sel-date" value="<?= date('Y-m-d') ?>" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                     </div>
                 </div>
 
                 <!-- Topic -->
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">เรื่องที่แจ้งนักเรียน / สรุปกิจกรรม</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">เรื่องที่แจ้งนักเรียน / สรุปกิจกรรม</label>
                     <textarea id="log-topic" rows="8" placeholder="เช่น แจ้งเรื่องการสอบกลางภาค, ตรวจเครื่องแบบนักเรียน..." class="w-full bg-slate-50 border border-slate-200 rounded-3xl px-6 py-5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"></textarea>
                 </div>
 
                 <!-- Photo Upload -->
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">รูปภาพประกอบกิจกรรม</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">รูปภาพประกอบกิจกรรม</label>
                     <div id="photo-preview-container" class="mb-3 hidden">
                         <div class="relative w-full aspect-video rounded-3xl overflow-hidden border border-slate-200 shadow-inner group">
                             <img id="photo-preview" src="" class="w-full h-full object-cover">
@@ -141,7 +141,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 
                 <!-- Advisor Info -->
                 <div class="bg-indigo-50/50 rounded-2xl p-4 border border-indigo-100/50">
-                    <p class="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2">ครูที่ปรึกษา</p>
+                    <p class="text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">ครูที่ปรึกษา</p>
                     <div id="advisor-names" class="text-xs font-bold text-indigo-700">กำลังโหลด...</div>
                 </div>
 
@@ -161,7 +161,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </div>
                 <div>
                     <h3 class="text-lg font-black text-slate-800 leading-tight">สรุปรายงาน</h3>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Weekly Logbook Status</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Weekly Logbook Status</p>
                 </div>
             </div>
             
@@ -254,10 +254,10 @@ function renderStudents(date) {
         html += `
         <div class="flex items-center justify-between p-3.5 rounded-2xl hover:bg-slate-50 transition-all border-b border-slate-50 last:border-0 group">
             <div class="flex items-center gap-3">
-                <span class="w-6 h-6 bg-slate-100 text-slate-400 rounded-lg flex items-center justify-center text-[10px] font-black group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-all">${i + 1}</span>
+                <span class="w-6 h-6 bg-slate-100 text-slate-400 rounded-lg flex items-center justify-center text-xs font-black group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-all">${i + 1}</span>
                 <div>
                     <p class="text-xs font-bold text-slate-700">${esc(s.name)}</p>
-                    <p class="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">${esc(s.student_id)}</p>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-tighter">${esc(s.student_id)}</p>
                 </div>
             </div>
             <div class="flex gap-1.5 student-att-row" data-id="${s.student_id}">
@@ -313,12 +313,12 @@ function renderWeeklySummary(mondayStr) {
         html += `
         <div class="p-3.5 rounded-2xl ${isCurrent ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-50 border border-slate-100'} flex items-center justify-between group transition-all">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl ${isCurrent ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400'} flex items-center justify-center text-[10px] font-black shadow-sm">
+                <div class="w-8 h-8 rounded-xl ${isCurrent ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400'} flex items-center justify-center text-xs font-black shadow-sm">
                     ${i}
                 </div>
                 <div>
-                    <p class="text-[11px] font-black ${isCurrent ? 'text-indigo-600' : 'text-slate-700'}">สัปดาห์ที่ ${i}</p>
-                    <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">${loggedDays}/5 วันที่บันทึกแล้ว</p>
+                    <p class="text-sm font-black ${isCurrent ? 'text-indigo-600' : 'text-slate-700'}">สัปดาห์ที่ ${i}</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">${loggedDays}/5 วันที่บันทึกแล้ว</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">

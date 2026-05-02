@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * attendance_system/dashboard.php — Enhanced Academic Dashboard with Premium Aesthetics
  */
@@ -113,11 +113,11 @@ require_once '../components/layout_start.php';
                 <div class="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center text-xl backdrop-blur-sm">
                     <i class="bi bi-<?= $k['icon'] ?>"></i>
                 </div>
-                <span class="text-[10px] font-black text-white/80 uppercase tracking-widest"><?= $k['label'] ?></span>
+                <span class="text-xs font-black text-white/80 uppercase tracking-widest"><?= $k['label'] ?></span>
             </div>
             <div>
                 <p class="text-4xl font-black text-white leading-none"><?= number_format($k['val']) ?></p>
-                <p class="text-[9px] text-white/60 font-black uppercase tracking-[0.2em] mt-3 italic">Total Count</p>
+                <p class="text-xs text-white/60 font-black uppercase tracking-[0.2em] mt-3 italic">Total Count</p>
             </div>
         </div>
         <?php endforeach; ?>
@@ -133,16 +133,16 @@ require_once '../components/layout_start.php';
                     <h3 class="font-black text-slate-800 flex items-center gap-3 text-lg">
                         <i class="bi bi-exclamation-triangle-fill text-rose-500"></i> ติดตามเกณฑ์เสี่ยง (มส.)
                     </h3>
-                    <p class="text-[10px] font-bold text-rose-400 uppercase tracking-widest mt-1">Students below 80% attendance rate</p>
+                    <p class="text-xs font-bold text-rose-400 uppercase tracking-widest mt-1">Students below 80% attendance rate</p>
                 </div>
-                <div class="bg-rose-50 text-rose-600 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border border-rose-100">Warning</div>
+                <div class="bg-rose-50 text-rose-600 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border border-rose-100">Warning</div>
             </div>
 
             <div class="flex flex-col gap-4 relative z-10">
                 <?php if (empty($riskStudents)): ?>
                     <div class="py-12 bg-slate-50/50 rounded-3xl text-center border-2 border-dashed border-slate-100">
                         <i class="bi bi-shield-check text-4xl text-emerald-400 opacity-50"></i>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-3">No critical risks detected</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-3">No critical risks detected</p>
                     </div>
                 <?php else: ?>
                     <?php foreach($riskStudents as $student): ?>
@@ -153,18 +153,18 @@ require_once '../components/layout_start.php';
                             </div>
                             <div>
                                 <p class="text-[13px] font-black text-slate-800"><?= htmlspecialchars($student['name']) ?></p>
-                                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">ห้อง <?= $student['classroom'] ?></p>
+                                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">ห้อง <?= $student['classroom'] ?></p>
                             </div>
                         </div>
                         <div class="text-right">
-                            <p class="text-lg font-black text-rose-600"><?= $student['presence_rate'] ?><span class="text-[10px] ml-0.5">%</span></p>
-                            <p class="text-[8px] font-bold text-slate-300 uppercase">Presence</p>
+                            <p class="text-lg font-black text-rose-600"><?= $student['presence_rate'] ?><span class="text-xs ml-0.5">%</span></p>
+                            <p class="text-xs font-bold text-slate-300 uppercase">Presence</p>
                         </div>
                     </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
-            <a href="report.php" class="w-full py-4 rounded-2xl bg-slate-50 text-slate-400 text-center text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">View All Risk Analysis</a>
+            <a href="report.php" class="w-full py-4 rounded-2xl bg-slate-50 text-slate-400 text-center text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-all">View All Risk Analysis</a>
         </div>
 
         <!-- Productivity Highlights (Diligence) -->
@@ -175,16 +175,16 @@ require_once '../components/layout_start.php';
                     <h3 class="font-black text-slate-800 flex items-center gap-3 text-lg">
                         <i class="bi bi-trophy-fill text-emerald-500"></i> นักเรียนเช็คชื่อดีเด่น
                     </h3>
-                    <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mt-1">Students with exemplary records</p>
+                    <p class="text-xs font-bold text-emerald-400 uppercase tracking-widest mt-1">Students with exemplary records</p>
                 </div>
-                <div class="bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border border-emerald-100">Top Star</div>
+                <div class="bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border border-emerald-100">Top Star</div>
             </div>
 
             <div class="flex flex-col gap-4 relative z-10">
                 <?php if (empty($highlightStudents)): ?>
                     <div class="py-12 bg-slate-50/50 rounded-3xl text-center border-2 border-dashed border-slate-100">
                         <i class="bi bi-hourglass-split text-4xl text-slate-300 opacity-50"></i>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-3">Analyzing performance data...</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-3">Analyzing performance data...</p>
                     </div>
                 <?php else: ?>
                     <?php foreach($highlightStudents as $student): ?>
@@ -195,18 +195,18 @@ require_once '../components/layout_start.php';
                             </div>
                             <div>
                                 <p class="text-[13px] font-black text-slate-800"><?= htmlspecialchars($student['name']) ?></p>
-                                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">ห้อง <?= $student['classroom'] ?></p>
+                                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">ห้อง <?= $student['classroom'] ?></p>
                             </div>
                         </div>
                         <div class="text-right">
-                            <p class="text-lg font-black text-emerald-600"><?= $student['presence_rate'] ?><span class="text-[10px] ml-0.5">%</span></p>
-                            <p class="text-[8px] font-bold text-slate-300 uppercase">High Presence</p>
+                            <p class="text-lg font-black text-emerald-600"><?= $student['presence_rate'] ?><span class="text-xs ml-0.5">%</span></p>
+                            <p class="text-xs font-bold text-slate-300 uppercase">High Presence</p>
                         </div>
                     </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
-            <a href="report.php" class="w-full py-4 rounded-2xl bg-slate-50 text-slate-400 text-center text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">View Full Performance</a>
+            <a href="report.php" class="w-full py-4 rounded-2xl bg-slate-50 text-slate-400 text-center text-xs font-black uppercase tracking-widest hover:bg-slate-100 transition-all">View Full Performance</a>
         </div>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -217,7 +217,7 @@ require_once '../components/layout_start.php';
                     <h3 class="font-black text-slate-800 flex items-center gap-3 text-lg">
                         <i class="bi bi-graph-up-arrow text-indigo-600"></i> สถิติการเข้าเรียนแยกตามคาบ
                     </h3>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Attendance records by period & status</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Attendance records by period & status</p>
                 </div>
             </div>
             <div class="relative h-[380px] w-full">
@@ -240,7 +240,7 @@ require_once '../components/layout_start.php';
                 <?php if (empty($recentLogs)): ?>
                     <div class="py-20 text-center text-slate-200 flex flex-col items-center gap-4">
                         <i class="bi bi-cloud-slash text-6xl opacity-30"></i>
-                        <p class="text-[10px] font-black uppercase tracking-widest italic">No activity detected</p>
+                        <p class="text-xs font-black uppercase tracking-widest italic">No activity detected</p>
                     </div>
                 <?php else: ?>
                     <?php foreach ($recentLogs as $log): 
@@ -256,16 +256,16 @@ require_once '../components/layout_start.php';
                     ?>
                     <div class="flex gap-5 items-center p-4 rounded-3xl hover:bg-slate-50/50 transition border border-transparent hover:border-slate-100 group">
                         <div class="w-12 h-12 rounded-2xl bg-<?= $sc ?>-50 text-<?= $sc ?>-600 flex flex-col items-center justify-center flex-shrink-0 group-hover:scale-110 transition-all">
-                            <span class="text-[10px] font-black opacity-40 leading-none mb-1">P</span>
+                            <span class="text-xs font-black opacity-40 leading-none mb-1">P</span>
                             <span class="font-black text-lg leading-none"><?= $log['period'] ?></span>
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="text-[13px] font-black text-slate-800 truncate"><?= htmlspecialchars($log['student_name']) ?></p>
-                            <p class="text-[9px] text-slate-400 font-bold truncate tracking-widest uppercase mt-0.5"><?= htmlspecialchars($log['subject_name']) ?></p>
+                            <p class="text-xs text-slate-400 font-bold truncate tracking-widest uppercase mt-0.5"><?= htmlspecialchars($log['subject_name']) ?></p>
                         </div>
                         <div class="text-right">
-                            <span class="inline-block px-3 py-1 rounded-xl bg-<?= $sc ?>-50 text-<?= $sc ?>-700 text-[9px] font-black uppercase tracking-widest border border-<?= $sc ?>-100/50"><?= $log['status'] ?></span>
-                            <p class="text-[8px] font-bold text-slate-300 mt-2"><?= date('H:i', strtotime($log['created_at'])) ?></p>
+                            <span class="inline-block px-3 py-1 rounded-xl bg-<?= $sc ?>-50 text-<?= $sc ?>-700 text-xs font-black uppercase tracking-widest border border-<?= $sc ?>-100/50"><?= $log['status'] ?></span>
+                            <p class="text-xs font-bold text-slate-300 mt-2"><?= date('H:i', strtotime($log['created_at'])) ?></p>
                         </div>
                     </div>
                     <?php endforeach; ?>
@@ -283,7 +283,7 @@ require_once '../components/layout_start.php';
                     </div>
                     <div class="flex justify-between items-center relative z-10">
                         <div>
-                            <p class="text-[10px] text-indigo-400 font-black uppercase tracking-widest mb-1">Global Presence Rate</p>
+                            <p class="text-xs text-indigo-400 font-black uppercase tracking-widest mb-1">Global Presence Rate</p>
                             <h4 class="text-3xl font-black text-indigo-700 leading-none"><?= $rate ?><span class="text-sm ml-1">%</span></h4>
                         </div>
                         <div class="w-14 h-14 rounded-3xl bg-white shadow-xl shadow-indigo-100 flex items-center justify-center group-hover:rotate-12 transition-all">

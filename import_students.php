@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * import_students.php — หน้า import นักเรียนแบบ standalone
  * ใช้ layout กลาง (components/) ไม่ผ่าน attendance_system
@@ -149,7 +149,7 @@ require_once __DIR__ . '/components/layout_start.php';
                 <p class="text-xs text-blue-600 font-mono mt-1">student_id, name, classroom</p>
                 <a href="data:text/csv;charset=utf-8,%EF%BB%BFstudent_id%2Cname%2Cclassroom%0A01001%2C%E0%B9%80%E0%B8%94%E0%B9%87%E0%B8%81%E0%B8%8A%E0%B8%B2%E0%B8%A2%E0%B8%AA%E0%B8%A1%E0%B8%8A%E0%B8%B2%E0%B8%A2%20%E0%B9%83%E0%B8%88%E0%B8%94%E0%B8%B5%2C%E0%B8%A1.1%2F1"
                    download="template_students.csv"
-                   class="text-[10px] font-bold text-blue-500 underline hover:text-blue-700">
+                   class="text-xs font-bold text-blue-500 underline hover:text-blue-700">
                     ⬇ ดาวน์โหลด Template
                 </a>
             </div>
@@ -169,17 +169,17 @@ require_once __DIR__ . '/components/layout_start.php';
                 <?= csrf_field() ?>
                 <input type="hidden" name="do" value="add_student">
                 <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">รหัสนักเรียน</label>
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5">รหัสนักเรียน</label>
                     <input type="text" name="student_id" required placeholder="01001"
                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">ชื่อ-สกุล</label>
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5">ชื่อ-สกุล</label>
                     <input type="text" name="name" required placeholder="เด็กชายสมชาย ใจดี"
                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">ห้องเรียน</label>
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5">ห้องเรียน</label>
                     <input type="text" name="classroom" required placeholder="ม.1/1" list="cls-list"
                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                     <datalist id="cls-list">
@@ -206,12 +206,12 @@ require_once __DIR__ . '/components/layout_start.php';
                 <?= csrf_field() ?>
                 <input type="hidden" name="do" value="preview">
                 <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">เลือกไฟล์ CSV</label>
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5">เลือกไฟล์ CSV</label>
                     <input type="file" name="csvfile" accept=".csv" required
                            class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs file:mr-3 file:py-1.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition-all">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5">
                         กำหนดห้องเรียน <span class="text-slate-300 font-normal">(เว้นว่างเพื่อใช้จากไฟล์)</span>
                     </label>
                     <input type="text" name="classroom_fixed" placeholder="เช่น ม.2/2 (ถ้าต้องการกำหนดทั้งหมดให้ห้องเดียว)"
@@ -248,10 +248,10 @@ require_once __DIR__ . '/components/layout_start.php';
             <table class="min-w-full divide-y divide-slate-100">
                 <thead class="bg-slate-50 sticky top-0">
                     <tr>
-                        <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">#</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">รหัส</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">ชื่อ-สกุล</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">ห้อง</th>
+                        <th class="px-6 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-wider">#</th>
+                        <th class="px-6 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-wider">รหัส</th>
+                        <th class="px-6 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-wider">ชื่อ-สกุล</th>
+                        <th class="px-6 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-wider">ห้อง</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50 text-sm">
@@ -304,10 +304,10 @@ require_once __DIR__ . '/components/layout_start.php';
             <table class="min-w-full divide-y divide-slate-100">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">รหัส</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">ชื่อ-สกุล</th>
-                        <th class="px-6 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider">ห้องเรียน</th>
-                        <th class="px-6 py-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider">จัดการ</th>
+                        <th class="px-6 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-wider">รหัส</th>
+                        <th class="px-6 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-wider">ชื่อ-สกุล</th>
+                        <th class="px-6 py-3 text-center text-xs font-black text-slate-400 uppercase tracking-wider">ห้องเรียน</th>
+                        <th class="px-6 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-wider">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50 text-sm">

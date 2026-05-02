@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * report_ms.php — หน้าสรุปนักเรียนติด มส. ทั้งโรงเรียน (ส่งฝ่ายวิชาการ)
  * Role: super_admin, wfh_admin
@@ -204,7 +204,7 @@ require_once '../components/layout_start.php';
                 <div class="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center font-black text-sm"><?= substr($cls, -3) ?></div>
                 <div>
                     <h3 class="font-black text-slate-800">ห้อง <?= htmlspecialchars($cls) ?></h3>
-                    <p class="text-[10px] text-rose-500 font-black uppercase tracking-widest">นักเรียนอาจติด มส. <?= count($students) ?> คน</p>
+                    <p class="text-xs text-rose-500 font-black uppercase tracking-widest">นักเรียนอาจติด มส. <?= count($students) ?> คน</p>
                 </div>
             </div>
         </div>
@@ -222,8 +222,8 @@ require_once '../components/layout_start.php';
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
                             <p class="font-black text-slate-800"><?= htmlspecialchars($info['name']) ?></p>
-                            <span class="font-mono text-[10px] text-blue-500 font-bold"><?= $info['student_id'] ?></span>
-                            <span class="px-2 py-0.5 bg-rose-100 text-rose-600 text-[10px] font-black rounded-lg"><?= count($subjs) ?> วิชา</span>
+                            <span class="font-mono text-xs text-blue-500 font-bold"><?= $info['student_id'] ?></span>
+                            <span class="px-2 py-0.5 bg-rose-100 text-rose-600 text-xs font-black rounded-lg"><?= count($subjs) ?> วิชา</span>
                         </div>
                         <!-- Subject list -->
                         <div class="mt-3 grid gap-2">
@@ -231,7 +231,7 @@ require_once '../components/layout_start.php';
                             <div class="flex items-center gap-3 bg-rose-50 rounded-xl px-4 py-2.5">
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2">
-                                        <span class="font-mono text-[10px] font-black text-rose-400"><?= $sv['code'] ?></span>
+                                        <span class="font-mono text-xs font-black text-rose-400"><?= $sv['code'] ?></span>
                                         <span class="font-bold text-xs text-slate-700 truncate"><?= htmlspecialchars($sv['name']) ?></span>
                                     </div>
                                     <!-- Progress -->
@@ -239,12 +239,12 @@ require_once '../components/layout_start.php';
                                         <div class="flex-1 h-1.5 rounded-full bg-rose-100 overflow-hidden">
                                             <div class="h-full rounded-full bg-rose-500 transition-all" style="width:<?= min($sv['rate'],100) ?>%"></div>
                                         </div>
-                                        <span class="text-[10px] font-black text-rose-600 w-10 text-right"><?= $sv['rate'] ?>%</span>
+                                        <span class="text-xs font-black text-rose-600 w-10 text-right"><?= $sv['rate'] ?>%</span>
                                     </div>
                                 </div>
                                 <div class="text-right flex-shrink-0">
-                                    <p class="text-[10px] font-bold text-slate-400"><?= $sv['come'] ?>/<?= $sv['total'] ?> คาบ</p>
-                                    <p class="text-[10px] font-black text-amber-600">ขาดอีก <?= $sv['need'] ?> คาบ</p>
+                                    <p class="text-xs font-bold text-slate-400"><?= $sv['come'] ?>/<?= $sv['total'] ?> คาบ</p>
+                                    <p class="text-xs font-black text-amber-600">ขาดอีก <?= $sv['need'] ?> คาบ</p>
                                 </div>
                             </div>
                             <?php endforeach; ?>

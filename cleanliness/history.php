@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -66,12 +66,12 @@ require_once __DIR__ . '/../components/layout_start.php';
         <table class="w-full">
             <thead>
                 <tr class="bg-slate-50">
-                    <th class="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest rounded-l-2xl">วันที่</th>
-                    <th class="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">พื้นที่</th>
-                    <th class="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">ห้องเรียน</th>
-                    <th class="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">คะแนน (100)</th>
-                    <th class="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">ผู้บันทึก</th>
-                    <th class="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest rounded-r-2xl">จัดการ</th>
+                    <th class="px-6 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest rounded-l-2xl">วันที่</th>
+                    <th class="px-6 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">พื้นที่</th>
+                    <th class="px-6 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ห้องเรียน</th>
+                    <th class="px-6 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest">คะแนน (100)</th>
+                    <th class="px-6 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ผู้บันทึก</th>
+                    <th class="px-6 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest rounded-r-2xl">จัดการ</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
@@ -79,7 +79,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <tr class="hover:bg-slate-50/50 transition-colors group">
                         <td class="px-6 py-5">
                             <span class="text-sm font-bold text-slate-600"><?= date('d/m/Y', strtotime($row['score_date'])) ?></span>
-                            <p class="text-[10px] text-slate-300 font-medium"><?= date('H:i', strtotime($row['created_at'])) ?> น.</p>
+                            <p class="text-xs text-slate-300 font-medium"><?= date('H:i', strtotime($row['created_at'])) ?> น.</p>
                         </td>
                         <td class="px-6 py-5">
                             <span class="text-sm font-black text-slate-800"><?= htmlspecialchars($row['area_name']) ?></span>

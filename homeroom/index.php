@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * homeroom/index.php — แดชบอร์ดครูที่ปรึกษา (Class Advisor Dashboard)
  * ศูนย์กลางการดูแลนักเรียนสำหรับครูที่ปรึกษา
@@ -123,24 +123,24 @@ require_once __DIR__ . '/../components/layout_start.php';
                             </div>
                             <div>
                                 <h3 class="text-lg font-black text-slate-800">ชั้น <?= htmlspecialchars($room) ?></h3>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Class Advisor Board</p>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Class Advisor Board</p>
                             </div>
                         </div>
                         <?php if ($pendingDeeds > 0): ?>
                         <div class="flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-500 rounded-full animate-pulse border border-rose-100">
                             <span class="w-2 h-2 bg-rose-500 rounded-full"></span>
-                            <span class="text-[10px] font-black uppercase tracking-tighter"><?= $pendingDeeds ?> Pending</span>
+                            <span class="text-xs font-black uppercase tracking-tighter"><?= $pendingDeeds ?> Pending</span>
                         </div>
                         <?php endif; ?>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3 mb-8">
                         <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100/50 transition-all hover:bg-white hover:shadow-md">
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">การเข้าแถววันนี้</p>
+                            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">การเข้าแถววันนี้</p>
                             <p class="text-xl font-black text-slate-700"><?= $attToday > 0 ? '<span class="text-emerald-500">เช็คแล้ว</span>' : '<span class="text-amber-500">ยังไม่ได้เช็ค</span>' ?></p>
                         </div>
                         <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100/50 transition-all hover:bg-white hover:shadow-md">
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">คะแนนความดี (ด.)</p>
+                            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">คะแนนความดี (ด.)</p>
                             <p class="text-xl font-black text-emerald-500">+<?= number_format($behStats['good'] ?? 0) ?></p>
                         </div>
                     </div>

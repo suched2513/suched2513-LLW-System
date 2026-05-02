@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -92,7 +92,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             </div>
 
             <div class="relative z-10">
-                <span class="px-4 py-1.5 rounded-full bg-violet-600 text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-violet-100">
+                <span class="px-4 py-1.5 rounded-full bg-violet-600 text-white text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-violet-100">
                     <?= htmlspecialchars($group['status']) ?>
                 </span>
                 <h2 class="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight mt-6 leading-tight">
@@ -119,11 +119,11 @@ require_once __DIR__ . '/../components/layout_start.php';
                 ?>
                 <div class="mt-10 pt-10 border-t border-slate-100">
                     <div class="flex flex-wrap justify-between items-end mb-4 gap-4">
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">PDCA Master Progress</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">PDCA Master Progress</p>
                         <div class="flex items-center gap-3">
                             <p class="text-3xl font-black italic text-violet-600"><?= number_format($progressPercent) ?>%</p>
                             <?php if ($canManage): ?>
-                            <select id="groupStatusSelect" onchange="updateGroupStatus(this.value)" class="text-[10px] font-black uppercase tracking-wider border border-slate-200 rounded-xl px-3 py-1.5 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer transition-all <?php
+                            <select id="groupStatusSelect" onchange="updateGroupStatus(this.value)" class="text-xs font-black uppercase tracking-wider border border-slate-200 rounded-xl px-3 py-1.5 outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer transition-all <?php
                                 echo match($group['status']) {
                                     'active' => 'bg-emerald-50 text-emerald-600',
                                     'completed' => 'bg-blue-50 text-blue-600',
@@ -136,7 +136,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                                 <option value="archived" <?= $group['status'] === 'archived' ? 'selected' : '' ?>>▸ Archived</option>
                             </select>
                             <?php else: ?>
-                            <span class="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl <?php
+                            <span class="text-xs font-black uppercase tracking-wider px-3 py-1.5 rounded-xl <?php
                                 echo match($group['status']) {
                                     'active' => 'bg-emerald-50 text-emerald-600',
                                     'completed' => 'bg-blue-50 text-blue-600',
@@ -190,7 +190,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                     </div>
                     <div class="flex-1">
                         <p class="text-xs font-black text-slate-800"><?= htmlspecialchars($member['firstname']) ?> <?= htmlspecialchars($member['lastname']) ?></p>
-                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 italic">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5 italic">
                             <?= $roleLabels[$member['role']] ?>
                         </p>
                     </div>
@@ -198,7 +198,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     <?php elseif ($canManage && $member['role'] !== 'model_teacher'): ?>
                     <button onclick="removeMember(<?= $member['user_id'] ?>, '<?= htmlspecialchars(addslashes($member['firstname'])) ?> <?= htmlspecialchars(addslashes($member['lastname'])) ?>')" class="w-7 h-7 rounded-full bg-rose-50 flex items-center justify-center text-rose-400 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100" title="ลบออกจากกลุ่ม">
-                        <i class="bi bi-x-lg text-[10px]"></i>
+                        <i class="bi bi-x-lg text-xs"></i>
                     </button>
                     <?php endif; ?>
                 </div>
@@ -239,7 +239,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                         </div>
                         <div>
                             <h3 class="text-xl font-black text-slate-800 tracking-tight italic"><?= $step['title'] ?></h3>
-                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Phase <?= $step['key'] ?></p>
+                            <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Phase <?= $step['key'] ?></p>
                         </div>
                     </div>
                     <?php if ($isMember || $_SESSION['llw_role'] === 'super_admin'): ?>
@@ -270,7 +270,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                                 </div>
                                 <div>
                                     <p class="text-xs font-black text-slate-800"><?= htmlspecialchars($log['firstname']) ?> <?= htmlspecialchars($log['lastname']) ?></p>
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic"><?= date('d M Y', strtotime($log['log_date'])) ?></p>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest italic"><?= date('d M Y', strtotime($log['log_date'])) ?></p>
                                 </div>
                             </div>
                             
@@ -278,14 +278,14 @@ require_once __DIR__ . '/../components/layout_start.php';
                             <div class="text-sm text-slate-500 leading-relaxed space-y-4">
                                 <?php if ($log['details']): ?>
                                 <div>
-                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 italic">รายละเอียดกิจกรรม</p>
+                                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1 italic">รายละเอียดกิจกรรม</p>
                                     <div class="whitespace-pre-line"><?= htmlspecialchars($log['details']) ?></div>
                                 </div>
                                 <?php endif; ?>
                                 
                                 <?php if ($log['reflection']): ?>
                                 <div class="bg-violet-50/50 p-4 rounded-2xl border border-violet-100/50 italic">
-                                    <p class="text-[9px] font-black text-violet-400 uppercase tracking-widest mb-1 italic">การสะท้อนผลและแนวทางพัฒนา</p>
+                                    <p class="text-xs font-black text-violet-400 uppercase tracking-widest mb-1 italic">การสะท้อนผลและแนวทางพัฒนา</p>
                                     <div class="text-violet-900"><?= htmlspecialchars($log['reflection']) ?></div>
                                 </div>
                                 <?php endif; ?>
@@ -298,7 +298,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                                     $files = explode(',', $log['evidence_path']);
                                     foreach ($files as $file): if (empty($file)) continue;
                                 ?>
-                                <a href="<?= htmlspecialchars($file) ?>" target="_blank" class="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-slate-100 text-[10px] font-bold text-slate-600 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition-all">
+                                <a href="<?= htmlspecialchars($file) ?>" target="_blank" class="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-slate-100 text-xs font-bold text-slate-600 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition-all">
                                     <i class="bi bi-file-earmark-image"></i> หลักฐานแนบ
                                 </a>
                                 <?php endforeach; ?>
@@ -333,12 +333,12 @@ require_once __DIR__ . '/../components/layout_start.php';
 
             <div class="space-y-5">
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block">ค้นหาชื่อครู/บุคลากร</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block">ค้นหาชื่อครู/บุคลากร</label>
                     <input type="text" id="memberSearch" oninput="searchUsers(this.value)" placeholder="พิมพ์ชื่อเพื่อค้นหา..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm focus:ring-4 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all font-bold">
                     <div id="searchResults" class="mt-3 space-y-2 max-h-60 overflow-y-auto"></div>
                 </div>
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block">บทบาทในกลุ่ม</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block">บทบาทในกลุ่ม</label>
                     <select id="memberRoleSelect" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm focus:ring-4 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all font-bold">
                         <option value="member">Member (สมาชิก)</option>
                         <option value="mentor">Mentor (ครูพี่เลี้ยง)</option>
@@ -358,7 +358,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 <!-- Floating Print Button -->
 <a href="report_print.php?id=<?= $groupId ?>" target="_blank" class="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-indigo-600 to-blue-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-blue-300 hover:scale-110 active:scale-90 transition-all z-40 group">
     <i class="bi bi-printer-fill text-2xl group-hover:animate-bounce"></i>
-    <div class="absolute right-full mr-4 bg-slate-800 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+    <div class="absolute right-full mr-4 bg-slate-800 text-white text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
         พิมพ์รายงานสรุป
     </div>
 </a>
@@ -490,7 +490,7 @@ function searchUsers(query) {
                     <div class="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl text-white text-xs font-black flex items-center justify-center shadow-lg">${u.firstname.charAt(0)}</div>
                     <div>
                         <p class="text-xs font-black text-slate-800">${u.firstname} ${u.lastname}</p>
-                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${u.role}</p>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">${u.role}</p>
                     </div>
                 </div>
             `).join('');

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -48,7 +48,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             </div>
             <div>
                 <h2 class="text-2xl font-black text-slate-800 tracking-tight italic"><?= $phaseConfig['title'] ?></h2>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">New PDCA Log Entry</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mt-1">New PDCA Log Entry</p>
             </div>
         </div>
         <a href="view_group.php?id=<?= $groupId ?>" class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 shadow-xl shadow-slate-100/50 border border-slate-100 transition-all">
@@ -65,23 +65,23 @@ require_once __DIR__ . '/../components/layout_start.php';
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div class="md:col-span-2">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 mb-3 block">หัวข้อกิจกรรม / ชื่อหัวข้อย่อย</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest px-4 mb-3 block">หัวข้อกิจกรรม / ชื่อหัวข้อย่อย</label>
                     <input type="text" name="topic" required placeholder="เช่น ประชุมวางแผนพัฒนารูปแบบนวัตกรรม..." class="w-full bg-slate-50 border border-slate-100 rounded-3xl px-8 py-5 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-<?= $phaseConfig['color'] ?>-500/10 focus:border-<?= $phaseConfig['color'] ?>-500 outline-none transition-all">
                 </div>
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 mb-3 block">วันที่จัดกิจกรรม</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest px-4 mb-3 block">วันที่จัดกิจกรรม</label>
                     <input type="date" name="log_date" value="<?= date('Y-m-d') ?>" required class="w-full bg-slate-50 border border-slate-100 rounded-3xl px-8 py-5 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-<?= $phaseConfig['color'] ?>-500/10 focus:border-<?= $phaseConfig['color'] ?>-500 outline-none transition-all">
                 </div>
 
                 <div class="md:col-span-3">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 mb-3 block"><?= $phaseConfig['detail_label'] ?></label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest px-4 mb-3 block"><?= $phaseConfig['detail_label'] ?></label>
                     <textarea name="details" rows="6" required placeholder="ระบุรายละเอียดที่ได้ดำเนินการ..." class="w-full bg-slate-50 border border-slate-100 rounded-[2rem] px-8 py-6 text-sm font-bold text-slate-800 focus:ring-4 focus:ring-<?= $phaseConfig['color'] ?>-500/10 focus:border-<?= $phaseConfig['color'] ?>-500 outline-none transition-all leading-relaxed"></textarea>
                 </div>
 
                 <?php if (isset($phaseConfig['reflection_label'])): ?>
                 <div class="md:col-span-3">
                     <div class="p-8 bg-violet-50/30 rounded-[2rem] border border-violet-100/50">
-                        <label class="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-3 block"><?= $phaseConfig['reflection_label'] ?></label>
+                        <label class="text-xs font-black text-violet-400 uppercase tracking-widest mb-3 block"><?= $phaseConfig['reflection_label'] ?></label>
                         <textarea name="reflection" rows="4" placeholder="บันทึกสิ่งที่น่าพอใจ ปัญหาที่พบ และแนวทางแก้ไขคราวถัดไป..." class="w-full bg-white/50 border border-violet-100 rounded-2xl px-6 py-4 text-sm font-bold text-violet-800 focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 outline-none transition-all italic leading-relaxed"></textarea>
                     </div>
                 </div>
@@ -89,13 +89,13 @@ require_once __DIR__ . '/../components/layout_start.php';
 
                 <!-- Evidence Upload -->
                 <div class="md:col-span-3">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 mb-3 block">หลักฐานประกอบกิจกรรม (ภาพถ่าย/แผน/เอกสาร)</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest px-4 mb-3 block">หลักฐานประกอบกิจกรรม (ภาพถ่าย/แผน/เอกสาร)</label>
                     <div id="dropZone" class="p-8 border-2 border-dashed border-slate-100 rounded-[2rem] text-center hover:border-<?= $phaseConfig['color'] ?>-500 transition-all group/file relative cursor-pointer active:scale-[0.99] bg-slate-50/30">
                         <input type="file" id="fileInput" name="evidence_files[]" class="hidden" multiple accept="image/*,.pdf,.docx,.xlsx,.pptx">
                         <div id="uploadPlaceholder">
                             <i class="bi bi-cloud-arrow-up text-4xl text-slate-300 group-hover/file:text-<?= $phaseConfig['color'] ?>-500 transition-colors mb-4 block"></i>
                             <p class="text-xs font-black text-slate-500">คลิกหรือลากไฟล์มาวางเพื่ออัปโหลด</p>
-                            <p class="text-[10px] text-slate-300 mt-2 uppercase tracking-[0.2em] font-bold">PDF, Word, Excel, Images (MAX 10MB)</p>
+                            <p class="text-xs text-slate-300 mt-2 uppercase tracking-[0.2em] font-bold">PDF, Word, Excel, Images (MAX 10MB)</p>
                         </div>
                         <div id="fileList" class="hidden mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <!-- Selected files will appear here -->
@@ -153,8 +153,8 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <i class="bi bi-file-earmark-check"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-[10px] font-black text-slate-800 truncate">${file.name}</p>
-                    <p class="text-[8px] text-slate-400 uppercase font-bold">${(file.size / 1024).toFixed(1)} KB</p>
+                    <p class="text-xs font-black text-slate-800 truncate">${file.name}</p>
+                    <p class="text-xs text-slate-400 uppercase font-bold">${(file.size / 1024).toFixed(1)} KB</p>
                 </div>
             `;
             fileList.appendChild(card);

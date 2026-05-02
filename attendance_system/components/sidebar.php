@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../functions.php';
 checkLogin();
 
@@ -35,7 +35,7 @@ if ($is_admin) {
             </div>
             <div>
                 <h1 class="text-sm font-bold text-gray-800 leading-tight">LLW Attendance</h1>
-                <p class="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Lalom Wittaya</p>
+                <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Lalom Wittaya</p>
             </div>
         </div>
     </div>
@@ -48,7 +48,7 @@ if ($is_admin) {
             </div>
             <div class="overflow-hidden">
                 <p class="text-xs font-semibold text-gray-700 truncate"><?= htmlspecialchars($teacher_name) ?></p>
-                <p class="text-[10px] text-gray-500 font-medium"><?= $is_admin ? 'ผู้ดูแลระบบ' : 'ครูผู้สอน' ?></p>
+                <p class="text-xs text-gray-500 font-medium"><?= $is_admin ? 'ผู้ดูแลระบบ' : 'ครูผู้สอน' ?></p>
             </div>
         </div>
     </div>

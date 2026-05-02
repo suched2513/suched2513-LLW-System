@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * supervision.php — ระบบนิเทศการจัดการเรียนรู้เชิงรุก
  */
@@ -29,7 +29,7 @@ require_once __DIR__ . '/components/layout_start.php';
                     <i class="bi bi-shield-lock-fill text-2xl"></i>
                 </div>
                 <div>
-                    <p class="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-0.5">สถานะการใช้งานระบบ</p>
+                    <p class="text-xs font-black text-indigo-300 uppercase tracking-[0.2em] mb-0.5">สถานะการใช้งานระบบ</p>
                     <p class="text-white font-black text-sm">กรุณาระบุสถานะเพื่อเข้าถึงฟังก์ชันที่ต้องการ</p>
                 </div>
             </div>
@@ -76,7 +76,7 @@ require_once __DIR__ . '/components/layout_start.php';
                     
                     <div class="space-y-5">
                         <div class="group">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ชื่อ-นามสกุล ครูผู้สอน</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ชื่อ-นามสกุล ครูผู้สอน</label>
                             <select id="sel-teacher" onchange="onTeacherChange()" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold focus:border-indigo-500 focus:bg-white outline-none transition-all appearance-none cursor-pointer">
                                 <option value="">เลือกครูผู้สอน...</option>
                             </select>
@@ -84,17 +84,17 @@ require_once __DIR__ . '/components/layout_start.php';
 
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ตำแหน่ง</label>
+                                <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ตำแหน่ง</label>
                                 <input type="text" id="info-position" readonly class="w-full bg-slate-100 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-500 opacity-70">
                             </div>
                             <div>
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">วิทยฐานะ</label>
+                                <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">วิทยฐานะ</label>
                                 <input type="text" id="info-academic" readonly class="w-full bg-slate-100 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-500 opacity-70">
                             </div>
                         </div>
 
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">กลุ่มสาระการเรียนรู้</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">กลุ่มสาระการเรียนรู้</label>
                             <input type="text" id="info-group" readonly class="w-full bg-slate-100 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-500 opacity-70">
                         </div>
 
@@ -102,21 +102,21 @@ require_once __DIR__ . '/components/layout_start.php';
 
                         <div class="grid grid-cols-2 gap-4">
                             <div class="col-span-2">
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ชื่อรายวิชา <span class="text-rose-500 font-black">*</span></label>
+                                <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ชื่อรายวิชา <span class="text-rose-500 font-black">*</span></label>
                                 <input type="text" id="course-name" placeholder="เช่น วิทยาการคำนวณ 1" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold focus:border-indigo-500 focus:bg-white outline-none transition-all">
                             </div>
                             <div>
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">รหัสวิชา <span class="text-rose-500 font-black">*</span></label>
+                                <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">รหัสวิชา <span class="text-rose-500 font-black">*</span></label>
                                 <input type="text" id="course-code" placeholder="เช่น ว21103" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold focus:border-indigo-500 focus:bg-white outline-none transition-all">
                             </div>
                             <div>
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ระดับชั้น <span class="text-rose-500 font-black">*</span></label>
+                                <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ระดับชั้น <span class="text-rose-500 font-black">*</span></label>
                                 <input type="text" id="class-level" placeholder="เช่น ม.1" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold focus:border-indigo-500 focus:bg-white outline-none transition-all">
                             </div>
                         </div>
 
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">วันที่นิเทศ</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">วันที่นิเทศ</label>
                             <input type="date" id="obs-date" value="<?= date('Y-m-d') ?>" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold focus:border-indigo-500 focus:bg-white outline-none transition-all">
                         </div>
                     </div>
@@ -134,7 +134,7 @@ require_once __DIR__ . '/components/layout_start.php';
                             แบบนิเทศการจัดการเรียนรู้
                         </h3>
                         <div class="px-4 py-2 bg-white rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Score Avg</span>
+                            <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Score Avg</span>
                             <span id="live-avg" class="text-xl font-black text-indigo-600">0.00</span>
                         </div>
                     </div>
@@ -147,26 +147,26 @@ require_once __DIR__ . '/components/layout_start.php';
                         <div class="p-8 bg-slate-50/50 space-y-6">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ผลการวิเคราะห์/สิ่งที่ค้นพบ</label>
+                                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ผลการวิเคราะห์/สิ่งที่ค้นพบ</label>
                                     <textarea id="findings" rows="4" class="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-medium focus:border-indigo-500 outline-none transition-all placeholder:text-slate-300" placeholder="ระบุสิ่งที่พบจากการนิเทศ..."></textarea>
                                 </div>
                                 <div>
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">จุดเด่น/สิ่งที่ประทับใจ</label>
+                                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">จุดเด่น/สิ่งที่ประทับใจ</label>
                                     <textarea id="impressions" rows="4" class="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-medium focus:border-indigo-500 outline-none transition-all placeholder:text-slate-300" placeholder="ระบุจุดเด่นหรือสิ่งที่ควรชื่นชม..."></textarea>
                                 </div>
                                 <div class="md:col-span-2">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ข้อขวัญ/สิ่งที่ควรพัฒนา</label>
+                                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ข้อขวัญ/สิ่งที่ควรพัฒนา</label>
                                     <textarea id="improvements" rows="4" class="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-medium focus:border-indigo-500 outline-none transition-all placeholder:text-slate-300" placeholder="ระบุข้อเสนอแนะในการพัฒนา..."></textarea>
                                 </div>
                             </div>
 
                             <div class="flex flex-col md:flex-row items-end gap-6 pt-4">
                                 <div class="flex-1">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ผู้นิเทศ</label>
+                                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ผู้นิเทศ</label>
                                     <input type="text" id="observer-name" value="<?= htmlspecialchars($_SESSION['fullname']) ?>" class="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold focus:border-indigo-500 outline-none transition-all">
                                 </div>
                                 <div class="flex-1">
-                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ตำแหน่งผู้นิเทศ</label>
+                                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 mb-2 block">ตำแหน่งผู้นิเทศ</label>
                                     <select id="observer-position" class="w-full bg-white border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer">
                                         <option value="">เลือกตำแหน่ง...</option>
                                         <option value="ผู้อำนวยการโรงเรียน">ผู้อำนวยการโรงเรียน</option>
@@ -193,7 +193,7 @@ require_once __DIR__ . '/components/layout_start.php';
     <div id="content-individual" class="tab-content hidden space-y-6">
         <div id="teacher-selection" class="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 p-8 border border-white flex flex-col md:flex-row items-center gap-6">
             <div class="flex-1 w-full">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">เลือกครูเพื่อดูรายงาน</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">เลือกครูเพื่อดูรายงาน</label>
                 <select id="sel-report-teacher" onchange="loadIndividualReport()" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer">
                     <option value="">เลือกครูผู้สอน...</option>
                 </select>
@@ -207,15 +207,15 @@ require_once __DIR__ . '/components/layout_start.php';
             <!-- Stats Grid -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-200">
-                    <p class="text-[10px] font-black uppercase tracking-widest opacity-70">จำนวนครั้งที่รับการนิเทศ</p>
+                    <p class="text-xs font-black uppercase tracking-widest opacity-70">จำนวนครั้งที่รับการนิเทศ</p>
                     <p id="stat-count" class="text-5xl font-black mt-3 italic">0</p>
                 </div>
                 <div class="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-slate-100 border border-slate-50">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">คะแนนเฉลี่ยรวม</p>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">คะแนนเฉลี่ยรวม</p>
                     <p id="stat-avg" class="text-5xl font-black mt-3 text-slate-800 italic">0.00</p>
                 </div>
                 <div class="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-slate-100 border border-slate-50">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">การแปลผล</p>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">การแปลผล</p>
                     <div class="mt-3 flex items-center gap-3">
                         <span id="stat-inter" class="text-2xl font-black text-indigo-600">รอดำเนินการ</span>
                     </div>
@@ -244,7 +244,7 @@ require_once __DIR__ . '/components/layout_start.php';
                 <div class="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
                     <div class="p-8 border-b border-slate-50 flex items-center justify-between">
                         <h4 class="text-lg font-black text-slate-800">ประวัติการรับนิเทศ</h4>
-                        <button id="btn-triple-report" onclick="loadTripleSummary()" class="hidden px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black hover:bg-indigo-600 hover:text-white transition-all">
+                        <button id="btn-triple-report" onclick="loadTripleSummary()" class="hidden px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black hover:bg-indigo-600 hover:text-white transition-all">
                             <i class="bi bi-people-fill mr-1"></i> พิมพ์สรุป 3 กรรมการ
                         </button>
                     </div>
@@ -252,11 +252,11 @@ require_once __DIR__ . '/components/layout_start.php';
                         <table class="w-full text-left">
                             <thead class="bg-slate-50">
                                 <tr>
-                                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">วันที่</th>
-                                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">วิชา/ชั้น</th>
-                                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">ผู้นิเทศ</th>
-                                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">คะแนนเฉลี่ย</th>
-                                    <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">ผลประเมิน</th>
+                                    <th class="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">วันที่</th>
+                                    <th class="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">วิชา/ชั้น</th>
+                                    <th class="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">ผู้นิเทศ</th>
+                                    <th class="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest text-center">คะแนนเฉลี่ย</th>
+                                    <th class="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">ผลประเมิน</th>
                                 </tr>
                             </thead>
                             <tbody id="history-rows" class="divide-y divide-slate-50">
@@ -273,29 +273,29 @@ require_once __DIR__ . '/components/layout_start.php';
     <div id="content-summary" class="tab-content hidden space-y-6">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[2rem] p-6 text-white shadow-xl shadow-indigo-200">
-                 <p class="text-[9px] font-black uppercase tracking-widest opacity-70">ครูทั้งหมด (ไม่รวม ผอ./รอง)</p>
+                 <p class="text-xs font-black uppercase tracking-widest opacity-70">ครูทั้งหมด (ไม่รวม ผอ./รอง)</p>
                  <p id="sum-kpi-total" class="text-4xl font-black mt-2 italic">0</p>
             </div>
             <div class="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-100 border border-slate-100">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">ประเมินตนเองแล้ว</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest">ประเมินตนเองแล้ว</p>
                 <div class="flex items-baseline gap-2">
                     <p id="sum-kpi-self" class="text-4xl font-black mt-2 text-slate-800 italic">0</p>
-                    <p class="text-[10px] font-bold text-slate-400">คน</p>
+                    <p class="text-xs font-bold text-slate-400">คน</p>
                 </div>
             </div>
             <div class="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-100 border border-slate-100">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">ประเมินครบ 3 ท่านแล้ว</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest">ประเมินครบ 3 ท่านแล้ว</p>
                 <div class="flex items-baseline gap-2">
                     <p id="sum-kpi-peer3" class="text-4xl font-black mt-2 text-indigo-600 italic">0</p>
-                    <p class="text-[10px] font-bold text-slate-400">คน</p>
+                    <p class="text-xs font-bold text-slate-400">คน</p>
                 </div>
             </div>
             <div class="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-100 border border-slate-100">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">จำนวนครั้งการนิเทศรวม</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest">จำนวนครั้งการนิเทศรวม</p>
                 <p id="sum-total-obs" class="text-4xl font-black mt-2 text-slate-800 italic">0</p>
             </div>
             <div class="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-100 border border-slate-100">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">ครูที่รับนิเทศแล้ว (คน)</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest">ครูที่รับนิเทศแล้ว (คน)</p>
                 <p id="sum-total-teachers" class="text-4xl font-black mt-2 text-slate-800 italic">0</p>
             </div>
         </div>
@@ -344,12 +344,12 @@ require_once __DIR__ . '/components/layout_start.php';
                 <table class="w-full text-left">
                      <thead>
                         <tr class="bg-slate-50">
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest rounded-l-2xl">ชื่อครู</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ตำแหน่ง</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">วิทยฐานะ</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">กลุ่มสาระฯ</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">สิทธิ์ผู้นิเทศ</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest rounded-r-2xl text-center">จัดการ</th>
+                            <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest rounded-l-2xl">ชื่อครู</th>
+                            <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ตำแหน่ง</th>
+                            <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">วิทยฐานะ</th>
+                            <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">กลุ่มสาระฯ</th>
+                            <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-center">สิทธิ์ผู้นิเทศ</th>
+                            <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest rounded-r-2xl text-center">จัดการ</th>
                         </tr>
                      </thead>
                      <tbody id="settings-teacher-list" class="divide-y divide-slate-50">
@@ -433,19 +433,19 @@ require_once __DIR__ . '/components/layout_start.php';
             <!-- Summary Info -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-wider">รหัสวิชา</p>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-wider">รหัสวิชา</p>
                     <p id="md-code" class="text-sm font-bold text-slate-700 mt-1">-</p>
                 </div>
                 <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-wider">ระดับชั้น</p>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-wider">ระดับชั้น</p>
                     <p id="md-class" class="text-sm font-bold text-slate-700 mt-1">-</p>
                 </div>
                 <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-wider">วันที่นิเทศ</p>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-wider">วันที่นิเทศ</p>
                     <p id="md-date" class="text-sm font-bold text-slate-700 mt-1">-</p>
                 </div>
                 <div class="bg-indigo-600 p-4 rounded-2xl text-white shadow-xl shadow-indigo-200">
-                    <p class="text-[9px] font-black opacity-80 uppercase tracking-wider">คะแนนเฉลี่ย</p>
+                    <p class="text-xs font-black opacity-80 uppercase tracking-wider">คะแนนเฉลี่ย</p>
                     <p id="md-avg" class="text-2xl font-black italic mt-1">-</p>
                 </div>
             </div>
@@ -477,7 +477,7 @@ require_once __DIR__ . '/components/layout_start.php';
                 <div class="space-y-6">
                     <div class="bg-slate-900 rounded-2xl p-6 text-white overflow-hidden relative">
                         <div class="relative z-10">
-                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4">ข้อมูลผู้นิเทศ</p>
+                            <p class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">ข้อมูลผู้นิเทศ</p>
                             <p id="md-obs-name" class="font-bold text-sm">-</p>
                             <p id="md-obs-pos" class="text-xs text-indigo-400 mt-1">-</p>
                         </div>
@@ -485,7 +485,7 @@ require_once __DIR__ . '/components/layout_start.php';
                     </div>
 
                     <div class="space-y-3">
-                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">รายการคะแนน (27 หัวข้อ)</h4>
+                        <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">รายการคะแนน (27 หัวข้อ)</h4>
                         <div id="md-score-list" class="space-y-2 pr-2">
                             <!-- Populated by JS -->
                         </div>
@@ -495,7 +495,7 @@ require_once __DIR__ . '/components/layout_start.php';
         </div>
 
         <div class="p-8 bg-slate-50 rounded-b-[2.5rem] border-t border-slate-100 flex justify-between items-center">
-            <p class="text-[10px] font-black text-slate-300 uppercase italic">Active Learning Supervision | LLW System</p>
+            <p class="text-xs font-black text-slate-300 uppercase italic">Active Learning Supervision | LLW System</p>
             <div class="flex items-center gap-3">
                 <button onclick="printPage()" class="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-xs hover:bg-slate-100 transition-all flex items-center gap-2">
                     <i class="bi bi-printer"></i> พิมพ์รายงาน
@@ -834,14 +834,14 @@ async function loadIndividualReport() {
                     <td class="px-8 py-5 text-sm font-bold text-slate-700">${new Date(r.observation_date).toLocaleDateString('th-TH')}</td>
                     <td class="px-8 py-5">
                         <p class="text-sm font-black text-slate-800">${r.course_name}</p>
-                        <p class="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">${r.course_code} | ${r.class_level}</p>
+                        <p class="text-xs text-indigo-500 font-bold uppercase tracking-wider">${r.course_code} | ${r.class_level}</p>
                     </td>
                     <td class="px-8 py-5">
                         <div class="flex items-center gap-2">
-                             <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">${r.observer_name ? r.observer_name[0] : '?'}</span>
+                             <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black text-slate-500">${r.observer_name ? r.observer_name[0] : '?'}</span>
                              <div>
                                 <p class="text-xs font-bold text-slate-700">${r.observer_name || 'ไม่ระบุ'}</p>
-                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tight">${r.observer_position || '-'}</p>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-tight">${r.observer_position || '-'}</p>
                              </div>
                         </div>
                     </td>
@@ -852,7 +852,7 @@ async function loadIndividualReport() {
                     </td>
                     <td class="px-8 py-5">
                         <div class="flex items-center justify-between gap-2">
-                            <span class="px-3 py-1.5 rounded-full ${getInterColor(r.average_score)} text-[10px] font-black uppercase tracking-wider">
+                            <span class="px-3 py-1.5 rounded-full ${getInterColor(r.average_score)} text-xs font-black uppercase tracking-wider">
                                 ${r.interpretation}
                             </span>
                             <i class="bi bi-chevron-right text-slate-300"></i>
@@ -891,15 +891,15 @@ async function loadSummaryReport() {
                         <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">${r.teacher_name[0]}</div>
                         <div>
                             <p class="text-xs font-bold text-slate-800">${r.teacher_name}</p>
-                            <p class="text-[9px] font-bold text-slate-400 uppercase">${new Date(r.observation_date).toLocaleDateString('th-TH')}</p>
+                            <p class="text-xs font-bold text-slate-400 uppercase">${new Date(r.observation_date).toLocaleDateString('th-TH')}</p>
                         </div>
-                        <div class="ml-auto px-3 py-1 rounded-lg ${getInterColor(r.average_score)} text-[8px] font-black uppercase">${r.interpretation}</div>
+                        <div class="ml-auto px-3 py-1 rounded-lg ${getInterColor(r.average_score)} text-xs font-black uppercase">${r.interpretation}</div>
                     </div>
                     <p class="text-xs font-black text-slate-700 line-clamp-1">${r.course_name}</p>
-                    <p class="text-[9px] font-bold text-indigo-500 uppercase mt-1">${r.course_code} | ${r.class_level}</p>
+                    <p class="text-xs font-bold text-indigo-500 uppercase mt-1">${r.course_code} | ${r.class_level}</p>
                     <div class="mt-4 flex items-center justify-between">
                         <span class="text-xl font-black italic text-indigo-600">${r.average_score}</span>
-                        <p class="text-[10px] font-bold text-slate-300">นิเทศโดย: ${r.observer_name}</p>
+                        <p class="text-xs font-bold text-slate-300">นิเทศโดย: ${r.observer_name}</p>
                     </div>
                 </div>
             `).join('');
@@ -996,11 +996,11 @@ function renderSettingsList() {
                     <input type="checkbox" id="set-eval-${t.id}" class="sr-only peer" ${t.is_evaluator == 1 ? 'checked' : ''}
                            onchange="toggleEvaluator(${t.id}, this.checked)">
                     <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 relative"></div>
-                    <span id="eval-label-${t.id}" class="text-[10px] font-black uppercase tracking-widest ${t.is_evaluator == 1 ? 'text-indigo-600' : 'text-slate-300'}">${t.is_evaluator == 1 ? 'ผู้นิเทศ' : 'ครู'}</span>
+                    <span id="eval-label-${t.id}" class="text-xs font-black uppercase tracking-widest ${t.is_evaluator == 1 ? 'text-indigo-600' : 'text-slate-300'}">${t.is_evaluator == 1 ? 'ผู้นิเทศ' : 'ครู'}</span>
                 </label>
             </td>
             <td class="px-6 py-5 text-center">
-                <button onclick="updateProfile(${t.id})" class="text-indigo-600 hover:text-indigo-800 transition-colors font-black text-[10px] uppercase tracking-widest">
+                <button onclick="updateProfile(${t.id})" class="text-indigo-600 hover:text-indigo-800 transition-colors font-black text-xs uppercase tracking-widest">
                     <i class="bi bi-save-fill"></i> Save
                 </button>
             </td>
@@ -1025,7 +1025,7 @@ async function toggleEvaluator(id, checked) {
             const t = teachers.find(x => x.id == id);
             t.is_evaluator = checked ? 1 : 0;
             label.textContent = checked ? 'ผู้นิเทศ' : 'ครู';
-            label.className = `text-[10px] font-black uppercase tracking-widest ${checked ? 'text-indigo-600' : 'text-slate-300'}`;
+            label.className = `text-xs font-black uppercase tracking-widest ${checked ? 'text-indigo-600' : 'text-slate-300'}`;
 
             const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
             Toast.fire({ icon: 'success', title: checked ? 'กำหนดเป็นผู้นิเทศแล้ว' : 'ยกเลิกสิทธิ์ผู้นิเทศแล้ว' });
@@ -1113,8 +1113,8 @@ async function showRecordDetails(id) {
             scoreList.innerHTML = json.scores.map(s => `
                 <div class="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
                     <div class="flex items-center gap-3">
-                        <span class="w-6 h-6 rounded-lg bg-slate-50 text-slate-400 text-[9px] font-black flex items-center justify-center italic">${(s.item_idx + 1).toString().padStart(2, '0')}</span>
-                        <p class="text-[11px] font-bold text-slate-600 line-clamp-1">${ITEMS_DESC[s.item_idx]}</p>
+                        <span class="w-6 h-6 rounded-lg bg-slate-50 text-slate-400 text-xs font-black flex items-center justify-center italic">${(s.item_idx + 1).toString().padStart(2, '0')}</span>
+                        <p class="text-sm font-bold text-slate-600 line-clamp-1">${ITEMS_DESC[s.item_idx]}</p>
                     </div>
                     <span class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${getScoreColor(s.score)}">${s.score}</span>
                 </div>
@@ -1176,16 +1176,16 @@ async function loadTripleSummary() {
                     </div>
 
                     <div class="mb-4 flex justify-between items-end border-b-2 border-slate-900 pb-2">
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Supervision Itemized Comparison</p>
-                        <p class="text-[10px] font-bold text-slate-500 italic">Page 1 of 1</p>
+                        <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Supervision Itemized Comparison</p>
+                        <p class="text-xs font-bold text-slate-500 italic">Page 1 of 1</p>
                     </div>
 
-                    <table class="w-full border-collapse border border-slate-400 text-[11px] text-center">
+                    <table class="w-full border-collapse border border-slate-400 text-sm text-center">
                         <thead>
                             <tr class="bg-slate-100">
                                 <th class="border border-slate-400 p-2 w-10">ข้อ</th>
                                 <th class="border border-slate-400 p-2 text-left">รายการนิเทศ (Active Learning)</th>
-                                ${evals.map((e, i) => `<th class="border border-slate-400 p-2">กก.${i+1}<br><span class="text-[8px] font-normal leading-tight">${e.observer_name.split(' ')[0]}</span></th>`).join('')}
+                                ${evals.map((e, i) => `<th class="border border-slate-400 p-2">กก.${i+1}<br><span class="text-xs font-normal leading-tight">${e.observer_name.split(' ')[0]}</span></th>`).join('')}
                                 <th class="border border-slate-400 p-2 bg-slate-200 font-bold">ค่าเฉลี่ย</th>
                             </tr>
                         </thead>

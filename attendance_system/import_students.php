@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'functions.php';
 checkLogin();
 
@@ -198,13 +198,13 @@ require_once __DIR__ . '/components/layout_start.php';
                     <div id="dropZone" class="drop-zone rounded-[32px] p-10 flex flex-col items-center justify-center cursor-pointer group">
                         <i class="bi bi-file-earmark-spreadsheet text-5xl text-slate-300 group-hover:text-indigo-500 mb-4 transition-colors"></i>
                         <p class="text-slate-600 font-bold">ลากไฟล์ CSV มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
-                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-2">รองรับ .CSV เท่านั้น (Thai/TIS-620 หรือ UTF-8)</p>
+                        <p class="text-xs text-slate-400 uppercase tracking-widest mt-2">รองรับ .CSV เท่านั้น (Thai/TIS-620 หรือ UTF-8)</p>
                         <input type="file" name="csvfile" id="fileInput" accept=".csv" class="hidden">
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="space-y-2">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">บังคับห้องเรียน (ถ้ามี)</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-4">บังคับห้องเรียน (ถ้ามี)</label>
                             <input type="text" name="classroom_fixed" placeholder="เช่น ม.1/1 (เว้นว่างไว้เพื่อใช้ค่าจากไฟล์)"
                                    class="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all">
                         </div>
@@ -251,11 +251,11 @@ require_once __DIR__ . '/components/layout_start.php';
                     <table class="w-full">
                         <thead class="bg-slate-50 sticky top-0 z-10">
                             <tr class="text-left">
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ลำดับ</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">รหัส</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อ-นามสกุล</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ห้อง</th>
-                                <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">เลขบัตร (รหัสผ่าน)</th>
+                                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ลำดับ</th>
+                                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">รหัส</th>
+                                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ชื่อ-นามสกุล</th>
+                                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ห้อง</th>
+                                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">เลขบัตร (รหัสผ่าน)</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -265,7 +265,7 @@ require_once __DIR__ . '/components/layout_start.php';
                                 <td class="px-6 py-4 font-mono font-black text-indigo-600 text-xs"><?= htmlspecialchars($p['student_id']) ?></td>
                                 <td class="px-6 py-4 font-bold text-slate-700"><?= htmlspecialchars($p['name']) ?></td>
                                 <td class="px-6 py-4">
-                                    <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black border border-emerald-100">
+                                    <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-black border border-emerald-100">
                                         <?= htmlspecialchars($p['classroom']) ?>
                                     </span>
                                 </td>
@@ -273,7 +273,7 @@ require_once __DIR__ . '/components/layout_start.php';
                                     <?php if ($p['nid_valid']): ?>
                                     <span class="font-mono text-xs text-slate-600"><?= htmlspecialchars($p['national_id_masked']) ?></span>
                                     <?php else: ?>
-                                    <span class="px-2 py-1 rounded-lg bg-amber-100 text-amber-700 text-[10px] font-black">
+                                    <span class="px-2 py-1 rounded-lg bg-amber-100 text-amber-700 text-xs font-black">
                                         <i class="bi bi-exclamation-triangle-fill me-1"></i>ไม่มีเลขบัตร
                                     </span>
                                     <?php endif; ?>
@@ -302,26 +302,26 @@ require_once __DIR__ . '/components/layout_start.php';
                     <?= csrf_field() ?>
                     <input type="hidden" name="do" value="add_student">
                     <div class="space-y-1">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">เลขประจำตัว</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-4">เลขประจำตัว</label>
                         <input type="text" name="student_id" required placeholder="เช่น 04684"
                                class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all">
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">ชื่อ-นามสกุล</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-4">ชื่อ-นามสกุล</label>
                         <input type="text" name="name" required placeholder="ชื่อ-สกุล"
                                class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all">
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">ห้องเรียน</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-4">ห้องเรียน</label>
                         <input type="text" name="classroom" required placeholder="ม.1/1"
                                class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-3.5 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all">
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">เลขบัตรประชาชน 13 หลัก</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-4">เลขบัตรประชาชน 13 หลัก</label>
                         <input type="text" name="national_id" required maxlength="13" inputmode="numeric"
                                placeholder="1234567890123"
                                class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-3.5 text-sm font-bold font-mono focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all">
-                        <p class="text-[10px] text-slate-400 ml-4">ใช้เป็นรหัสผ่านเข้าระบบนักเรียน</p>
+                        <p class="text-xs text-slate-400 ml-4">ใช้เป็นรหัสผ่านเข้าระบบนักเรียน</p>
                     </div>
                     <button type="submit" class="w-full bg-emerald-500 text-white rounded-2xl py-4 font-black text-sm hover:bg-emerald-600 hover:-translate-y-1 transition-all shadow-xl shadow-emerald-100">
                         บันทึกนักเรียน
@@ -342,7 +342,7 @@ require_once __DIR__ . '/components/layout_start.php';
                 </ul>
                 <a href="data:text/csv;charset=utf-8,%EF%BB%BFstudent_id%2Cname%2Cclassroom%2Cnational_id%0A04684%2C%E0%B9%80%E0%B8%94%E0%B9%87%E0%B8%81%E0%B8%82%E0%B8%B2%E0%B8%A2%E0%B8%81%E0%B8%B4%E0%B8%95%E0%B8%95%E0%B8%B4%E0%B8%A8%E0%B8%B1%E0%B8%81%E0%B8%94%E0%B8%B4%E0%B9%8C%2C%E0%B8%A1.1%2F1%2C1234567890123"
                    download="student_template.csv"
-                   class="mt-6 inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                   class="mt-6 inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all">
                     <i class="bi bi-download"></i> โหลดไฟล์ตัวอย่าง
                 </a>
             </div>
@@ -365,11 +365,11 @@ require_once __DIR__ . '/components/layout_start.php';
             <table class="w-full">
                 <thead class="bg-slate-50/50">
                     <tr class="text-left">
-                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">เลขประจำตัว</th>
-                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อ-นามสกุล</th>
-                        <th class="px-8 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">ห้องเรียน</th>
-                        <th class="px-8 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">รหัสผ่าน (เลขบัตร)</th>
-                        <th class="px-8 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">การจัดการ</th>
+                        <th class="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">เลขประจำตัว</th>
+                        <th class="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ชื่อ-นามสกุล</th>
+                        <th class="px-8 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest">ห้องเรียน</th>
+                        <th class="px-8 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest">รหัสผ่าน (เลขบัตร)</th>
+                        <th class="px-8 py-4 text-right text-xs font-black text-slate-400 uppercase tracking-widest">การจัดการ</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -378,7 +378,7 @@ require_once __DIR__ . '/components/layout_start.php';
                         <td class="px-8 py-4 font-mono font-black text-indigo-600 text-xs tracking-tighter"><?= htmlspecialchars($s['student_id']) ?></td>
                         <td class="px-8 py-4 font-bold text-slate-700"><?= htmlspecialchars($s['name']) ?></td>
                         <td class="px-8 py-4 text-center">
-                            <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-black text-[10px]"><?= htmlspecialchars($s['classroom']) ?></span>
+                            <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-black text-xs"><?= htmlspecialchars($s['classroom']) ?></span>
                         </td>
                         <td class="px-8 py-4 text-center">
                             <?php if (!empty($s['national_id_masked'])): ?>
@@ -386,7 +386,7 @@ require_once __DIR__ . '/components/layout_start.php';
                                 <i class="bi bi-shield-lock-fill me-1"></i><?= htmlspecialchars($s['national_id_masked']) ?>
                             </span>
                             <?php else: ?>
-                            <span class="px-2 py-1 rounded-lg bg-rose-50 text-rose-500 text-[10px] font-black">
+                            <span class="px-2 py-1 rounded-lg bg-rose-50 text-rose-500 text-xs font-black">
                                 <i class="bi bi-x-circle-fill me-1"></i>ยังไม่มี
                             </span>
                             <?php endif; ?>
@@ -433,21 +433,21 @@ require_once __DIR__ . '/components/layout_start.php';
             <input type="hidden" name="do" value="edit_student">
             <input type="hidden" name="student_db_id" id="edit-id">
             <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">ชื่อ-นามสกุล</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-4">ชื่อ-นามสกุล</label>
                 <input type="text" name="edit_name" id="edit-name" required
                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all">
             </div>
             <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">ห้องเรียน</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-4">ห้องเรียน</label>
                 <input type="text" name="edit_classroom" id="edit-cls" required
                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all">
             </div>
             <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">เลขบัตรประชาชน (เว้นว่าง = ไม่เปลี่ยน)</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-4">เลขบัตรประชาชน (เว้นว่าง = ไม่เปลี่ยน)</label>
                 <input type="text" name="edit_national_id" id="edit-nid" maxlength="13" inputmode="numeric"
                        placeholder="กรอกเพื่อเปลี่ยนรหัสผ่าน"
                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold font-mono focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all">
-                <p id="edit-nid-current" class="text-[10px] text-slate-400 ml-4 mt-1"></p>
+                <p id="edit-nid-current" class="text-xs text-slate-400 ml-4 mt-1"></p>
             </div>
             <div class="flex gap-3 pt-4">
                 <button type="button" onclick="closeEditModal()" class="flex-1 px-6 py-4 rounded-2xl text-sm font-black text-slate-400 hover:bg-slate-50 transition-all">ยกเลิก</button>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * assembly/admin.php — Admin Dashboard (ผู้บริหาร)
  * Roles: super_admin, wfh_admin
@@ -51,19 +51,19 @@ require_once __DIR__ . '/../components/layout_start.php';
         <!-- Filters -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เดือน</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เดือน</label>
                 <select id="adm-month" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all">
                     <?php echo renderMonthOptions(true); ?>
                 </select>
             </div>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ชั้น</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ชั้น</label>
                 <select id="adm-grade" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all">
                     <option value="all">ทุกชั้น</option>
                 </select>
             </div>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ห้อง</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ห้อง</label>
                 <select id="adm-classroom" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all">
                     <option value="all">ทุกห้อง</option>
                 </select>
@@ -78,15 +78,15 @@ require_once __DIR__ . '/../components/layout_start.php';
         <!-- KPI Cards -->
         <div id="adm-kpi" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 hidden">
             <div class="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-5 shadow-lg shadow-emerald-200/50">
-                <p class="text-[10px] font-black uppercase tracking-wider opacity-80">การมาเฉลี่ย</p>
+                <p class="text-xs font-black uppercase tracking-wider opacity-80">การมาเฉลี่ย</p>
                 <p id="kpi-present" class="text-4xl font-black mt-1">- %</p>
             </div>
             <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl p-5 shadow-lg shadow-blue-200/50">
-                <p class="text-[10px] font-black uppercase tracking-wider opacity-80">แต่งกายถูกเฉลี่ย</p>
+                <p class="text-xs font-black uppercase tracking-wider opacity-80">แต่งกายถูกเฉลี่ย</p>
                 <p id="kpi-uniform" class="text-4xl font-black mt-1">- %</p>
             </div>
             <div class="bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-2xl p-5 shadow-lg shadow-rose-200/50">
-                <p class="text-[10px] font-black uppercase tracking-wider opacity-80">หมายเหตุทั้งหมด</p>
+                <p class="text-xs font-black uppercase tracking-wider opacity-80">หมายเหตุทั้งหมด</p>
                 <p id="kpi-notes" class="text-4xl font-black mt-1">-</p>
             </div>
         </div>
@@ -110,11 +110,11 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <table class="w-full text-sm">
                         <thead class="bg-slate-50">
                             <tr>
-                                <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">ห้อง</th>
-                                <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">ครูที่ปรึกษา</th>
-                                <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-green-600">การมา %</th>
-                                <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-blue-500">แต่งกายถูก %</th>
-                                <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-rose-500">หมายเหตุ</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ห้อง</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ครูที่ปรึกษา</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-green-600">การมา %</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-blue-500">แต่งกายถูก %</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-rose-500">หมายเหตุ</th>
                             </tr>
                         </thead>
                         <tbody id="adm-table"></tbody>
@@ -141,13 +141,13 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เดือน</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เดือน</label>
                 <select id="det-month" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all">
                     <?php echo renderMonthOptions(true); ?>
                 </select>
             </div>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ชั้น</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ชั้น</label>
                 <select id="det-level" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all">
                     <option value="all">ทุกชั้น</option>
                     <option value="ม.1">ม.1</option>
@@ -159,7 +159,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </select>
             </div>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ห้อง</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ห้อง</label>
                 <select id="det-classroom" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all">
                     <option value="all">ทุกห้อง</option>
                 </select>
@@ -175,15 +175,15 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <table class="w-full text-sm">
                     <thead class="bg-slate-50 sticky top-0">
                         <tr>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">วันที่</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">ห้อง</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-emerald-600">มา</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-rose-500">ขาด</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-amber-500">ลา</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-purple-500">โดด</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-blue-500">แต่งกาย %</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">หมายเหตุ</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-center">ปริ้น</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">วันที่</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ห้อง</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-emerald-600">มา</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-rose-500">ขาด</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-amber-500">ลา</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-purple-500">โดด</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-blue-500">แต่งกาย %</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">หมายเหตุ</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-center">ปริ้น</th>
                         </tr>
                     </thead>
                     <tbody id="det-table">
@@ -206,7 +206,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
         <div class="flex items-end gap-4 mb-5">
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เลือกวันที่</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เลือกวันที่</label>
                 <input id="daily-date" type="date" value="<?= date('Y-m-d') ?>" class="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-cyan-400 outline-none transition-all">
             </div>
             <button onclick="loadDailySummary()" class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-5 py-3 rounded-2xl font-bold text-sm shadow-lg shadow-cyan-200/50 hover:scale-[1.02] transition-all flex items-center gap-2">
@@ -217,19 +217,19 @@ require_once __DIR__ . '/../components/layout_start.php';
         <!-- KPI totals -->
         <div id="daily-kpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5 hidden">
             <div class="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-4 text-center shadow-lg shadow-emerald-200/50">
-                <p class="text-[10px] font-black uppercase tracking-wider opacity-80">เช้า: มา</p>
+                <p class="text-xs font-black uppercase tracking-wider opacity-80">เช้า: มา</p>
                 <p id="daily-m-present" class="text-3xl font-black mt-1">0</p>
             </div>
             <div class="bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-2xl p-4 text-center shadow-lg shadow-rose-200/50">
-                <p class="text-[10px] font-black uppercase tracking-wider opacity-80">เช้า: ขาด</p>
+                <p class="text-xs font-black uppercase tracking-wider opacity-80">เช้า: ขาด</p>
                 <p id="daily-m-absent" class="text-3xl font-black mt-1">0</p>
             </div>
             <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl p-4 text-center shadow-lg shadow-blue-200/50">
-                <p class="text-[10px] font-black uppercase tracking-wider opacity-80">เย็น: กลับบ้าน</p>
+                <p class="text-xs font-black uppercase tracking-wider opacity-80">เย็น: กลับบ้าน</p>
                 <p id="daily-e-present" class="text-3xl font-black mt-1">0</p>
             </div>
             <div class="bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-2xl p-4 text-center shadow-lg shadow-amber-200/50">
-                <p class="text-[10px] font-black uppercase tracking-wider opacity-80">เย็น: ไม่กลับ</p>
+                <p class="text-xs font-black uppercase tracking-wider opacity-80">เย็น: ไม่กลับ</p>
                 <p id="daily-e-absent" class="text-3xl font-black mt-1">0</p>
             </div>
         </div>
@@ -239,13 +239,13 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <table class="w-full text-sm text-center">
                     <thead class="bg-slate-50 sticky top-0">
                         <tr>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">ห้อง</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">ครูที่ปรึกษา</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-emerald-600">เช้า: มา</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-rose-500">เช้า: ขาด</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-blue-500">เย็น: กลับ</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-amber-500">เย็น: ไม่กลับ</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-slate-400 text-center">ปริ้น</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ห้อง</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ครูที่ปรึกษา</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-emerald-600">เช้า: มา</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-rose-500">เช้า: ขาด</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-blue-500">เย็น: กลับ</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-amber-500">เย็น: ไม่กลับ</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-slate-400 text-center">ปริ้น</th>
                         </tr>
                     </thead>
                     <tbody id="daily-table">

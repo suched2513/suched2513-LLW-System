@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/config.php';
 busRequireStudent();
@@ -123,13 +123,13 @@ body { font-family:'Prompt',sans-serif; }
             </div>
             <div>
                 <div class="font-black text-sm leading-tight">รถรับส่งนักเรียน</div>
-                <div class="text-orange-100 text-[9px] font-bold">โรงเรียนละลมวิทยา</div>
+                <div class="text-orange-100 text-xs font-bold">โรงเรียนละลมวิทยา</div>
             </div>
         </div>
         <div class="flex items-center gap-2">
             <div class="text-right">
                 <div class="font-bold text-xs leading-tight max-w-[130px] truncate"><?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?></div>
-                <div class="text-orange-100 text-[10px]"><?= htmlspecialchars($class, ENT_QUOTES, 'UTF-8') ?></div>
+                <div class="text-orange-100 text-xs"><?= htmlspecialchars($class, ENT_QUOTES, 'UTF-8') ?></div>
             </div>
             <a href="/bus/logout.php" title="ออกจากระบบ"
                class="w-8 h-8 bg-white/15 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/30">
@@ -156,7 +156,7 @@ body { font-family:'Prompt',sans-serif; }
         <div class="absolute right-8 -top-4 w-16 h-16 bg-white/5 rounded-full pointer-events-none"></div>
         <div class="relative flex items-start justify-between">
             <div class="flex-1 min-w-0">
-                <p class="text-orange-100 text-[10px] font-bold uppercase tracking-wider"><?= htmlspecialchars($semLabel, ENT_QUOTES, 'UTF-8') ?></p>
+                <p class="text-orange-100 text-xs font-bold uppercase tracking-wider"><?= htmlspecialchars($semLabel, ENT_QUOTES, 'UTF-8') ?></p>
                 <h2 class="text-xl font-black mt-0.5 leading-snug truncate"><?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?></h2>
                 <p class="text-orange-100 text-xs mt-1.5 flex items-center gap-1.5">
                     <i class="bi bi-mortarboard-fill"></i>
@@ -170,7 +170,7 @@ body { font-family:'Prompt',sans-serif; }
             </div>
         </div>
         <!-- Semester pill -->
-        <div class="mt-4 inline-flex items-center gap-1.5 bg-white/20 border border-white/20 rounded-full px-3 py-1 text-[10px] font-bold">
+        <div class="mt-4 inline-flex items-center gap-1.5 bg-white/20 border border-white/20 rounded-full px-3 py-1 text-xs font-bold">
             <i class="bi bi-calendar3"></i> <?= htmlspecialchars($semLabel, ENT_QUOTES, 'UTF-8') ?>
         </div>
     </div>
@@ -182,7 +182,7 @@ body { font-family:'Prompt',sans-serif; }
             <i class="bi bi-geo-alt-fill text-amber-500"></i>
             <p class="font-black text-amber-700 text-sm">กรุณาระบุบ้านที่อยู่ของคุณ</p>
         </div>
-        <p class="text-[11px] text-amber-600 mb-2.5">เพื่อให้เจ้าหน้าที่ทราบว่าคุณอยู่บ้านไหน และรถสายไหนที่เหมาะสม</p>
+        <p class="text-sm text-amber-600 mb-2.5">เพื่อให้เจ้าหน้าที่ทราบว่าคุณอยู่บ้านไหน และรถสายไหนที่เหมาะสม</p>
         <form method="POST" class="flex gap-2">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="update_village">
@@ -204,7 +204,7 @@ body { font-family:'Prompt',sans-serif; }
                     <i class="bi bi-geo-alt-fill text-emerald-500 text-xs"></i>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">บ้านของฉัน</p>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">บ้านของฉัน</p>
                     <p class="font-bold text-slate-700 text-sm truncate"><?= htmlspecialchars($village, ENT_QUOTES, 'UTF-8') ?></p>
                 </div>
             </div>
@@ -274,16 +274,16 @@ body { font-family:'Prompt',sans-serif; }
             </div>
             <div class="flex-1 min-w-0">
                 <p class="font-black text-slate-800 leading-tight"><?= htmlspecialchars($reg['route_name']) ?></p>
-                <p class="text-[11px] text-slate-400 font-bold mt-0.5">สาย <?= htmlspecialchars($reg['route_code']) ?></p>
+                <p class="text-sm text-slate-400 font-bold mt-0.5">สาย <?= htmlspecialchars($reg['route_code']) ?></p>
             </div>
-            <span class="px-2.5 py-1 rounded-full text-[10px] font-black flex-shrink-0
+            <span class="px-2.5 py-1 rounded-full text-xs font-black flex-shrink-0
                 bg-<?= $sc ?>-100 text-<?= $sc ?>-700">
                 <i class="bi <?= $si ?>"></i> <?= $sl ?>
             </span>
         </div>
         <?php if ($reg['description']): ?>
         <div class="px-5 py-2.5 bg-slate-50 border-b border-slate-100">
-            <p class="text-[11px] text-slate-500"><?= htmlspecialchars($reg['description']) ?></p>
+            <p class="text-sm text-slate-500"><?= htmlspecialchars($reg['description']) ?></p>
         </div>
         <?php endif; ?>
         <?php if ($reg['driver_name']): ?>
@@ -300,7 +300,7 @@ body { font-family:'Prompt',sans-serif; }
             <?php endif; ?>
         </div>
         <?php endif; ?>
-        <div class="px-5 pb-3 text-[10px] text-slate-400 font-bold">
+        <div class="px-5 pb-3 text-xs text-slate-400 font-bold">
             ลงทะเบียนเมื่อ <?= thDate($reg['registered_at'], $thaiMonths) ?>
         </div>
     </div>
@@ -327,7 +327,7 @@ body { font-family:'Prompt',sans-serif; }
             <p class="font-black text-slate-700 text-sm flex items-center gap-1.5">
                 <i class="bi bi-wallet2 text-orange-400"></i> สรุปการชำระเงิน
             </p>
-            <span class="text-[10px] font-bold text-slate-400"><?= $pctPaid ?>% ชำระแล้ว</span>
+            <span class="text-xs font-bold text-slate-400"><?= $pctPaid ?>% ชำระแล้ว</span>
         </div>
         <!-- Progress -->
         <div class="w-full bg-slate-100 rounded-full h-2.5">
@@ -337,19 +337,19 @@ body { font-family:'Prompt',sans-serif; }
         <!-- 3 cols -->
         <div class="grid grid-cols-3 gap-2 text-center">
             <div class="bg-slate-50 rounded-2xl p-3">
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-0.5">ราคาเต็ม</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-wider mb-0.5">ราคาเต็ม</p>
                 <p class="text-base font-black text-slate-700"><?= number_format($reg['price'], 0) ?></p>
-                <p class="text-[9px] text-slate-400">บาท</p>
+                <p class="text-xs text-slate-400">บาท</p>
             </div>
             <div class="bg-emerald-50 rounded-2xl p-3">
-                <p class="text-[9px] font-black text-emerald-400 uppercase tracking-wider mb-0.5">ชำระแล้ว</p>
+                <p class="text-xs font-black text-emerald-400 uppercase tracking-wider mb-0.5">ชำระแล้ว</p>
                 <p class="text-base font-black text-emerald-600"><?= number_format($paid, 0) ?></p>
-                <p class="text-[9px] text-emerald-400">บาท</p>
+                <p class="text-xs text-emerald-400">บาท</p>
             </div>
             <div class="bg-rose-50 rounded-2xl p-3">
-                <p class="text-[9px] font-black text-rose-400 uppercase tracking-wider mb-0.5">คงเหลือ</p>
+                <p class="text-xs font-black text-rose-400 uppercase tracking-wider mb-0.5">คงเหลือ</p>
                 <p class="text-base font-black text-rose-600"><?= number_format($balance, 0) ?></p>
-                <p class="text-[9px] text-rose-400">บาท</p>
+                <p class="text-xs text-rose-400">บาท</p>
             </div>
         </div>
         <?php if ($reg['status'] === 'active'): ?>
@@ -359,7 +359,7 @@ body { font-family:'Prompt',sans-serif; }
             <i class="bi bi-camera-fill text-base"></i> แนบสลิปโอนเงิน
         </a>
         <?php else: ?>
-        <p class="text-[10px] text-slate-400 text-center">ติดต่อเจ้าหน้าที่การเงินเพื่อชำระเงินค่าบริการ</p>
+        <p class="text-xs text-slate-400 text-center">ติดต่อเจ้าหน้าที่การเงินเพื่อชำระเงินค่าบริการ</p>
         <?php endif; ?>
     </div>
     <?php endif; ?>
@@ -382,9 +382,9 @@ body { font-family:'Prompt',sans-serif; }
             </div>
             <div class="flex items-center gap-2">
                 <?php if ($hasPendingSlip): ?>
-                <span class="text-[9px] font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">รอตรวจสอบ</span>
+                <span class="text-xs font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">รอตรวจสอบ</span>
                 <?php endif; ?>
-                <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full"><?= count($slips) ?></span>
+                <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full"><?= count($slips) ?></span>
             </div>
         </div>
         <div class="divide-y divide-slate-50">
@@ -398,18 +398,18 @@ body { font-family:'Prompt',sans-serif; }
                     </div>
                     <div class="flex-1 min-w-0">
                         <p class="font-bold text-sm text-slate-700"><?= number_format((float)$slip['amount'], 0) ?> บาท</p>
-                        <p class="text-[10px] text-slate-400">
+                        <p class="text-xs text-slate-400">
                             ส่งเมื่อ <?= thDate($slip['created_at'], $thaiMonths) ?>
                             <?php if ($slip['transfer_date']): ?> · โอน <?= thDate($slip['transfer_date'], $thaiMonths) ?><?php endif; ?>
                         </p>
                     </div>
-                    <span class="px-2.5 py-1 rounded-full text-[10px] font-black flex-shrink-0 bg-<?= $sc ?>-100 text-<?= $sc ?>-700">
+                    <span class="px-2.5 py-1 rounded-full text-xs font-black flex-shrink-0 bg-<?= $sc ?>-100 text-<?= $sc ?>-700">
                         <?= $sl ?>
                     </span>
                 </div>
                 <?php if ($slip['status'] === 'rejected' && $slip['admin_note']): ?>
                 <div class="mt-2 ml-12 bg-rose-50 rounded-xl px-3 py-2">
-                    <p class="text-[11px] text-rose-600"><i class="bi bi-chat-text me-1"></i><?= htmlspecialchars($slip['admin_note'], ENT_QUOTES, 'UTF-8') ?></p>
+                    <p class="text-sm text-rose-600"><i class="bi bi-chat-text me-1"></i><?= htmlspecialchars($slip['admin_note'], ENT_QUOTES, 'UTF-8') ?></p>
                 </div>
                 <?php endif; ?>
             </div>
@@ -460,7 +460,7 @@ body { font-family:'Prompt',sans-serif; }
 
     <!-- Quick Menu -->
     <div>
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">เมนู</p>
+        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 px-1">เมนู</p>
         <div class="grid grid-cols-2 gap-3">
             <a href="/bus/register.php"
                class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center gap-3 active:bg-orange-50 transition-colors group">
@@ -469,7 +469,7 @@ body { font-family:'Prompt',sans-serif; }
                 </div>
                 <div class="min-w-0">
                     <p class="font-black text-slate-700 text-sm leading-tight">เลือกสายรถ</p>
-                    <p class="text-[10px] text-slate-400 mt-0.5">ลงทะเบียน / เปลี่ยนสาย</p>
+                    <p class="text-xs text-slate-400 mt-0.5">ลงทะเบียน / เปลี่ยนสาย</p>
                 </div>
             </a>
             <a href="#history"
@@ -479,7 +479,7 @@ body { font-family:'Prompt',sans-serif; }
                 </div>
                 <div class="min-w-0">
                     <p class="font-black text-slate-700 text-sm leading-tight">ประวัติการชำระ</p>
-                    <p class="text-[10px] text-slate-400 mt-0.5"><?= count($history) ?> รายการ</p>
+                    <p class="text-xs text-slate-400 mt-0.5"><?= count($history) ?> รายการ</p>
                 </div>
             </a>
             <?php if ($reg && $reg['status'] === 'active' && !$isPaidFull): ?>
@@ -490,7 +490,7 @@ body { font-family:'Prompt',sans-serif; }
                 </div>
                 <div class="min-w-0">
                     <p class="font-black text-slate-700 text-sm leading-tight">แนบสลิปโอนเงิน</p>
-                    <p class="text-[10px] text-slate-400 mt-0.5">อัปโหลดหลักฐานการชำระ</p>
+                    <p class="text-xs text-slate-400 mt-0.5">อัปโหลดหลักฐานการชำระ</p>
                 </div>
             </a>
             <?php endif; ?>
@@ -502,7 +502,7 @@ body { font-family:'Prompt',sans-serif; }
                 </div>
                 <div class="min-w-0">
                     <p class="font-black text-rose-600 text-sm leading-tight">ขอยกเลิก</p>
-                    <p class="text-[10px] text-slate-400 mt-0.5">ส่งคำขอยกเลิกบริการ</p>
+                    <p class="text-xs text-slate-400 mt-0.5">ส่งคำขอยกเลิกบริการ</p>
                 </div>
             </button>
             <?php endif; ?>
@@ -513,7 +513,7 @@ body { font-family:'Prompt',sans-serif; }
                 </div>
                 <div class="min-w-0">
                     <p class="font-black text-slate-700 text-sm leading-tight">หน้าหลัก LLW</p>
-                    <p class="text-[10px] text-slate-400 mt-0.5">กลับระบบโรงเรียน</p>
+                    <p class="text-xs text-slate-400 mt-0.5">กลับระบบโรงเรียน</p>
                 </div>
             </a>
         </div>
@@ -527,7 +527,7 @@ body { font-family:'Prompt',sans-serif; }
                 <i class="bi bi-receipt text-orange-400"></i>
                 <p class="font-black text-slate-700 text-sm">ประวัติการชำระเงิน</p>
             </div>
-            <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full"><?= count($history) ?> รายการ</span>
+            <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full"><?= count($history) ?> รายการ</span>
         </div>
         <div class="divide-y divide-slate-50">
             <?php foreach ($history as $h): ?>
@@ -537,13 +537,13 @@ body { font-family:'Prompt',sans-serif; }
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="font-bold text-sm text-slate-700"><?= number_format($h['amount'], 0) ?> บาท</p>
-                    <p class="text-[10px] text-slate-400 truncate">
+                    <p class="text-xs text-slate-400 truncate">
                         <?= thDate($h['paid_at'], $thaiMonths) ?>
                         <?php if ($h['note']): ?> · <?= htmlspecialchars($h['note']) ?><?php endif; ?>
                     </p>
-                    <p class="text-[10px] text-orange-400 font-bold truncate"><?= htmlspecialchars($h['route_name']) ?> · <?= htmlspecialchars(busSemesterLabel($h['semester'])) ?></p>
+                    <p class="text-xs text-orange-400 font-bold truncate"><?= htmlspecialchars($h['route_name']) ?> · <?= htmlspecialchars(busSemesterLabel($h['semester'])) ?></p>
                 </div>
-                <span class="text-[10px] font-black text-emerald-500 bg-emerald-50 px-2 py-1 rounded-xl flex-shrink-0">ชำระแล้ว</span>
+                <span class="text-xs font-black text-emerald-500 bg-emerald-50 px-2 py-1 rounded-xl flex-shrink-0">ชำระแล้ว</span>
             </div>
             <?php endforeach; ?>
         </div>
@@ -564,15 +564,15 @@ body { font-family:'Prompt',sans-serif; }
     <div class="max-w-lg mx-auto grid grid-cols-3 h-16">
         <a href="/bus/dashboard.php" class="flex flex-col items-center justify-center gap-1 text-orange-500">
             <i class="bi bi-house-door-fill text-xl"></i>
-            <span class="text-[10px] font-black">หน้าหลัก</span>
+            <span class="text-xs font-black">หน้าหลัก</span>
         </a>
         <a href="/bus/register.php" class="flex flex-col items-center justify-center gap-1 text-slate-400 active:text-orange-500 transition-colors">
             <i class="bi bi-bus-front text-xl"></i>
-            <span class="text-[10px] font-bold">เลือกสาย</span>
+            <span class="text-xs font-bold">เลือกสาย</span>
         </a>
         <a href="/bus/logout.php" class="flex flex-col items-center justify-center gap-1 text-slate-400 active:text-rose-500 transition-colors">
             <i class="bi bi-box-arrow-right text-xl"></i>
-            <span class="text-[10px] font-bold">ออกจากระบบ</span>
+            <span class="text-xs font-bold">ออกจากระบบ</span>
         </a>
     </div>
 </nav>
@@ -589,12 +589,12 @@ body { font-family:'Prompt',sans-serif; }
         <form method="POST" action="/bus/cancel.php" class="p-5 space-y-4">
             <?= csrf_field() ?>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">เหตุผลการยกเลิก <span class="text-rose-500">*</span></label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">เหตุผลการยกเลิก <span class="text-rose-500">*</span></label>
                 <textarea name="reason" rows="3" required placeholder="กรุณาระบุเหตุผล..."
                           class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-rose-400 outline-none transition-all"></textarea>
             </div>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">เลขบัตรประชาชน 13 หลัก <span class="text-rose-500">*</span></label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">เลขบัตรประชาชน 13 หลัก <span class="text-rose-500">*</span></label>
                 <input type="password" name="national_id" required inputmode="numeric" maxlength="13"
                        placeholder="• • • • • • • • • • • • •"
                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold tracking-widest focus:ring-2 focus:ring-rose-400 outline-none transition-all">

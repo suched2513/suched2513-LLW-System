@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/_guard.php';
@@ -104,7 +104,7 @@ body { font-family:'Prompt',sans-serif; }
         </a>
         <div>
             <div class="font-black text-sm leading-tight">เวลาเรียน</div>
-            <div class="text-blue-200 text-[10px] font-bold">ภาคเรียน <?= htmlspecialchars($semester) ?></div>
+            <div class="text-blue-200 text-xs font-bold">ภาคเรียน <?= htmlspecialchars($semester) ?></div>
         </div>
     </div>
 </header>
@@ -124,7 +124,7 @@ body { font-family:'Prompt',sans-serif; }
             </div>
             <div class="text-right">
                 <div class="text-3xl font-black leading-none"><?= $pct ?><span class="text-lg">%</span></div>
-                <div class="text-blue-200 text-[10px] font-bold">เข้าเรียน</div>
+                <div class="text-blue-200 text-xs font-bold">เข้าเรียน</div>
             </div>
         </div>
         <!-- Progress bar -->
@@ -141,7 +141,7 @@ body { font-family:'Prompt',sans-serif; }
             ] as $s): ?>
             <div>
                 <div class="text-xl font-black <?= $s['o'] ?>"><?= $s['v'] ?></div>
-                <div class="text-[10px] font-bold text-blue-200"><?= $s['l'] ?></div>
+                <div class="text-xs font-bold text-blue-200"><?= $s['l'] ?></div>
             </div>
             <?php endforeach; ?>
         </div>
@@ -171,17 +171,17 @@ body { font-family:'Prompt',sans-serif; }
                 <div class="flex items-start justify-between gap-2 mb-2">
                     <div class="flex-1 min-w-0">
                         <p class="font-black text-slate-700 text-sm truncate"><?= htmlspecialchars($sub['subject_name'], ENT_QUOTES, 'UTF-8') ?></p>
-                        <p class="text-slate-400 text-[11px]"><?= htmlspecialchars($sub['subject_code'], ENT_QUOTES, 'UTF-8') ?></p>
+                        <p class="text-slate-400 text-sm"><?= htmlspecialchars($sub['subject_code'], ENT_QUOTES, 'UTF-8') ?></p>
                     </div>
                     <div class="text-right flex-shrink-0">
                         <span class="font-black text-sm <?= $subPct >= 80 ? 'text-emerald-600' : ($subPct >= 60 ? 'text-amber-600' : 'text-rose-600') ?>"><?= $subPct ?>%</span>
-                        <p class="text-slate-400 text-[10px]"><?= $sub['present'] ?>/<?= $sub['total'] ?> คาบ</p>
+                        <p class="text-slate-400 text-xs"><?= $sub['present'] ?>/<?= $sub['total'] ?> คาบ</p>
                     </div>
                 </div>
                 <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2">
                     <div class="h-full rounded-full <?= $barColor ?>" style="width:<?= $subPct ?>%"></div>
                 </div>
-                <div class="flex gap-3 text-[10px] font-bold text-slate-400">
+                <div class="flex gap-3 text-xs font-bold text-slate-400">
                     <span class="text-emerald-600">มา <?= $sub['present'] ?></span>
                     <span class="text-rose-500">ขาด <?= $sub['absent'] + $sub['skip'] ?></span>
                     <span class="text-blue-500">ลา <?= $sub['leave'] ?></span>
@@ -205,15 +205,15 @@ body { font-family:'Prompt',sans-serif; }
                 $st = $statusStyle[$rec['status']] ?? ['bg'=>'bg-slate-100','text'=>'text-slate-600','label'=>$rec['status']];
             ?>
             <div class="flex items-center gap-3 px-5 py-3.5">
-                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black <?= $st['bg'] ?> <?= $st['text'] ?> flex-shrink-0 w-10 text-center">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-black <?= $st['bg'] ?> <?= $st['text'] ?> flex-shrink-0 w-10 text-center">
                     <?= htmlspecialchars($st['label']) ?>
                 </span>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-bold text-slate-700 truncate"><?= htmlspecialchars($rec['subject_name'], ENT_QUOTES, 'UTF-8') ?></p>
-                    <p class="text-[11px] text-slate-400">คาบ <?= (int)$rec['period'] ?> · <?= htmlspecialchars(fmtDate($rec['date'], $thaiMonths)) ?></p>
+                    <p class="text-sm text-slate-400">คาบ <?= (int)$rec['period'] ?> · <?= htmlspecialchars(fmtDate($rec['date'], $thaiMonths)) ?></p>
                 </div>
                 <?php if ($rec['note']): ?>
-                <span class="text-[10px] text-slate-400 italic max-w-[80px] truncate"><?= htmlspecialchars($rec['note'], ENT_QUOTES, 'UTF-8') ?></span>
+                <span class="text-xs text-slate-400 italic max-w-[80px] truncate"><?= htmlspecialchars($rec['note'], ENT_QUOTES, 'UTF-8') ?></span>
                 <?php endif; ?>
             </div>
             <?php endforeach; ?>

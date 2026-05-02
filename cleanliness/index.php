@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -66,7 +66,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     <div class="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group">
         <div class="flex justify-between items-start">
             <div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">จัดการระบบ</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-wider">จัดการระบบ</p>
                 <h3 class="text-xl font-black text-slate-800 mt-1">ตั้งค่าพื้นที่</h3>
             </div>
             <a href="manage_areas.php" class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-emerald-500 hover:text-white transition-all shadow-sm">
@@ -105,11 +105,11 @@ require_once __DIR__ . '/../components/layout_start.php';
                             <i class="bi bi-map text-xl"></i>
                         </span>
                         <?php if ($area['today_score']): ?>
-                            <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-wider">
+                            <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-black uppercase tracking-wider">
                                 ประเมินแล้ว: <?= $area['today_score'] ?>
                             </span>
                         <?php else: ?>
-                            <span class="px-3 py-1 rounded-full bg-rose-50 text-rose-500 text-[10px] font-black uppercase tracking-wider">
+                            <span class="px-3 py-1 rounded-full bg-rose-50 text-rose-500 text-xs font-black uppercase tracking-wider">
                                 รอการประเมิน
                             </span>
                         <?php endif; ?>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * behavior/admin.php — Admin Dashboard (สถิติ + พิมพ์รายงาน + สรุปคะแนน)
  * Roles: super_admin, wfh_admin
@@ -35,19 +35,19 @@ require_once __DIR__ . '/../components/layout_start.php';
 <!-- ─── KPI Cards ─── -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
     <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-xl shadow-emerald-200/50 relative overflow-hidden">
-        <p class="text-[10px] font-black uppercase tracking-wider opacity-75">นักเรียนทำความดี</p>
+        <p class="text-xs font-black uppercase tracking-wider opacity-75">นักเรียนทำความดี</p>
         <p class="text-4xl font-black mt-2" id="statPersonGood">0</p>
         <p class="text-xs opacity-75">คน (วันที่เลือก)</p>
         <i class="bi bi-emoji-smile-fill absolute -right-3 -bottom-5 text-6xl opacity-20 rotate-[-15deg]"></i>
     </div>
     <div class="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-6 text-white shadow-xl shadow-rose-200/50 relative overflow-hidden">
-        <p class="text-[10px] font-black uppercase tracking-wider opacity-75">นักเรียนทำความผิด</p>
+        <p class="text-xs font-black uppercase tracking-wider opacity-75">นักเรียนทำความผิด</p>
         <p class="text-4xl font-black mt-2" id="statPersonBad">0</p>
         <p class="text-xs opacity-75">คน (วันที่เลือก)</p>
         <i class="bi bi-emoji-frown-fill absolute -right-3 -bottom-5 text-6xl opacity-20 rotate-[-15deg]"></i>
     </div>
     <div class="bg-gradient-to-br from-violet-600 to-indigo-700 rounded-2xl p-6 text-white shadow-xl shadow-violet-200/50 relative overflow-hidden">
-        <p class="text-[10px] font-black uppercase tracking-wider opacity-75">รายการบันทึกรวม</p>
+        <p class="text-xs font-black uppercase tracking-wider opacity-75">รายการบันทึกรวม</p>
         <p class="text-4xl font-black mt-2" id="statDailyRecords">0</p>
         <p class="text-xs opacity-75">รายการ (วันที่เลือก)</p>
         <i class="bi bi-file-earmark-text-fill absolute -right-3 -bottom-5 text-6xl opacity-20 rotate-[-15deg]"></i>
@@ -67,22 +67,22 @@ require_once __DIR__ . '/../components/layout_start.php';
     </div>
     <div class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
         <div>
-            <label class="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-1 block">จากวันที่</label>
+            <label class="text-xs font-bold text-white/50 uppercase tracking-wider mb-1 block">จากวันที่</label>
             <input type="date" id="printFromDate"
                 class="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-violet-500 outline-none">
         </div>
         <div>
-            <label class="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-1 block">ถึงวันที่</label>
+            <label class="text-xs font-bold text-white/50 uppercase tracking-wider mb-1 block">ถึงวันที่</label>
             <input type="date" id="printToDate"
                 class="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-violet-500 outline-none">
         </div>
         <div>
-            <label class="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-1 block">ห้อง (เช่น ม.1/1)</label>
+            <label class="text-xs font-bold text-white/50 uppercase tracking-wider mb-1 block">ห้อง (เช่น ม.1/1)</label>
             <input type="text" id="printClass" placeholder="ระบุห้อง"
                 class="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:ring-2 focus:ring-violet-500 outline-none">
         </div>
         <div>
-            <label class="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-1 block">ครูที่ปรึกษา</label>
+            <label class="text-xs font-bold text-white/50 uppercase tracking-wider mb-1 block">ครูที่ปรึกษา</label>
             <input type="text" id="printHomeroom" placeholder="ชื่อครู"
                 class="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-sm text-white placeholder-white/30 focus:ring-2 focus:ring-violet-500 outline-none">
         </div>
@@ -123,13 +123,13 @@ require_once __DIR__ . '/../components/layout_start.php';
             <table class="w-full text-sm">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">รหัส</th>
-                        <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ชื่อ-สกุล</th>
-                        <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">ห้อง</th>
-                        <th class="px-4 py-3 text-[10px] font-black text-emerald-500 uppercase tracking-wider border-b border-slate-100 text-right">ดี</th>
-                        <th class="px-4 py-3 text-[10px] font-black text-rose-500 uppercase tracking-wider border-b border-slate-100 text-right">ลบ</th>
-                        <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 text-right">สุทธิ</th>
-                        <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 text-center">ดู</th>
+                        <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">รหัส</th>
+                        <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ชื่อ-สกุล</th>
+                        <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">ห้อง</th>
+                        <th class="px-4 py-3 text-xs font-black text-emerald-500 uppercase tracking-wider border-b border-slate-100 text-right">ดี</th>
+                        <th class="px-4 py-3 text-xs font-black text-rose-500 uppercase tracking-wider border-b border-slate-100 text-right">ลบ</th>
+                        <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 text-right">สุทธิ</th>
+                        <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 text-center">ดู</th>
                     </tr>
                 </thead>
                 <tbody id="adminSummaryBody">
@@ -198,7 +198,7 @@ async function loadAdminSummary() {
         tr.innerHTML = `
             <td class="px-4 py-3 text-xs text-slate-400 font-mono">${esc(item.studentId)}</td>
             <td class="px-4 py-3 text-sm font-bold text-slate-700">${esc(item.name)}</td>
-            <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 bg-slate-100 rounded-lg text-[10px] font-bold">${esc(item.level)}/${esc(item.room)}</span></td>
+            <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 bg-slate-100 rounded-lg text-xs font-bold">${esc(item.level)}/${esc(item.room)}</span></td>
             <td class="px-4 py-3 text-right font-black text-emerald-600">${good}</td>
             <td class="px-4 py-3 text-right font-black text-rose-600">${bad}</td>
             <td class="px-4 py-3 text-right font-black ${net < BASE_BEHAVIOR_SCORE ? 'text-rose-600' : 'text-emerald-600'}">${net}</td>

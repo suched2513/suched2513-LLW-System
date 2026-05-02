@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * behavior/manage_advisors_ui.php — หน้าจัดการห้องที่ปรึกษาสำหรับครู
  */
@@ -41,7 +41,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 
                 <form id="formAddMapping" class="space-y-5">
                     <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">ระดับชั้น (Level)</label>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">ระดับชั้น (Level)</label>
                         <select id="mapLevel" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all">
                             <option value="">-- เลือก --</option>
                             <option value="ม.1">ม.1</option>
@@ -54,7 +54,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                     </div>
                     
                     <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">ห้อง (Room)</label>
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">ห้อง (Room)</label>
                         <input type="text" id="mapRoom" placeholder="เช่น 1" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all">
                     </div>
                     
@@ -77,7 +77,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <div class="p-4 overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <tr class="text-xs font-black text-slate-400 uppercase tracking-widest">
                                 <th class="px-6 py-4 text-left">ห้องเรียน</th>
                                 <th class="px-6 py-4 text-right">จัดการ</th>
                             </tr>

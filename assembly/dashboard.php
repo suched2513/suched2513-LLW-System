@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * assembly/dashboard.php — ระบบเช็คชื่อเข้าแถวและแต่งกายนักเรียน
  * Roles: att_teacher, super_admin, wfh_admin
@@ -61,13 +61,13 @@ require_once __DIR__ . '/../components/layout_start.php';
         <!-- Filters -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ห้องเรียน</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ห้องเรียน</label>
                 <select id="att-classroom" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all">
                     <option value="">เลือกห้องเรียน...</option>
                 </select>
             </div>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">วันที่</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">วันที่</label>
                 <input id="att-date" type="date" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all">
             </div>
             <div class="flex items-end gap-2">
@@ -99,16 +99,16 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <table class="w-full text-sm">
                     <thead class="bg-slate-50 sticky top-0 z-10">
                         <tr>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">รหัส</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ชื่อ-สกุล</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">สถานะ</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">เล็บ</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">ผม</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">เสื้อ</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">กางเกง</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">ถุงเท้า</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">รองเท้า</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">หมายเหตุ</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">รหัส</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ชื่อ-สกุล</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">สถานะ</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">เล็บ</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">ผม</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">เสื้อ</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">กางเกง</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">ถุงเท้า</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">รองเท้า</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">หมายเหตุ</th>
                         </tr>
                     </thead>
                     <tbody id="att-student-table">
@@ -139,13 +139,13 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ห้องเรียน</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ห้องเรียน</label>
                 <select id="co-classroom" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-400 outline-none transition-all">
                     <option value="">เลือกห้องเรียน...</option>
                 </select>
             </div>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">วันที่</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">วันที่</label>
                 <input id="co-date" type="date" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-purple-400 outline-none transition-all">
             </div>
             <div class="flex items-end gap-2">
@@ -162,11 +162,11 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <table class="w-full text-sm">
                     <thead class="bg-slate-50 sticky top-0">
                         <tr>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">รหัส</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ชื่อ-สกุล</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-center border-b border-slate-100">ตอนเช้า</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">สถานะเย็น</th>
-                            <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">หมายเหตุ</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">รหัส</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ชื่อ-สกุล</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-center border-b border-slate-100">ตอนเช้า</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">สถานะเย็น</th>
+                            <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">หมายเหตุ</th>
                         </tr>
                     </thead>
                     <tbody id="co-table">
@@ -192,13 +192,13 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ห้องเรียน</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ห้องเรียน</label>
                 <select id="ov-classroom" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-400 outline-none transition-all">
                     <option value="">เลือกห้องเรียน...</option>
                 </select>
             </div>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เดือน</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เดือน</label>
                 <select id="ov-month" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-400 outline-none transition-all">
                     <?php echo renderMonthOptions(true); ?>
                 </select>
@@ -229,17 +229,17 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <table class="w-full text-sm">
                         <thead class="bg-slate-50 sticky top-0">
                             <tr>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">ชื่อ</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">วันที่เช็ค</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-green-600">มา</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b text-red-500">ขาด</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">เล็บ</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">ผม</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">เสื้อ</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">กางเกง</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">ถุงเท้า</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">รองเท้า</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">หมายเหตุ</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ชื่อ</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">วันที่เช็ค</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-green-600">มา</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-red-500">ขาด</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">เล็บ</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">ผม</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">เสื้อ</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">กางเกง</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">ถุงเท้า</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">รองเท้า</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">หมายเหตุ</th>
                             </tr>
                         </thead>
                         <tbody id="ov-table"></tbody>
@@ -273,12 +273,12 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">รหัสนักเรียน</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">รหัสนักเรียน</label>
                 <input id="ind-student-id" type="text" placeholder="กรอกรหัสนักเรียน..."
                     class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all">
             </div>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เดือน</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เดือน</label>
                 <select id="ind-month" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all">
                     <?php echo renderMonthOptions(true); ?>
                 </select>
@@ -294,28 +294,28 @@ require_once __DIR__ . '/../components/layout_start.php';
             <!-- Info card -->
             <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 mb-5 border border-indigo-100">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">รหัส</p><p id="ind-info-id" class="font-black text-slate-700 mt-1"></p></div>
-                    <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">ชื่อ</p><p id="ind-info-name" class="font-black text-slate-700 mt-1"></p></div>
-                    <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">ห้อง</p><p id="ind-info-class" class="font-black text-slate-700 mt-1"></p></div>
-                    <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">ครูที่ปรึกษา</p><p id="ind-info-teacher" class="font-black text-slate-700 mt-1"></p></div>
+                    <div><p class="text-xs font-black text-slate-400 uppercase tracking-wider">รหัส</p><p id="ind-info-id" class="font-black text-slate-700 mt-1"></p></div>
+                    <div><p class="text-xs font-black text-slate-400 uppercase tracking-wider">ชื่อ</p><p id="ind-info-name" class="font-black text-slate-700 mt-1"></p></div>
+                    <div><p class="text-xs font-black text-slate-400 uppercase tracking-wider">ห้อง</p><p id="ind-info-class" class="font-black text-slate-700 mt-1"></p></div>
+                    <div><p class="text-xs font-black text-slate-400 uppercase tracking-wider">ครูที่ปรึกษา</p><p id="ind-info-teacher" class="font-black text-slate-700 mt-1"></p></div>
                 </div>
             </div>
             <!-- KPI -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
                 <div class="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-4 shadow-lg shadow-emerald-200/50">
-                    <p class="text-[10px] font-black uppercase tracking-wider opacity-80">วันมา</p>
+                    <p class="text-xs font-black uppercase tracking-wider opacity-80">วันมา</p>
                     <p id="ind-present" class="text-3xl font-black mt-1">0</p>
                 </div>
                 <div class="bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-2xl p-4 shadow-lg shadow-rose-200/50">
-                    <p class="text-[10px] font-black uppercase tracking-wider opacity-80">วันขาด</p>
+                    <p class="text-xs font-black uppercase tracking-wider opacity-80">วันขาด</p>
                     <p id="ind-absent" class="text-3xl font-black mt-1">0</p>
                 </div>
                 <div class="bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-2xl p-4 shadow-lg shadow-amber-200/50">
-                    <p class="text-[10px] font-black uppercase tracking-wider opacity-80">วันลา</p>
+                    <p class="text-xs font-black uppercase tracking-wider opacity-80">วันลา</p>
                     <p id="ind-leave" class="text-3xl font-black mt-1">0</p>
                 </div>
                 <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl p-4 shadow-lg shadow-indigo-200/50">
-                    <p class="text-[10px] font-black uppercase tracking-wider opacity-80">คะแนนแต่งกาย</p>
+                    <p class="text-xs font-black uppercase tracking-wider opacity-80">คะแนนแต่งกาย</p>
                     <p id="ind-uniform" class="text-3xl font-black mt-1">0%</p>
                 </div>
             </div>
@@ -325,15 +325,15 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <table class="w-full text-sm">
                         <thead class="bg-slate-50 sticky top-0">
                             <tr>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">วันที่</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">สถานะ</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">เล็บ</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">ผม</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">เสื้อ</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">กางเกง</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">ถุงเท้า</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">รองเท้า</th>
-                                <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">หมายเหตุ</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">วันที่</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">สถานะ</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">เล็บ</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">ผม</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">เสื้อ</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">กางเกง</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">ถุงเท้า</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">รองเท้า</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">หมายเหตุ</th>
                             </tr>
                         </thead>
                         <tbody id="ind-history"></tbody>
@@ -583,7 +583,7 @@ async function loadCheckout() {
                 <td class="px-3 py-2.5 text-xs font-bold text-slate-400">${esc(s.student_id)}</td>
                 <td class="px-3 py-2.5 text-sm font-medium text-slate-700">${esc(s.name)}</td>
                 <td class="px-3 py-2.5 text-center">
-                    <span class="px-2 py-1 rounded-lg text-[10px] font-black ${mClass}">${mStatus}</span>
+                    <span class="px-2 py-1 rounded-lg text-xs font-black ${mClass}">${mStatus}</span>
                 </td>
                 <td class="px-3 py-2.5 text-center">
                     <select class="status-sel" data-sid="${esc(s.student_id)}" style="background:#f3f4f6">

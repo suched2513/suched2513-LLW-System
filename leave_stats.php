@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * leave_stats.php — สถิติการขออนุญาตออกนอกบริเวณ
  */
@@ -183,27 +183,27 @@ $personHrs    = json_encode(array_column($perPerson, 'hrs'));
 <!-- KPI Cards -->
 <div class="grid grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
     <div class="bg-gradient-to-br from-indigo-500 to-blue-600 p-5 rounded-2xl text-white shadow-xl shadow-indigo-200/50 col-span-2 lg:col-span-1">
-        <p class="text-[10px] font-black uppercase tracking-widest opacity-80">คำขอทั้งหมด</p>
+        <p class="text-xs font-black uppercase tracking-widest opacity-80">คำขอทั้งหมด</p>
         <p class="text-4xl font-black mt-1"><?= number_format($kpi['total'] ?? 0) ?></p>
         <p class="text-xs opacity-70 mt-1">รวม <?= number_format($kpi['total_hours'] ?? 0, 1) ?> ชม.</p>
     </div>
     <div class="bg-gradient-to-br from-emerald-500 to-teal-600 p-5 rounded-2xl text-white shadow-xl shadow-emerald-200/50">
-        <p class="text-[10px] font-black uppercase tracking-widest opacity-80">อนุญาต</p>
+        <p class="text-xs font-black uppercase tracking-widest opacity-80">อนุญาต</p>
         <p class="text-4xl font-black mt-1"><?= $kpi['approved'] ?? 0 ?></p>
         <p class="text-xs opacity-70 mt-1"><?= $kpi['total'] ? round(($kpi['approved']/$kpi['total'])*100) : 0 ?>% ของทั้งหมด</p>
     </div>
     <div class="bg-gradient-to-br from-amber-500 to-orange-500 p-5 rounded-2xl text-white shadow-xl shadow-amber-200/50">
-        <p class="text-[10px] font-black uppercase tracking-widest opacity-80">รออนุญาต</p>
+        <p class="text-xs font-black uppercase tracking-widest opacity-80">รออนุญาต</p>
         <p class="text-4xl font-black mt-1"><?= $kpi['pending'] ?? 0 ?></p>
         <p class="text-xs opacity-70 mt-1">รอการพิจารณา</p>
     </div>
     <div class="bg-gradient-to-br from-rose-500 to-pink-600 p-5 rounded-2xl text-white shadow-xl shadow-rose-200/50">
-        <p class="text-[10px] font-black uppercase tracking-widest opacity-80">ไม่อนุญาต</p>
+        <p class="text-xs font-black uppercase tracking-widest opacity-80">ไม่อนุญาต</p>
         <p class="text-4xl font-black mt-1"><?= $kpi['rejected'] ?? 0 ?></p>
         <p class="text-xs opacity-70 mt-1">ปฏิเสธ</p>
     </div>
     <div class="bg-white border border-slate-100 shadow-sm p-5 rounded-2xl">
-        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">เวลารวม</p>
+        <p class="text-xs font-black uppercase tracking-widest text-slate-400">เวลารวม</p>
         <p class="text-4xl font-black text-slate-800 mt-1"><?= number_format($kpi['total_hours'] ?? 0, 1) ?></p>
         <p class="text-xs text-slate-400 mt-1">ชั่วโมงสะสม</p>
     </div>
@@ -262,11 +262,11 @@ $personHrs    = json_encode(array_column($perPerson, 'hrs'));
         <div class="overflow-y-auto max-h-64">
             <table class="w-full text-sm">
                 <thead><tr>
-                    <th class="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3">#</th>
-                    <th class="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3">ชื่อ</th>
-                    <th class="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3">ครั้ง</th>
-                    <th class="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3">ชม.</th>
-                    <th class="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest pb-3">อนุญาต</th>
+                    <th class="text-left text-xs font-black text-slate-400 uppercase tracking-widest pb-3">#</th>
+                    <th class="text-left text-xs font-black text-slate-400 uppercase tracking-widest pb-3">ชื่อ</th>
+                    <th class="text-center text-xs font-black text-slate-400 uppercase tracking-widest pb-3">ครั้ง</th>
+                    <th class="text-center text-xs font-black text-slate-400 uppercase tracking-widest pb-3">ชม.</th>
+                    <th class="text-center text-xs font-black text-slate-400 uppercase tracking-widest pb-3">อนุญาต</th>
                 </tr></thead>
                 <tbody class="divide-y divide-slate-50">
                 <?php foreach ($perPerson as $i => $p): ?>
@@ -301,14 +301,14 @@ $personHrs    = json_encode(array_column($perPerson, 'hrs'));
         <table class="w-full text-sm">
             <thead class="bg-slate-50">
                 <tr>
-                    <th class="px-5 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">วันที่</th>
+                    <th class="px-5 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">วันที่</th>
                     <?php if ($isAdmin): ?>
-                    <th class="px-5 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">ผู้ขอ</th>
+                    <th class="px-5 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ผู้ขอ</th>
                     <?php endif; ?>
-                    <th class="px-5 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">ประเภท</th>
-                    <th class="px-5 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">เหตุผล</th>
-                    <th class="px-5 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">ชม.</th>
-                    <th class="px-5 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">สถานะ</th>
+                    <th class="px-5 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ประเภท</th>
+                    <th class="px-5 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">เหตุผล</th>
+                    <th class="px-5 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest">ชม.</th>
+                    <th class="px-5 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest">สถานะ</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
@@ -318,9 +318,9 @@ $personHrs    = json_encode(array_column($perPerson, 'hrs'));
             <?php foreach ($requests as $r):
                 $col  = $typeColors[$r['reason_type'] ?? 'อื่นๆ']['light'] ?? 'bg-slate-100 text-slate-600';
                 $sBadge = match((int)$r['status_boss1']) {
-                    1 => '<span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black">✓ อนุญาต</span>',
-                    2 => '<span class="px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-[10px] font-black">✗ ไม่อนุญาต</span>',
-                    default => '<span class="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black">⏳ รออนุญาต</span>',
+                    1 => '<span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-black">✓ อนุญาต</span>',
+                    2 => '<span class="px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-xs font-black">✗ ไม่อนุญาต</span>',
+                    default => '<span class="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-black">⏳ รออนุญาต</span>',
                 };
                 $d = date('j', strtotime($r['req_date'] ?? date('Y-m-d')));
                 $m = $thMonths[(int)date('n', strtotime($r['req_date'] ?? date('Y-m-d')))];
@@ -332,7 +332,7 @@ $personHrs    = json_encode(array_column($perPerson, 'hrs'));
                 <td class="px-5 py-3 font-bold text-slate-800"><?= htmlspecialchars($r['t_name'] ?? '', ENT_QUOTES) ?></td>
                 <?php endif; ?>
                 <td class="px-5 py-3">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black <?= $col ?>">
+                    <span class="px-2 py-0.5 rounded-full text-xs font-black <?= $col ?>">
                         <?= htmlspecialchars($r['reason_type'] ?? 'อื่นๆ', ENT_QUOTES) ?>
                     </span>
                 </td>

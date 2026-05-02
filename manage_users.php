@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * manage_users.php — จัดการผู้ใช้งานระบบ LLW (llw_users)
  * เข้าถึงได้: super_admin เท่านั้น
@@ -235,15 +235,15 @@ $roleLabel = [
     <!-- Stats -->
     <div class="grid grid-cols-3 gap-4 mb-8 max-w-xl">
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ผู้ใช้ทั้งหมด</p>
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest">ผู้ใช้ทั้งหมด</p>
             <p class="text-4xl font-black text-slate-800 mt-1"><?= $totalUsers ?></p>
         </div>
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ใช้งานอยู่</p>
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest">ใช้งานอยู่</p>
             <p class="text-4xl font-black text-emerald-600 mt-1"><?= $activeUsers ?></p>
         </div>
         <div class="bg-amber-50 rounded-2xl shadow-sm border border-amber-100 p-5">
-            <p class="text-[10px] font-black text-amber-500 uppercase tracking-widest">รอเปลี่ยนรหัส</p>
+            <p class="text-xs font-black text-amber-500 uppercase tracking-widest">รอเปลี่ยนรหัส</p>
             <p class="text-4xl font-black text-amber-600 mt-1"><?= $pendingChange ?></p>
         </div>
     </div>
@@ -258,12 +258,12 @@ $roleLabel = [
             <table class="w-full">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">#</th>
-                        <th class="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อ-สกุล / Username</th>
-                        <th class="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Role</th>
-                        <th class="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">สถานะ</th>
-                        <th class="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">เข้าสู่ระบบล่าสุด</th>
-                        <th class="px-6 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">จัดการ</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">#</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ชื่อ-สกุล / Username</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Role</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">สถานะ</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">เข้าสู่ระบบล่าสุด</th>
+                        <th class="px-6 py-5 text-center text-xs font-black text-slate-400 uppercase tracking-widest">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
@@ -285,7 +285,7 @@ $roleLabel = [
                         </div>
                     </td>
                     <td class="px-6 py-5">
-                        <span class="px-3 py-1 rounded-full text-[10px] font-black <?= $r['color'] ?>">
+                        <span class="px-3 py-1 rounded-full text-xs font-black <?= $r['color'] ?>">
                             <?= $r['label'] ?>
                         </span>
                     </td>
@@ -300,7 +300,7 @@ $roleLabel = [
                         </span>
                         <?php endif; ?>
                         <?php if (!empty($u['force_password_change'])): ?>
-                        <span class="mt-1 flex items-center gap-1 text-amber-500 text-[10px] font-black">
+                        <span class="mt-1 flex items-center gap-1 text-amber-500 text-xs font-black">
                             <i class="bi bi-exclamation-triangle-fill"></i> รอเปลี่ยนรหัส
                         </span>
                         <?php endif; ?>
@@ -351,7 +351,7 @@ $roleLabel = [
                                 <i class="bi bi-trash3-fill text-xs"></i>
                             </button>
                             <?php else: ?>
-                            <span class="text-[10px] text-slate-300 font-bold">บัญชีของคุณ</span>
+                            <span class="text-xs text-slate-300 font-bold">บัญชีของคุณ</span>
                             <?php endif; ?>
                         </div>
                     </td>
@@ -373,7 +373,7 @@ $roleLabel = [
                 </div>
                 <div>
                     <h5 class="font-black text-lg">เพิ่มผู้ใช้งานใหม่</h5>
-                    <p class="text-[10px] font-bold text-blue-100 uppercase tracking-widest">กรอกข้อมูลให้ครบถ้วน</p>
+                    <p class="text-xs font-bold text-blue-100 uppercase tracking-widest">กรอกข้อมูลให้ครบถ้วน</p>
                 </div>
             </div>
         </div>
@@ -382,20 +382,20 @@ $roleLabel = [
             <input type="hidden" name="action" value="create">
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">ชื่อ</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">ชื่อ</label>
                     <input type="text" name="firstname" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="ชื่อจริง">
                 </div>
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">นามสกุล</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">นามสกุล</label>
                     <input type="text" name="lastname" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="นามสกุล">
                 </div>
             </div>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Username</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Username</label>
                 <input type="text" name="username" required autocomplete="off" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="ตัวอักษรภาษาอังกฤษ ไม่มีช่องว่าง">
             </div>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Role</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Role</label>
                 <select name="role" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
                     <option value="wfh_staff">WFH Staff (บุคลากรทั่วไป)</option>
                     <option value="att_teacher">ครูผู้สอน (Attendance)</option>
@@ -410,7 +410,7 @@ $roleLabel = [
                 <i class="bi bi-info-circle-fill text-amber-500 flex-shrink-0 mt-0.5"></i>
                 <div>
                     <p class="text-amber-800 font-black text-xs">รหัสผ่านเริ่มต้น: <span class="font-mono bg-amber-100 px-1.5 py-0.5 rounded-lg">123456</span></p>
-                    <p class="text-amber-600 text-[10px] mt-0.5">ผู้ใช้จะถูกบังคับให้เปลี่ยนรหัสผ่านเมื่อ Login ครั้งแรก</p>
+                    <p class="text-amber-600 text-xs mt-0.5">ผู้ใช้จะถูกบังคับให้เปลี่ยนรหัสผ่านเมื่อ Login ครั้งแรก</p>
                 </div>
             </div>
             <div class="flex gap-3 pt-2">
@@ -435,7 +435,7 @@ $roleLabel = [
                 </div>
                 <div>
                     <h5 class="font-black text-lg">รีเซ็ตรหัสผ่าน</h5>
-                    <p id="reset-name" class="text-[10px] font-bold text-amber-100 uppercase tracking-widest"></p>
+                    <p id="reset-name" class="text-xs font-bold text-amber-100 uppercase tracking-widest"></p>
                 </div>
             </div>
         </div>
@@ -444,7 +444,7 @@ $roleLabel = [
             <input type="hidden" name="action" value="reset_password">
             <input type="hidden" name="user_id" id="reset-uid">
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">รหัสผ่านใหม่</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">รหัสผ่านใหม่</label>
                 <input type="password" name="new_password" required autocomplete="new-password"
                     class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all"
                     placeholder="อย่างน้อย 6 ตัวอักษร">
@@ -471,18 +471,18 @@ $roleLabel = [
                 </div>
                 <div>
                     <h5 class="font-black text-lg">นำเข้าผู้ใช้งานจาก CSV</h5>
-                    <p class="text-[10px] font-bold text-emerald-100 uppercase tracking-widest">รองรับไฟล์ .csv (UTF-8)</p>
+                    <p class="text-xs font-bold text-emerald-100 uppercase tracking-widest">รองรับไฟล์ .csv (UTF-8)</p>
                 </div>
             </div>
         </div>
         <div class="p-8 space-y-6">
             <div class="bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
                 <p class="text-xs font-bold text-emerald-700 mb-2"><i class="bi bi-info-circle-fill mr-1"></i>รูปแบบไฟล์ CSV (ไม่มีหัวตาราง):</p>
-                <code class="text-[11px] text-emerald-600 bg-emerald-100/50 px-2 py-1 rounded-lg block leading-relaxed">
+                <code class="text-sm text-emerald-600 bg-emerald-100/50 px-2 py-1 rounded-lg block leading-relaxed">
                     username, firstname, lastname, password, role
                 </code>
-                <p class="text-[10px] text-emerald-500 mt-2 italic">* Role: super_admin, wfh_admin, wfh_staff, cb_admin, att_teacher</p>
-                <p class="text-[11px] text-emerald-600 mt-3">
+                <p class="text-xs text-emerald-500 mt-2 italic">* Role: super_admin, wfh_admin, wfh_staff, cb_admin, att_teacher</p>
+                <p class="text-sm text-emerald-600 mt-3">
                     <a href="api/download_user_template.php" class="inline-flex items-center gap-1 font-black underline decoration-emerald-200 hover:text-emerald-800 transition-colors">
                         <i class="bi bi-download"></i> ดาวน์โหลดไฟล์ตัวอย่าง (.csv)
                     </a>
@@ -519,7 +519,7 @@ $roleLabel = [
                 </div>
                 <div>
                     <h5 class="font-black text-lg">แก้ไขข้อมูลผู้ใช้</h5>
-                    <p id="edit-username-display" class="text-[10px] font-bold text-indigo-200 uppercase tracking-widest"></p>
+                    <p id="edit-username-display" class="text-xs font-bold text-indigo-200 uppercase tracking-widest"></p>
                 </div>
             </div>
         </div>
@@ -529,20 +529,20 @@ $roleLabel = [
             <input type="hidden" name="user_id" id="edit-uid">
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">ชื่อ</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">ชื่อ</label>
                     <input type="text" name="firstname" id="edit-firstname" required
                         class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
                         placeholder="ชื่อ">
                 </div>
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">นามสกุล</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">นามสกุล</label>
                     <input type="text" name="lastname" id="edit-lastname"
                         class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
                         placeholder="นามสกุล">
                 </div>
             </div>
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Role / สิทธิ์การใช้งาน</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Role / สิทธิ์การใช้งาน</label>
                 <select name="role" id="edit-role" required
                     class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all">
                     <option value="wfh_staff">WFH Staff — บุคลากรทั่วไป (ลงเวลา)</option>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/_guard.php';
@@ -121,7 +121,7 @@ body { font-family:'Prompt',sans-serif; }
         </a>
         <div>
             <div class="font-black text-sm leading-tight">แบบสำรวจการเดินทาง</div>
-            <div class="text-orange-100 text-[10px] font-bold">ภาคเรียน <?= htmlspecialchars($semester) ?></div>
+            <div class="text-orange-100 text-xs font-bold">ภาคเรียน <?= htmlspecialchars($semester) ?></div>
         </div>
     </div>
 </header>
@@ -145,7 +145,7 @@ body { font-family:'Prompt',sans-serif; }
             <p class="text-slate-400 text-xs">รหัส <?= htmlspecialchars($code, ENT_QUOTES, 'UTF-8') ?> · <?= htmlspecialchars($_SESSION['student_class'], ENT_QUOTES, 'UTF-8') ?></p>
         </div>
         <?php if ($survey): ?>
-        <span class="px-3 py-1 rounded-full text-[10px] font-black
+        <span class="px-3 py-1 rounded-full text-xs font-black
                      <?= $confirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' ?>">
             <?= $confirmed ? 'ยืนยันแล้ว' : 'รอยืนยัน' ?>
         </span>
@@ -184,7 +184,7 @@ body { font-family:'Prompt',sans-serif; }
         <?= csrf_field() ?>
 
         <div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
                 คุณเดินทางมาโรงเรียนด้วยอะไร? <span class="text-rose-500">*</span>
             </p>
             <div class="space-y-2">
@@ -210,7 +210,7 @@ body { font-family:'Prompt',sans-serif; }
         <!-- Route select (only if school_bus) -->
         <div id="routeSection" class="<?= $selected === 'school_bus' ? '' : 'hidden' ?> space-y-3">
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5">
                     เลือกสายรถรับส่ง <span class="text-rose-500">*</span>
                 </label>
                 <?php if (empty($routes)): ?>
@@ -232,7 +232,7 @@ body { font-family:'Prompt',sans-serif; }
 
         <!-- Village / area -->
         <div>
-            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5">
                 หมู่บ้าน / ตำบล ที่อยู่ (ไม่บังคับ)
             </label>
             <input type="text" name="home_village" maxlength="200"
@@ -243,7 +243,7 @@ body { font-family:'Prompt',sans-serif; }
 
         <!-- Note -->
         <div>
-            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">หมายเหตุ (ไม่บังคับ)</label>
+            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5">หมายเหตุ (ไม่บังคับ)</label>
             <textarea name="note" rows="2" maxlength="500"
                       placeholder="ข้อมูลเพิ่มเติม..."
                       class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-orange-400 outline-none transition-all"><?= htmlspecialchars($_POST['note'] ?? ($survey['note'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * report_admin.php — Executive Dashboard: สถิติการเข้าเรียนสำหรับผู้บริหาร
  * Role: super_admin, wfh_admin
@@ -140,7 +140,7 @@ require_once '../components/layout_start.php';
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
         <form method="GET" class="flex flex-wrap gap-4 items-end">
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">ห้องเรียน</label>
+                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">ห้องเรียน</label>
                 <select name="classroom" onchange="this.form.submit()"
                         class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-400 outline-none transition-all pr-10">
                     <?php foreach ($classrooms as $cls): ?>
@@ -149,12 +149,12 @@ require_once '../components/layout_start.php';
                 </select>
             </div>
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">ตั้งแต่</label>
+                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">ตั้งแต่</label>
                 <input type="date" name="start_date" value="<?= $start_date ?>"
                        class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all">
             </div>
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">ถึง</label>
+                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">ถึง</label>
                 <input type="date" name="end_date" value="<?= $end_date ?>"
                        class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all">
             </div>
@@ -175,22 +175,22 @@ require_once '../components/layout_start.php';
     <!-- ── KPI Cards ── -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl p-5 text-white shadow-xl shadow-indigo-200/50">
-            <p class="text-[10px] font-black opacity-70 uppercase tracking-widest">นักเรียนทั้งหมด</p>
+            <p class="text-xs font-black opacity-70 uppercase tracking-widest">นักเรียนทั้งหมด</p>
             <p class="text-4xl font-black mt-2"><?= $kpi['total'] ?></p>
             <p class="text-xs opacity-60 mt-1">ห้อง <?= htmlspecialchars($selected_class) ?></p>
         </div>
         <div class="bg-gradient-to-br from-<?= $kpi['avg_rate'] >= 80 ? 'emerald-500 to-teal-600' : 'amber-500 to-orange-600' ?> rounded-2xl p-5 text-white shadow-xl shadow-emerald-200/50">
-            <p class="text-[10px] font-black opacity-70 uppercase tracking-widest">เฉลี่ยมาเรียน</p>
+            <p class="text-xs font-black opacity-70 uppercase tracking-widest">เฉลี่ยมาเรียน</p>
             <p class="text-4xl font-black mt-2"><?= $kpi['avg_rate'] ?>%</p>
             <p class="text-xs opacity-60 mt-1"><?= $kpi['avg_rate'] >= 80 ? 'ผ่านเกณฑ์ภาพรวม' : 'ต่ำกว่าเกณฑ์ 80%' ?></p>
         </div>
         <div class="bg-gradient-to-br from-rose-500 to-pink-700 rounded-2xl p-5 text-white shadow-xl shadow-rose-200/50">
-            <p class="text-[10px] font-black opacity-70 uppercase tracking-widest">เสี่ยงติด มส.</p>
+            <p class="text-xs font-black opacity-70 uppercase tracking-widest">เสี่ยงติด มส.</p>
             <p class="text-4xl font-black mt-2"><?= $kpi['ms_count'] ?></p>
             <p class="text-xs opacity-60 mt-1">มาเรียน&lt;80%</p>
         </div>
         <div class="bg-gradient-to-br from-slate-600 to-slate-800 rounded-2xl p-5 text-white shadow-xl shadow-slate-200/50">
-            <p class="text-[10px] font-black opacity-70 uppercase tracking-widest">จำนวนวิชา</p>
+            <p class="text-xs font-black opacity-70 uppercase tracking-widest">จำนวนวิชา</p>
             <p class="text-4xl font-black mt-2"><?= $kpi['subjects'] ?></p>
             <p class="text-xs opacity-60 mt-1">วิชาในห้องนี้</p>
         </div>
@@ -200,7 +200,7 @@ require_once '../components/layout_start.php';
     <?php if (!empty($chart_labels)): ?>
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
         <h3 class="font-black text-slate-800 mb-1">กราฟ % มาเรียนรายบุคคล</h3>
-        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-5">ห้อง <?= htmlspecialchars($selected_class) ?> · สีเขียว = ≥80% · สีส้ม = 60-79% · สีแดง = &lt;60%</p>
+        <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mb-5">ห้อง <?= htmlspecialchars($selected_class) ?> · สีเขียว = ≥80% · สีส้ม = 60-79% · สีแดง = &lt;60%</p>
         <div style="max-height:280px">
             <canvas id="classChart"></canvas>
         </div>
@@ -212,7 +212,7 @@ require_once '../components/layout_start.php';
         <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
             <div>
                 <h3 class="font-black text-slate-800">ตารางสถิติรายบุคคล × รายวิชา</h3>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">ห้อง <?= htmlspecialchars($selected_class) ?> · <?= count($students) ?> คน · <?= count($subjects) ?> วิชา</p>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">ห้อง <?= htmlspecialchars($selected_class) ?> · <?= count($students) ?> คน · <?= count($subjects) ?> วิชา</p>
             </div>
             <?php if ($kpi['ms_count'] > 0): ?>
             <span class="flex items-center gap-2 bg-rose-50 text-rose-600 border border-rose-200 px-4 py-2 rounded-xl text-xs font-black">
@@ -225,15 +225,15 @@ require_once '../components/layout_start.php';
             <table class="min-w-full text-xs">
                 <thead>
                     <tr class="bg-slate-50 border-b border-slate-100">
-                        <th class="px-5 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest sticky left-0 bg-slate-50 z-10 min-w-[180px]">นักเรียน</th>
+                        <th class="px-5 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest sticky left-0 bg-slate-50 z-10 min-w-[180px]">นักเรียน</th>
                         <?php foreach ($subjects as $sub): ?>
-                        <th class="px-3 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                        <th class="px-3 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                             <?= htmlspecialchars($sub['subject_code']) ?><br>
-                            <span class="text-[9px] normal-case font-medium opacity-60"><?= mb_substr($sub['subject_name'],0,12) ?>…</span>
+                            <span class="text-xs normal-case font-medium opacity-60"><?= mb_substr($sub['subject_name'],0,12) ?>…</span>
                         </th>
                         <?php endforeach; ?>
-                        <th class="px-5 py-4 text-center text-[10px] font-black text-indigo-500 uppercase tracking-widest">รวม %</th>
-                        <th class="px-3 py-4 text-center text-[10px] font-black text-rose-600 uppercase tracking-widest">มส.</th>
+                        <th class="px-5 py-4 text-center text-xs font-black text-indigo-500 uppercase tracking-widest">รวม %</th>
+                        <th class="px-3 py-4 text-center text-xs font-black text-rose-600 uppercase tracking-widest">มส.</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
@@ -251,7 +251,7 @@ require_once '../components/layout_start.php';
                     <tr class="hover:bg-slate-50 transition <?= $is_ms ? 'bg-rose-50/30' : '' ?>">
                         <td class="px-5 py-3.5 sticky left-0 bg-white hover:bg-slate-50 z-10 border-r border-slate-50">
                             <div class="flex flex-col">
-                                <span class="font-mono font-bold text-blue-600 text-[10px]"><?= $stu['student_id'] ?></span>
+                                <span class="font-mono font-bold text-blue-600 text-xs"><?= $stu['student_id'] ?></span>
                                 <span class="font-bold text-slate-700 <?= $is_ms ? 'text-rose-700' : '' ?>"><?= htmlspecialchars($stu['name']) ?></span>
                             </div>
                         </td>
@@ -267,7 +267,7 @@ require_once '../components/layout_start.php';
                             <?php if ($sess > 0): ?>
                             <div class="inline-flex flex-col items-center gap-1">
                                 <span class="font-black <?= $tc ?> rounded-lg px-2.5 py-1"><?= $r ?>%</span>
-                                <span class="text-[9px] text-slate-400"><?= $come ?>/<?= $sess ?></span>
+                                <span class="text-xs text-slate-400"><?= $come ?>/<?= $sess ?></span>
                             </div>
                             <?php else: ?>
                             <span class="text-slate-200 font-bold">—</span>
@@ -286,15 +286,15 @@ require_once '../components/layout_start.php';
                         <!-- มส. -->
                         <td class="px-3 py-3.5 text-center">
                             <?php if ($is_ms): ?>
-                            <span class="inline-flex items-center gap-1 bg-rose-600 text-white px-2.5 py-1 rounded-xl text-[10px] font-black shadow-sm">
+                            <span class="inline-flex items-center gap-1 bg-rose-600 text-white px-2.5 py-1 rounded-xl text-xs font-black shadow-sm">
                                 <i class="bi bi-x-circle-fill"></i> มส.
                             </span>
                             <?php elseif ($total_possible > 0): ?>
-                            <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-600 border border-emerald-100 px-2.5 py-1 rounded-xl text-[10px] font-black">
+                            <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-600 border border-emerald-100 px-2.5 py-1 rounded-xl text-xs font-black">
                                 <i class="bi bi-check-circle-fill"></i> ผ่าน
                             </span>
                             <?php else: ?>
-                            <span class="text-slate-200 text-[10px] font-bold">—</span>
+                            <span class="text-slate-200 text-xs font-bold">—</span>
                             <?php endif; ?>
                         </td>
                     </tr>

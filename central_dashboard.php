@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * central_dashboard.php — The "Super Dashboard" for LLW Platinum
  */
@@ -255,32 +255,32 @@ require_once 'components/layout_start.php';
             <div class="glass-card p-6">
                 <div class="w-12 h-12 rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-indigo-200"><i class="bi bi-people-fill"></i></div>
                 <p class="text-3xl font-black text-slate-800"><?= number_format($countStudents) ?></p>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">นักเรียนทั้งหมด</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">นักเรียนทั้งหมด</p>
             </div>
             <div class="glass-card p-6 border-l-4 border-l-amber-500">
                 <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-amber-200"><i class="bi bi-envelope-paper-fill"></i></div>
                 <p class="text-3xl font-black text-slate-800"><?= $countPendingLeave ?></p>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">ใบลาที่ค้างอยู่</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">ใบลาที่ค้างอยู่</p>
             </div>
             <div class="glass-card p-6">
                 <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-emerald-200"><i class="bi bi-calendar-check-fill"></i></div>
                 <p class="text-3xl font-black text-slate-800"><?= $countCheckedRooms ?></p>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">ห้องที่เช็คแล้ว</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">ห้องที่เช็คแล้ว</p>
             </div>
             <div class="glass-card p-6">
                 <div class="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-rose-200"><i class="bi bi-calendar-x-fill"></i></div>
                 <p class="text-3xl font-black text-slate-800"><?= $countRemainingRooms ?></p>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">ห้องที่ยังไม่เช็ค</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">ห้องที่ยังไม่เช็ค</p>
             </div>
             <div class="glass-card p-6">
                 <div class="w-12 h-12 rounded-2xl bg-cyan-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-cyan-200"><i class="bi bi-person-workspace"></i></div>
                 <p class="text-3xl font-black text-slate-800"><?= $countOnLeaveToday ?></p>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">บุคลากรลาวันนี้</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">บุคลากรลาวันนี้</p>
             </div>
             <div class="glass-card p-6">
                 <div class="w-12 h-12 rounded-2xl bg-slate-800 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-slate-200"><i class="bi bi-lightning-fill"></i></div>
                 <p class="text-3xl font-black text-slate-800"><?= count($recentActivity) ?></p>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">กิจกรรมล่าสุด</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">กิจกรรมล่าสุด</p>
             </div>
         </section>
 
@@ -297,7 +297,7 @@ require_once 'components/layout_start.php';
                     <?php else: ?>
                         <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-300 opacity-50">
                             <i class="bi bi-bar-chart text-4xl mb-2"></i>
-                            <p class="text-[10px] font-black uppercase tracking-widest">ยังไม่มีข้อมูลการเช็คชื่อปี <?= $currentYear ?></p>
+                            <p class="text-xs font-black uppercase tracking-widest">ยังไม่มีข้อมูลการเช็คชื่อปี <?= $currentYear ?></p>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -313,7 +313,7 @@ require_once 'components/layout_start.php';
                     <?php else: ?>
                         <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-300 opacity-50">
                             <i class="bi bi-graph-up text-4xl mb-2"></i>
-                            <p class="text-[10px] font-black uppercase tracking-widest">รอการบันทึกกิจกรรมย้อนหลัง</p>
+                            <p class="text-xs font-black uppercase tracking-widest">รอการบันทึกกิจกรรมย้อนหลัง</p>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -329,7 +329,7 @@ require_once 'components/layout_start.php';
                     <?php else: ?>
                         <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-300 opacity-50">
                             <i class="bi bi-pie-chart text-4xl mb-2"></i>
-                            <p class="text-[10px] font-black uppercase tracking-widest">ไม่พบข้อมูลผู้ใช้งาน</p>
+                            <p class="text-xs font-black uppercase tracking-widest">ไม่พบข้อมูลผู้ใช้งาน</p>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -359,18 +359,18 @@ require_once 'components/layout_start.php';
                         <i class="bi bi-chevron-right text-slate-200 group-hover:text-indigo-600 transition-all"></i>
                     </div>
                     <h4 class="text-xl font-black text-slate-800 tracking-tighter"><?= htmlspecialchars($room['classroom']) ?></h4>
-                    <p class="text-[10px] font-bold text-slate-400 mt-1 truncate" title="<?= htmlspecialchars($room['advisors']) ?>">
+                    <p class="text-xs font-bold text-slate-400 mt-1 truncate" title="<?= htmlspecialchars($room['advisors']) ?>">
                         <?= $room['advisors'] ? 'ครู' . htmlspecialchars($room['advisors'], ENT_QUOTES, 'UTF-8') : 'ยังไม่ระบุครูที่ปรึกษา' ?>
                     </p>
                     
                     <div class="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
                         <div>
-                            <p class="text-[8px] font-black text-slate-300 uppercase tracking-widest">Total</p>
+                            <p class="text-xs font-black text-slate-300 uppercase tracking-widest">Total</p>
                             <p class="text-3xl font-black text-slate-800 leading-none"><?= $room['cnt'] ?></p>
                         </div>
                         <div class="text-right flex flex-col gap-1">
-                            <span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-black">♂ <?= $room['male_cnt'] ?></span>
-                            <span class="px-2 py-1 rounded-lg bg-pink-50 text-pink-600 text-[10px] font-black">♀ <?= $room['female_cnt'] ?></span>
+                            <span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-600 text-xs font-black">♂ <?= $room['male_cnt'] ?></span>
+                            <span class="px-2 py-1 rounded-lg bg-pink-50 text-pink-600 text-xs font-black">♀ <?= $room['female_cnt'] ?></span>
                         </div>
                     </div>
                 </div>
@@ -386,7 +386,7 @@ require_once 'components/layout_start.php';
                         <i class="bi bi-graph-up-arrow text-indigo-600"></i>
                         สถิติการใช้งานแยกตามครูผู้สอน
                     </h3>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Monthly Usage Performance Index</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Monthly Usage Performance Index</p>
                 </div>
                 <form method="GET" class="flex gap-3">
                     <input type="hidden" name="year" value="<?= $currentYear ?>">
@@ -397,7 +397,7 @@ require_once 'components/layout_start.php';
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-xs text-left">
-                    <thead class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                    <thead class="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-[0.2em]">
                         <tr>
                             <th class="px-8 py-5">ชื่อ-นามสกุล ครูผู้สอน</th>
                             <th class="px-6 py-5 text-center">วิชา</th>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * manage_advisors.php — ศูนย์กลางการจัดการครูที่ปรึกษา (LLW Class Advisors)
  * กำหนดห้องเรียน 1 ห้องต่อครูที่ปรึกษา 2 คน
@@ -101,9 +101,9 @@ require_once __DIR__ . '/components/layout_start.php';
                 <table class="w-full border-collapse">
                     <thead>
                         <tr class="bg-slate-50/50">
-                            <th class="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">ห้องเรียน</th>
-                            <th class="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">ครูที่ปรึกษา 1</th>
-                            <th class="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">ครูที่ปรึกษา 2</th>
+                            <th class="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">ห้องเรียน</th>
+                            <th class="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">ครูที่ปรึกษา 1</th>
+                            <th class="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">ครูที่ปรึกษา 2</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
@@ -116,7 +116,7 @@ require_once __DIR__ . '/components/layout_start.php';
                                 <div class="flex items-center gap-3">
                                     <span class="text-lg font-black text-slate-700"><?= htmlspecialchars($room) ?></span>
                                     <?php if ($isMyRoom): ?>
-                                    <span class="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-lg uppercase tracking-tighter">My Class</span>
+                                    <span class="px-2 py-0.5 bg-blue-600 text-white text-xs font-black rounded-lg uppercase tracking-tighter">My Class</span>
                                     <?php endif; ?>
                                 </div>
                             </td>

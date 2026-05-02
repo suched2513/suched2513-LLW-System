@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/config.php';
 busRequireStudent();
@@ -103,12 +103,12 @@ header('Content-Type: text/html; charset=UTF-8');
             </a>
             <div>
                 <div class="font-black text-sm leading-tight">เลือกสายรถ</div>
-                <div class="text-orange-100 text-[9px] font-bold"><?= htmlspecialchars($semLabel, ENT_QUOTES, 'UTF-8') ?></div>
+                <div class="text-orange-100 text-xs font-bold"><?= htmlspecialchars($semLabel, ENT_QUOTES, 'UTF-8') ?></div>
             </div>
         </div>
         <div class="text-right">
             <div class="font-bold text-xs leading-tight truncate max-w-[130px]"><?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?></div>
-            <div class="text-orange-100 text-[10px]"><?= htmlspecialchars($class, ENT_QUOTES, 'UTF-8') ?></div>
+            <div class="text-orange-100 text-xs"><?= htmlspecialchars($class, ENT_QUOTES, 'UTF-8') ?></div>
         </div>
     </div>
 </header>
@@ -121,7 +121,7 @@ header('Content-Type: text/html; charset=UTF-8');
     </div>
     <?php endif; ?>
 
-    <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">
+    <p class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">
         สายที่เปิดให้บริการ <?= count($routes) ?> สาย
     </p>
 
@@ -150,24 +150,24 @@ header('Content-Type: text/html; charset=UTF-8');
             </div>
             <div class="flex-1 min-w-0">
                 <p class="font-black text-slate-800 leading-tight"><?= htmlspecialchars($rt['route_name']) ?></p>
-                <p class="text-[10px] text-slate-400 font-bold mt-0.5">สาย <?= htmlspecialchars($rt['route_code']) ?></p>
+                <p class="text-xs text-slate-400 font-bold mt-0.5">สาย <?= htmlspecialchars($rt['route_code']) ?></p>
             </div>
             <div class="text-right flex-shrink-0">
                 <p class="text-2xl font-black text-orange-600 leading-none"><?= number_format($rt['price'], 0) ?></p>
-                <p class="text-[9px] text-slate-400 font-bold">บาท/ภาคเรียน</p>
+                <p class="text-xs text-slate-400 font-bold">บาท/ภาคเรียน</p>
             </div>
         </div>
 
         <?php if ($rt['description']): ?>
         <div class="mx-5 mb-3 bg-slate-50 rounded-2xl px-3 py-2">
-            <p class="text-[11px] text-slate-500"><?= htmlspecialchars($rt['description']) ?></p>
+            <p class="text-sm text-slate-500"><?= htmlspecialchars($rt['description']) ?></p>
         </div>
         <?php endif; ?>
 
         <!-- Seat availability -->
         <?php if ($seats > 0): ?>
         <div class="px-5 mb-3">
-            <div class="flex justify-between text-[10px] font-bold mb-1">
+            <div class="flex justify-between text-xs font-bold mb-1">
                 <span class="text-slate-400 flex items-center gap-1">
                     <i class="bi bi-people-fill text-slate-300"></i>
                     <?= $isFull ? 'เต็มแล้ว' : "ว่าง {$available}/{$seats} ที่นั่ง" ?>
@@ -183,7 +183,7 @@ header('Content-Type: text/html; charset=UTF-8');
 
         <!-- Driver & Action -->
         <div class="flex items-center justify-between px-5 pb-4 gap-3">
-            <div class="text-[11px] text-slate-400 min-w-0">
+            <div class="text-sm text-slate-400 min-w-0">
                 <?php if ($rt['driver_name']): ?>
                 <span class="flex items-center gap-1 truncate">
                     <i class="bi bi-person-fill"></i>
@@ -212,7 +212,7 @@ header('Content-Type: text/html; charset=UTF-8');
     <?php endforeach; ?>
 
     <div class="pb-2 text-center">
-        <p class="text-[10px] text-slate-300">หากไม่มีสายที่ต้องการ กรุณาติดต่อเจ้าหน้าที่</p>
+        <p class="text-xs text-slate-300">หากไม่มีสายที่ต้องการ กรุณาติดต่อเจ้าหน้าที่</p>
     </div>
 
 </div>
@@ -223,15 +223,15 @@ header('Content-Type: text/html; charset=UTF-8');
     <div class="max-w-lg mx-auto grid grid-cols-3 h-16">
         <a href="/bus/dashboard.php" class="flex flex-col items-center justify-center gap-1 text-slate-400 active:text-orange-500 transition-colors">
             <i class="bi bi-house-door text-xl"></i>
-            <span class="text-[10px] font-bold">หน้าหลัก</span>
+            <span class="text-xs font-bold">หน้าหลัก</span>
         </a>
         <a href="/bus/register.php" class="flex flex-col items-center justify-center gap-1 text-orange-500">
             <i class="bi bi-bus-front-fill text-xl"></i>
-            <span class="text-[10px] font-black">เลือกสาย</span>
+            <span class="text-xs font-black">เลือกสาย</span>
         </a>
         <a href="/bus/logout.php" class="flex flex-col items-center justify-center gap-1 text-slate-400 active:text-rose-500 transition-colors">
             <i class="bi bi-box-arrow-right text-xl"></i>
-            <span class="text-[10px] font-bold">ออกจากระบบ</span>
+            <span class="text-xs font-bold">ออกจากระบบ</span>
         </a>
     </div>
 </nav>

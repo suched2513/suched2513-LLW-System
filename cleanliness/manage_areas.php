@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -89,12 +89,12 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <input type="hidden" name="id" id="areaId" value="">
 
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ชื่อพื้นที่</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">ชื่อพื้นที่</label>
                     <input type="text" name="name" id="areaName" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
                 </div>
 
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ห้องเรียนที่รับผิดชอบ</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">ห้องเรียนที่รับผิดชอบ</label>
                     <div class="flex flex-col gap-2">
                         <select id="areaClass" onchange="document.getElementById('areaClassManual').value = this.value" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
                             <option value="">-- เลือกห้องเรียน --</option>
@@ -107,7 +107,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </div>
 
                 <div class="space-y-2">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">รายละเอียด</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">รายละเอียด</label>
                     <textarea name="description" id="areaDesc" rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"></textarea>
                 </div>
 
@@ -125,9 +125,9 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <table class="w-full">
                     <thead>
                         <tr class="bg-slate-50">
-                            <th class="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest rounded-l-2xl">ชื่อพื้นที่</th>
-                            <th class="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">ห้องรับผิดชอบ</th>
-                            <th class="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest rounded-r-2xl">จัดการ</th>
+                            <th class="px-6 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest rounded-l-2xl">ชื่อพื้นที่</th>
+                            <th class="px-6 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ห้องรับผิดชอบ</th>
+                            <th class="px-6 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest rounded-r-2xl">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">

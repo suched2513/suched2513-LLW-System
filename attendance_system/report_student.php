@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'functions.php';
 checkLogin();
 
@@ -66,11 +66,11 @@ require_once 'components/layout_start.php';
             </div>
             <div class="w-full grid grid-cols-2 gap-2 mt-4">
                 <div class="p-3 bg-slate-50 rounded-2xl">
-                    <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">มาเรียน</p>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">มาเรียน</p>
                     <p class="text-xl font-black text-slate-700"><?= $summary['มา'] ?></p>
                 </div>
                 <div class="p-3 bg-slate-50 rounded-2xl">
-                    <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">ขาดเรียน</p>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">ขาดเรียน</p>
                     <p class="text-xl font-black text-rose-500"><?= $summary['ขาด'] ?></p>
                 </div>
             </div>
@@ -85,11 +85,11 @@ require_once 'components/layout_start.php';
                 <h3 class="font-bold text-slate-800 flex items-center gap-2 italic">
                     <i class="bi bi-clock-history text-indigo-500"></i> ประวัติการเข้าเรียนรายวิชา
                 </h3>
-                <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-lg font-bold uppercase tracking-widest">ทั้งหมด <?= count($report_data) ?> รายการ</span>
+                <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded-lg font-bold uppercase tracking-widest">ทั้งหมด <?= count($report_data) ?> รายการ</span>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-50 text-xs">
-                    <thead class="bg-white text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <thead class="bg-white text-xs font-black text-slate-400 uppercase tracking-widest">
                         <tr>
                             <th class="px-8 py-4 text-left">วันที่/คาบ</th>
                             <th class="px-8 py-4 text-left">รหัสวิชา - รายวิชา</th>
@@ -109,17 +109,17 @@ require_once 'components/layout_start.php';
                                 <td class="px-8 py-4">
                                     <div class="flex flex-col">
                                         <span class="font-bold text-slate-700"><?= date('d/m/Y', strtotime($row['date'])) ?></span>
-                                        <span class="text-[10px] text-slate-400 font-medium">คาบที่ <?= $row['period'] ?></span>
+                                        <span class="text-xs text-slate-400 font-medium">คาบที่ <?= $row['period'] ?></span>
                                     </div>
                                 </td>
                                 <td class="px-8 py-4">
                                     <div class="flex flex-col">
-                                        <span class="text-[11px] font-bold text-blue-600 font-mono"><?= $row['subject_code'] ?></span>
+                                        <span class="text-sm font-bold text-blue-600 font-mono"><?= $row['subject_code'] ?></span>
                                         <span class="text-sm font-bold text-slate-700"><?= htmlspecialchars($row['subject_name']) ?></span>
                                     </div>
                                 </td>
                                 <td class="px-8 py-4 text-center">
-                                    <span class="px-3 py-1 rounded-xl font-black text-[10px] bg-<?= $sc ?>-100 text-<?= $sc ?>-700"><?= $row['status'] ?></span>
+                                    <span class="px-3 py-1 rounded-xl font-black text-xs bg-<?= $sc ?>-100 text-<?= $sc ?>-700"><?= $row['status'] ?></span>
                                 </td>
                                 <td class="px-8 py-4 italic text-slate-400"><?= htmlspecialchars($row['note']) ?></td>
                             </tr>

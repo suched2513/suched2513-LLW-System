@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -52,7 +52,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
 
         <div class="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-100/50 border border-slate-100 group hover:border-violet-200 transition-all">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">กำลังดำเนินการ (Active)</p>
+            <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">กำลังดำเนินการ (Active)</p>
             <div class="flex items-end justify-between mt-4">
                 <p class="text-5xl font-black text-slate-800 italic"><?= $activePdca ?></p>
                 <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500">
@@ -63,7 +63,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 
         <div class="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-100/50 border border-slate-100 group hover:border-violet-200 transition-all relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-violet-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">บันทึกกิจกรรมทั้งหมด</p>
+            <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">บันทึกกิจกรรมทั้งหมด</p>
             <div class="flex items-end justify-between mt-4">
                 <?php
                 $stmt = $pdo->prepare("SELECT COUNT(*) FROM plc_logs l JOIN plc_members m ON l.group_id = m.group_id WHERE m.user_id = ?");
@@ -107,7 +107,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <div class="w-14 h-14 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg shadow-violet-100 group-hover:rotate-6 transition-transform">
                             <i class="bi bi-bookmarks-fill"></i>
                         </div>
-                        <span class="px-3 py-1 rounded-full bg-violet-50 text-violet-600 text-[10px] font-black uppercase tracking-widest">
+                        <span class="px-3 py-1 rounded-full bg-violet-50 text-violet-600 text-xs font-black uppercase tracking-widest">
                             <?= htmlspecialchars($group['my_role']) ?>
                         </span>
                     </div>
@@ -118,7 +118,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                     </p>
 
                     <div class="mt-8 space-y-3">
-                        <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        <div class="flex justify-between items-center text-xs font-black uppercase tracking-widest text-slate-400">
                             <span>PDCA PROGRESS</span>
                             <span class="text-violet-600"><?= number_format($progress) ?>%</span>
                         </div>
@@ -131,12 +131,12 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <div class="flex -space-x-3">
                             <!-- Placeholder for member avatars -->
                             <?php for($i=0; $i<3; $i++): ?>
-                            <div class="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-400">
+                            <div class="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs font-bold text-slate-400">
                                 <i class="bi bi-person"></i>
                             </div>
                             <?php endfor; ?>
                         </div>
-                        <span class="text-slate-400 text-[10px] font-black uppercase tracking-widest italic">
+                        <span class="text-slate-400 text-xs font-black uppercase tracking-widest italic">
                             <?= $group['log_count'] ?> กิจกรรม
                         </span>
                     </div>
@@ -155,28 +155,28 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center font-black italic">P</div>
                         <div>
                             <p class="text-xs font-black text-slate-800">Plan</p>
-                            <p class="text-[10px] text-slate-400 mt-0.5">วิเคราะห์ปัญหาและวางแผน</p>
+                            <p class="text-xs text-slate-400 mt-0.5">วิเคราะห์ปัญหาและวางแผน</p>
                         </div>
                     </div>
                     <div class="flex gap-4">
                         <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center font-black italic">D</div>
                         <div>
                             <p class="text-xs font-black text-slate-800">Do</p>
-                            <p class="text-[10px] text-slate-400 mt-0.5">ปฏิบัติและสังเกตการเรียนรู้</p>
+                            <p class="text-xs text-slate-400 mt-0.5">ปฏิบัติและสังเกตการเรียนรู้</p>
                         </div>
                     </div>
                     <div class="flex gap-4">
                         <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center font-black italic">C</div>
                         <div>
                             <p class="text-xs font-black text-slate-800">Check</p>
-                            <p class="text-[10px] text-slate-400 mt-0.5">สะท้อนผลและตรวจสอบ</p>
+                            <p class="text-xs text-slate-400 mt-0.5">สะท้อนผลและตรวจสอบ</p>
                         </div>
                     </div>
                     <div class="flex gap-4">
                         <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center font-black italic">A</div>
                         <div>
                             <p class="text-xs font-black text-slate-800">Act</p>
-                            <p class="text-[10px] text-slate-400 mt-0.5">สรุปและรายงานผล</p>
+                            <p class="text-xs text-slate-400 mt-0.5">สรุปและรายงานผล</p>
                         </div>
                     </div>
                 </div>
@@ -203,22 +203,22 @@ require_once __DIR__ . '/../components/layout_start.php';
             <form id="createGroupForm" class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="md:col-span-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block">ชื่อกลุ่ม PLC</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block">ชื่อกลุ่ม PLC</label>
                         <input type="text" name="group_name" required placeholder="เช่น ชุมชนคณิตศาสตร์คิดสร้างสรรค์" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm focus:ring-4 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all font-bold">
                     </div>
                     <div>
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block">ปีการศึกษา</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block">ปีการศึกษา</label>
                         <input type="text" name="academic_year" required placeholder="2567" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm focus:ring-4 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all font-bold">
                     </div>
                     <div>
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block">ภาคเรียน</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block">ภาคเรียน</label>
                         <select name="semester" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm focus:ring-4 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all font-bold">
                             <option value="1">ภาคเรียนที่ 1</option>
                             <option value="2">ภาคเรียนที่ 2</option>
                         </select>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block">กลุ่มเป้าหมาย / รายวิชา</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-2 mb-2 block">กลุ่มเป้าหมาย / รายวิชา</label>
                         <input type="text" name="target_group" placeholder="เช่น นักเรียนชั้นมัธยมศึกษาปีที่ 1" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm focus:ring-4 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all font-bold">
                     </div>
                 </div>

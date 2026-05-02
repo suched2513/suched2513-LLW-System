@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 // Auth: super_admin or cb_admin
 if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'cb_admin'])) {
@@ -41,22 +41,22 @@ require_once '../components/layout_start.php';
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
         <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
             <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-all"><i class="bi bi-laptop text-6xl"></i></div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">อุปกรณ์ทั้งหมด</p>
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">อุปกรณ์ทั้งหมด</p>
             <h3 class="text-4xl font-black text-slate-800 tracking-tight" id="stat-total">-</h3>
         </div>
         <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
             <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-all text-amber-600"><i class="bi bi-hand-index-thumb-fill text-6xl"></i></div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">กำลังยืมอยู่</p>
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">กำลังยืมอยู่</p>
             <h3 class="text-4xl font-black text-slate-800 tracking-tight" id="stat-borrowed">-</h3>
         </div>
         <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
             <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-all text-emerald-600"><i class="bi bi-check-circle-fill text-6xl"></i></div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ว่างพร้อมใช้</p>
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">ว่างพร้อมใช้</p>
             <h3 class="text-4xl font-black text-slate-800 tracking-tight" id="stat-avail">-</h3>
         </div>
         <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
             <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-all text-rose-600"><i class="bi bi-exclamation-triangle-fill text-6xl"></i></div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ค้างคืน &gt;2 วัน</p>
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">ค้างคืน &gt;2 วัน</p>
             <h3 class="text-4xl font-black text-slate-800 tracking-tight" id="stat-overdue">-</h3>
         </div>
     </div>
@@ -66,7 +66,7 @@ require_once '../components/layout_start.php';
         <div class="lg:col-span-2 bg-white p-10 rounded-[32px] shadow-sm border border-slate-100">
             <div class="flex justify-between items-center mb-8">
                 <h3 class="font-black text-slate-800 flex items-center gap-3"><i class="bi bi-bar-chart-fill text-blue-600"></i> อัตราการยืมตามห้องเรียน</h3>
-                <span class="text-[10px] font-black text-slate-400 bg-slate-50 px-4 py-1.5 rounded-full uppercase tracking-widest" id="chart-period-label">ทั้งหมด</span>
+                <span class="text-xs font-black text-slate-400 bg-slate-50 px-4 py-1.5 rounded-full uppercase tracking-widest" id="chart-period-label">ทั้งหมด</span>
             </div>
             <div class="relative h-[300px]"><canvas id="classChart"></canvas></div>
         </div>
@@ -82,11 +82,11 @@ require_once '../components/layout_start.php';
         <div class="bg-white rounded-[32px] shadow-sm border border-rose-100 overflow-hidden">
             <div class="px-10 py-6 border-b border-rose-50 bg-rose-50/30 flex items-center justify-between">
                 <h3 class="font-black text-rose-700 flex items-center gap-3"><i class="bi bi-exclamation-octagon-fill"></i> ค้างส่งเกินกำหนด</h3>
-                <span class="px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-[10px] font-black uppercase tracking-widest" id="overdue-count-badge">0 รายการ</span>
+                <span class="px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-black uppercase tracking-widest" id="overdue-count-badge">0 รายการ</span>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
-                    <thead class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                    <thead class="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                         <tr>
                             <th class="px-8 py-4 text-left">ผู้ยืม</th>
                             <th class="px-6 py-4 text-left">เครื่อง</th>
@@ -196,9 +196,9 @@ function renderDashboard(logs) {
             const dayCount = Math.floor((now - new Date(r[8])) / (1000 * 60 * 60 * 24));
             const urgency = dayCount > 7 ? 'text-rose-600 bg-rose-50' : 'text-amber-600 bg-amber-50';
             return `<tr>
-                <td class="px-8 py-5 font-bold text-slate-700">${getName(r)}<div class="text-[10px] text-slate-400 uppercase tracking-widest font-black">${r[3]||r[1]}</div></td>
-                <td class="px-6 py-5 font-mono font-bold text-slate-500 text-xs">${r[4]}<div class="text-[9px] text-slate-300 font-black">${r[5]}</div></td>
-                <td class="px-6 py-5 text-center"><span class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${urgency}">${dayCount} วัน</span></td>
+                <td class="px-8 py-5 font-bold text-slate-700">${getName(r)}<div class="text-xs text-slate-400 uppercase tracking-widest font-black">${r[3]||r[1]}</div></td>
+                <td class="px-6 py-5 font-mono font-bold text-slate-500 text-xs">${r[4]}<div class="text-xs text-slate-300 font-black">${r[5]}</div></td>
+                <td class="px-6 py-5 text-center"><span class="px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest ${urgency}">${dayCount} วัน</span></td>
             </tr>`;
         }).join('');
     }

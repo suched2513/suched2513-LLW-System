@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * assembly/report_print.php — หน้าปริ้นรายงานการเข้าแถวรายห้อง
  * GET ?classroom=...&date=...
@@ -84,7 +84,7 @@ $date = $_GET['date'] ?? date('Y-m-d');
 
             <!-- Advisor Section -->
             <div class="mt-auto pt-10 border-t border-white/10 flex flex-col items-center">
-                <p class="text-[10px] font-black uppercase tracking-widest opacity-60 mb-4">ครูที่ปรึกษา</p>
+                <p class="text-xs font-black uppercase tracking-widest opacity-60 mb-4">ครูที่ปรึกษา</p>
                 <div class="w-24 h-24 rounded-full bg-white/20 border-4 border-white/30 flex items-center justify-center mb-4 text-3xl">
                     <i class="bi bi-person-fill"></i>
                 </div>
@@ -93,8 +93,8 @@ $date = $_GET['date'] ?? date('Y-m-d');
 
             <!-- Rules Section -->
             <div class="mt-10 bg-black/10 rounded-2xl p-4 border border-white/5">
-                <h3 class="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">ข้อตกลงของห้อง</h3>
-                <ol class="text-[9px] font-medium leading-relaxed opacity-80 list-decimal pl-4">
+                <h3 class="text-xs font-black uppercase tracking-widest opacity-60 mb-2">ข้อตกลงของห้อง</h3>
+                <ol class="text-xs font-medium leading-relaxed opacity-80 list-decimal pl-4">
                     <li>เข้าแถวให้ตรงเวลาและเป็นระเบียบ</li>
                     <li>แต่งกายให้ถูกต้องตามระเบียบโรงเรียน</li>
                     <li>รักษาความสะอาดและความสงบเรียบร้อย</li>
@@ -114,7 +114,7 @@ $date = $_GET['date'] ?? date('Y-m-d');
                     <h2 id="school-name" class="text-3xl font-black text-slate-800">...</h2>
                 </div>
                 <div class="text-right">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ประจำวันที่</p>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">ประจำวันที่</p>
                     <p id="report-date" class="text-3xl font-black text-cyan-600 tracking-tighter">...</p>
                 </div>
             </header>
@@ -124,12 +124,12 @@ $date = $_GET['date'] ?? date('Y-m-d');
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="text-left border-b-2 border-slate-100">
-                            <th class="py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-12">เลขที่</th>
-                            <th class="py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อ-สกุล</th>
-                            <th class="py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center bg-slate-50/50">วันนี้</th>
-                            <th colspan="4" class="py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center border-l border-slate-50">สถิติรวม (ครั้ง)</th>
+                            <th class="py-4 text-xs font-black text-slate-400 uppercase tracking-widest w-12">เลขที่</th>
+                            <th class="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ชื่อ-สกุล</th>
+                            <th class="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-center bg-slate-50/50">วันนี้</th>
+                            <th colspan="4" class="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-center border-l border-slate-50">สถิติรวม (ครั้ง)</th>
                         </tr>
-                        <tr class="text-[9px] font-black text-slate-400 border-b border-slate-50 uppercase text-center">
+                        <tr class="text-xs font-black text-slate-400 border-b border-slate-50 uppercase text-center">
                             <th></th><th></th><th></th>
                             <th class="py-2 border-l border-slate-50 text-emerald-600">มา</th>
                             <th class="py-2 text-rose-500">ขาด</th>
@@ -148,15 +148,15 @@ $date = $_GET['date'] ?? date('Y-m-d');
             <footer class="mt-20 pt-10 border-t border-slate-100 flex justify-between gap-10">
                 <div class="w-48 text-center">
                     <div class="border-b border-slate-300 h-10 mb-2"></div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase">ครูที่ปรึกษา</p>
+                    <p class="text-xs font-black text-slate-400 uppercase">ครูที่ปรึกษา</p>
                 </div>
                 <div class="w-48 text-center">
                     <div class="border-b border-slate-300 h-10 mb-2"></div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase">ผู้ช่วยฝ่ายปกครอง</p>
+                    <p class="text-xs font-black text-slate-400 uppercase">ผู้ช่วยฝ่ายปกครอง</p>
                 </div>
                 <div class="w-48 text-center">
                     <div class="border-b border-slate-300 h-10 mb-2"></div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase">ฝ่ายบริหาร</p>
+                    <p class="text-xs font-black text-slate-400 uppercase">ฝ่ายบริหาร</p>
                 </div>
             </footer>
         </main>
@@ -218,7 +218,7 @@ $date = $_GET['date'] ?? date('Y-m-d');
         const tbody = document.getElementById('student-list');
         tbody.innerHTML = data.students.map((s, i) => `
             <tr class="hover:bg-slate-50/50 transition-colors">
-                <td class="py-3 text-[11px] font-bold text-slate-400">${i + 1}</td>
+                <td class="py-3 text-sm font-bold text-slate-400">${i + 1}</td>
                 <td class="py-3 font-bold text-slate-700">${s.name}</td>
                 <td class="py-3 text-center bg-slate-50/30">${statusMap[s.today] || '-'}</td>
                 <td class="py-3 text-center border-l border-slate-50 font-bold text-emerald-600">${s.stats.m}</td>

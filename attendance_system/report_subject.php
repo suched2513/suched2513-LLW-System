@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'functions.php';
 checkLogin();
 
@@ -76,9 +76,9 @@ require_once '../components/layout_start.php';
         $colors = ['มา'=>'emerald','ขาด'=>'rose','ลา'=>'amber','โดด'=>'violet','สาย'=>'orange'];
         foreach($summary as $st => $count): $c = $colors[$st]; ?>
         <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center">
-            <span class="text-[10px] font-black text-<?= $c ?>-500 uppercase tracking-widest mb-1"><?= $st ?></span>
+            <span class="text-xs font-black text-<?= $c ?>-500 uppercase tracking-widest mb-1"><?= $st ?></span>
             <span class="text-2xl font-black text-slate-800"><?= $count ?></span>
-            <span class="text-[9px] text-slate-400 font-bold uppercase mt-1">ครั้ง</span>
+            <span class="text-xs text-slate-400 font-bold uppercase mt-1">ครั้ง</span>
         </div>
         <?php endforeach; ?>
     </div>
@@ -101,7 +101,7 @@ require_once '../components/layout_start.php';
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-xs">
-                    <thead class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <thead class="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-widest">
                         <tr>
                             <th class="px-4 py-3 text-left">คาบ</th>
                             <?php foreach($summary as $st => $v): ?> <th class="px-4 py-3 text-center"><?= $st ?></th> <?php endforeach; ?>
@@ -137,7 +137,7 @@ require_once '../components/layout_start.php';
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-100 text-xs">
-                <thead class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <thead class="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-widest">
                     <tr>
                         <th class="px-6 py-4 text-left">วันที่/คาบ</th>
                         <th class="px-6 py-4 text-left">รหัสนักเรียน</th>
@@ -157,12 +157,12 @@ require_once '../components/layout_start.php';
                         <tr class="hover:bg-slate-50 transition">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="font-bold text-slate-700"><?= date('d/m/Y', strtotime($row['date'])) ?></span>
-                                <span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded ml-1 font-bold text-[9px]">P<?= $row['period'] ?></span>
+                                <span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded ml-1 font-bold text-xs">P<?= $row['period'] ?></span>
                             </td>
                             <td class="px-6 py-4 font-mono text-blue-600"><?= $row['student_code'] ?></td>
                             <td class="px-6 py-4 font-bold text-slate-600"><?= htmlspecialchars($row['student_name']) ?></td>
                             <td class="px-6 py-4 text-center">
-                                <span class="px-2 py-0.5 rounded-lg font-black text-[10px] bg-<?= $sc ?>-100 text-<?= $sc ?>-700"><?= $row['status'] ?></span>
+                                <span class="px-2 py-0.5 rounded-lg font-black text-xs bg-<?= $sc ?>-100 text-<?= $sc ?>-700"><?= $row['status'] ?></span>
                             </td>
                             <td class="px-6 py-4 text-center text-slate-500"><?= $row['time_in'] ?: '-' ?></td>
                             <td class="px-6 py-4 italic text-slate-400"><?= htmlspecialchars($row['note']) ?></td>

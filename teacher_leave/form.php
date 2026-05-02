@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * teacher_leave/form.php
  * Official Leave Form mimicking the paper equivalent
@@ -31,11 +31,11 @@ require_once '../components/layout_start.php';
             </div>
             <div class="md:text-right space-y-2">
                 <div class="flex flex-col md:items-end">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">เขียนที่</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">เขียนที่</label>
                     <input type="text" id="written_at" value="โรงเรียนละลมวิทยา" class="text-right font-bold border-b border-dashed border-slate-300 outline-none focus:border-blue-500 py-1">
                 </div>
                 <div class="flex flex-col md:items-end">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">วันที่</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">วันที่</label>
                     <input type="date" id="current_date" value="<?= date('Y-m-d') ?>" class="text-right font-bold border-b border-dashed border-slate-300 outline-none focus:border-blue-500 py-1">
                 </div>
             </div>
@@ -75,11 +75,11 @@ require_once '../components/layout_start.php';
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 py-2">
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">ตั้งแต่วันที่</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest block">ตั้งแต่วันที่</label>
                         <input type="date" name="date_start" id="date_start" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold outline-none focus:ring-2 focus:ring-blue-500" required>
                     </div>
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">ถึงวันที่</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest block">ถึงวันที่</label>
                         <input type="date" name="date_end" id="date_end" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 font-bold outline-none focus:ring-2 focus:ring-blue-500" required>
                     </div>
                 </div>
@@ -96,7 +96,7 @@ require_once '../components/layout_start.php';
                 </div>
 
                 <div class="space-y-4">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">ในระหว่างการลา ข้าพเจ้าสามารถติดต่อได้ที่</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest block">ในระหว่างการลา ข้าพเจ้าสามารถติดต่อได้ที่</label>
                     <textarea name="contact_info" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-blue-500" placeholder="ที่อยู่ หรือเบอร์โทรศัพท์ที่ติดต่อได้"></textarea>
                 </div>
 
@@ -108,13 +108,13 @@ require_once '../components/layout_start.php';
                         </div>
                         <div class="flex-1 text-center md:text-left">
                             <h4 class="text-sm font-black text-slate-800 uppercase tracking-wider">แนบใบรับรองแพทย์ (ถ้ามี)</h4>
-                            <p class="text-[10px] text-slate-500 font-bold mt-1">รองรับไฟล์ภาพ (JPG, PNG) หรือ PDF ขนาดไม่เกิน 5MB</p>
+                            <p class="text-xs text-slate-500 font-bold mt-1">รองรับไฟล์ภาพ (JPG, PNG) หรือ PDF ขนาดไม่เกิน 5MB</p>
                             <div class="mt-4">
                                 <label for="attachment" class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-rose-500 text-white text-xs font-black rounded-xl hover:bg-rose-600 transition-all">
                                     <i class="bi bi-upload"></i> เลือกไฟล์
                                 </label>
                                 <input type="file" id="attachment" name="attachment" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
-                                <span id="file-name" class="ml-3 text-[10px] font-black text-rose-600">ยังไม่ได้เลือกไฟล์</span>
+                                <span id="file-name" class="ml-3 text-xs font-black text-rose-600">ยังไม่ได้เลือกไฟล์</span>
                             </div>
                         </div>
                     </div>
@@ -152,7 +152,7 @@ require_once '../components/layout_start.php';
             <div class="mt-16 flex flex-col items-center gap-6">
                 <div class="text-center space-y-2">
                     <p class="text-sm font-bold text-slate-700">(ลงชื่อ)............................................................ ผู้ขอลา</p>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ลงชื่อในกรอบด้านล่างนี้</p>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">ลงชื่อในกรอบด้านล่างนี้</p>
                 </div>
                 
                 <div class="relative group">

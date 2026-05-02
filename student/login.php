@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -96,7 +96,7 @@ body { font-family:'Prompt',sans-serif; }
     </a>
     <div>
         <div class="text-white font-black text-sm leading-tight">พอร์ทัลนักเรียน</div>
-        <div class="text-teal-200 text-[10px] font-bold">โรงเรียนละลมวิทยา</div>
+        <div class="text-teal-200 text-xs font-bold">โรงเรียนละลมวิทยา</div>
     </div>
 </div>
 
@@ -125,7 +125,7 @@ body { font-family:'Prompt',sans-serif; }
             <?= csrf_field() ?>
 
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5">
                     รหัสนักเรียน
                 </label>
                 <div class="relative">
@@ -138,7 +138,7 @@ body { font-family:'Prompt',sans-serif; }
             </div>
 
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5">
                     เลขบัตรประชาชน 13 หลัก
                 </label>
                 <div class="relative">
@@ -150,7 +150,7 @@ body { font-family:'Prompt',sans-serif; }
                         <i class="bi bi-eye" id="nidEye"></i>
                     </button>
                 </div>
-                <p class="text-[10px] text-slate-400 mt-1.5 ml-1">ไม่ต้องใส่เครื่องหมาย - (ขีด)</p>
+                <p class="text-xs text-slate-400 mt-1.5 ml-1">ไม่ต้องใส่เครื่องหมาย - (ขีด)</p>
             </div>
 
             <button type="submit"

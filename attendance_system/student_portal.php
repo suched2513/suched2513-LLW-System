@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * student_portal.php — Public portal for students
  * A: ดูวิชาที่ลงทะเบียน + สถิติเข้าเรียน
@@ -184,12 +184,12 @@ if ($student_code !== '') {
             </div>
             <div class="ml-auto text-right hidden sm:flex gap-6">
                 <div>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">วิชาที่เรียน</p>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">วิชาที่เรียน</p>
                     <p class="text-3xl font-black text-slate-700"><?= count($subjects_summary) ?></p>
                 </div>
                 <?php if (!empty($enrolled_electives)): ?>
                 <div>
-                    <p class="text-[10px] text-violet-400 font-bold uppercase tracking-widest">วิชาเลือก</p>
+                    <p class="text-xs text-violet-400 font-bold uppercase tracking-widest">วิชาเลือก</p>
                     <p class="text-3xl font-black text-violet-600"><?= count($enrolled_electives) ?></p>
                 </div>
                 <?php endif; ?>
@@ -208,7 +208,7 @@ if ($student_code !== '') {
                     class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white/80 transition-all">
                 <i class="bi bi-star-fill mr-1.5"></i> วิชาเลือก
                 <?php if (!empty($enrolled_electives)): ?>
-                <span class="ml-1 px-1.5 py-0.5 bg-violet-200 text-violet-700 text-[9px] font-black rounded-lg"><?= count($enrolled_electives) ?></span>
+                <span class="ml-1 px-1.5 py-0.5 bg-violet-200 text-violet-700 text-xs font-black rounded-lg"><?= count($enrolled_electives) ?></span>
                 <?php endif; ?>
             </button>
         </div>
@@ -241,9 +241,9 @@ if ($student_code !== '') {
                 <div class="flex items-start justify-between mb-4">
                     <div>
                         <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest font-mono"><?= htmlspecialchars($subj['subject_code']) ?></span>
+                            <span class="text-xs font-black text-indigo-500 uppercase tracking-widest font-mono"><?= htmlspecialchars($subj['subject_code']) ?></span>
                             <?php if (!empty($subj['is_elective'])): ?>
-                            <span class="px-2 py-0.5 bg-violet-100 text-violet-600 text-[9px] font-black rounded-lg">วิชาเลือก</span>
+                            <span class="px-2 py-0.5 bg-violet-100 text-violet-600 text-xs font-black rounded-lg">วิชาเลือก</span>
                             <?php endif; ?>
                         </div>
                         <h3 class="font-black text-slate-800 text-base"><?= htmlspecialchars($subj['subject_name']) ?></h3>
@@ -265,7 +265,7 @@ if ($student_code !== '') {
                         <div class="progress-fill bg-<?= $rc ?>-500" style="width: <?= min($rate,100) ?>%"></div>
                     </div>
                     <?php if ($is_ms): ?>
-                    <p class="text-[10px] text-rose-500 font-bold mt-1">ต้องการ <?= 80 - $rate ?>% เพิ่มเติม (ยังขาดอีก <?= max(0, ceil($total * 0.8) - $subj['cnt_come']) ?> คาบ)</p>
+                    <p class="text-xs text-rose-500 font-bold mt-1">ต้องการ <?= 80 - $rate ?>% เพิ่มเติม (ยังขาดอีก <?= max(0, ceil($total * 0.8) - $subj['cnt_come']) ?> คาบ)</p>
                     <?php endif; ?>
                 </div>
 
@@ -280,7 +280,7 @@ if ($student_code !== '') {
                     ];
                     foreach ($stats as $s): ?>
                     <div class="text-center bg-slate-50 rounded-xl py-2.5">
-                        <p class="text-[9px] font-black text-<?= $s['color'] ?>-500 uppercase"><?= $s['label'] ?></p>
+                        <p class="text-xs font-black text-<?= $s['color'] ?>-500 uppercase"><?= $s['label'] ?></p>
                         <p class="text-lg font-black text-slate-700"><?= $s['val'] ?></p>
                     </div>
                     <?php endforeach; ?>
@@ -316,9 +316,9 @@ if ($student_code !== '') {
                 <?php foreach ($enrolled_electives as $ev): ?>
                 <div class="flex items-center justify-between bg-violet-50 border border-violet-100 rounded-2xl px-5 py-4">
                     <div>
-                        <span class="font-mono text-[10px] font-black text-violet-400"><?= htmlspecialchars($ev['subject_code']) ?></span>
+                        <span class="font-mono text-xs font-black text-violet-400"><?= htmlspecialchars($ev['subject_code']) ?></span>
                         <p class="font-black text-slate-800"><?= htmlspecialchars($ev['subject_name']) ?></p>
-                        <p class="text-[11px] text-slate-400 font-bold"><i class="bi bi-person-fill"></i> <?= htmlspecialchars($ev['teacher_name']) ?> &nbsp;·&nbsp; ห้อง <?= $ev['classroom'] ?></p>
+                        <p class="text-sm text-slate-400 font-bold"><i class="bi bi-person-fill"></i> <?= htmlspecialchars($ev['teacher_name']) ?> &nbsp;·&nbsp; ห้อง <?= $ev['classroom'] ?></p>
                     </div>
                     <form method="POST" class="flex-shrink-0">
                         <?= csrf_field() ?>
@@ -327,7 +327,7 @@ if ($student_code !== '') {
                         <input type="hidden" name="subject_id" value="<?= $ev['id'] ?>">
                         <input type="hidden" name="code" value="<?= htmlspecialchars($student_code) ?>">
                         <button type="button" onclick="confirmUnenroll(this, '<?= addslashes($ev['subject_name']) ?>')"
-                                class="text-[11px] font-bold text-rose-400 hover:text-rose-600 transition px-3 py-1.5 rounded-xl hover:bg-rose-50">
+                                class="text-sm font-bold text-rose-400 hover:text-rose-600 transition px-3 py-1.5 rounded-xl hover:bg-rose-50">
                             <i class="bi bi-x-lg"></i> ยกเลิก
                         </button>
                     </form>
@@ -349,9 +349,9 @@ if ($student_code !== '') {
                 <?php foreach ($available_electives as $av): ?>
                 <div class="flex items-center justify-between bg-amber-50 border border-amber-100 rounded-2xl px-5 py-4">
                     <div>
-                        <span class="font-mono text-[10px] font-black text-amber-400"><?= htmlspecialchars($av['subject_code']) ?></span>
+                        <span class="font-mono text-xs font-black text-amber-400"><?= htmlspecialchars($av['subject_code']) ?></span>
                         <p class="font-black text-slate-800"><?= htmlspecialchars($av['subject_name']) ?></p>
-                        <p class="text-[11px] text-slate-400 font-bold">
+                        <p class="text-sm text-slate-400 font-bold">
                             <i class="bi bi-person-fill"></i> <?= htmlspecialchars($av['teacher_name']) ?>
                             &nbsp;·&nbsp; ห้อง <?= $av['classroom'] ?>
                             &nbsp;·&nbsp; <i class="bi bi-people-fill"></i> ลงทะเบียนแล้ว <?= $av['enrolled_count'] ?> คน
@@ -364,7 +364,7 @@ if ($student_code !== '') {
                         <input type="hidden" name="subject_id" value="<?= $av['id'] ?>">
                         <input type="hidden" name="code" value="<?= htmlspecialchars($student_code) ?>">
                         <button type="submit"
-                                class="text-[11px] font-black text-violet-600 bg-violet-100 hover:bg-violet-600 hover:text-white transition px-4 py-2 rounded-xl shadow-sm">
+                                class="text-sm font-black text-violet-600 bg-violet-100 hover:bg-violet-600 hover:text-white transition px-4 py-2 rounded-xl shadow-sm">
                             <i class="bi bi-plus-lg"></i> ลงทะเบียน
                         </button>
                     </form>
@@ -386,7 +386,7 @@ if ($student_code !== '') {
     <!-- Footer -->
     <div class="mt-10 mb-4 text-center">
         <p class="text-white/50 text-xs font-medium">LLW Platform · โรงเรียนละลมวิทยา</p>
-        <a href="/login.php" class="text-white/40 text-[10px] hover:text-white/70 transition mt-1 block">ครูและบุคลากร → เข้าสู่ระบบหลัก</a>
+        <a href="/login.php" class="text-white/40 text-xs hover:text-white/70 transition mt-1 block">ครูและบุคลากร → เข้าสู่ระบบหลัก</a>
     </div>
 
 <script>

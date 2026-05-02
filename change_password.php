@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * change_password.php — หน้าเปลี่ยนรหัสผ่านส่วนตัวสำหรับผู้ใช้งานทุกคน
  */
@@ -112,7 +112,7 @@ require_once __DIR__ . '/components/layout_start.php';
             <?= csrf_field() ?>
             <?php if (!$forcedMode): ?>
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 ml-1">รหัสผ่านปัจจุบัน (Current Password)</label>
+                <label class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 ml-1">รหัสผ่านปัจจุบัน (Current Password)</label>
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
                         <i class="bi bi-lock"></i>
@@ -126,7 +126,7 @@ require_once __DIR__ . '/components/layout_start.php';
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                 <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 ml-1">รหัสผ่านใหม่ (New Password)</label>
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 ml-1">รหัสผ่านใหม่ (New Password)</label>
                     <div class="relative group">
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
                             <i class="bi bi-key"></i>
@@ -137,7 +137,7 @@ require_once __DIR__ . '/components/layout_start.php';
                     </div>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 ml-1">ยืนยันรหัสผ่านใหม่ (Confirm)</label>
+                    <label class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5 ml-1">ยืนยันรหัสผ่านใหม่ (Confirm)</label>
                     <div class="relative group">
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
                             <i class="bi bi-check2-circle"></i>

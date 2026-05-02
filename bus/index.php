@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * bus/index.php — Student Login Portal
  */
@@ -98,7 +98,7 @@ body { font-family:'Prompt',sans-serif; }
     <div class="bg-white rounded-[28px] shadow-2xl shadow-orange-600/20 overflow-hidden">
         <div class="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-4">
             <p class="text-white font-black text-sm">เข้าสู่ระบบ</p>
-            <p class="text-orange-100 text-[11px]">สำหรับนักเรียนเท่านั้น</p>
+            <p class="text-orange-100 text-sm">สำหรับนักเรียนเท่านั้น</p>
         </div>
         <div class="p-6 space-y-4">
 
@@ -120,7 +120,7 @@ body { font-family:'Prompt',sans-serif; }
                 <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirect, ENT_QUOTES, 'UTF-8') ?>">
 
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">รหัสนักเรียน</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">รหัสนักเรียน</label>
                     <div class="relative">
                         <i class="bi bi-person-badge absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
                         <input type="text" name="student_id" required autocomplete="username" inputmode="numeric"
@@ -131,14 +131,14 @@ body { font-family:'Prompt',sans-serif; }
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">เลขบัตรประชาชน 13 หลัก</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">เลขบัตรประชาชน 13 หลัก</label>
                     <div class="relative">
                         <i class="bi bi-credit-card absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
                         <input type="password" name="national_id" required autocomplete="current-password" inputmode="numeric"
                                maxlength="13" placeholder="• • • • • • • • • • • • •"
                                class="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-orange-400 outline-none transition-all">
                     </div>
-                    <p class="text-[10px] text-slate-400 mt-1 pl-1">ใช้เป็นรหัสผ่านในการเข้าระบบ</p>
+                    <p class="text-xs text-slate-400 mt-1 pl-1">ใช้เป็นรหัสผ่านในการเข้าระบบ</p>
                 </div>
 
                 <button type="submit"
@@ -154,7 +154,7 @@ body { font-family:'Prompt',sans-serif; }
         <a href="/index.php" class="text-white/80 text-xs font-bold hover:text-white transition-colors flex items-center justify-center gap-1">
             <i class="bi bi-arrow-left"></i> กลับหน้าหลัก LLW
         </a>
-        <p class="text-orange-100/70 text-[10px]">หากเข้าสู่ระบบไม่ได้ กรุณาติดต่อเจ้าหน้าที่การเงิน</p>
+        <p class="text-orange-100/70 text-xs">หากเข้าสู่ระบบไม่ได้ กรุณาติดต่อเจ้าหน้าที่การเงิน</p>
     </div>
 
 </div>

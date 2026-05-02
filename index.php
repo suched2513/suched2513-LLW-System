@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * index.php — LLW Platinum Portal
  * Desktop: world-class landing  |  Mobile: native app shell
@@ -265,7 +265,7 @@ $modules = [
                 <div class="w-9 h-9 bg-white/15 rounded-[10px] flex items-center justify-center text-white font-black text-xs italic border border-white/20 shadow-inner">LLW</div>
                 <div>
                     <div class="text-white font-black text-[14px] leading-tight">Platinum Portal</div>
-                    <div class="text-blue-200 text-[9px] font-bold uppercase tracking-[0.2em]">โรงเรียนละลมวิทยา</div>
+                    <div class="text-blue-200 text-xs font-bold uppercase tracking-[0.2em]">โรงเรียนละลมวิทยา</div>
                 </div>
             </div>
             <!-- Right Actions -->
@@ -296,12 +296,12 @@ $modules = [
                 <div class="absolute right-14 top-0 w-16 h-16 bg-white/5 rounded-full"></div>
                 <div class="relative flex items-start justify-between">
                     <div class="flex-1 min-w-0">
-                        <p class="text-blue-200 text-[11px] font-bold tracking-wider uppercase"><?= htmlspecialchars($greeting) ?></p>
+                        <p class="text-blue-200 text-sm font-bold tracking-wider uppercase"><?= htmlspecialchars($greeting) ?></p>
                         <h2 class="text-2xl font-black mt-0.5 truncate"><?= htmlspecialchars($fullname ?: $firstname) ?></h2>
                         <div class="flex items-center gap-1.5 mt-2">
-                            <span class="px-2.5 py-0.5 bg-white/15 rounded-full text-[10px] font-black uppercase tracking-wider border border-white/15"><?= htmlspecialchars(strtoupper($userRole)) ?></span>
+                            <span class="px-2.5 py-0.5 bg-white/15 rounded-full text-xs font-black uppercase tracking-wider border border-white/15"><?= htmlspecialchars(strtoupper($userRole)) ?></span>
                         </div>
-                        <p class="text-blue-200 text-[11px] font-medium mt-2.5 flex items-center gap-1.5">
+                        <p class="text-blue-200 text-sm font-medium mt-2.5 flex items-center gap-1.5">
                             <i class="bi bi-calendar3"></i><?= htmlspecialchars($thaiDate) ?>
                         </p>
                     </div>
@@ -327,7 +327,7 @@ $modules = [
                     </div>
                     <div class="min-w-0">
                         <div class="text-2xl font-black text-slate-800 leading-none counter" data-target="<?= $ms['v'] ?>">0</div>
-                        <div class="text-[10px] font-bold text-slate-400 mt-0.5 truncate"><?= $ms['label'] ?></div>
+                        <div class="text-xs font-bold text-slate-400 mt-0.5 truncate"><?= $ms['label'] ?></div>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -362,7 +362,7 @@ $modules = [
                     <i class="bi bi-lightning-charge-fill text-amber-500"></i>
                     ทางลัดสำหรับคุณ
                 </h3>
-                <span class="text-[10px] font-bold text-slate-400 uppercase"><?= htmlspecialchars(strtoupper($userRole)) ?></span>
+                <span class="text-xs font-bold text-slate-400 uppercase"><?= htmlspecialchars(strtoupper($userRole)) ?></span>
             </div>
             <div class="flex gap-2.5 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory" style="scrollbar-width:none">
                 <?php foreach ($quickAccess as $qa): ?>
@@ -385,7 +385,7 @@ $modules = [
                     <i class="bi bi-grid-fill text-blue-500"></i>
                     ระบบทั้งหมด
                 </h3>
-                <span class="text-[10px] font-bold text-slate-400 uppercase">All Modules</span>
+                <span class="text-xs font-bold text-slate-400 uppercase">All Modules</span>
             </div>
 
             <div class="grid grid-cols-3 gap-3">
@@ -403,7 +403,7 @@ $modules = [
                         <i class="bi <?= $m['icon'] ?> text-white relative" style="font-size:1.85rem"></i>
                     </div>
                     <!-- Label -->
-                    <span class="text-[11px] font-bold text-slate-600 text-center leading-tight line-clamp-2"><?= htmlspecialchars($m['short']) ?></span>
+                    <span class="text-sm font-bold text-slate-600 text-center leading-tight line-clamp-2"><?= htmlspecialchars($m['short']) ?></span>
                 </a>
                 <?php endforeach; ?>
             </div>
@@ -419,7 +419,7 @@ $modules = [
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="font-black text-slate-800 truncate"><?= htmlspecialchars($fullname) ?></div>
-                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5"><?= htmlspecialchars(strtoupper($userRole)) ?></div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5"><?= htmlspecialchars(strtoupper($userRole)) ?></div>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mt-3">
@@ -435,7 +435,7 @@ $modules = [
             <div class="bg-white rounded-[20px] p-5 shadow-sm border border-slate-100 text-center">
                 <i class="bi bi-person-circle text-5xl text-slate-300"></i>
                 <p class="text-sm font-black text-slate-700 mt-3">ยังไม่ได้เข้าสู่ระบบ</p>
-                <p class="text-[11px] text-slate-400 mt-1 mb-4">กรุณาเข้าสู่ระบบเพื่อใช้งานฟีเจอร์ทั้งหมด</p>
+                <p class="text-sm text-slate-400 mt-1 mb-4">กรุณาเข้าสู่ระบบเพื่อใช้งานฟีเจอร์ทั้งหมด</p>
                 <a href="login.php" class="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-200/50 active:scale-95 transition-transform">
                     <i class="bi bi-box-arrow-in-right"></i>เข้าสู่ระบบ
                 </a>
@@ -443,7 +443,7 @@ $modules = [
             <?php endif; ?>
 
             <!-- Footer credit -->
-            <p class="text-center text-[10px] text-slate-300 font-bold mt-4 uppercase tracking-widest">
+            <p class="text-center text-xs text-slate-300 font-bold mt-4 uppercase tracking-widest">
                 © <?= date('Y') ?> LLW System &nbsp;·&nbsp; โรงเรียนละลมวิทยา
             </p>
         </section>
@@ -458,14 +458,14 @@ $modules = [
                class="bnav-tab is-active flex-1 flex flex-col items-center justify-center gap-0.5 relative active:bg-slate-50 transition-colors">
                 <div class="bnav-dot absolute top-1 w-1.5 h-1.5 rounded-full bg-blue-600 opacity-0 transition-opacity"></div>
                 <i class="bi bi-house-fill text-xl text-blue-600"></i>
-                <span class="text-[9px] font-black text-blue-600 uppercase">หน้าหลัก</span>
+                <span class="text-xs font-black text-blue-600 uppercase">หน้าหลัก</span>
             </a>
 
             <a href="#mob-systems" data-tab="systems"
                class="bnav-tab flex-1 flex flex-col items-center justify-center gap-0.5 relative active:bg-slate-50 transition-colors">
                 <div class="bnav-dot absolute top-1 w-1.5 h-1.5 rounded-full bg-blue-600 opacity-0 transition-opacity"></div>
                 <i class="bi bi-grid-fill text-xl text-slate-400"></i>
-                <span class="text-[9px] font-bold text-slate-400 uppercase">ระบบ</span>
+                <span class="text-xs font-bold text-slate-400 uppercase">ระบบ</span>
             </a>
 
             <?php if ($isLoggedIn && !empty($quickAccess)): ?>
@@ -473,7 +473,7 @@ $modules = [
                class="bnav-tab flex-1 flex flex-col items-center justify-center gap-0.5 relative active:bg-slate-50 transition-colors">
                 <div class="bnav-dot absolute top-1 w-1.5 h-1.5 rounded-full bg-blue-600 opacity-0 transition-opacity"></div>
                 <i class="bi bi-lightning-charge-fill text-xl text-slate-400"></i>
-                <span class="text-[9px] font-bold text-slate-400 uppercase">ด่วน</span>
+                <span class="text-xs font-bold text-slate-400 uppercase">ด่วน</span>
             </a>
             <?php endif; ?>
 
@@ -481,7 +481,7 @@ $modules = [
                class="bnav-tab flex-1 flex flex-col items-center justify-center gap-0.5 relative active:bg-slate-50 transition-colors">
                 <div class="bnav-dot absolute top-1 w-1.5 h-1.5 rounded-full bg-blue-600 opacity-0 transition-opacity"></div>
                 <i class="bi bi-person-fill text-xl text-slate-400"></i>
-                <span class="text-[9px] font-bold text-slate-400 uppercase"><?= $isLoggedIn ? 'ฉัน' : 'เข้าระบบ' ?></span>
+                <span class="text-xs font-bold text-slate-400 uppercase"><?= $isLoggedIn ? 'ฉัน' : 'เข้าระบบ' ?></span>
             </a>
 
         </div>
@@ -508,7 +508,7 @@ $modules = [
         <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-xl shadow-blue-200/50 italic group-hover:rotate-6 group-hover:scale-110 transition-all duration-300">LLW</div>
         <div>
             <div class="text-lg font-black text-slate-800 tracking-tight leading-none">Platinum Portal</div>
-            <div class="text-[9px] font-black text-blue-400 uppercase tracking-[0.25em] mt-0.5">Unified School Ecosystem</div>
+            <div class="text-xs font-black text-blue-400 uppercase tracking-[0.25em] mt-0.5">Unified School Ecosystem</div>
         </div>
     </a>
     <div class="flex items-center gap-3">
@@ -522,7 +522,7 @@ $modules = [
                 <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-lg shadow-blue-200/50"><?= mb_substr($firstname, 0, 1) ?></div>
                 <div>
                     <div class="text-sm font-black text-slate-700 leading-none"><?= htmlspecialchars($fullname) ?></div>
-                    <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5"><?= htmlspecialchars(strtoupper($userRole)) ?></div>
+                    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5"><?= htmlspecialchars(strtoupper($userRole)) ?></div>
                 </div>
             </div>
             <a href="logout.php" class="w-11 h-11 flex items-center justify-center text-rose-500 bg-rose-50 rounded-2xl hover:bg-rose-500 hover:text-white transition-all shadow-sm hover:shadow-lg hover:scale-110">
@@ -538,7 +538,7 @@ $modules = [
 
 <!-- Desktop Hero -->
 <section class="hidden sm:block relative container mx-auto px-6 md:px-12 py-20 md:py-28 text-center max-w-5xl z-10">
-    <div class="animate-badge-float inline-flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm border border-blue-100 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-8 shadow-lg shadow-blue-100/30 animate-fade-in">
+    <div class="animate-badge-float inline-flex items-center gap-2 px-5 py-2 bg-white/80 backdrop-blur-sm border border-blue-100 text-blue-600 rounded-full text-xs font-black uppercase tracking-[0.3em] mb-8 shadow-lg shadow-blue-100/30 animate-fade-in">
         <i class="bi bi-stars"></i>Welcome to Lalom Wittaya School
     </div>
     <h1 class="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight mb-8 leading-[1.1] animate-fade-in-delay-1">
@@ -581,7 +581,7 @@ $modules = [
                 <div class="w-2 h-2 rounded-full bg-white/40 animate-pulse"></div>
             </div>
             <div class="text-3xl md:text-4xl font-black leading-none counter" data-target="<?= $s['value'] ?>">0</div>
-            <div class="text-[10px] font-bold opacity-80 uppercase tracking-widest mt-2"><?= $s['label'] ?></div>
+            <div class="text-xs font-bold opacity-80 uppercase tracking-widest mt-2"><?= $s['label'] ?></div>
         </div>
         <?php endforeach; ?>
     </div>
@@ -611,7 +611,7 @@ $modules = [
             </div>
             <h3 class="relative text-lg font-black text-slate-800 mb-3"><?= $m['title'] ?></h3>
             <p class="relative text-xs text-slate-400 font-bold leading-relaxed"><?= $m['desc'] ?></p>
-            <div class="card-arrow relative mt-6 flex items-center gap-2 text-<?= $m['color'] ?>-500 text-[10px] font-black uppercase tracking-widest">
+            <div class="card-arrow relative mt-6 flex items-center gap-2 text-<?= $m['color'] ?>-500 text-xs font-black uppercase tracking-widest">
                 <?= $isLoggedIn ? 'เข้าสู่ระบบ' : 'เข้าสู่ระบบก่อน' ?> <i class="bi bi-arrow-right"></i>
             </div>
         </a>
@@ -628,7 +628,7 @@ $modules = [
                 <h3 class="text-base font-black text-slate-800 flex items-center gap-2">
                     <i class="bi bi-lightning-charge-fill text-amber-500"></i>Quick Access
                 </h3>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">ทางลัดสำหรับ <?= htmlspecialchars(strtoupper($userRole)) ?></p>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">ทางลัดสำหรับ <?= htmlspecialchars(strtoupper($userRole)) ?></p>
             </div>
             <div class="flex flex-wrap gap-3">
                 <?php foreach ($quickAccess as $qa): ?>
@@ -651,34 +651,34 @@ $modules = [
         <div class="text-center mb-8">
             <div class="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center text-white text-xl font-black italic mx-auto mb-4 shadow-xl shadow-blue-200/50 hover:rotate-12 transition-transform cursor-default">LLW</div>
             <p class="text-base font-black text-slate-700">โรงเรียนละลมวิทยา</p>
-            <p class="text-[10px] font-black text-slate-300 uppercase tracking-[0.35em] mt-1">Lalom Wittaya School &bull; Powered by Advanced School Intelligence</p>
+            <p class="text-xs font-black text-slate-300 uppercase tracking-[0.35em] mt-1">Lalom Wittaya School &bull; Powered by Advanced School Intelligence</p>
         </div>
         <div class="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent mb-8"></div>
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
             <div class="flex items-center gap-3 bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
                 <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-200/50">ส</div>
                 <div class="text-left">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">พัฒนาโดย</p>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">พัฒนาโดย</p>
                     <p class="text-sm font-black text-slate-700 leading-tight">นายสุเชษฐ์ ไพรบึง</p>
-                    <p class="text-[10px] font-bold text-slate-400">ครูโรงเรียนละลมวิทยา</p>
+                    <p class="text-xs font-bold text-slate-400">ครูโรงเรียนละลมวิทยา</p>
                 </div>
             </div>
             <a href="https://www.facebook.com/suched.p?locale=th_TH" target="_blank" rel="noopener noreferrer"
                class="flex items-center gap-2.5 bg-[#1877F2] text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-[#166FE5] hover:shadow-lg hover:shadow-blue-200/50 hover:-translate-y-0.5 transition-all shadow-md">
                 <i class="bi bi-facebook text-lg"></i>
                 <div class="text-left">
-                    <p class="text-[9px] font-black uppercase tracking-widest opacity-80">ติดตามผ่าน</p>
+                    <p class="text-xs font-black uppercase tracking-widest opacity-80">ติดตามผ่าน</p>
                     <p class="font-black text-sm leading-tight">Facebook</p>
                 </div>
             </a>
         </div>
         <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div class="flex gap-5 text-[9px] font-bold text-slate-300 uppercase tracking-widest">
+            <div class="flex gap-5 text-xs font-bold text-slate-300 uppercase tracking-widest">
                 <a href="login.php" class="hover:text-blue-500 transition-colors">Admin Login</a>
                 <span class="text-slate-200">|</span>
                 <a href="#desktop-modules" class="hover:text-blue-500 transition-colors">ระบบทั้งหมด</a>
             </div>
-            <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">&copy; <?= date('Y') ?> LLW System</span>
+            <span class="text-xs font-black text-slate-300 uppercase tracking-widest">&copy; <?= date('Y') ?> LLW System</span>
         </div>
     </div>
 </footer>

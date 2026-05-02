@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'functions.php';
 checkLogin();
 
@@ -130,7 +130,7 @@ require_once '../components/layout_start.php';
         <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
             <div>
                 <h3 class="font-bold text-slate-800 text-lg"><?= htmlspecialchars($subject_info['subject_name']) ?></h3>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">ห้อง <?= $subject_info['classroom'] ?> — สรุปยอดสะสม | เรียนไปแล้ว <?= $total_sessions ?> คาบ | เกณฑ์ มส. &lt; 80%</p>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">ห้อง <?= $subject_info['classroom'] ?> — สรุปยอดสะสม | เรียนไปแล้ว <?= $total_sessions ?> คาบ | เกณฑ์ มส. &lt; 80%</p>
             </div>
             <div class="flex gap-2">
                 <a href="report.php?subject_id=<?= $selected_subject_id ?>&start_date=<?= $start_date ?>&end_date=<?= $end_date ?>&export=csv" class="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-100 transition border border-emerald-100 flex items-center gap-2">
@@ -141,7 +141,7 @@ require_once '../components/layout_start.php';
 
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-50 text-xs text-left">
-                <thead class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <thead class="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-widest">
                     <tr>
                         <th class="px-8 py-4">รหัสนักเรียน</th>
                         <th class="px-8 py-4">ชื่อ-สกุล</th>
@@ -178,15 +178,15 @@ require_once '../components/layout_start.php';
                         </td>
                         <td class="px-4 py-4 text-center">
                             <?php if ($is_ms): ?>
-                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-600 text-white text-[10px] font-black shadow-sm">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-600 text-white text-xs font-black shadow-sm">
                                     <i class="bi bi-x-circle-fill"></i> มส.
                                 </span>
                             <?php elseif ($total_sessions > 0): ?>
-                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-600 text-[10px] font-black border border-emerald-100">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-600 text-xs font-black border border-emerald-100">
                                     <i class="bi bi-check-circle-fill"></i> ผ่าน
                                 </span>
                             <?php else: ?>
-                                <span class="text-slate-300 text-[10px] font-bold">—</span>
+                                <span class="text-slate-300 text-xs font-bold">—</span>
                             <?php endif; ?>
                         </td>
                     </tr>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once 'config.php';
 
@@ -24,7 +24,7 @@ require_once 'components/layout_start.php';
             </div>
             <div>
                 <h3 class="font-black text-slate-800 tracking-tight">รายการคำขอของฉัน</h3>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 italic">รายการและประวัติคำขอขออนุญาต</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1 italic">รายการและประวัติคำขอขออนุญาต</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
@@ -41,13 +41,13 @@ require_once 'components/layout_start.php';
     <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
         <div class="px-10 py-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
             <h3 class="font-black text-slate-800 flex items-center gap-3"><i class="bi bi-list-ul text-blue-600"></i> ประวัติการขออนุญาต</h3>
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest font-bold">รายการคำขอทั้งหมด</span>
+            <span class="text-xs font-black text-slate-400 uppercase tracking-widest font-bold">รายการคำขอทั้งหมด</span>
         </div>
         
         <div class="p-8">
             <div class="overflow-x-auto">
                 <table id="requestTable" class="min-w-full text-sm">
-                    <thead class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                    <thead class="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                         <tr>
                             <th class="px-6 py-5">วันที่ / เวลา</th>
                             <th class="px-6 py-5">ผู้ขออนุญาต</th>
@@ -78,7 +78,7 @@ require_once 'components/layout_start.php';
                     </div>
                     <div>
                         <h5 class="modal-title font-black text-lg">แบบฟอร์มขออนุญาตออกนอกบริเวณ</h5>
-                        <p class="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-0.5">กรุณากรอกข้อมูลให้ถูกต้องและครบถ้วน</p>
+                        <p class="text-xs font-bold text-blue-100 uppercase tracking-widest mt-0.5">กรุณากรอกข้อมูลให้ถูกต้องและครบถ้วน</p>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white opacity-50 hover:opacity-100" data-bs-dismiss="modal"></button>
@@ -87,7 +87,7 @@ require_once 'components/layout_start.php';
                 <form id="requestForm" class="space-y-8">
                     <!-- Reason Type -->
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1"><i class="bi bi-tag-fill mr-1"></i>ประเภทเหตุผล</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1"><i class="bi bi-tag-fill mr-1"></i>ประเภทเหตุผล</label>
                         <select class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="reason_type" id="reasonType" required>
                             <option value="ติดต่อราชการ">🏧 ติดต่อราชการ</option>
                             <option value="ป่วย / รักษาพยาบาล">🏥 ป่วย / รักษาพยาบาล</option>
@@ -100,26 +100,26 @@ require_once 'components/layout_start.php';
 
                     <!-- Reason -->
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เหตุผลที่ขออนุญาต (ระบุเพิ่มเติม)</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">เหตุผลที่ขออนุญาต (ระบุเพิ่มเติม)</label>
                         <input type="text" class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="reason" required placeholder="เช่น ไปราชการ สพม., นัดหมอโรงพยาบาล">
                     </div>
                     
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">รายละเอียด / สถานที่</label>
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">รายละเอียด / สถานที่</label>
                         <textarea class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="detail" rows="2" placeholder="ระบุรายละเอียดเพิ่มเติม..."></textarea>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="space-y-2">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">เริ่มเวลา</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">เริ่มเวลา</label>
                             <input type="time" class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="time_start" required>
                         </div>
                         <div class="space-y-2">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ถึงเวลา</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">ถึงเวลา</label>
                             <input type="time" class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="time_end" required>
                         </div>
                         <div class="space-y-2">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">รวมชั่วโมง</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">รวมชั่วโมง</label>
                             <input type="number" step="0.5" class="w-full bg-white border border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-100 transition-all" name="total_hr" required placeholder="0.0">
                         </div>
                     </div>
@@ -129,7 +129,7 @@ require_once 'components/layout_start.php';
                             <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-lg transition-transform group-hover:scale-110"><i class="bi bi-journal-check"></i></div>
                             <div>
                                 <h6 class="text-sm font-black text-slate-700">มีคาบการสอนในช่วงเวลาดังกล่าว</h6>
-                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">เปิดเพื่อจัดการครูสอนแทน</p>
+                                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">เปิดเพื่อจัดการครูสอนแทน</p>
                             </div>
                         </div>
                         <div class="form-check form-switch p-0 m-0">
@@ -155,7 +155,7 @@ require_once 'components/layout_start.php';
                         </div>
                         
                         <div class="overflow-hidden rounded-2xl border border-slate-100">
-                            <table class="min-w-full text-[10px] text-left">
+                            <table class="min-w-full text-xs text-left">
                                 <thead class="bg-slate-50 font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                                     <tr>
                                         <th class="px-6 py-3">คาบ</th>
@@ -173,7 +173,7 @@ require_once 'components/layout_start.php';
                 </form>
             </div>
             <div class="modal-footer bg-slate-50 p-8 border-0 flex gap-4">
-                <button type="button" class="flex-1 py-4 bg-white border border-slate-200 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="flex-1 py-4 bg-white border border-slate-200 text-slate-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all" data-bs-dismiss="modal">ยกเลิก</button>
                 <button type="button" id="saveRequest" class="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:scale-[1.02] active:scale-95 transition-all">
                     ส่งคำขออนุมัติ
                 </button>
@@ -192,13 +192,13 @@ require_once 'components/layout_start.php';
                 </div>
                 <div>
                     <h5 class="font-black text-lg">ยืนยัน PIN ผอ.</h5>
-                    <p class="text-[10px] font-bold text-rose-100 uppercase tracking-widest">กรอก PIN เพื่ออนุมัติคำขอ</p>
+                    <p class="text-xs font-bold text-rose-100 uppercase tracking-widest">กรอก PIN เพื่ออนุมัติคำขอ</p>
                 </div>
             </div>
         </div>
         <div class="p-8 space-y-6">
             <div>
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">รหัส PIN (4-6 หลัก)</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">รหัส PIN (4-6 หลัก)</label>
                 <input type="password" id="pin-input" maxlength="6"
                     class="w-full text-center text-3xl font-black tracking-[1rem] bg-slate-50 border-2 border-slate-200 rounded-2xl px-6 py-4 outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100 transition-all"
                     placeholder="••••••">
@@ -264,7 +264,7 @@ $(document).ready(function() {
                 data: 'r_id',
                 className: 'text-center',
                 render: (id) => `<a href="leave_report.php?r_id=${id}" target="_blank"
-                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black hover:bg-slate-200 transition-all">
+                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all">
                     <i class="bi bi-printer"></i> พิมพ์
                 </a>`
             },
@@ -340,7 +340,7 @@ $(document).ready(function() {
                     <td class="px-6 py-4 font-bold text-slate-700">${item.period}</td>
                     <td class="px-6 py-4">
                         <div class="font-bold text-slate-800">${item.subject}</div>
-                        <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">${item.class_level}</div>
+                        <div class="text-xs font-black text-slate-400 uppercase tracking-widest">${item.class_level}</div>
                     </td>
                     <td class="px-6 py-4 font-bold text-indigo-500">${item.sub_teacher_name}</td>
                     <td class="px-6 py-4 text-right">

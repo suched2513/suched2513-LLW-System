@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -35,7 +35,7 @@ if (!$groupId) {
                 <i class="bi bi-file-earmark-bar-graph"></i>
             </div>
             <h2 class="text-3xl font-black text-slate-800 tracking-tight">พิมพ์รายงานสรุป</h2>
-            <p class="text-slate-400 mt-2 font-bold uppercase tracking-widest text-[10px]">โปรดเลือกหนึ่งในระบบกลุ่ม PLC ของคุณเพื่อดำเนินการต่อ</p>
+            <p class="text-slate-400 mt-2 font-bold uppercase tracking-widest text-xs">โปรดเลือกหนึ่งในระบบกลุ่ม PLC ของคุณเพื่อดำเนินการต่อ</p>
         </div>
 
         <?php if (empty($myGroups)): ?>
@@ -58,7 +58,7 @@ if (!$groupId) {
                 <p class="text-slate-400 text-xs mt-1 uppercase font-bold tracking-widest italic">
                     ปีการศึกษา <?= htmlspecialchars($group['academic_year']) ?> / <?= htmlspecialchars($group['semester']) ?>
                 </p>
-                <div class="mt-6 flex items-center gap-2 text-violet-600 font-black text-[10px] uppercase tracking-widest">
+                <div class="mt-6 flex items-center gap-2 text-violet-600 font-black text-xs uppercase tracking-widest">
                     <span>เปิดแบบพิมพ์</span>
                     <i class="bi bi-arrow-right"></i>
                 </div>

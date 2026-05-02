@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'functions.php';
 require_once '../includes/telegram_bot.php';
 checkLogin();
@@ -155,7 +155,7 @@ require_once '../components/layout_start.php';
                 </div>
                 <div>
                   <h3 class="font-bold text-slate-800">นักเรียนห้อง <?= htmlspecialchars($subject_info['classroom']) ?></h3>
-                  <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider"><?= count($students) ?> คนในชั้นเรียน</p>
+                  <p class="text-xs text-slate-400 font-bold uppercase tracking-wider"><?= count($students) ?> คนในชั้นเรียน</p>
                 </div>
             </div>
             <div class="flex gap-2">
@@ -179,9 +179,9 @@ require_once '../components/layout_start.php';
                 <table class="min-w-full divide-y divide-slate-100">
                     <thead class="bg-slate-50/50">
                         <tr>
-                            <th class="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">รหัส/ชื่อ-สกุล</th>
-                            <th class="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">สถานะเช็คชื่อ</th>
-                            <th class="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">เวลาเข้า/หมายเหตุ</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">รหัส/ชื่อ-สกุล</th>
+                            <th class="px-6 py-4 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">สถานะเช็คชื่อ</th>
+                            <th class="px-6 py-4 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">เวลาเข้า/หมายเหตุ</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
@@ -233,7 +233,7 @@ require_once '../components/layout_start.php';
                                                class="bg-white border border-slate-200 rounded-lg p-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-400">
                                         <input type="text" name="note[<?= $sid_db_id ?>]" value="<?= htmlspecialchars($cur_note) ?>" 
                                                placeholder="หมายเหตุ..."
-                                               class="bg-white border border-slate-200 rounded-lg p-1.5 text-[10px] outline-none focus:ring-2 focus:ring-blue-400 w-full">
+                                               class="bg-white border border-slate-200 rounded-lg p-1.5 text-xs outline-none focus:ring-2 focus:ring-blue-400 w-full">
                                     </div>
                                 </td>
                             </tr>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * behavior/manage.php — การจัดการระบบ (Students, Templates, Users)
  * Roles: super_admin
@@ -32,7 +32,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             </h5>
             <p class="text-xs text-slate-400 mt-1">สำหรับผู้ดูแลระบบ (Admin Only)</p>
         </div>
-        <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-wider">Admin Area</span>
+        <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-black uppercase tracking-wider">Admin Area</span>
     </div>
 
     <!-- Tabs -->
@@ -75,12 +75,12 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <table class="w-full text-sm">
                     <thead class="bg-slate-50">
                         <tr>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">รหัส</th>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">ชื่อ-สกุล</th>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">ระดับ</th>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">ห้อง</th>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">ที่ปรึกษา</th>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right border-b">จัดการ</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">รหัส</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ชื่อ-สกุล</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">ระดับ</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">ห้อง</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ที่ปรึกษา</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right border-b">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody id="manageStudentBody"><tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">กำลังโหลด...</td></tr></tbody>
@@ -120,10 +120,10 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <table class="w-full text-sm">
                     <thead class="bg-slate-50">
                         <tr>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">ประเภท</th>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">ชื่อรายการ</th>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right border-b">คะแนน</th>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right border-b">จัดการ</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ประเภท</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ชื่อรายการ</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right border-b">คะแนน</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right border-b">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody id="manageTemplateBody"></tbody>
@@ -159,11 +159,11 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <table class="w-full text-sm">
                     <thead class="bg-slate-50">
                         <tr>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">Username</th>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">ชื่อ-สกุล</th>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">บทบาท</th>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-center border-b">สถานะ</th>
-                            <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-right border-b">จัดการ</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">Username</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ชื่อ-สกุล</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">บทบาท</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-center border-b">สถานะ</th>
+                            <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-right border-b">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody id="manageUserBody"></tbody>
@@ -279,7 +279,7 @@ function renderTemplates() {
         tr.className = 'border-b border-slate-50 hover:bg-violet-50/30 transition-colors';
         const isGood = t.type === 'ความดี';
         tr.innerHTML = `
-            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-black ${isGood ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">${esc(t.type)}</span></td>
+            <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs font-black ${isGood ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">${esc(t.type)}</span></td>
             <td class="px-4 py-3 font-medium text-slate-700">${esc(t.name)}</td>
             <td class="px-4 py-3 text-right font-black text-slate-600">${t.score}</td>
             <td class="px-4 py-3 text-right">
@@ -335,7 +335,7 @@ function renderUsers() {
             <td class="px-4 py-3 text-xs font-mono text-slate-400">${esc(u.username)}</td>
             <td class="px-4 py-3 font-bold text-slate-700">${esc(u.name)}</td>
             <td class="px-4 py-3 text-center text-xs">${roleLabel}</td>
-            <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-black ${active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}">${active ? 'ใช้งาน' : 'ปิด'}</span></td>
+            <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-black ${active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}">${active ? 'ใช้งาน' : 'ปิด'}</span></td>
             <td class="px-4 py-3 text-right">
                 <button onclick="editUser(${u.id})" class="w-7 h-7 bg-slate-100 hover:bg-violet-100 rounded-lg inline-flex items-center justify-center transition-all me-1"><i class="bi bi-pencil text-xs text-slate-500"></i></button>
                 <button onclick="deleteUser(${u.id})" class="w-7 h-7 bg-rose-50 hover:bg-rose-100 rounded-lg inline-flex items-center justify-center transition-all"><i class="bi bi-trash text-xs text-rose-500"></i></button>

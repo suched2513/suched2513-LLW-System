@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once 'functions.php';
 checkAdmin();
 
@@ -230,7 +230,7 @@ require_once '../components/layout_start.php';
         </button>
         <button onclick="showTab('enrollment')" id="tab-enrollment" class="tab-btn px-6 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:text-slate-700 transition-all">
             <i class="bi bi-person-check-fill mr-2"></i> ลงทะเบียนวิชาเลือก
-            <?php if (!empty($elective_subjects)): ?><span class="ml-1 px-1.5 py-0.5 bg-violet-100 text-violet-600 text-[9px] font-black rounded-lg"><?= count($elective_subjects) ?></span><?php endif; ?>
+            <?php if (!empty($elective_subjects)): ?><span class="ml-1 px-1.5 py-0.5 bg-violet-100 text-violet-600 text-xs font-black rounded-lg"><?= count($elective_subjects) ?></span><?php endif; ?>
         </button>
     </div>
 
@@ -258,8 +258,8 @@ require_once '../components/layout_start.php';
                     </select>
                 </div>
                 <div class="bg-slate-50 rounded-2xl p-4 border border-dashed border-slate-200">
-                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">คำแนะนำ</p>
-                    <p class="text-[11px] text-slate-400 leading-relaxed">ระบบจะใช้ Username และ Password เดียวกับที่ใช้ลงเวลาปฏิบัติงาน (WFH) หากไม่พบชื่อในรายการ กรุณาไปเพิ่มที่ <a href="/manage_users.php" class="text-indigo-600 underline">เมนูจัดการผู้ใช้</a> ก่อน</p>
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">คำแนะนำ</p>
+                    <p class="text-sm text-slate-400 leading-relaxed">ระบบจะใช้ Username และ Password เดียวกับที่ใช้ลงเวลาปฏิบัติงาน (WFH) หากไม่พบชื่อในรายการ กรุณาไปเพิ่มที่ <a href="/manage_users.php" class="text-indigo-600 underline">เมนูจัดการผู้ใช้</a> ก่อน</p>
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition mt-2">ยืนยันการเพิ่มครู</button>
             </form>
@@ -272,7 +272,7 @@ require_once '../components/layout_start.php';
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-50 text-sm">
-                    <thead class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <thead class="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-widest">
                         <tr>
                             <th class="px-6 py-4 text-left">ครูผู้สอน</th>
                             <th class="px-6 py-4 text-left">Username</th>
@@ -292,10 +292,10 @@ require_once '../components/layout_start.php';
                             </td>
                             <td class="px-6 py-4 font-mono text-xs text-blue-600"><?= $t['username'] ?></td>
                             <td class="px-6 py-4 text-center">
-                                <span class="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[10px]"><?= $t['s_count'] ?> วิชา</span>
+                                <span class="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-xs"><?= $t['s_count'] ?> วิชา</span>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold <?= $t['user_status']==='active' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600' ?>">
+                                <span class="px-2 py-0.5 rounded-lg text-xs font-bold <?= $t['user_status']==='active' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600' ?>">
                                     <?= strtoupper($t['user_status'] ?? 'N/A') ?>
                                 </span>
                             </td>
@@ -368,7 +368,7 @@ require_once '../components/layout_start.php';
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-50 text-sm">
-                    <thead class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <thead class="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-widest">
                         <tr>
                             <th class="px-6 py-4 text-left">รหัส</th>
                             <th class="px-6 py-4 text-left">ชื่อ-สกุล</th>
@@ -382,7 +382,7 @@ require_once '../components/layout_start.php';
                             <td class="px-6 py-3.5 font-mono font-bold text-blue-600 text-xs"><?= htmlspecialchars($std['student_id']) ?></td>
                             <td class="px-6 py-3.5 font-bold text-slate-700"><?= htmlspecialchars($std['name']) ?></td>
                             <td class="px-6 py-3.5 text-center">
-                                <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-[10px]"><?= $std['classroom'] ?></span>
+                                <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-xs"><?= $std['classroom'] ?></span>
                             </td>
                             <td class="px-6 py-3.5 text-right flex gap-1 justify-end">
                                 <button onclick="editStudent(<?= $std['id'] ?>, '<?= addslashes($std['student_id']) ?>', '<?= addslashes($std['name']) ?>', '<?= addslashes($std['classroom']) ?>')"
@@ -437,7 +437,7 @@ require_once '../components/layout_start.php';
                     <input type="checkbox" name="is_elective" id="is_elective" value="1" class="w-4 h-4 accent-violet-600">
                     <div>
                         <label for="is_elective" class="font-bold text-violet-700 text-sm cursor-pointer">วิชาเลือก (Elective)</label>
-                        <p class="text-[10px] text-violet-500 mt-0.5">นักเรียนแต่ละคนเลือกวิชาไม่เหมือนกัน ต้องกำหนดนักเรียนในแท็บลงทะเบียนด้วย</p>
+                        <p class="text-xs text-violet-500 mt-0.5">นักเรียนแต่ละคนเลือกวิชาไม่เหมือนกัน ต้องกำหนดนักเรียนในแท็บลงทะเบียนด้วย</p>
                     </div>
                 </div>
                 <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-xl shadow-blue-100 hover:bg-blue-700 transition mt-2">ยืนยันเพิ่มวิชา</button>
@@ -451,7 +451,7 @@ require_once '../components/layout_start.php';
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-50 text-sm">
-                    <thead class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <thead class="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-widest">
                         <tr>
                             <th class="px-6 py-4 text-left">รหัส / วิชา</th>
                             <th class="px-6 py-4 text-left">ครูผู้รับผิดชอบ</th>
@@ -471,15 +471,15 @@ require_once '../components/layout_start.php';
                             </td>
                             <td class="px-6 py-4 text-slate-600"><?= $s['t_name'] ?></td>
                             <td class="px-6 py-4 text-center">
-                                <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-[10px]"><?= $s['classroom'] ?></span>
+                                <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-xs"><?= $s['classroom'] ?></span>
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <?php if (!$migration_ready): ?>
-                                <span class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-600 font-bold text-[10px]"><i class="bi bi-database-exclamation"></i> รอ migration</span>
+                                <span class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-600 font-bold text-xs"><i class="bi bi-database-exclamation"></i> รอ migration</span>
                                 <?php elseif (!empty($s['is_elective'])): ?>
-                                <span class="px-2.5 py-1 rounded-lg bg-violet-100 text-violet-700 font-black text-[10px]"><i class="bi bi-star-fill"></i> วิชาเลือก</span>
+                                <span class="px-2.5 py-1 rounded-lg bg-violet-100 text-violet-700 font-black text-xs"><i class="bi bi-star-fill"></i> วิชาเลือก</span>
                                 <?php else: ?>
-                                <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 font-bold text-[10px]">บังคับ</span>
+                                <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 font-bold text-xs">บังคับ</span>
                                 <?php endif; ?>
                             </td>
                             <td class="px-6 py-4 text-right">
@@ -523,7 +523,7 @@ require_once '../components/layout_start.php';
                 <i class="bi bi-star-fill text-violet-500 text-xl"></i>
                 <div>
                     <p class="font-black text-violet-800 text-sm">วิชาเลือกทั้งหมด <?= count($elective_subjects) ?> วิชา</p>
-                    <p class="text-[10px] text-violet-500 font-bold">จำนวนผู้ลงทะเบียนรวม <?= array_sum(array_map(fn($id) => count($enrollments[$id] ?? []), array_column($elective_subjects, 'id'))) ?> คน</p>
+                    <p class="text-xs text-violet-500 font-bold">จำนวนผู้ลงทะเบียนรวม <?= array_sum(array_map(fn($id) => count($enrollments[$id] ?? []), array_column($elective_subjects, 'id'))) ?> คน</p>
                 </div>
             </div>
             <a href="export_elective.php" target="_blank"
@@ -540,18 +540,18 @@ require_once '../components/layout_start.php';
             <div class="px-6 py-4 border-b border-slate-100 bg-violet-50/50 flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <div class="flex items-center gap-2">
-                        <span class="px-2 py-0.5 bg-violet-100 text-violet-700 text-[10px] font-black rounded-lg">วิชาเลือก</span>
+                        <span class="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-black rounded-lg">วิชาเลือก</span>
                         <span class="font-mono text-xs font-bold text-blue-600"><?= $es['subject_code'] ?></span>
                     </div>
                     <h3 class="font-black text-slate-800 mt-1"><?= htmlspecialchars($es['subject_name']) ?></h3>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ลงทะเบียนแล้ว <?= count($enrolled_ids) ?> คน จากทั้งหมด <?= $total_students ?> คน</p>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">ลงทะเบียนแล้ว <?= count($enrolled_ids) ?> คน จากทั้งหมด <?= $total_students ?> คน</p>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
                     <a href="export_elective.php?subject_id=<?= $es['id'] ?>" target="_blank"
-                       class="inline-flex items-center gap-1.5 text-[11px] font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl transition border border-emerald-100">
+                       class="inline-flex items-center gap-1.5 text-sm font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl transition border border-emerald-100">
                         <i class="bi bi-file-earmark-spreadsheet-fill"></i> Export CSV
                     </a>
-                    <span class="text-[10px] font-bold text-violet-500"><i class="bi bi-info-circle"></i> เลือกได้ทุกห้อง</span>
+                    <span class="text-xs font-bold text-violet-500"><i class="bi bi-info-circle"></i> เลือกได้ทุกห้อง</span>
                 </div>
             </div>
             <form method="POST" class="p-6">
@@ -565,8 +565,8 @@ require_once '../components/layout_start.php';
                 <div class="mb-5">
                     <div class="flex items-center gap-2 mb-3">
                         <span class="px-3 py-1 bg-emerald-50 text-emerald-700 font-black text-xs rounded-lg"><?= htmlspecialchars($cls_name) ?></span>
-                        <span class="text-[10px] text-slate-400 font-bold"><?= count($cls_students) ?> คน</span>
-                        <button type="button" onclick="selectGroup(this)" class="text-[10px] font-bold text-violet-500 hover:text-violet-700 ml-auto transition">เลือกทั้งห้อง</button>
+                        <span class="text-xs text-slate-400 font-bold"><?= count($cls_students) ?> คน</span>
+                        <button type="button" onclick="selectGroup(this)" class="text-xs font-bold text-violet-500 hover:text-violet-700 ml-auto transition">เลือกทั้งห้อง</button>
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                         <?php foreach ($cls_students as $std): ?>
@@ -575,7 +575,7 @@ require_once '../components/layout_start.php';
                                    class="accent-violet-600 w-4 h-4 flex-shrink-0" <?= in_array($std['id'], $enrolled_ids) ? 'checked' : '' ?>>
                             <div class="min-w-0">
                                 <p class="font-bold text-xs text-slate-700 truncate"><?= htmlspecialchars($std['name']) ?></p>
-                                <p class="font-mono text-[9px] text-blue-500"><?= htmlspecialchars($std['student_id']) ?></p>
+                                <p class="font-mono text-xs text-blue-500"><?= htmlspecialchars($std['student_id']) ?></p>
                             </div>
                         </label>
                         <?php endforeach; ?>

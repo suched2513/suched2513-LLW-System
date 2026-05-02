@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * teacher_info.php — Teacher Information System (Full Personnel)
  */
@@ -46,21 +46,21 @@ require_once 'components/layout_start.php';
                     <div class="w-16 h-16 rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-3xl shadow-xl shadow-indigo-200"><i class="bi bi-people-fill"></i></div>
                     <div>
                         <p class="text-4xl font-black text-slate-800 leading-none"><?= number_format($totalUsers) ?></p>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">บุคลากรรวม</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-2">บุคลากรรวม</p>
                     </div>
                 </div>
                 <div class="stat-card flex items-center gap-6 border-l-8 border-l-blue-600">
                     <div class="w-16 h-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-3xl shadow-xl shadow-blue-200"><i class="bi bi-shield-lock-fill"></i></div>
                     <div>
                         <p class="text-4xl font-black text-slate-800 leading-none"><?= number_format($adminCount) ?></p>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">ฝ่ายบริหาร/แอดมิน</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-2">ฝ่ายบริหาร/แอดมิน</p>
                     </div>
                 </div>
                 <div class="stat-card flex items-center gap-6 border-l-8 border-l-emerald-500">
                     <div class="w-16 h-16 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-3xl shadow-xl shadow-emerald-200"><i class="bi bi-person-vcard"></i></div>
                     <div>
                         <p class="text-4xl font-black text-slate-800 leading-none"><?= number_format($staffCount) ?></p>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">ครูและเจ้าหน้าที่</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-2">ครูและเจ้าหน้าที่</p>
                     </div>
                 </div>
             </div>
@@ -75,7 +75,7 @@ require_once 'components/layout_start.php';
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
-                        <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <thead class="bg-slate-50 text-xs font-black text-slate-400 uppercase tracking-widest">
                             <tr>
                                 <th class="px-8 py-5">ชื่อ-นามสกุล</th>
                                 <th class="px-6 py-5">ตำแหน่ง</th>
@@ -94,21 +94,21 @@ require_once 'components/layout_start.php';
                                         </div>
                                         <div>
                                             <p class="font-black text-slate-800"><?= htmlspecialchars($t['firstname'] . ' ' . $t['lastname']) ?></p>
-                                            <p class="text-[10px] text-slate-400 font-bold">USER ID: #<?= $t['user_id'] ?></p>
+                                            <p class="text-xs text-slate-400 font-bold">USER ID: #<?= $t['user_id'] ?></p>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-5">
-                                    <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] font-black uppercase">
+                                    <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-black uppercase">
                                         <?= $rolesThai[$t['role']] ?? $t['role'] ?>
                                     </span>
                                 </td>
                                 <td class="px-6 py-5 text-center">
                                     <span class="text-sm font-black text-slate-700"><?= $t['subject_count'] ?></span>
-                                    <span class="text-[10px] text-slate-400 font-bold ml-1">วิชา</span>
+                                    <span class="text-xs text-slate-400 font-bold ml-1">วิชา</span>
                                 </td>
                                 <td class="px-6 py-5 text-center text-emerald-500">
-                                    <span class="text-[10px] font-black uppercase tracking-widest">Active</span>
+                                    <span class="text-xs font-black uppercase tracking-widest">Active</span>
                                 </td>
                                 <td class="px-8 py-5 text-center">
                                     <button class="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 hover:bg-amber-500 hover:text-white transition-all">

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once '../config.php';
 
@@ -94,32 +94,32 @@ require_once __DIR__ . '/../components/layout_start.php';
             <input type="hidden" name="action" value="add">
             
             <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Username / ID</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Username / ID</label>
                 <input class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold" name="username" placeholder="ระบุชื่อผู้ใช้" required>
             </div>
 
             <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
                 <input class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold" name="password" type="password" placeholder="ระบุรหัสผ่าน" required>
             </div>
 
             <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">First Name</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">First Name</label>
                 <input class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold" name="firstname" placeholder="ชื่อ" required>
             </div>
 
             <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Last Name</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Last Name</label>
                 <input class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold" name="lastname" placeholder="นามสกุล" required>
             </div>
 
             <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Position</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Position</label>
                 <input class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold" name="position" placeholder="ตำแหน่ง">
             </div>
 
             <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Department</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Department</label>
                 <select class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold appearance-none" name="dept_id">
                     <option value="">-- ฝ่าย --</option>
                     <?php foreach ($departments as $d): ?>
@@ -129,7 +129,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             </div>
 
             <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Access Role</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Access Role</label>
                 <select class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold appearance-none" name="role">
                     <option value="user">ครู/บุคลากร</option>
                     <option value="admin">ผู้ดูแลระบบ</option>
@@ -151,7 +151,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <i class="bi bi-person-lines-fill text-indigo-600 text-xl"></i>
                 <h3 class="text-lg font-black text-slate-800">รายชื่อบุคลากรทั้งหมด</h3>
             </div>
-            <span class="px-4 py-1 bg-indigo-100 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+            <span class="px-4 py-1 bg-indigo-100 text-indigo-600 rounded-full text-xs font-black uppercase tracking-widest">
                 Total: <?= count($users) ?> Members
             </span>
         </div>
@@ -160,12 +160,12 @@ require_once __DIR__ . '/../components/layout_start.php';
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-slate-50/50 border-y border-slate-100">
-                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">#</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Username</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ชื่อ-สกุล</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ตำแหน่ง / ฝ่าย</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">บทบาท</th>
-                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">จัดการ</th>
+                        <th class="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">#</th>
+                        <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Username</th>
+                        <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ชื่อ-สกุล</th>
+                        <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ตำแหน่ง / ฝ่าย</th>
+                        <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-center">บทบาท</th>
+                        <th class="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -173,7 +173,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <tr class="hover:bg-slate-50/80 transition-colors group">
                         <td class="px-8 py-4 text-xs font-bold text-slate-400"><?= $i+1 ?></td>
                         <td class="px-6 py-4">
-                            <code class="px-2 py-1 bg-slate-100 text-indigo-600 rounded text-[11px] font-bold">
+                            <code class="px-2 py-1 bg-slate-100 text-indigo-600 rounded text-sm font-bold">
                                 <?= htmlspecialchars($u['username']) ?>
                             </code>
                         </td>
@@ -183,14 +183,14 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <td class="px-6 py-4">
                             <div class="flex flex-col">
                                 <span class="text-xs font-bold text-slate-600 truncate"><?= htmlspecialchars($u['position'] ?? '-') ?></span>
-                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight truncate"><?= htmlspecialchars($u['dept_name'] ?? 'ไม่ระบุฝ่าย') ?></span>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-tight truncate"><?= htmlspecialchars($u['dept_name'] ?? 'ไม่ระบุฝ่าย') ?></span>
                             </div>
                         </td>
                         <td class="px-6 py-4 text-center">
                             <?php if ($u['role'] === 'admin'): ?>
-                                <span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-wider">Administrator</span>
+                                <span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-black uppercase tracking-wider">Administrator</span>
                             <?php else: ?>
-                                <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-wider">Staff</span>
+                                <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-black uppercase tracking-wider">Staff</span>
                             <?php endif; ?>
                         </td>
                         <td class="px-8 py-4 text-right">

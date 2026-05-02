@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * export_elective.php — หน้าค้นหา + Export รายชื่อผู้ลงทะเบียนวิชาเลือก
  */
@@ -184,7 +184,7 @@ require_once '../components/layout_start.php';
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-50 text-sm">
-                <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <thead class="bg-slate-50 text-xs font-black text-slate-400 uppercase tracking-widest">
                     <tr>
                         <th class="px-5 py-4 text-left">#</th>
                         <th class="px-5 py-4 text-left">รหัส</th>
@@ -202,10 +202,10 @@ require_once '../components/layout_start.php';
                         <td class="px-5 py-3.5 font-mono font-black text-blue-600 text-xs"><?= htmlspecialchars($r['student_id']) ?></td>
                         <td class="px-5 py-3.5 font-bold text-slate-700"><?= htmlspecialchars($r['student_name']) ?></td>
                         <td class="px-5 py-3.5">
-                            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold text-[10px] rounded-lg"><?= htmlspecialchars($r['classroom']) ?></span>
+                            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold text-xs rounded-lg"><?= htmlspecialchars($r['classroom']) ?></span>
                         </td>
                         <td class="px-5 py-3.5">
-                            <span class="font-mono text-[10px] text-violet-500 font-black"><?= htmlspecialchars($r['subject_code']) ?></span>
+                            <span class="font-mono text-xs text-violet-500 font-black"><?= htmlspecialchars($r['subject_code']) ?></span>
                             <p class="text-xs text-slate-600 font-bold mt-0.5"><?= htmlspecialchars($r['subject_name']) ?></p>
                         </td>
                         <td class="px-5 py-3.5 text-xs text-slate-500 font-bold"><?= htmlspecialchars($r['teacher_name']) ?></td>

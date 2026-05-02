@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * assembly/manage_students.php — จัดการข้อมูลนักเรียนและห้องเรียน
  * Roles: super_admin
@@ -30,19 +30,19 @@ $totalRooms    = $pdo->query("SELECT COUNT(*) FROM assembly_classrooms")->fetchC
 <!-- ─── KPI Strip ─── -->
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-2xl p-5 shadow-lg shadow-amber-200/50">
-        <p class="text-[10px] font-black uppercase tracking-wider opacity-80">นักเรียนทั้งหมด</p>
+        <p class="text-xs font-black uppercase tracking-wider opacity-80">นักเรียนทั้งหมด</p>
         <p class="text-4xl font-black mt-1"><?= number_format($totalStudents) ?></p>
     </div>
     <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl p-5 shadow-lg shadow-blue-200/50">
-        <p class="text-[10px] font-black uppercase tracking-wider opacity-80">ห้องเรียน</p>
+        <p class="text-xs font-black uppercase tracking-wider opacity-80">ห้องเรียน</p>
         <p class="text-4xl font-black mt-1"><?= $totalRooms ?></p>
     </div>
     <div class="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-5 shadow-lg shadow-emerald-200/50">
-        <p class="text-[10px] font-black uppercase tracking-wider opacity-80">ครูที่ปรึกษา (ผูกแล้ว)</p>
+        <p class="text-xs font-black uppercase tracking-wider opacity-80">ครูที่ปรึกษา (ผูกแล้ว)</p>
         <p class="text-4xl font-black mt-1"><?= count(array_filter($classrooms, fn($c) => $c['llw_user_id'])) ?></p>
     </div>
     <div class="bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-2xl p-5 shadow-lg shadow-rose-200/50">
-        <p class="text-[10px] font-black uppercase tracking-wider opacity-80">ห้องที่ยังไม่ผูก</p>
+        <p class="text-xs font-black uppercase tracking-wider opacity-80">ห้องที่ยังไม่ผูก</p>
         <p class="text-4xl font-black mt-1"><?= count(array_filter($classrooms, fn($c) => !$c['llw_user_id'])) ?></p>
     </div>
 </div>
@@ -63,8 +63,8 @@ $totalRooms    = $pdo->query("SELECT COUNT(*) FROM assembly_classrooms")->fetchC
         <!-- CSV Format info -->
         <div class="bg-amber-50 rounded-2xl p-4 mb-4 border border-amber-100">
             <p class="text-xs font-bold text-amber-700 mb-2"><i class="bi bi-info-circle-fill mr-1"></i>รูปแบบ CSV (header row บรรทัดแรก):</p>
-            <code class="text-[11px] text-amber-600 bg-amber-100 px-2 py-1 rounded-lg block">student_id, name, classroom, teacher_name</code>
-            <p class="text-[10px] text-amber-600 mt-2">ตัวอย่าง: <code>12345, นายสมชาย ใจดี, ม.1/1, นางสาวมาลี สุขใจ</code></p>
+            <code class="text-sm text-amber-600 bg-amber-100 px-2 py-1 rounded-lg block">student_id, name, classroom, teacher_name</code>
+            <p class="text-xs text-amber-600 mt-2">ตัวอย่าง: <code>12345, นายสมชาย ใจดี, ม.1/1, นางสาวมาลี สุขใจ</code></p>
         </div>
 
         <!-- Upload form -->
@@ -108,7 +108,7 @@ $totalRooms    = $pdo->query("SELECT COUNT(*) FROM assembly_classrooms")->fetchC
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-black text-slate-700"><?= htmlspecialchars($c['classroom'], ENT_QUOTES, 'UTF-8') ?></p>
-                    <p class="text-[10px] text-slate-400 truncate"><?= htmlspecialchars($c['teacher_name'] ?? 'ยังไม่ระบุครู', ENT_QUOTES, 'UTF-8') ?></p>
+                    <p class="text-xs text-slate-400 truncate"><?= htmlspecialchars($c['teacher_name'] ?? 'ยังไม่ระบุครู', ENT_QUOTES, 'UTF-8') ?></p>
                 </div>
                 <select class="bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-medium focus:ring-2 focus:ring-blue-400 outline-none"
                         onchange="assignTeacher('<?= htmlspecialchars($c['classroom'], ENT_QUOTES, 'UTF-8') ?>', this.value)">
@@ -156,11 +156,11 @@ $totalRooms    = $pdo->query("SELECT COUNT(*) FROM assembly_classrooms")->fetchC
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 sticky top-0">
                     <tr>
-                        <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">#</th>
-                        <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">รหัส</th>
-                        <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b">ชื่อ-สกุล</th>
-                        <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">ห้อง</th>
-                        <th class="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b">จัดการ</th>
+                        <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">#</th>
+                        <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">รหัส</th>
+                        <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ชื่อ-สกุล</th>
+                        <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">ห้อง</th>
+                        <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody id="student-list">

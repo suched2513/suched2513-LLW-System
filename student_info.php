@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * student_info.php — Detailed Student Information System (SIS)
  */
@@ -133,21 +133,21 @@ require_once 'components/layout_start.php';
                     <div class="w-16 h-16 rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-3xl shadow-xl shadow-indigo-200"><i class="bi bi-people-fill"></i></div>
                     <div>
                         <p class="text-4xl font-black text-slate-800 leading-none"><?= number_format($totalCount) ?></p>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">นักเรียนทั้งหมด</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-2">นักเรียนทั้งหมด</p>
                     </div>
                 </div>
                 <div class="stat-card flex items-center gap-6 border-l-8 border-l-blue-500">
                     <div class="w-16 h-16 rounded-2xl bg-blue-500 text-white flex items-center justify-center text-3xl shadow-xl shadow-blue-200"><i class="bi bi-gender-male"></i></div>
                     <div>
                         <p class="text-4xl font-black text-slate-800 leading-none"><?= number_format($maleCount) ?></p>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">ชาย (Male)</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-2">ชาย (Male)</p>
                     </div>
                 </div>
                 <div class="stat-card flex items-center gap-6 border-l-8 border-l-pink-500">
                     <div class="w-16 h-16 rounded-2xl bg-pink-500 text-white flex items-center justify-center text-3xl shadow-xl shadow-pink-200"><i class="bi bi-gender-female"></i></div>
                     <div>
                         <p class="text-4xl font-black text-slate-800 leading-none"><?= number_format($femaleCount) ?></p>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">หญิง (Female)</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-2">หญิง (Female)</p>
                     </div>
                 </div>
             </div>
@@ -159,13 +159,13 @@ require_once 'components/layout_start.php';
                         <i class="bi bi-table text-indigo-600"></i>
                         รายชื่อนักเรียนแยกตามห้อง
                     </h2>
-                    <span class="px-4 py-1.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase">
+                    <span class="px-4 py-1.5 rounded-full bg-slate-100 text-slate-500 text-xs font-black uppercase">
                         แสดงทั้งหมด <?= count($students) ?> รายการ
                     </span>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left">
-                        <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <thead class="bg-slate-50 text-xs font-black text-slate-400 uppercase tracking-widest">
                             <tr>
                                 <th class="px-8 py-5">ห้องเรียน</th>
                                 <th class="px-6 py-5">เลขประจำตัว</th>
@@ -193,7 +193,7 @@ require_once 'components/layout_start.php';
                                 <td class="px-6 py-4 font-bold text-slate-500"><?= htmlspecialchars($s['student_id']) ?></td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center font-black text-[10px]">
+                                        <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center font-black text-xs">
                                             <?= mb_substr($s['name'], 0, 1) ?>
                                         </div>
                                         <span class="font-bold text-slate-700"><?= htmlspecialchars($s['name']) ?></span>
@@ -203,11 +203,11 @@ require_once 'components/layout_start.php';
                                     <?php 
                                     $g = detectGender($s['name'], $s['gender'] ?? null);
                                     if($g === 'ชาย'): ?>
-                                        <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black">♂ ชาย</span>
+                                        <span class="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-black">♂ ชาย</span>
                                     <?php elseif($g === 'หญิง'): ?>
-                                        <span class="px-3 py-1 rounded-full bg-pink-50 text-pink-600 text-[10px] font-black">♀ หญิง</span>
+                                        <span class="px-3 py-1 rounded-full bg-pink-50 text-pink-600 text-xs font-black">♀ หญิง</span>
                                     <?php else: ?>
-                                        <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-400 text-[10px] font-black">-</span>
+                                        <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-400 text-xs font-black">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4 text-center font-bold text-slate-400 text-xs">

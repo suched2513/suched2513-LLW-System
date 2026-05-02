@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * API: Get student focus data (info + scores + history)
  * GET ?sid=xxxxx
@@ -132,9 +132,9 @@ try {
 
             $statusBadge = '';
             if ($r['status'] === 'pending') {
-                $statusBadge = '<span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[8px] font-black uppercase tracking-tighter border border-amber-100 ml-2">รอยืนยัน</span>';
+                $statusBadge = '<span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-xs font-black uppercase tracking-tighter border border-amber-100 ml-2">รอยืนยัน</span>';
             } elseif ($r['status'] === 'rejected') {
-                $statusBadge = '<span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[8px] font-black uppercase tracking-tighter border border-rose-100 ml-2">ปฏิเสธ</span>';
+                $statusBadge = '<span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-xs font-black uppercase tracking-tighter border border-rose-100 ml-2">ปฏิเสธ</span>';
             }
 
             $html .= "

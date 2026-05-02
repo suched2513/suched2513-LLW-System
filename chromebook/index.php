@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -78,7 +78,7 @@ require_once '../components/layout_start.php';
                         <div>
                             <div class="flex items-center justify-between mb-2">
                                 <label class="form-label mb-0">Chromebook</label>
-                                <button type="button" onclick="openScanner()" class="text-[10px] font-black text-cyan-600 bg-cyan-50 border border-cyan-100 px-3 py-1.5 rounded-lg hover:bg-cyan-100 transition flex items-center gap-1.5">
+                                <button type="button" onclick="openScanner()" class="text-xs font-black text-cyan-600 bg-cyan-50 border border-cyan-100 px-3 py-1.5 rounded-lg hover:bg-cyan-100 transition flex items-center gap-1.5">
                                     <i class="bi bi-qr-code-scan"></i> สแกน QR
                                 </button>
                             </div>
@@ -124,7 +124,7 @@ require_once '../components/layout_start.php';
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-sm">
-                        <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        <thead class="bg-slate-50 text-xs font-black text-slate-400 uppercase tracking-widest">
                             <tr>
                                 <th class="px-5 py-4 text-left">สถานะ</th>
                                 <th class="px-5 py-4 text-left">ผู้ยืม / ห้อง</th>
@@ -141,7 +141,7 @@ require_once '../components/layout_start.php';
                     </table>
                 </div>
                 <div class="px-5 py-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest" id="page-info">–</span>
+                    <span class="text-xs font-black text-slate-400 uppercase tracking-widest" id="page-info">–</span>
                     <div class="flex gap-1" id="pagination"></div>
                 </div>
             </div>
@@ -176,7 +176,7 @@ require_once '../components/layout_start.php';
                 <i class="bi bi-file-earmark-spreadsheet-fill"></i> นำเข้า CSV
                 <input type="file" accept=".csv,.txt" class="hidden" onchange="importCSV(this,'teacher')">
             </label>
-            <a href="data:text/csv;charset=utf-8,%EF%BB%BF%E0%B8%A3%E0%B8%AB%E0%B8%B1%E0%B8%AA%E0%B8%84%E0%B8%A3%E0%B8%B9,%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD-%E0%B8%AA%E0%B8%81%E0%B8%B8%E0%B8%A5%0AT001,%E0%B8%99%E0%B8%B2%E0%B8%A2%20%E0%B8%AA%E0%B8%A1%E0%B8%84%E0%B8%A3" download="template_teacher.csv" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1">
+            <a href="data:text/csv;charset=utf-8,%EF%BB%BF%E0%B8%A3%E0%B8%AB%E0%B8%B1%E0%B8%AA%E0%B8%84%E0%B8%A3%E0%B8%B9,%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD-%E0%B8%AA%E0%B8%81%E0%B8%B8%E0%B8%A5%0AT001,%E0%B8%99%E0%B8%B2%E0%B8%A2%20%E0%B8%AA%E0%B8%A1%E0%B8%84%E0%B8%A3" download="template_teacher.csv" class="text-xs font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1">
                 <i class="bi bi-download"></i> ดาวน์โหลด Template
             </a>
         </div>
@@ -196,7 +196,7 @@ require_once '../components/layout_start.php';
                 <i class="bi bi-file-earmark-spreadsheet-fill"></i> นำเข้า CSV
                 <input type="file" accept=".csv,.txt" class="hidden" onchange="importCSV(this,'student')">
             </label>
-            <a href="data:text/csv;charset=utf-8,%EF%BB%BF%E0%B8%A3%E0%B8%AB%E0%B8%B1%E0%B8%AA,%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD-%E0%B8%AA%E0%B8%81%E0%B8%B8%E0%B8%A5,%E0%B8%AB%E0%B9%89%E0%B8%AD%E0%B8%87%0A4100,%E0%B8%99%E0%B8%B2%E0%B8%A2%20%E0%B8%AA%E0%B8%A1%E0%B8%84%E0%B8%A3,%E0%B8%A1.4%2F1" download="template_student.csv" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1">
+            <a href="data:text/csv;charset=utf-8,%EF%BB%BF%E0%B8%A3%E0%B8%AB%E0%B8%B1%E0%B8%AA,%E0%B8%8A%E0%B8%B7%E0%B9%88%E0%B8%AD-%E0%B8%AA%E0%B8%81%E0%B8%B8%E0%B8%A5,%E0%B8%AB%E0%B9%89%E0%B8%AD%E0%B8%87%0A4100,%E0%B8%99%E0%B8%B2%E0%B8%A2%20%E0%B8%AA%E0%B8%A1%E0%B8%84%E0%B8%A3,%E0%B8%A1.4%2F1" download="template_student.csv" class="text-xs font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1">
                 <i class="bi bi-download"></i> ดาวน์โหลด Template
             </a>
         </div>
@@ -216,7 +216,7 @@ require_once '../components/layout_start.php';
                 <i class="bi bi-file-earmark-spreadsheet-fill"></i> นำเข้า CSV
                 <input type="file" accept=".csv,.txt" class="hidden" onchange="importCSV(this,'chromebook')">
             </label>
-            <a href="data:text/csv;charset=utf-8,%EF%BB%BF%E0%B8%A3%E0%B8%AB%E0%B8%B1%E0%B8%AA%E0%B9%80%E0%B8%84%E0%B8%A3%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%87,%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99,Serial%0ACB-001,Acer%20C933,SN123456" download="template_chromebook.csv" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1">
+            <a href="data:text/csv;charset=utf-8,%EF%BB%BF%E0%B8%A3%E0%B8%AB%E0%B8%B1%E0%B8%AA%E0%B9%80%E0%B8%84%E0%B8%A3%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%87,%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99,Serial%0ACB-001,Acer%20C933,SN123456" download="template_chromebook.csv" class="text-xs font-bold text-slate-400 hover:text-slate-600 transition flex items-center gap-1">
                 <i class="bi bi-download"></i> ดาวน์โหลด Template
             </a>
         </div>
@@ -294,7 +294,7 @@ require_once '../components/layout_start.php';
     </div>
     <div id="qr-reader" class="w-full rounded-2xl overflow-hidden border-2 border-cyan-200" style="min-height:220px"></div>
     <div id="scan-result" class="hidden mt-3 bg-cyan-50 border border-cyan-200 rounded-xl p-3 text-sm font-bold text-cyan-700"></div>
-    <p class="text-[10px] text-slate-400 text-center mt-3 font-bold">สแกนรหัสนักเรียน/ครู → แล้วสแกนรหัสเครื่อง</p>
+    <p class="text-xs text-slate-400 text-center mt-3 font-bold">สแกนรหัสนักเรียน/ครู → แล้วสแกนรหัสเครื่อง</p>
   </div>
 </div>
 
@@ -359,7 +359,7 @@ function renderKPI() {
     ];
     document.getElementById('kpi-cards').innerHTML = cards.map(c=>`
         <div class="kpi-card bg-gradient-to-br ${c.grad} shadow-xl ${c.shadow}">
-            <p class="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">${c.label}</p>
+            <p class="text-xs font-black uppercase tracking-widest opacity-80 mb-1">${c.label}</p>
             <p class="text-4xl font-black tracking-tight">${c.val}</p>
             <i class="bi ${c.icon} kpi-icon"></i>
         </div>`).join('');
@@ -371,7 +371,7 @@ function renderTabs() {
     const tabs = [{key:'all',label:'🗂 ทั้งหมด'},{key:'Teacher',label:'👤 ครู'},...classes.map(c=>({key:c,label:c}))];
     document.getElementById('tabs-row').innerHTML = tabs.map(t=>`
         <button onclick="setTab('${t.key}')" data-tab="${t.key}"
-            class="tab-btn px-3 py-1.5 rounded-xl text-[11px] font-black transition-all ${
+            class="tab-btn px-3 py-1.5 rounded-xl text-sm font-black transition-all ${
                 S.tab===t.key
                     ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-200/50 scale-105'
                     : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
@@ -400,24 +400,24 @@ function renderTable() {
         const dateStr    = fmtDate(r[8]);
         const imgs = r[6]?r[6].split(',').filter(Boolean):[];
         const imgHtml = imgs.length
-            ? `<div class="flex -space-x-2">${imgs.slice(0,3).map(i=>`<img src="uploads/${i}" class="w-9 h-9 rounded-xl ring-2 ring-white object-cover cursor-pointer hover:z-10 hover:scale-110 transition" onclick="viewImg('uploads/${i}')">`).join('')}${imgs.length>3?`<div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 text-[10px] font-black flex items-center justify-center ring-2 ring-white">+${imgs.length-3}</div>`:''}</div>`
-            : `<span class="text-slate-300 text-[10px] font-bold">—</span>`;
+            ? `<div class="flex -space-x-2">${imgs.slice(0,3).map(i=>`<img src="uploads/${i}" class="w-9 h-9 rounded-xl ring-2 ring-white object-cover cursor-pointer hover:z-10 hover:scale-110 transition" onclick="viewImg('uploads/${i}')">`).join('')}${imgs.length>3?`<div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 text-xs font-black flex items-center justify-center ring-2 ring-white">+${imgs.length-3}</div>`:''}</div>`
+            : `<span class="text-slate-300 text-xs font-bold">—</span>`;
         const nowD = new Date(), daysAgo = (nowD-new Date(r[8]))/(864e5);
         const overdue = isBorrowed && daysAgo>2;
         // r[9] = last_inspected date from API
         const lastInspected = r[9];
         const inspectBadge = lastInspected
-            ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[9px] font-black"><i class="bi bi-shield-check"></i> ${fmtDate(lastInspected)}</span>`
+            ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-black"><i class="bi bi-shield-check"></i> ${fmtDate(lastInspected)}</span>`
             : (isBorrowed
-                ? `<span class="text-[9px] text-amber-500 font-black"><i class="bi bi-shield-exclamation"></i> ยังไม่ตรวจ</span>`
-                : `<span class="text-[9px] text-slate-300 font-bold">—</span>`);
+                ? `<span class="text-xs text-amber-500 font-black"><i class="bi bi-shield-exclamation"></i> ยังไม่ตรวจ</span>`
+                : `<span class="text-xs text-slate-300 font-bold">—</span>`);
         return `<tr class="hover:bg-slate-50/50 transition ${overdue?'bg-rose-50/30':''}">
             <td class="px-5 py-4">
-                <span class="px-2.5 py-1 rounded-full text-[10px] font-black ${isBorrowed?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700'}">${isBorrowed?'ยืมอยู่':'คืนแล้ว'}</span>
-                ${overdue?`<div class="text-[9px] font-black text-rose-500 mt-0.5"><i class="bi bi-exclamation-triangle-fill"></i> ค้าง ${Math.floor(daysAgo)} วัน</div>`:''}
+                <span class="px-2.5 py-1 rounded-full text-xs font-black ${isBorrowed?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700'}">${isBorrowed?'ยืมอยู่':'คืนแล้ว'}</span>
+                ${overdue?`<div class="text-xs font-black text-rose-500 mt-0.5"><i class="bi bi-exclamation-triangle-fill"></i> ค้าง ${Math.floor(daysAgo)} วัน</div>`:''}
             </td>
-            <td class="px-5 py-4"><p class="font-bold text-slate-700">${name}</p><p class="text-[10px] text-slate-400 font-bold">${r[3]||r[1]}</p></td>
-            <td class="px-5 py-4"><p class="font-mono font-black text-xs text-cyan-600">${r[4]}</p><p class="text-[9px] text-slate-300 font-bold">${r[5]}</p></td>
+            <td class="px-5 py-4"><p class="font-bold text-slate-700">${name}</p><p class="text-xs text-slate-400 font-bold">${r[3]||r[1]}</p></td>
+            <td class="px-5 py-4"><p class="font-mono font-black text-xs text-cyan-600">${r[4]}</p><p class="text-xs text-slate-300 font-bold">${r[5]}</p></td>
             <td class="px-5 py-4 text-xs text-slate-400 font-bold">${dateStr}</td>
             <td class="px-5 py-4 text-center">${inspectBadge}</td>
             <td class="px-5 py-4 text-center">${imgHtml}</td>
@@ -611,21 +611,21 @@ function renderMasterList(tab) {
     // Teachers
     document.getElementById('list-teacher').innerHTML = S.teachers.length
         ? S.teachers.map(t=>`<div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5">
-            <div><p class="font-bold text-sm text-slate-700">${t[1]}</p><p class="font-mono text-[10px] text-slate-400">${t[0]}</p></div>
+            <div><p class="font-bold text-sm text-slate-700">${t[1]}</p><p class="font-mono text-xs text-slate-400">${t[0]}</p></div>
             <button onclick="delMaster('teacher','${t[0]}')" class="text-rose-400 hover:text-rose-600 transition p-1"><i class="bi bi-trash3 text-sm"></i></button>
         </div>`).join('')
         : '<p class="text-center text-slate-400 text-sm py-4 font-bold">ยังไม่มีข้อมูลครู</p>';
     // Students
     document.getElementById('list-student').innerHTML = S.students.length
         ? S.students.map(s=>`<div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5">
-            <div><p class="font-bold text-sm text-slate-700">${s[1]} <span class="text-[10px] text-emerald-600 font-black bg-emerald-50 px-2 py-0.5 rounded-lg">${s[2]}</span></p><p class="font-mono text-[10px] text-slate-400">${s[0]}</p></div>
+            <div><p class="font-bold text-sm text-slate-700">${s[1]} <span class="text-xs text-emerald-600 font-black bg-emerald-50 px-2 py-0.5 rounded-lg">${s[2]}</span></p><p class="font-mono text-xs text-slate-400">${s[0]}</p></div>
             <button onclick="delMaster('student','${s[0]}')" class="text-rose-400 hover:text-rose-600 transition p-1"><i class="bi bi-trash3 text-sm"></i></button>
         </div>`).join('')
         : '<p class="text-center text-slate-400 text-sm py-4 font-bold">ยังไม่มีข้อมูลนักเรียน</p>';
     // Chromebooks
     document.getElementById('list-chromebook').innerHTML = S.chromebooks.length
         ? S.chromebooks.map(c=>`<div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-2.5">
-            <div><p class="font-bold text-sm text-slate-700">${c[0]} – ${c[1]}</p><p class="font-mono text-[10px] text-slate-400">${c[2]}</p></div>
+            <div><p class="font-bold text-sm text-slate-700">${c[0]} – ${c[1]}</p><p class="font-mono text-xs text-slate-400">${c[2]}</p></div>
             <button onclick="delMaster('chromebook','${c[0]}')" class="text-rose-400 hover:text-rose-600 transition p-1"><i class="bi bi-trash3 text-sm"></i></button>
         </div>`).join('')
         : '<p class="text-center text-slate-400 text-sm py-4 font-bold">ยังไม่มีข้อมูลอุปกรณ์</p>';
@@ -731,11 +731,11 @@ async function importCSV(input, type) {
     const labels = { teacher: ['รหัสครู','ชื่อ-สกุล'], student: ['รหัส','ชื่อ-สกุล','ห้อง'], chromebook: ['รหัส','รุ่น','Serial'] };
     const cols   = labels[type];
     const previewRows = valid.slice(0, 5).map(r => `<tr>${r.slice(0,cols.length).map(c=>`<td class="px-3 py-1.5 border-b border-slate-100 text-xs text-slate-600">${c}</td>`).join('')}</tr>`).join('');
-    const moreTxt = valid.length > 5 ? `<p class="text-[10px] text-slate-400 font-bold mt-2">... และอีก ${valid.length-5} แถว</p>` : '';
+    const moreTxt = valid.length > 5 ? `<p class="text-xs text-slate-400 font-bold mt-2">... และอีก ${valid.length-5} แถว</p>` : '';
 
     const confirm = await Swal.fire({
         title: `นำเข้า ${valid.length} แถว?`,
-        html: `<div class="text-left overflow-x-auto"><table class="min-w-full"><thead><tr>${cols.map(c=>`<th class="px-3 py-2 text-[10px] font-black text-slate-400 uppercase">${c}</th>`).join('')}</tr></thead><tbody>${previewRows}</tbody></table>${moreTxt}</div>`,
+        html: `<div class="text-left overflow-x-auto"><table class="min-w-full"><thead><tr>${cols.map(c=>`<th class="px-3 py-2 text-xs font-black text-slate-400 uppercase">${c}</th>`).join('')}</tr></thead><tbody>${previewRows}</tbody></table>${moreTxt}</div>`,
         icon: 'question', showCancelButton: true,
         confirmButtonColor: '#0891b2', confirmButtonText: `นำเข้า ${valid.length} แถว`,
         cancelButtonText: 'ยกเลิก'

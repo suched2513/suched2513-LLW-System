@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * behavior/student_view.php — หน้านักเรียนดูข้อมูลตัวเอง (public / standalone)
  * ไม่ต้อง login ผ่าน llw_users — กรอกรหัสนักเรียนดูได้เลย
@@ -47,12 +47,12 @@ $autoLoginSid = isset($_SESSION['is_student']) ? ($_SESSION['student_code'] ?? '
 
         <form id="studentLoginForm">
             <div class="mb-4">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">รหัสนักเรียน (5 หลัก)</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">รหัสนักเรียน (5 หลัก)</label>
                 <input type="text" id="studentLoginId" placeholder="เช่น 12345" required
                     class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-center text-lg font-bold tracking-widest focus:ring-2 focus:ring-violet-500 outline-none transition-all">
             </div>
             <div class="mb-6">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เลขบัตรประชาชน 13 หลัก</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เลขบัตรประชาชน 13 หลัก</label>
                 <input type="password" id="studentCitizenId" placeholder="เลขบัตรประชาชน" required
                     class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-center text-sm font-bold tracking-widest focus:ring-2 focus:ring-violet-500 outline-none transition-all">
             </div>
@@ -102,21 +102,21 @@ $autoLoginSid = isset($_SESSION['is_student']) ? ($_SESSION['student_code'] ?? '
                     <div class="text-center mt-12">
                         <h4 class="text-lg font-black text-slate-800" id="stuViewName">-</h4>
                         <p class="text-xs text-slate-400 mt-1" id="stuViewMeta">-</p>
-                        <span class="inline-block mt-2 px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-[10px] font-bold border border-violet-100">
+                        <span class="inline-block mt-2 px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-xs font-bold border border-violet-100">
                             <i class="bi bi-person me-1"></i><span id="stuViewAdvisor">-</span>
                         </span>
                         <div class="grid grid-cols-3 gap-2 mt-4">
                             <div class="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
                                 <div class="text-2xl font-black text-emerald-600" id="stuViewScoreGood">0</div>
-                                <div class="text-[9px] font-bold text-emerald-400 uppercase">ความดี</div>
+                                <div class="text-xs font-bold text-emerald-400 uppercase">ความดี</div>
                             </div>
                             <div class="bg-rose-50 rounded-xl p-3 border border-rose-100">
                                 <div class="text-2xl font-black text-rose-600" id="stuViewScoreBad">0</div>
-                                <div class="text-[9px] font-bold text-rose-400 uppercase">ความผิด</div>
+                                <div class="text-xs font-bold text-rose-400 uppercase">ความผิด</div>
                             </div>
                             <div class="bg-sky-50 rounded-xl p-3 border border-sky-100">
                                 <div class="text-2xl font-black text-sky-600" id="stuViewScoreNet">100</div>
-                                <div class="text-[9px] font-bold text-sky-400 uppercase">สุทธิ</div>
+                                <div class="text-xs font-bold text-sky-400 uppercase">สุทธิ</div>
                             </div>
                         </div>
                     </div>
@@ -127,11 +127,11 @@ $autoLoginSid = isset($_SESSION['is_student']) ? ($_SESSION['student_code'] ?? '
                 <!-- Assembly & Discipline Sync Panel -->
                 <div id="sectionAssemblySync" class="hidden mt-6 text-left fade-in">
                     <div class="bg-gradient-to-br from-indigo-50/50 to-blue-50/50 rounded-2xl p-4 border border-indigo-100/30">
-                        <h6 class="text-[9px] font-black text-indigo-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <h6 class="text-xs font-black text-indigo-600 uppercase tracking-widest mb-3 flex items-center gap-2">
                             <i class="bi bi-shield-check"></i> การเข้าแถว & ระเบียบวินัย
                             <span class="ml-auto opacity-50" id="syncTimeAssembly"></span>
                         </h6>
-                        <div id="assemblyHistoryList" class="space-y-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar text-[9px]">
+                        <div id="assemblyHistoryList" class="space-y-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar text-xs">
                             <!-- Assembly items -->
                         </div>
                     </div>
@@ -140,11 +140,11 @@ $autoLoginSid = isset($_SESSION['is_student']) ? ($_SESSION['student_code'] ?? '
                 <!-- NEW: Subject Attendance Panel -->
                 <div id="sectionAttendanceSync" class="hidden mt-4 text-left fade-in">
                     <div class="bg-gradient-to-br from-emerald-50/50 to-teal-50/50 rounded-2xl p-4 border border-emerald-100/30">
-                        <h6 class="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <h6 class="text-xs font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-2">
                             <i class="bi bi-calendar-check-fill"></i> การเข้าเรียนรายวิชา (คาบ 1-8)
                             <span class="ml-auto opacity-50" id="syncTimeAttendance"></span>
                         </h6>
-                        <div id="attendanceHistoryList" class="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar text-[9px]">
+                        <div id="attendanceHistoryList" class="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar text-xs">
                             <!-- Attendance items -->
                         </div>
                     </div>
@@ -156,7 +156,7 @@ $autoLoginSid = isset($_SESSION['is_student']) ? ($_SESSION['student_code'] ?? '
                 <div class="bg-white rounded-2xl shadow-xl p-6 border border-slate-100">
                     <div class="flex justify-between items-center mb-4 pl-3 border-l-4 border-cyan-500">
                         <h5 class="text-lg font-black text-slate-800">ประวัติการบันทึก</h5>
-                        <button onclick="openSubmitDeedModal()" class="bg-violet-600 text-white px-3 py-1.5 rounded-xl font-bold text-[10px] shadow-lg shadow-violet-200 hover:scale-[1.02] transition-all flex items-center gap-2">
+                        <button onclick="openSubmitDeedModal()" class="bg-violet-600 text-white px-3 py-1.5 rounded-xl font-bold text-xs shadow-lg shadow-violet-200 hover:scale-[1.02] transition-all flex items-center gap-2">
                             <i class="bi bi-plus-circle-fill"></i> ส่งบันทึกความดี
                         </button>
                     </div>
@@ -343,7 +343,7 @@ async function loadAssemblySync(sid) {
                     <div class="flex justify-between items-start">
                         <div>
                             <span class="font-bold text-slate-800">${dateStr}</span>
-                            <span class="ml-2 px-2 py-0.5 rounded-full font-bold bg-white/50 text-[9px] uppercase">${statusText}</span>
+                            <span class="ml-2 px-2 py-0.5 rounded-full font-bold bg-white/50 text-xs uppercase">${statusText}</span>
                         </div>
                     </div>
                     ${dressVio.length > 0 ? `<div class="mt-2 font-bold text-rose-600 flex flex-wrap gap-1">
@@ -464,16 +464,16 @@ async function openSubmitDeedModal() {
         html: `
             <div class="text-left space-y-4 p-2">
                 <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">กิจกรรมที่ทำ</label>
+                    <label class="block text-xs font-black text-slate-400 uppercase mb-1">กิจกรรมที่ทำ</label>
                     <textarea id="swal-activity" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all h-24" placeholder="เช่น ช่วยคุณแม่ล้างจาน, ช่วยกวาดลานวัด..."></textarea>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">รูปถ่ายหลักฐาน</label>
+                    <label class="block text-xs font-black text-slate-400 uppercase mb-1">รูปถ่ายหลักฐาน</label>
                     <input type="file" id="swal-file" accept="image/*" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs">
                 </div>
                 <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 flex gap-2 items-start">
                     <i class="bi bi-info-circle-fill text-blue-500 mt-0.5"></i>
-                    <p class="text-[10px] text-blue-600 font-medium leading-relaxed">ข้อมูลนี้จะถูกส่งไปยังครูที่ปรึกษาเพื่อตรวจสอบและอนุมัติคะแนนความดีให้คุณครับ</p>
+                    <p class="text-xs text-blue-600 font-medium leading-relaxed">ข้อมูลนี้จะถูกส่งไปยังครูที่ปรึกษาเพื่อตรวจสอบและอนุมัติคะแนนความดีให้คุณครับ</p>
                 </div>
             </div>
         `,

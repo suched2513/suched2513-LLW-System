@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -59,7 +59,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
 
         <div class="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-100/50 border border-slate-100 group hover:border-emerald-200 transition-all">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">กำลัง Active</p>
+            <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">กำลัง Active</p>
             <div class="flex items-end justify-between mt-4">
                 <p class="text-5xl font-black text-slate-800 italic"><?= $activeGroups ?></p>
                 <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500">
@@ -69,7 +69,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
 
         <div class="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-100/50 border border-slate-100 group hover:border-violet-200 transition-all">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">บันทึกกิจกรรมรวม</p>
+            <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">บันทึกกิจกรรมรวม</p>
             <div class="flex items-end justify-between mt-4">
                 <p class="text-5xl font-black text-slate-800 italic"><?= $totalLogs ?></p>
                 <div class="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center text-violet-500">
@@ -79,7 +79,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
 
         <div class="bg-white rounded-[2rem] p-8 shadow-xl shadow-slate-100/50 border border-slate-100 group hover:border-blue-200 transition-all">
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">ครูที่เข้าร่วม</p>
+            <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">ครูที่เข้าร่วม</p>
             <div class="flex items-end justify-between mt-4">
                 <p class="text-5xl font-black text-slate-800 italic"><?= $totalParticipants ?></p>
                 <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500">
@@ -110,15 +110,15 @@ require_once __DIR__ . '/../components/layout_start.php';
             <table class="w-full">
                 <thead class="bg-slate-50">
                     <tr>
-                        <th class="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest px-6 py-4">#</th>
-                        <th class="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest px-6 py-4">ชื่อกลุ่ม</th>
-                        <th class="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest px-6 py-4">ผู้สร้าง</th>
-                        <th class="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest px-6 py-4">ปีการศึกษา</th>
-                        <th class="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest px-6 py-4">สมาชิก</th>
-                        <th class="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest px-6 py-4">PDCA Progress</th>
-                        <th class="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest px-6 py-4">บันทึก</th>
-                        <th class="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest px-6 py-4">สถานะ</th>
-                        <th class="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest px-6 py-4">จัดการ</th>
+                        <th class="text-left text-xs font-black text-slate-400 uppercase tracking-widest px-6 py-4">#</th>
+                        <th class="text-left text-xs font-black text-slate-400 uppercase tracking-widest px-6 py-4">ชื่อกลุ่ม</th>
+                        <th class="text-left text-xs font-black text-slate-400 uppercase tracking-widest px-6 py-4">ผู้สร้าง</th>
+                        <th class="text-left text-xs font-black text-slate-400 uppercase tracking-widest px-6 py-4">ปีการศึกษา</th>
+                        <th class="text-center text-xs font-black text-slate-400 uppercase tracking-widest px-6 py-4">สมาชิก</th>
+                        <th class="text-center text-xs font-black text-slate-400 uppercase tracking-widest px-6 py-4">PDCA Progress</th>
+                        <th class="text-center text-xs font-black text-slate-400 uppercase tracking-widest px-6 py-4">บันทึก</th>
+                        <th class="text-center text-xs font-black text-slate-400 uppercase tracking-widest px-6 py-4">สถานะ</th>
+                        <th class="text-center text-xs font-black text-slate-400 uppercase tracking-widest px-6 py-4">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
@@ -138,7 +138,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                                 <?= htmlspecialchars($g['group_name']) ?>
                             </a>
                             <?php if ($g['target_group']): ?>
-                            <p class="text-[10px] text-slate-400 font-bold mt-0.5 italic"><?= htmlspecialchars($g['target_group']) ?></p>
+                            <p class="text-xs text-slate-400 font-bold mt-0.5 italic"><?= htmlspecialchars($g['target_group']) ?></p>
                             <?php endif; ?>
                         </td>
                         <td class="px-6 py-4 text-xs font-bold text-slate-600"><?= htmlspecialchars($g['creator_name']) ?> <?= htmlspecialchars($g['creator_lastname']) ?></td>
@@ -156,7 +156,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                         </td>
                         <td class="px-6 py-4 text-center text-xs font-black text-slate-600"><?= $g['log_count'] ?></td>
                         <td class="px-6 py-4 text-center">
-                            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider <?= $statusClass ?>"><?= $g['status'] ?></span>
+                            <span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider <?= $statusClass ?>"><?= $g['status'] ?></span>
                         </td>
                         <td class="px-6 py-4 text-center">
                             <div class="flex items-center justify-center gap-2">

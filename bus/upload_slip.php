@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/config.php';
 busRequireStudent();
@@ -117,7 +117,7 @@ header('Content-Type: text/html; charset=UTF-8');
         </a>
         <div>
             <div class="font-black text-sm leading-tight">แนบสลิปโอนเงิน</div>
-            <div class="text-orange-100 text-[9px] font-bold">ค่าบริการรถรับส่ง</div>
+            <div class="text-orange-100 text-xs font-bold">ค่าบริการรถรับส่ง</div>
         </div>
     </div>
 </header>
@@ -149,14 +149,14 @@ header('Content-Type: text/html; charset=UTF-8');
     <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-50">
             <h2 class="font-black text-slate-700">กรอกข้อมูลสลิป</h2>
-            <p class="text-[10px] text-slate-400 mt-0.5">แนบรูปสลิปและกรอกข้อมูลการโอนเงิน</p>
+            <p class="text-xs text-slate-400 mt-0.5">แนบรูปสลิปและกรอกข้อมูลการโอนเงิน</p>
         </div>
         <form method="POST" enctype="multipart/form-data" class="p-5 space-y-5">
             <?= csrf_field() ?>
 
             <!-- Amount -->
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
                     จำนวนเงินที่โอน (บาท) <span class="text-rose-500">*</span>
                 </label>
                 <div class="relative">
@@ -168,12 +168,12 @@ header('Content-Type: text/html; charset=UTF-8');
                                   text-center focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all">
                     <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold pointer-events-none">฿</span>
                 </div>
-                <p class="text-[10px] text-slate-400 mt-1.5 text-center">ยอดค้างชำระ <?= number_format($balance, 0) ?> บาท</p>
+                <p class="text-xs text-slate-400 mt-1.5 text-center">ยอดค้างชำระ <?= number_format($balance, 0) ?> บาท</p>
             </div>
 
             <!-- Transfer Date -->
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
                     วันที่โอนเงิน <span class="text-rose-500">*</span>
                 </label>
                 <input type="date" name="transfer_date" required
@@ -184,7 +184,7 @@ header('Content-Type: text/html; charset=UTF-8');
 
             <!-- Slip Image Upload -->
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
                     รูปสลิปการโอนเงิน <span class="text-rose-500">*</span>
                 </label>
                 <label for="slipImageInput" id="imageDropZone"
@@ -193,7 +193,7 @@ header('Content-Type: text/html; charset=UTF-8');
                     <i class="bi bi-camera-fill text-4xl text-slate-300" id="dropIcon"></i>
                     <div class="text-center">
                         <p class="text-sm font-black text-slate-500" id="dropText">แตะเพื่อเลือกรูปภาพ</p>
-                        <p class="text-[10px] text-slate-400 mt-0.5">JPG, PNG, WebP · ไม่เกิน 8 MB</p>
+                        <p class="text-xs text-slate-400 mt-0.5">JPG, PNG, WebP · ไม่เกิน 8 MB</p>
                     </div>
                     <input type="file" name="slip_image" id="slipImageInput" required accept="image/*"
                            capture="environment" class="hidden" onchange="previewImage(this)">
@@ -210,7 +210,7 @@ header('Content-Type: text/html; charset=UTF-8');
 
             <!-- Note -->
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">หมายเหตุ (ไม่บังคับ)</label>
+                <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">หมายเหตุ (ไม่บังคับ)</label>
                 <textarea name="note" rows="2" maxlength="500"
                           placeholder="เช่น ชำระบางส่วน, ชำระครั้งที่ 1..."
                           class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm resize-none

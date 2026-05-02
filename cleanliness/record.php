@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -84,7 +84,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="space-y-3">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ห้องเรียนที่รับผิดชอบ</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">ห้องเรียนที่รับผิดชอบ</label>
                     <div class="flex flex-col gap-2">
                         <select onchange="document.getElementById('class_name_manual').value = this.value" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
                             <option value="">-- เลือกห้องเรียน --</option>
@@ -99,7 +99,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </div>
 
                 <div class="space-y-3">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">วันที่ประเมิน</label>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">วันที่ประเมิน</label>
                     <input type="date" name="score_date" value="<?= date('Y-m-d') ?>" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all">
                 </div>
             </div>
@@ -133,7 +133,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             </div>
 
             <div class="space-y-3">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">หมายเหตุ / ข้อเสนอแนะ</label>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">หมายเหตุ / ข้อเสนอแนะ</label>
                 <textarea name="notes" rows="3" placeholder="ระบุรายละเอียดเพิ่มเติม..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"></textarea>
             </div>
 

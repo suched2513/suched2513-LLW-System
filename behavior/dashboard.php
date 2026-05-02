@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * behavior/dashboard.php — ระบบบันทึกพฤติกรรมนักเรียน (Teacher Dashboard)
  * Tabs: บันทึกพฤติกรรม | ประวัติรายบุคคล | ฐานข้อมูลรวม
@@ -39,7 +39,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             <i class="bi bi-patch-check-fill"></i> อนุมัติความดี
             <span id="pendingBadge" class="hidden absolute -top-1 -right-1 flex h-4 w-4">
                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-[8px] text-white items-center justify-center font-black">!</span>
+                <span class="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-xs text-white items-center justify-center font-black">!</span>
             </span>
         </button>
         <button id="tab-btn-leaderboard" onclick="showTab('leaderboard')"
@@ -63,21 +63,21 @@ require_once __DIR__ . '/../components/layout_start.php';
             <div id="pendingTaskAlert" class="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-5 text-white shadow-xl shadow-indigo-200/50 hidden cursor-pointer transition-all hover:scale-[1.02]" onclick="showTab('approval')">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="text-[10px] font-black uppercase tracking-widest opacity-80">มีรายการรอยืนยัน</p>
+                        <p class="text-xs font-black uppercase tracking-widest opacity-80">มีรายการรอยืนยัน</p>
                         <p class="text-3xl font-black mt-1" id="pendingCountText">0</p>
                     </div>
                     <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-xl">
                         <i class="bi bi-patch-check"></i>
                     </div>
                 </div>
-                <p class="text-[10px] mt-3 font-bold opacity-80 border-t border-white/20 pt-2 flex items-center gap-2">
+                <p class="text-xs mt-3 font-bold opacity-80 border-t border-white/20 pt-2 flex items-center gap-2">
                     <i class="bi bi-arrow-right-circle"></i> คลิกเพื่อไปตรวจสอบโครงการ
                 </p>
             </div>
 
             <!-- Search -->
             <div class="bg-white rounded-2xl shadow-xl shadow-violet-100/50 p-5 border border-violet-100/30">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2 block">
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-2 block">
                     <i class="bi bi-search me-1"></i> ค้นหานักเรียน
                 </label>
                 <div class="flex gap-2 mb-3">
@@ -111,27 +111,27 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <div class="text-center mt-12">
                     <h4 class="text-lg font-black text-slate-800" id="sbpStudentName">-</h4>
                     <p class="text-xs text-slate-400 mt-1" id="sbpStudentMeta">-</p>
-                    <span class="inline-block mt-2 px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-[10px] font-bold border border-violet-100">
+                    <span class="inline-block mt-2 px-3 py-1 bg-violet-50 text-violet-600 rounded-full text-xs font-bold border border-violet-100">
                         <i class="bi bi-person-badge me-1"></i><span id="sbpAdvisorName">-</span>
                     </span>
 
                     <div class="grid grid-cols-3 gap-2 mt-4">
                         <div class="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
                             <div class="text-2xl font-black text-emerald-600" id="sbpScoreGood">0</div>
-                            <div class="text-[9px] font-bold text-emerald-400 uppercase">ความดี</div>
+                            <div class="text-xs font-bold text-emerald-400 uppercase">ความดี</div>
                         </div>
                         <div class="bg-rose-50 rounded-xl p-3 border border-rose-100">
                             <div class="text-2xl font-black text-rose-600" id="sbpScoreBad">0</div>
-                            <div class="text-[9px] font-bold text-rose-400 uppercase">ความผิด</div>
+                            <div class="text-xs font-bold text-rose-400 uppercase">ความผิด</div>
                         </div>
                         <div class="bg-sky-50 rounded-xl p-3 border border-sky-100">
                             <div class="text-2xl font-black text-sky-600" id="sbpScoreNet">100</div>
-                            <div class="text-[9px] font-bold text-sky-400 uppercase">สุทธิ</div>
+                            <div class="text-xs font-bold text-sky-400 uppercase">สุทธิ</div>
                         </div>
                     </div>
 
                     <div class="mt-5 no-print">
-                        <a id="sbpCertBtn" href="#" target="_blank" class="block w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-200 hover:scale-[1.02] transition-all">
+                        <a id="sbpCertBtn" href="#" target="_blank" class="block w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-200 hover:scale-[1.02] transition-all">
                             <i class="bi bi-patch-check-fill me-1"></i> Print Certificate
                         </a>
                     </div>
@@ -139,10 +139,10 @@ require_once __DIR__ . '/../components/layout_start.php';
 
                         <div id="sectionAssemblySync" class="hidden mt-6 animate-fade-in text-left">
                             <div class="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl p-4 border border-indigo-100/50">
-                                <h6 class="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <h6 class="text-xs font-black text-indigo-600 uppercase tracking-widest mb-3 flex items-center gap-2">
                                     <i class="bi bi-shield-check"></i> การเข้าแถว & ระเบียบวินัย
                                 </h6>
-                                <div id="assemblyHistoryList" class="space-y-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar text-[9px]">
+                                <div id="assemblyHistoryList" class="space-y-2 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar text-xs">
                                     <!-- Assembly items -->
                                 </div>
                             </div>
@@ -151,10 +151,10 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <!-- NEW: Subject Attendance Panel -->
                         <div id="sectionAttendanceSync" class="hidden mt-4 animate-fade-in text-left">
                             <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-100/50">
-                                <h6 class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <h6 class="text-xs font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-2">
                                     <i class="bi bi-calendar-check-fill"></i> การเข้าเรียนรายวิชา (คาบ 1-8)
                                 </h6>
-                                <div id="attendanceHistoryList" class="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar text-[9px]">
+                                <div id="attendanceHistoryList" class="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar text-xs">
                                     <!-- Attendance items -->
                                 </div>
                             </div>
@@ -174,17 +174,17 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <form id="behaviorForm">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">วันที่</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">วันที่</label>
                             <input type="date" id="behDate" required
                                 class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all">
                         </div>
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ผู้บันทึก</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ผู้บันทึก</label>
                             <input type="text" id="behTeacher" readonly
                                 class="w-full bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3 text-sm text-slate-500">
                         </div>
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ประเภท</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ประเภท</label>
                             <select id="behType" required
                                 class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all">
                                 <option value="">-- เลือกประเภท --</option>
@@ -193,24 +193,24 @@ require_once __DIR__ . '/../components/layout_start.php';
                             </select>
                         </div>
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">แม่แบบ (Quick Select)</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">แม่แบบ (Quick Select)</label>
                             <select id="behTemplateSelect"
                                 class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all">
                                 <option value="">(กำหนดเอง)</option>
                             </select>
                         </div>
                         <div class="md:col-span-2">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">รายละเอียด / กิจกรรม</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">รายละเอียด / กิจกรรม</label>
                             <textarea id="behActivity" rows="3" required placeholder="ระบุสิ่งที่นักเรียนทำ..."
                                 class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all resize-none"></textarea>
                         </div>
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">คะแนน</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">คะแนน</label>
                             <input type="number" id="behScore" min="1" placeholder="0" required
                                 class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all">
                         </div>
                         <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 block">รูปภาพ (หลักฐาน)</label>
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">รูปภาพ (หลักฐาน)</label>
                             <input type="file" id="behFile" accept="image/*"
                                 class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-sm file:mr-3 file:bg-violet-50 file:text-violet-600 file:border-0 file:rounded-lg file:px-3 file:py-1 file:font-bold file:text-xs">
                         </div>
@@ -312,13 +312,13 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <table class="w-full text-sm">
                             <thead class="bg-slate-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">วันที่</th>
-                                    <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ชื่อ-สกุล</th>
-                                    <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">ชั้น</th>
-                                    <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">ประเภท</th>
-                                    <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">กิจกรรม</th>
-                                    <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">คะแนน</th>
-                                    <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ผู้บันทึก</th>
+                                    <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">วันที่</th>
+                                    <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ชื่อ-สกุล</th>
+                                    <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">ชั้น</th>
+                                    <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">ประเภท</th>
+                                    <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">กิจกรรม</th>
+                                    <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">คะแนน</th>
+                                    <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ผู้บันทึก</th>
                                 </tr>
                             </thead>
                             <tbody id="databaseBody">
@@ -339,11 +339,11 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <table class="w-full text-sm">
                             <thead class="bg-slate-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ชื่อ-สกุล</th>
-                                    <th class="px-4 py-3 text-[10px] font-black text-emerald-500 uppercase tracking-wider border-b border-slate-100 text-center">ความดี (+)</th>
-                                    <th class="px-4 py-3 text-[10px] font-black text-rose-500 uppercase tracking-wider border-b border-slate-100 text-center">ความผิด (-)</th>
-                                    <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 text-center">คะแนนสุทธิ</th>
-                                    <th class="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 text-center">สถานะความเสี่ยง</th>
+                                    <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ชื่อ-สกุล</th>
+                                    <th class="px-4 py-3 text-xs font-black text-emerald-500 uppercase tracking-wider border-b border-slate-100 text-center">ความดี (+)</th>
+                                    <th class="px-4 py-3 text-xs font-black text-rose-500 uppercase tracking-wider border-b border-slate-100 text-center">ความผิด (-)</th>
+                                    <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 text-center">คะแนนสุทธิ</th>
+                                    <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 text-center">สถานะความเสี่ยง</th>
                                 </tr>
                             </thead>
                             <tbody id="classroomSummaryBody">
@@ -386,7 +386,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     <div class="mt-6 bg-white rounded-2xl shadow-xl shadow-violet-100/50 p-6 border border-violet-100/30">
         <div class="flex justify-between items-center mb-4">
             <h6 class="text-sm font-black text-slate-800">จัดการสิทธิ์ครูที่ปรึกษา</h6>
-            <button onclick="openAdvisorMappingModal()" class="text-[10px] font-black bg-slate-800 text-white px-3 py-1.5 rounded-lg hover:bg-slate-700 transition-all">
+            <button onclick="openAdvisorMappingModal()" class="text-xs font-black bg-slate-800 text-white px-3 py-1.5 rounded-lg hover:bg-slate-700 transition-all">
                 <i class="bi bi-gear-fill me-1"></i> ตั้งค่าห้องเรียนที่คุณดูแล
             </button>
         </div>
@@ -406,7 +406,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             
             <div class="mt-10 w-full px-8 space-y-4">
                 <div class="bg-white/20 backdrop-blur-md rounded-2xl p-6 border border-white/30">
-                    <p class="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Top Performer</p>
+                    <p class="text-xs font-black uppercase tracking-widest opacity-70 mb-1">Top Performer</p>
                     <h5 id="leaderboardTopName" class="text-xl font-black">-</h5>
                 </div>
                 <button onclick="loadLeaderboard()" class="w-full bg-white text-orange-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-orange-700/20 hover:scale-[1.02] transition-all">
@@ -421,7 +421,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <h5 class="text-lg font-black text-slate-800 flex items-center gap-3">
                     <i class="bi bi-stars text-amber-500"></i> อันดับนักเรียนคะแนนความดีสูงสุด
                 </h5>
-                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full border border-slate-100">Updated Real-time</span>
+                <span class="text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full border border-slate-100">Updated Real-time</span>
             </div>
 
             <div id="leaderboardContainer" class="space-y-4">
@@ -441,7 +441,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <h5 class="text-lg font-black text-slate-800 flex items-center gap-3">
                         <i class="bi bi-bar-chart-fill text-indigo-600"></i> แผนภูมิคะแนนเฉลี่ยรายห้อง
                     </h5>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Average Behavior Score per Class</p>
+                    <p class="text-xs text-slate-400 font-bold uppercase mt-1">Average Behavior Score per Class</p>
                 </div>
                 <div class="h-[400px]">
                     <canvas id="roomStatsChart"></canvas>
@@ -453,7 +453,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <h5 class="text-lg font-black text-slate-800 flex items-center gap-3">
                         <i class="bi bi-pie-chart-fill text-rose-500"></i> สัดส่วนพฤติกรรมในระบบ
                     </h5>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Good Deeds vs Violations Distribution</p>
+                    <p class="text-xs text-slate-400 font-bold uppercase mt-1">Good Deeds vs Violations Distribution</p>
                 </div>
                 <div class="h-[400px] flex items-center justify-center">
                     <canvas id="typeRatioChart"></canvas>
@@ -597,12 +597,12 @@ async function loadLeaderboard() {
                     </div>
                     <div>
                         <p class="text-sm font-black text-slate-800">${esc(st.name)}</p>
-                        <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">${classDisplay} | ID: ${esc(st.student_id)}</p>
+                        <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">${classDisplay} | ID: ${esc(st.student_id)}</p>
                     </div>
                 </div>
                 <div class="text-right">
                     <div class="text-xl font-black text-amber-600">${st.net_score}</div>
-                    <div class="text-[8px] font-black text-slate-300 uppercase tracking-widest">Net Points</div>
+                    <div class="text-xs font-black text-slate-300 uppercase tracking-widest">Net Points</div>
                 </div>
             `;
             container.appendChild(card);
@@ -765,7 +765,7 @@ async function loadStudentFocus(sid) {
             <button onclick="handleSearchResultSelect('${s.student_id}')" 
                     class="w-full text-left p-3 hover:bg-violet-50 rounded-xl border border-transparent hover:border-violet-100 transition-all mb-1">
                 <div class="font-bold text-slate-800">${esc(s.name)}</div>
-                <div class="text-[10px] text-slate-400">ID: ${s.student_id} | ชั้น: ${esc(s.classroom)}</div>
+                <div class="text-xs text-slate-400">ID: ${s.student_id} | ชั้น: ${esc(s.classroom)}</div>
             </button>
         `).join('');
         
@@ -843,7 +843,7 @@ async function loadAttendanceSync(sid) {
                 if (status === 'สาย') bgColor = 'bg-orange-400 text-white';
 
                 pHtml += `<div class="flex flex-col items-center gap-0.5" title="${p ? esc(p.subject) : 'ไม่พบข้อมูล'}">
-                    <span class="text-[8px] font-black text-slate-400">คาบ ${i}</span>
+                    <span class="text-xs font-black text-slate-400">คาบ ${i}</span>
                     <div class="w-5 h-5 rounded-md flex items-center justify-center font-black ${bgColor}">${status[0]}</div>
                 </div>`;
             }
@@ -894,7 +894,7 @@ async function loadAssemblySync(sid) {
                 <div class="flex justify-between items-start">
                     <div>
                         <span class="font-bold text-slate-800">${dateStr}</span>
-                        <span class="ml-2 px-2 py-0.5 rounded-full font-bold bg-white/50 text-[9px] uppercase">${statusText}</span>
+                        <span class="ml-2 px-2 py-0.5 rounded-full font-bold bg-white/50 text-xs uppercase">${statusText}</span>
                     </div>
                 </div>
                 ${dressVio.length > 0 ? `<div class="mt-2 font-bold text-rose-600 flex flex-wrap gap-1">
@@ -1058,8 +1058,8 @@ function renderDatabaseTable(data) {
         tr.innerHTML = `
             <td class="px-4 py-3 text-xs text-slate-500">${new Date(row.date).toLocaleDateString('th-TH')}</td>
             <td class="px-4 py-3 text-sm font-bold text-slate-700">${esc(row.studentName)}</td>
-            <td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold">${esc(row.classInfo || '-')}</span></td>
-            <td class="px-4 py-3 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-black ${isGood ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">${esc(row.type)}</span></td>
+            <td class="px-4 py-3 text-center"><span class="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">${esc(row.classInfo || '-')}</span></td>
+            <td class="px-4 py-3 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-black ${isGood ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}">${esc(row.type)}</span></td>
             <td class="px-4 py-3 text-sm text-slate-600">${esc(row.activity)}</td>
             <td class="px-4 py-3 text-center font-black ${isGood ? 'text-emerald-600' : 'text-rose-600'}">${row.score}</td>
             <td class="px-4 py-3 text-xs text-slate-400">${esc(row.teacher || '-')}</td>
@@ -1149,8 +1149,8 @@ async function loadPendingDeeds() {
                         <div class="flex-1">
                             <div class="font-black text-slate-800 text-sm leading-tight">${esc(r.student_name)}</div>
                             <div class="flex items-center gap-2 mt-1">
-                                <span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-wider">ม.${esc(r.level || '')}/${esc(r.room || '')}</span>
-                                <span class="text-[9px] text-slate-400 font-bold"><i class="bi bi-calendar-event me-1"></i>${dateStr}</span>
+                                <span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-black uppercase tracking-wider">ม.${esc(r.level || '')}/${esc(r.room || '')}</span>
+                                <span class="text-xs text-slate-400 font-bold"><i class="bi bi-calendar-event me-1"></i>${dateStr}</span>
                             </div>
                         </div>
                     </div>
@@ -1230,14 +1230,14 @@ async function openAdvisorMappingModal() {
                 html: `
                 <div class="text-left">
                     <div class="mb-4">
-                        <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block">เพิ่มห้องที่ดูแล</label>
+                        <label class="text-xs font-black text-slate-400 uppercase mb-1 block">เพิ่มห้องที่ดูแล</label>
                         <div class="flex gap-2">
                             <input type="text" id="map-level" placeholder="ชั้น (เช่น 4)" class="w-1/2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm">
                             <input type="text" id="map-room" placeholder="ห้อง (เช่น 1)" class="w-1/2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm">
                             <button onclick="addAdvisorMapping()" class="bg-slate-800 text-white px-3 rounded-lg"><i class="bi bi-plus-lg"></i></button>
                         </div>
                     </div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block">รายการห้องปัจจุบัน</label>
+                    <label class="text-xs font-black text-slate-400 uppercase mb-1 block">รายการห้องปัจจุบัน</label>
                     <div id="advisorMappingList" class="max-h-48 overflow-y-auto">${listHtml}</div>
                 </div>`
             });
@@ -1296,11 +1296,11 @@ function renderClassroomSummary(data) {
         const tr = document.createElement('tr');
         tr.className = 'border-b border-slate-50 hover:bg-slate-50 transition-colors';
         tr.innerHTML = `
-            <td class="px-4 py-3 font-bold text-slate-700">${esc(s.name)}<br><span class="text-[10px] text-slate-400 font-mono">${esc(s.studentId)}</span></td>
+            <td class="px-4 py-3 font-bold text-slate-700">${esc(s.name)}<br><span class="text-xs text-slate-400 font-mono">${esc(s.studentId)}</span></td>
             <td class="px-4 py-3 text-center font-black text-emerald-600">${s.good}</td>
             <td class="px-4 py-3 text-center font-black text-rose-600">${s.bad}</td>
             <td class="px-4 py-3 text-center font-black text-slate-800 text-lg">${s.net}</td>
-            <td class="px-4 py-3 text-center"><span class="px-3 py-1 rounded-full text-[10px] font-black ${riskColor}">${riskLabel}</span></td>
+            <td class="px-4 py-3 text-center"><span class="px-3 py-1 rounded-full text-xs font-black ${riskColor}">${riskLabel}</span></td>
         `;
         body.appendChild(tr);
     });
@@ -1393,7 +1393,7 @@ function renderStudentModalPage() {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'w-full flex justify-between items-center px-4 py-3 rounded-xl hover:bg-violet-50 text-left transition-all border-b border-slate-50';
-        btn.innerHTML = `<span class="text-sm font-medium text-slate-700">${esc(s.studentId)} - ${esc(s.name)}</span><span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-lg text-[10px] font-bold">${esc(s.classText || '')}</span>`;
+        btn.innerHTML = `<span class="text-sm font-medium text-slate-700">${esc(s.studentId)} - ${esc(s.name)}</span><span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-lg text-xs font-bold">${esc(s.classText || '')}</span>`;
         btn.onclick = () => {
             document.getElementById('teacherStudentIdInput').value = s.studentId;
             closeStudentModal();

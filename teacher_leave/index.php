@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * teacher_leave/index.php
  * Leave System Dashboard
@@ -28,7 +28,7 @@ require_once '../components/layout_start.php';
             </div>
             <div>
                 <h3 class="font-black text-slate-800 tracking-tight">ระบบใบลาออนไลน์</h3>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 italic">จัดการการลาตามระเบียบโรงเรียน</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1 italic">จัดการการลาตามระเบียบโรงเรียน</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
@@ -79,7 +79,7 @@ require_once '../components/layout_start.php';
                         <i class="bi bi-person-workspace"></i>
                     </div>
                     <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">รอการตรวจสอบ</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">รอการตรวจสอบ</p>
                         <p class="text-2xl font-black text-slate-800" id="stat-waiting-verify">0</p>
                     </div>
                 </div>
@@ -89,7 +89,7 @@ require_once '../components/layout_start.php';
                         <i class="bi bi-calendar-event"></i>
                     </div>
                     <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ลางานวันนี้</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ลางานวันนี้</p>
                         <p class="text-2xl font-black text-slate-800" id="stat-on-leave-today">0</p>
                     </div>
                 </div>
@@ -99,7 +99,7 @@ require_once '../components/layout_start.php';
                         <i class="bi bi-mortarboard"></i>
                     </div>
                     <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">รอ ผอ./รองฯ</p>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">รอ ผอ./รองฯ</p>
                         <p class="text-2xl font-black text-slate-800" id="stat-waiting-director">0</p>
                     </div>
                 </div>
@@ -117,7 +117,7 @@ require_once '../components/layout_start.php';
                 <div class="p-8">
                     <div class="overflow-x-auto">
                         <table id="leaveTable" class="min-w-full text-sm">
-                            <thead class="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                            <thead class="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                                 <tr>
                                     <th class="px-6 py-5">ชื่อผู้ลา / ประเภทใบลา</th>
                                     <th class="px-6 py-5">จำนวน</th>
@@ -145,13 +145,13 @@ require_once '../components/layout_start.php';
             </div>
             <div>
                 <h3 class="font-black text-slate-800 text-lg" id="modalTitle">อนุมัติใบลา</h3>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest" id="modalSubtitle">กรุณาลงนามและยืนยัน</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest" id="modalSubtitle">กรุณาลงนามและยืนยัน</p>
             </div>
         </div>
 
         <!-- Comment -->
         <div>
-            <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">ความคิดเห็น (ไม่บังคับ)</label>
+            <label class="text-xs font-black text-slate-500 uppercase tracking-widest block mb-2">ความคิดเห็น (ไม่บังคับ)</label>
             <textarea id="approveComment" rows="2"
                 class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all resize-none"
                 placeholder="ใส่เหตุผลหรือข้อความเพิ่มเติม..."></textarea>
@@ -160,15 +160,15 @@ require_once '../components/layout_start.php';
         <!-- Signature Canvas -->
         <div>
             <div class="flex items-center justify-between mb-2">
-                <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest" id="sigLabel">ลายเซ็นผู้อำนวยการ <span class="text-rose-500">*</span></label>
-                <button onclick="clearDirectorSig()" class="text-[10px] font-black text-slate-400 hover:text-rose-500 transition-all uppercase tracking-widest flex items-center gap-1">
+                <label class="text-xs font-black text-slate-500 uppercase tracking-widest" id="sigLabel">ลายเซ็นผู้อำนวยการ <span class="text-rose-500">*</span></label>
+                <button onclick="clearDirectorSig()" class="text-xs font-black text-slate-400 hover:text-rose-500 transition-all uppercase tracking-widest flex items-center gap-1">
                     <i class="bi bi-arrow-counterclockwise"></i> ล้าง
                 </button>
             </div>
             <canvas id="directorSigCanvas"
                 class="w-full border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 cursor-crosshair touch-none"
                 style="height:140px"></canvas>
-            <p class="text-[9px] text-slate-400 mt-1 font-bold">วาดลายเซ็นในกรอบด้านบน</p>
+            <p class="text-xs text-slate-400 mt-1 font-bold">วาดลายเซ็นในกรอบด้านบน</p>
         </div>
 
         <!-- Attachment (If any) -->
@@ -179,11 +179,11 @@ require_once '../components/layout_start.php';
                         <i class="bi bi-file-earmark-medical"></i>
                     </div>
                     <div>
-                        <p class="text-[10px] font-black text-slate-800 uppercase tracking-wider leading-none mb-1">ใบรับรองแพทย์</p>
-                        <p class="text-[9px] font-bold text-slate-400">คลิกเพื่อดูเอกสารหลักฐาน</p>
+                        <p class="text-xs font-black text-slate-800 uppercase tracking-wider leading-none mb-1">ใบรับรองแพทย์</p>
+                        <p class="text-xs font-bold text-slate-400">คลิกเพื่อดูเอกสารหลักฐาน</p>
                     </div>
                 </div>
-                <a id="btn-view-att" href="#" target="_blank" class="px-4 py-2 bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-600 transition-all shadow-md shadow-rose-100">ดูไฟล์</a>
+                <a id="btn-view-att" href="#" target="_blank" class="px-4 py-2 bg-rose-500 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-rose-600 transition-all shadow-md shadow-rose-100">ดูไฟล์</a>
             </div>
         </div>
 
@@ -217,49 +217,49 @@ $(document).ready(function() {
                 render: (d, t, r) => `
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-slate-100 flex flex-col items-center justify-center font-black leading-none shrink-0">
-                            <span class="text-[8px] text-slate-400 uppercase">${new Date(d).toLocaleString('th-TH', {month:'short'})}</span>
+                            <span class="text-xs text-slate-400 uppercase">${new Date(d).toLocaleString('th-TH', {month:'short'})}</span>
                             <span class="text-lg text-slate-700">${new Date(d).getDate()}</span>
                         </div>
                         <div>
                             <?php if ($isAdmin): ?>
-                            <div class="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-0.5">${r.t_name}</div>
+                            <div class="text-xs font-black text-rose-500 uppercase tracking-widest mb-0.5">${r.t_name}</div>
                             <?php endif; ?>
                             <div class="font-bold text-slate-800">${r.leave_type_text}</div>
-                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${d} - ${r.date_end}</div>
+                            <div class="text-xs font-black text-slate-400 uppercase tracking-widest">${d} - ${r.date_end}</div>
                         </div>
                     </div>
                 `
             },
             { 
                 data: 'days_count',
-                render: (d) => `<div class="font-black text-slate-700 text-lg">${d} <span class="text-[10px] text-slate-400 uppercase">วัน</span></div>`
+                render: (d) => `<div class="font-black text-slate-700 text-lg">${d} <span class="text-xs text-slate-400 uppercase">วัน</span></div>`
             },
             { 
                 data: 'status',
                 render: (data, t, r) => {
                     if (data === 'approved') {
-                        return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black tracking-widest whitespace-nowrap">
+                        return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-xs font-black tracking-widest whitespace-nowrap">
                             <i class="bi bi-check-circle-fill"></i> อนุมัติแล้ว
                         </span>`;
                     }
                     if (data === 'rejected') {
-                        return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black tracking-widest whitespace-nowrap">
+                        return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-rose-50 text-rose-600 text-xs font-black tracking-widest whitespace-nowrap">
                             <i class="bi bi-x-circle-fill"></i> ไม่อนุมัติ
                         </span>`;
                     }
                     // pending — แสดงตาม level
                     const lvl = r.level_at;
                     if (lvl <= 1) {
-                        return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-black tracking-widest whitespace-nowrap">
+                        return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-50 text-amber-600 text-xs font-black tracking-widest whitespace-nowrap">
                             <i class="bi bi-hourglass-split"></i> รอตรวจสอบจากเจ้าหน้าที่
                         </span>`;
                     }
                     if (lvl === 2) {
-                        return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black tracking-widest whitespace-nowrap">
+                        return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 text-xs font-black tracking-widest whitespace-nowrap">
                             <i class="bi bi-person-check"></i> รออนุมัติ ผอ./รองฯ
                         </span>`;
                     }
-                    return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-50 text-slate-500 text-[10px] font-black tracking-widest whitespace-nowrap">
+                    return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-50 text-slate-500 text-xs font-black tracking-widest whitespace-nowrap">
                         <i class="bi bi-clock"></i> รอดำเนินการ
                     </span>`;
                 }
@@ -278,7 +278,7 @@ $(document).ready(function() {
 
                     <?php if ($isAdmin): ?>
                     if (r.status === 'pending') {
-                        html += `<button onclick='openApproval(${JSON.stringify(r)})' class="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-blue-100">อนุมัติ</button>`;
+                        html += `<button onclick='openApproval(${JSON.stringify(r)})' class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-blue-100">อนุมัติ</button>`;
                     }
                     <?php endif; ?>
                     
@@ -300,15 +300,15 @@ $(document).ready(function() {
 
             let html = `
                 <div class="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex justify-between items-center group hover:bg-blue-50 transition-all">
-                    <div><p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">ลาป่วยสะสม</p><p class="text-xl font-black text-blue-700">${s.sick_taken} วัน</p></div>
+                    <div><p class="text-xs font-black text-blue-400 uppercase tracking-widest mb-1">ลาป่วยสะสม</p><p class="text-xl font-black text-blue-700">${s.sick_taken} วัน</p></div>
                     <div class="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center text-xl shadow-lg shadow-blue-200 group-hover:scale-110 transition-all"><i class="bi bi-heart-pulse"></i></div>
                 </div>
                 <div class="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex justify-between items-center group hover:bg-emerald-50 transition-all">
-                    <div><p class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">ลากิจสะสม</p><p class="text-xl font-black text-emerald-700">${s.personal_taken} วัน</p></div>
+                    <div><p class="text-xs font-black text-emerald-400 uppercase tracking-widest mb-1">ลากิจสะสม</p><p class="text-xl font-black text-emerald-700">${s.personal_taken} วัน</p></div>
                     <div class="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center text-xl shadow-lg shadow-emerald-200 group-hover:scale-110 transition-all"><i class="bi bi-briefcase"></i></div>
                 </div>
                 <div class="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex justify-between items-center group hover:bg-indigo-50 transition-all">
-                    <div><p class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">ลาพักผ่อนคงเหลือ</p><p class="text-xl font-black text-indigo-700">${s.vacation_quota - s.vacation_taken} / ${s.vacation_quota}</p></div>
+                    <div><p class="text-xs font-black text-indigo-400 uppercase tracking-widest mb-1">ลาพักผ่อนคงเหลือ</p><p class="text-xl font-black text-indigo-700">${s.vacation_quota - s.vacation_taken} / ${s.vacation_quota}</p></div>
                     <div class="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center text-xl shadow-lg shadow-indigo-200 group-hover:scale-110 transition-all"><i class="bi bi-sun"></i></div>
                 </div>
             `;

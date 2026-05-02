@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once '../config.php';
 
@@ -79,13 +79,13 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <label class="block text-sm font-black text-slate-700 mb-2">เวลาเริ่มงานปกติ</label>
                     <input type="time" name="regular_time_in" value="<?= $settings['regular_time_in'] ?>" 
                         class="w-full bg-slate-50 border border-slate-200 rounded-2xlt px-5 py-4 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold" required>
-                    <p class="mt-2 text-[10px] text-slate-400 font-bold uppercase tracking-wide">Standard Check-in Time</p>
+                    <p class="mt-2 text-xs text-slate-400 font-bold uppercase tracking-wide">Standard Check-in Time</p>
                 </div>
                 <div>
                     <label class="block text-sm font-black text-slate-700 mb-2">เวลาที่เริ่มนับว่า "มาสาย"</label>
                     <input type="time" name="late_time" value="<?= $settings['late_time'] ?>" 
                         class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold" required>
-                    <p class="mt-2 text-[10px] text-slate-400 font-bold uppercase tracking-wide">Mark as "Late" after this time</p>
+                    <p class="mt-2 text-xs text-slate-400 font-bold uppercase tracking-wide">Mark as "Late" after this time</p>
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-200 transition-all hover:scale-[1.02] active:scale-[0.98]">
                     <i class="bi bi-save-fill me-2"></i> บันทึกเวลา
@@ -113,7 +113,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <input type="text" name="boss_name" value="<?= htmlspecialchars($settings['boss_name'] ?? '') ?>" 
                             placeholder="เช่น นาย สมศักดิ์์ ใจดี" 
                             class="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-sm focus:bg-white focus:text-slate-800 outline-none transition-all font-black placeholder:text-white/40" required>
-                        <p class="mt-2 text-[10px] text-white/50 font-bold uppercase tracking-wide">Will be used in print-ready reports</p>
+                        <p class="mt-2 text-xs text-white/50 font-bold uppercase tracking-wide">Will be used in print-ready reports</p>
                     </div>
                     <button type="submit" class="w-full bg-white text-indigo-600 font-black py-4 rounded-2xl shadow-xl transition-all hover:bg-slate-50 hover:scale-[1.02] active:scale-[0.98]">
                         <i class="bi bi-check2-circle me-2"></i> อัปเดตข้อมูล
@@ -214,19 +214,19 @@ require_once __DIR__ . '/../components/layout_start.php';
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="space-y-1">
-                <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest ml-1">Detected Base Path</p>
+                <p class="text-xs font-black text-indigo-300 uppercase tracking-widest ml-1">Detected Base Path</p>
                 <div class="bg-white px-4 py-3 rounded-xl border border-indigo-100 font-mono text-xs font-bold text-indigo-600">
                     <?= $base_path ?: '(Root /)' ?>
                 </div>
             </div>
             <div class="space-y-1">
-                <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest ml-1">Current Request URI</p>
+                <p class="text-xs font-black text-indigo-300 uppercase tracking-widest ml-1">Current Request URI</p>
                 <div class="bg-white px-4 py-3 rounded-xl border border-indigo-100 font-mono text-xs font-bold text-slate-500">
                     <?= htmlspecialchars($_SERVER['REQUEST_URI']) ?>
                 </div>
             </div>
             <div class="space-y-1">
-                <p class="text-[10px] font-black text-indigo-300 uppercase tracking-widest ml-1">Document Root</p>
+                <p class="text-xs font-black text-indigo-300 uppercase tracking-widest ml-1">Document Root</p>
                 <div class="bg-white px-4 py-3 rounded-xl border border-indigo-100 font-mono text-xs font-bold text-slate-500 overflow-hidden text-ellipsis">
                     <?= htmlspecialchars($_SERVER['DOCUMENT_ROOT']) ?>
                 </div>
@@ -235,7 +235,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         
         <div class="mt-6 flex items-start gap-3 bg-white/60 p-4 rounded-2xl border border-indigo-100">
             <i class="bi bi-lightbulb-fill text-indigo-500"></i>
-            <p class="text-[11px] font-bold text-indigo-800/80 leading-relaxed uppercase tracking-tight">
+            <p class="text-sm font-bold text-indigo-800/80 leading-relaxed uppercase tracking-tight">
                 PRO-TIP: ระบบตรวจสอบเส้นทาง (Path) โดยการเปรียบเทียบ Directory หลักกับ Document Root อัตโนมัติ ทำให้ลิงก์ใน Sidebar และ Breadcrumbs ทำงานถูกต้องเสมอไม่ว่าจะย้ายโฟลเดอร์โปรเจกต์ไปที่ใด
             </p>
         </div>

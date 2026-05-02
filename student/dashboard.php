@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/_guard.php';
@@ -120,7 +120,7 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
             </div>
             <div>
                 <div class="font-black text-sm leading-tight">พอร์ทัลนักเรียน</div>
-                <div class="text-teal-200 text-[10px] font-bold">โรงเรียนละลมวิทยา</div>
+                <div class="text-teal-200 text-xs font-bold">โรงเรียนละลมวิทยา</div>
             </div>
         </div>
         <a href="/student/logout.php"
@@ -149,13 +149,13 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
             <?= mb_substr($name, 0, 1, 'UTF-8') ?>
         </div>
         <div class="flex-1 min-w-0">
-            <p class="text-teal-200 text-[10px] font-bold"><?= htmlspecialchars($greeting) ?></p>
+            <p class="text-teal-200 text-xs font-bold"><?= htmlspecialchars($greeting) ?></p>
             <p class="font-black text-base leading-tight truncate"><?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?></p>
             <div class="flex items-center gap-2 mt-1">
-                <span class="px-2 py-0.5 bg-white/15 rounded-full text-[10px] font-black border border-white/20">
+                <span class="px-2 py-0.5 bg-white/15 rounded-full text-xs font-black border border-white/20">
                     <?= htmlspecialchars($class, ENT_QUOTES, 'UTF-8') ?>
                 </span>
-                <span class="text-teal-200 text-[10px]">รหัส <?= htmlspecialchars($code, ENT_QUOTES, 'UTF-8') ?></span>
+                <span class="text-teal-200 text-xs">รหัส <?= htmlspecialchars($code, ENT_QUOTES, 'UTF-8') ?></span>
             </div>
         </div>
     </div>
@@ -164,7 +164,7 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
     <?php if ($attStats['total'] > 0): ?>
     <div class="mt-4 pt-4 border-t border-white/20">
         <div class="flex items-center justify-between mb-1.5">
-            <span class="text-teal-100 text-[10px] font-bold">การเข้าเรียนภาคเรียนนี้</span>
+            <span class="text-teal-100 text-xs font-bold">การเข้าเรียนภาคเรียนนี้</span>
             <span class="text-white font-black text-sm"><?= $attPct ?>%</span>
         </div>
         <div class="h-2 bg-white/20 rounded-full overflow-hidden">
@@ -172,7 +172,7 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
                         <?= $attPct >= 80 ? 'bg-emerald-300' : ($attPct >= 60 ? 'bg-amber-300' : 'bg-rose-300') ?>"
                  style="width:<?= $attPct ?>%"></div>
         </div>
-        <div class="flex gap-3 mt-2 text-[10px] text-teal-200 font-bold">
+        <div class="flex gap-3 mt-2 text-xs text-teal-200 font-bold">
             <span><i class="bi bi-check-circle"></i> มา <?= $attStats['present'] + $attStats['late'] ?></span>
             <span><i class="bi bi-x-circle"></i> ขาด <?= $attStats['absent'] ?></span>
             <span><i class="bi bi-calendar-x"></i> ลา <?= $attStats['leave'] ?></span>
@@ -190,7 +190,7 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
     </div>
     <div class="flex-1 min-w-0">
         <p class="font-black text-amber-800 text-sm">ยังไม่ได้กรอกแบบสำรวจการเดินทาง</p>
-        <p class="text-amber-600 text-[11px] font-medium">กรุณากรอกเพื่อช่วยโรงเรียนวางแผนรถรับส่ง</p>
+        <p class="text-amber-600 text-sm font-medium">กรุณากรอกเพื่อช่วยโรงเรียนวางแผนรถรับส่ง</p>
     </div>
     <i class="bi bi-chevron-right text-amber-400"></i>
 </a>
@@ -209,13 +209,13 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
             <p class="font-black text-slate-700 text-sm leading-tight">การเดินทาง</p>
             <?php if ($transport): ?>
                 <?php $tInfo = $typeLabel[$transport['transport_type']] ?? ['label'=>$transport['transport_type'],'color'=>'slate']; ?>
-                <p class="text-<?= $tInfo['color'] ?>-600 text-[11px] font-bold mt-0.5"><?= htmlspecialchars($tInfo['label']) ?></p>
-                <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black
+                <p class="text-<?= $tInfo['color'] ?>-600 text-sm font-bold mt-0.5"><?= htmlspecialchars($tInfo['label']) ?></p>
+                <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-black
                              <?= $transport['status'] === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' ?>">
                     <?= $transport['status'] === 'confirmed' ? 'ยืนยันแล้ว' : 'รอยืนยัน' ?>
                 </span>
             <?php else: ?>
-                <p class="text-slate-400 text-[11px] font-bold mt-0.5">ยังไม่ได้กรอก</p>
+                <p class="text-slate-400 text-sm font-bold mt-0.5">ยังไม่ได้กรอก</p>
             <?php endif; ?>
         </div>
     </a>
@@ -229,10 +229,10 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
         <div>
             <p class="font-black text-slate-700 text-sm leading-tight">เวลาเรียน</p>
             <?php if ($attStats['total'] > 0): ?>
-                <p class="text-blue-600 text-[11px] font-bold mt-0.5"><?= $attPct ?>% เข้าเรียน</p>
-                <p class="text-slate-400 text-[10px]"><?= $attStats['total'] ?> คาบรวม</p>
+                <p class="text-blue-600 text-sm font-bold mt-0.5"><?= $attPct ?>% เข้าเรียน</p>
+                <p class="text-slate-400 text-xs"><?= $attStats['total'] ?> คาบรวม</p>
             <?php else: ?>
-                <p class="text-slate-400 text-[11px] font-bold mt-0.5">ดูประวัติ</p>
+                <p class="text-slate-400 text-sm font-bold mt-0.5">ดูประวัติ</p>
             <?php endif; ?>
         </div>
     </a>
@@ -247,13 +247,13 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
         <div>
             <p class="font-black text-slate-700 text-sm leading-tight">รถรับส่ง</p>
             <?php if ($busReg): ?>
-                <p class="text-orange-600 text-[11px] font-bold mt-0.5">สาย <?= htmlspecialchars($busReg['route_code'], ENT_QUOTES, 'UTF-8') ?></p>
-                <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black
+                <p class="text-orange-600 text-sm font-bold mt-0.5">สาย <?= htmlspecialchars($busReg['route_code'], ENT_QUOTES, 'UTF-8') ?></p>
+                <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-black
                              <?= $busReg['status'] === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500' ?>">
                     <?= $busReg['status'] === 'active' ? 'ลงทะเบียนแล้ว' : htmlspecialchars($busReg['status']) ?>
                 </span>
             <?php else: ?>
-                <p class="text-slate-400 text-[11px] font-bold mt-0.5">ดูสถานะ</p>
+                <p class="text-slate-400 text-sm font-bold mt-0.5">ดูสถานะ</p>
             <?php endif; ?>
         </div>
     </a>
@@ -266,7 +266,7 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
         </div>
         <div>
             <p class="font-black text-slate-700 text-sm leading-tight">รถรับส่ง</p>
-            <p class="text-slate-400 text-[11px] font-bold mt-0.5">สำรวจการเดินทาง</p>
+            <p class="text-slate-400 text-sm font-bold mt-0.5">สำรวจการเดินทาง</p>
         </div>
     </a>
     <?php endif; ?>
@@ -279,7 +279,7 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
         </div>
         <div>
             <p class="font-black text-slate-700 text-sm leading-tight">คะแนนพฤติกรรม</p>
-            <p class="text-violet-500 text-[11px] font-bold mt-0.5">ดูคะแนน</p>
+            <p class="text-violet-500 text-sm font-bold mt-0.5">ดูคะแนน</p>
         </div>
     </a>
 
@@ -293,7 +293,7 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
         </div>
         <div>
             <p class="font-black text-slate-600 text-xs">ใบลาออนไลน์</p>
-            <p class="text-slate-400 text-[10px]">เร็วๆ นี้</p>
+            <p class="text-slate-400 text-xs">เร็วๆ นี้</p>
         </div>
     </div>
     <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 opacity-50 flex items-center gap-3">
@@ -302,13 +302,13 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
         </div>
         <div>
             <p class="font-black text-slate-600 text-xs">เลือกชุมนุม</p>
-            <p class="text-slate-400 text-[10px]">เร็วๆ นี้</p>
+            <p class="text-slate-400 text-xs">เร็วๆ นี้</p>
         </div>
     </div>
 </div>
 
 <!-- ── Footer ──────────────────────────────────────────────────── -->
-<p class="text-center text-[10px] text-slate-400 font-bold pt-2 pb-4">
+<p class="text-center text-xs text-slate-400 font-bold pt-2 pb-4">
     © <?= date('Y') ?> โรงเรียนละลมวิทยา &nbsp;·&nbsp; ภาคเรียน <?= htmlspecialchars($semester) ?>
 </p>
 
