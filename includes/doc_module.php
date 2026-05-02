@@ -278,6 +278,8 @@ function renderDocumentModal($doc_type, $config = []) {
                                     <div id="fileList" class="mt-3 space-y-2">
                                         <!-- Selected files will list here -->
                                     </div>
+                                </div>
+
                                 <div class="mb-3">
                                     <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 d-block">มอบหมายให้บุคลากร</label>
                                     <select name="involved_users[]" id="involved_users" class="form-select select2-multiple" multiple="multiple" style="width: 100%">
@@ -290,9 +292,9 @@ function renderDocumentModal($doc_type, $config = []) {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
+                            </div><!-- /col-md-6 right -->
+                        </div><!-- /row -->
+                    </div><!-- /modal-body -->
                     
                     <div class="modal-footer border-0 p-6 pt-0">
                         <button type="button" class="btn btn-light rounded-2xl px-5 py-3 font-bold" data-bs-dismiss="modal">ยกเลิก</button>
