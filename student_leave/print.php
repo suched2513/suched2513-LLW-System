@@ -46,17 +46,15 @@ try {
 }
 
 // Helper functions
-function extractFirstName($fullName) {
+function stripTitle($fullName) {
     $name = trim($fullName);
     $prefixes = ['เด็กชาย', 'เด็กหญิง', 'ด.ช.', 'ด.ญ.', 'นาย', 'นางสาว', 'นาง', 'น.ส.'];
     foreach ($prefixes as $p) {
         if (mb_strpos($name, $p, 0, 'UTF-8') === 0) {
-            $name = ltrim(mb_substr($name, mb_strlen($p, 'UTF-8'), null, 'UTF-8'));
-            break;
+            return ltrim(mb_substr($name, mb_strlen($p, 'UTF-8'), null, 'UTF-8'));
         }
     }
-    $parts = preg_split('/\s+/u', $name);
-    return $parts[0] ?? $name;
+    return $name;
 }
 
 function thaiDate($dateStr) {
@@ -91,8 +89,8 @@ $reason      = $req['reason']       ?? '';
 $parentName  = $req['parent_name']  ?? '';
 $parentPhone = $req['parent_phone'] ?? '';
 $teacherNote = $req['teacher_note'] ?? '';
-$studentFirstName = extractFirstName($studentName);
-$parentFirstName  = $parentName ? extractFirstName($parentName) : '.................................';
+$studentNameNoTitle = stripTitle($studentName);
+$parentNameNoTitle  = $parentName ? stripTitle($parentName) : '';
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
@@ -129,9 +127,9 @@ body {
     margin-right: 10mm;
 }
 .sig-table td { padding: 0; }
-.sig-table .td-label { white-space: nowrap; padding: 0 6px; vertical-align: bottom; }
-.sig-table .td-line  { width: 200px; border-bottom: 1px dotted #000; vertical-align: bottom; text-align: center; }
-.sig-table .td-name  { text-align: center; font-size: 14pt; color: #333; padding-top: 2px; }
+.sig-table .td-label  { white-space: nowrap; padding: 0 6px; vertical-align: bottom; }
+.sig-table .td-name-inline { min-width: 180px; text-align: center; vertical-align: bottom; padding: 0 8px; }
+.sig-table .td-full-name   { text-align: center; font-size: 14pt; color: #333; padding-top: 1px; }
 .divider { border-top: 1px solid #999; margin: 8mm 0 6mm 0; }
 .teacher-section { background: #f9f9f9; padding: 4mm 6mm; border: 1px solid #ccc; border-radius: 4px; }
 .print-btn {
@@ -202,12 +200,12 @@ body {
         <table class="sig-table" style="margin-bottom: 8mm;">
             <tr>
                 <td class="td-label">ลงชื่อ</td>
-                <td class="td-line">&nbsp;</td>
+                <td class="td-name-inline"><?= htmlspecialchars($studentNameNoTitle, ENT_QUOTES, 'UTF-8') ?></td>
                 <td class="td-label">นักเรียน</td>
             </tr>
             <tr>
                 <td></td>
-                <td class="td-name">(<?= htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') ?>)</td>
+                <td class="td-full-name">(<?= htmlspecialchars($studentName, ENT_QUOTES, 'UTF-8') ?>)</td>
                 <td></td>
             </tr>
         </table>
@@ -216,18 +214,18 @@ body {
         <table class="sig-table">
             <tr>
                 <td class="td-label">ลงชื่อ</td>
-                <td class="td-line">&nbsp;</td>
+                <td class="td-name-inline"><?= htmlspecialchars($parentNameNoTitle, ENT_QUOTES, 'UTF-8') ?></td>
                 <td class="td-label">ผู้ปกครอง</td>
             </tr>
             <tr>
                 <td></td>
-                <td class="td-name">(<?= htmlspecialchars($parentFirstName, ENT_QUOTES, 'UTF-8') ?>)</td>
+                <td class="td-full-name">(<?= htmlspecialchars($parentName, ENT_QUOTES, 'UTF-8') ?>)</td>
                 <td></td>
             </tr>
             <?php if ($parentPhone): ?>
             <tr>
                 <td></td>
-                <td class="td-name" style="font-size:13pt; color:#555;">โทร. <?= htmlspecialchars($parentPhone, ENT_QUOTES, 'UTF-8') ?></td>
+                <td class="td-full-name" style="font-size:13pt; color:#555;">โทร. <?= htmlspecialchars($parentPhone, ENT_QUOTES, 'UTF-8') ?></td>
                 <td></td>
             </tr>
             <?php endif; ?>
@@ -259,18 +257,18 @@ body {
         <table class="sig-table" style="margin-top: 4mm;">
             <tr>
                 <td class="td-label">ลงชื่อ</td>
-                <td class="td-line">&nbsp;</td>
+                <td class="td-name-inline" style="border-bottom: 1px dotted #999;">&nbsp;</td>
                 <td class="td-label">ครูที่ปรึกษา</td>
             </tr>
             <tr>
                 <td></td>
-                <td class="td-name">&nbsp;</td>
+                <td class="td-full-name">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</td>
                 <td></td>
             </tr>
             <?php if ($req['approved_at']): ?>
             <tr>
                 <td></td>
-                <td class="td-name" style="font-size:13pt; color:#666;">วันที่ <?= thaiDate(substr($req['approved_at'], 0, 10)) ?></td>
+                <td class="td-full-name" style="font-size:13pt; color:#666;">วันที่ <?= thaiDate(substr($req['approved_at'], 0, 10)) ?></td>
                 <td></td>
             </tr>
             <?php endif; ?>
