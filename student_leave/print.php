@@ -19,9 +19,10 @@ try {
     $pdo = getPdo();
 
     $stmt = $pdo->prepare("
-        SELECT r.*, s.name AS student_name, s.classroom
+        SELECT r.*, s.name AS student_name, s.classroom, t.name AS teacher_name
         FROM stl_requests r
         LEFT JOIN att_students s ON s.student_id = r.student_id
+        LEFT JOIN att_teachers t ON t.id = r.teacher_id
         WHERE r.id = ?
         LIMIT 1
     ");
@@ -89,8 +90,10 @@ $reason      = $req['reason']       ?? '';
 $parentName  = $req['parent_name']  ?? '';
 $parentPhone = $req['parent_phone'] ?? '';
 $teacherNote = $req['teacher_note'] ?? '';
+$teacherName        = $req['teacher_name'] ?? '';
 $studentNameNoTitle = stripTitle($studentName);
 $parentNameNoTitle  = $parentName ? stripTitle($parentName) : '';
+$teacherNameNoTitle = $teacherName ? stripTitle($teacherName) : '';
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
@@ -257,12 +260,22 @@ body {
         <table class="sig-table" style="margin-top: 4mm;">
             <tr>
                 <td class="td-label">ลงชื่อ</td>
+                <?php if ($teacherNameNoTitle): ?>
+                <td class="td-name-inline"><?= htmlspecialchars($teacherNameNoTitle, ENT_QUOTES, 'UTF-8') ?></td>
+                <?php else: ?>
                 <td class="td-name-inline" style="border-bottom: 1px dotted #999;">&nbsp;</td>
+                <?php endif; ?>
                 <td class="td-label">ครูที่ปรึกษา</td>
             </tr>
             <tr>
                 <td></td>
-                <td class="td-full-name">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</td>
+                <td class="td-full-name">
+                    <?php if ($teacherName): ?>
+                    (<?= htmlspecialchars($teacherName, ENT_QUOTES, 'UTF-8') ?>)
+                    <?php else: ?>
+                    (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
+                    <?php endif; ?>
+                </td>
                 <td></td>
             </tr>
             <?php if ($req['approved_at']): ?>
