@@ -18,22 +18,12 @@ if (preg_match('/^\d+$/', $sid)) {
 
 try {
     $pdo  = getPdo();
-    $stmt = $pdo->prepare("SELECT id, fullname, national_id_hash, is_active FROM bus_students WHERE student_id = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT national_id_hash FROM att_students WHERE student_id = ? AND national_id_hash IS NOT NULL LIMIT 1");
     $stmt->execute([$sid]);
     $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$student) {
-        echo json_encode(['status' => 'error', 'message' => 'ไม่พบรหัสนักเรียนนี้ในระบบรถรับส่ง']);
-        exit;
-    }
-
-    if (!$student['is_active']) {
-        echo json_encode(['status' => 'error', 'message' => 'บัญชีนี้ถูกระงับการใช้งาน']);
-        exit;
-    }
-
-    if (!password_verify($citizenId, $student['national_id_hash'])) {
-        echo json_encode(['status' => 'error', 'message' => 'เลขบัตรประชาชนไม่ถูกต้อง']);
+    if (!$student || !password_verify($citizenId, $student['national_id_hash'])) {
+        echo json_encode(['status' => 'error', 'message' => 'รหัสนักเรียนหรือเลขบัตรประชาชนไม่ถูกต้อง']);
         exit;
     }
 

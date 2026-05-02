@@ -2,9 +2,11 @@
 /**
  * behavior/student_view.php — หน้านักเรียนดูข้อมูลตัวเอง (public / standalone)
  * ไม่ต้อง login ผ่าน llw_users — กรอกรหัสนักเรียนดูได้เลย
+ * ถ้ามาจาก student portal (session is_student) จะ auto-login ข้ามหน้ากรอก
  */
 session_start();
 require_once __DIR__ . '/../config/database.php';
+$autoLoginSid = isset($_SESSION['is_student']) ? ($_SESSION['student_code'] ?? '') : '';
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -198,6 +200,25 @@ try {
 } catch(e) {}
 
 let currentSid = '';
+
+// Auto-login if coming from student portal (already authenticated)
+(async function() {
+    const autoSid = <?= json_encode($autoLoginSid) ?>;
+    if (!autoSid) return;
+    currentSid = normId(autoSid);
+    try {
+        const res = await fetch(basePath + '/behavior/api/get_student_focus.php?sid=' + encodeURIComponent(currentSid) + '&mode=student');
+        const data = await res.json();
+        if (data && data.st) {
+            renderStudentView(data, currentSid);
+            loadAssemblySync(currentSid);
+            loadAttendanceSync(currentSid);
+            loadBusData(currentSid);
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('studentScreen').classList.remove('hidden');
+        }
+    } catch(e) { /* fall through to manual login */ }
+})();
 
 document.getElementById('studentLoginForm').onsubmit = async function(e) {
     e.preventDefault();

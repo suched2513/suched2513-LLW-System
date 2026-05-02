@@ -271,16 +271,17 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
     </a>
     <?php endif; ?>
 
-    <!-- พฤติกรรม (coming soon) -->
-    <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 opacity-60 flex flex-col gap-3">
+    <!-- พฤติกรรม -->
+    <a href="/behavior/student_view.php"
+       class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 active:scale-95 transition-transform flex flex-col gap-3">
         <div class="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center">
-            <i class="bi bi-star-fill text-violet-400 text-2xl"></i>
+            <i class="bi bi-star-fill text-violet-500 text-2xl"></i>
         </div>
         <div>
             <p class="font-black text-slate-700 text-sm leading-tight">คะแนนพฤติกรรม</p>
-            <span class="inline-block mt-1 px-2 py-0.5 bg-slate-100 text-slate-400 rounded-full text-[9px] font-black">เร็วๆ นี้</span>
+            <p class="text-violet-500 text-[11px] font-bold mt-0.5">ดูคะแนน</p>
         </div>
-    </div>
+    </a>
 
 </div>
 
