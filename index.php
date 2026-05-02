@@ -118,7 +118,7 @@ $modules = [
     ['url'=>'teacher_leave/index.php',         'icon'=>'bi-calendar-check-fill', 'bgIcon'=>'bi-file-earmark-text',    'title'=>'ใบลาออนไลน์',        'short'=>'ใบลา',      'desc'=>'ระบบยื่นใบลาป่วย กิจ พักผ่อน ตามระเบียบราชการ พร้อมสถิติสะสม',                    'color'=>'rose',   'gradient'=>'from-rose-600 to-red-600',       'delay'=>0.6],
     ['url'=>'plc_system/dashboard.php',        'icon'=>'bi-journal-richtext',    'bgIcon'=>'bi-journal-bookmark',     'title'=>'ระบบ PLC ออนไลน์',   'short'=>'PLC',       'desc'=>'ชุมชนแห่งการเรียนรู้ทางวิชาชีพ บันทึกกิจกรรมตามกระบวนการ PDCA',                  'color'=>'violet', 'gradient'=>'from-violet-600 to-purple-600',  'delay'=>0.7],
     ['url'=>'behavior/dashboard.php',          'icon'=>'bi-journal-text',        'bgIcon'=>'bi-journal-bookmark-fill','title'=>'บันทึกพฤติกรรม',     'short'=>'พฤติกรรม',  'desc'=>'ระบบจัดการคะแนนความประพฤติ บันทึกความดี และพฤติกรรมด้านต่างๆ',                    'color'=>'violet', 'gradient'=>'from-violet-600 to-indigo-600',  'delay'=>0.8],
-    ['url'=>'behavior/student_view.php',       'icon'=>'bi-person-badge',        'bgIcon'=>'bi-mortarboard',          'title'=>'พอร์ทัลนักเรียน',    'short'=>'นักเรียน',  'desc'=>'ตรวจสอบคะแนนพฤติกรรม และส่งบันทึกความดีเพื่อขอรับคะแนน (ไม่ต้อง Login ครู)','color'=>'violet', 'gradient'=>'from-purple-500 to-indigo-500',  'delay'=>0.9,'isPublic'=>true],
+    ['url'=>'student/login.php',              'icon'=>'bi-mortarboard-fill',    'bgIcon'=>'bi-mortarboard',          'title'=>'พอร์ทัลนักเรียน',    'short'=>'นักเรียน',  'desc'=>'ดูเวลาเรียน สำรวจการเดินทาง ตรวจสอบสถานะรถรับส่ง และบริการสำหรับนักเรียน',   'color'=>'teal',   'gradient'=>'from-teal-500 to-cyan-500',      'delay'=>0.9,'isPublic'=>true],
     ['url'=>'homeroom/index.php',              'icon'=>'bi-mortarboard-fill',    'bgIcon'=>'bi-mortarboard',          'title'=>'ระบบครูที่ปรึกษา',   'short'=>'ที่ปรึกษา', 'desc'=>'ศูนย์กลางการดูแลหนักเรียนประจำชั้น ติดตามการเข้าแถว พฤติกรรม',                     'color'=>'indigo', 'gradient'=>'from-indigo-600 to-violet-700',  'delay'=>1.0],
     ['url'=>'school_project/index.php',        'icon'=>'bi-cash-coin',           'bgIcon'=>'bi-wallet2',              'title'=>'ระบบงบประมาณ (SBMS)', 'short'=>'งบประมาณ',  'desc'=>'จัดการโครงการ ขอดำเนินการ เบิกจ่ายงบประมาณ และพิมพ์เอกสารอนุมัติ (2569)',       'color'=>'amber',  'gradient'=>'from-amber-500 to-orange-500',   'delay'=>1.1],
     ['url'=>'bus/admin/dashboard.php',         'icon'=>'bi-bus-front-fill',      'bgIcon'=>'bi-bus-front',            'title'=>'ระบบจัดการรถรับส่ง', 'short'=>'รถรับส่ง',    'desc'=>'จัดการสายรถรับส่ง ลงทะเบียนนักเรียน และบันทึกการชำระเงินค่าบริการ',             'color'=>'orange', 'gradient'=>'from-orange-500 to-amber-500',   'delay'=>1.2],
@@ -343,10 +343,10 @@ $modules = [
                     <p class="text-blue-200 text-xs font-medium mt-2"><?= htmlspecialchars($thaiDate) ?></p>
                     <div class="flex flex-col gap-2 mt-5">
                         <a href="login.php" class="flex items-center justify-center gap-2 w-full py-3 bg-white text-blue-700 rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-transform">
-                            <i class="bi bi-box-arrow-in-right"></i>เข้าสู่ระบบ
+                            <i class="bi bi-box-arrow-in-right"></i>เข้าสู่ระบบ (บุคลากร)
                         </a>
-                        <a href="behavior/student_view.php" class="flex items-center justify-center gap-2 w-full py-3 bg-white/15 text-white rounded-2xl font-bold text-sm border border-white/20 active:bg-white/25 transition-colors">
-                            <i class="bi bi-mortarboard-fill"></i>พอร์ทัลนักเรียน (ไม่ต้อง Login)
+                        <a href="student/login.php" class="flex items-center justify-center gap-2 w-full py-3 bg-gradient-to-r from-teal-400 to-cyan-400 text-white rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-transform">
+                            <i class="bi bi-mortarboard-fill"></i>พอร์ทัลนักเรียน
                         </a>
                     </div>
                 </div>
@@ -550,13 +550,13 @@ $modules = [
     <?php if (!$isLoggedIn): ?>
     <div class="mt-12 flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-delay-3">
         <a href="login.php" class="px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black shadow-2xl shadow-blue-200/50 hover:shadow-blue-300/70 hover:scale-105 hover:-translate-y-1 transition-all text-sm flex items-center justify-center gap-2">
-            <i class="bi bi-box-arrow-in-right"></i>เข้าสู่ระบบ Platinum
+            <i class="bi bi-box-arrow-in-right"></i>บุคลากร / ครู
+        </a>
+        <a href="student/login.php" class="px-10 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-2xl font-black shadow-2xl shadow-teal-200/50 hover:shadow-teal-300/70 hover:scale-105 hover:-translate-y-1 transition-all text-sm flex items-center justify-center gap-2">
+            <i class="bi bi-mortarboard-fill"></i>พอร์ทัลนักเรียน
         </a>
         <a href="#desktop-modules" class="px-10 py-4 bg-white/80 backdrop-blur-sm text-slate-600 border border-slate-200 rounded-2xl font-black hover:bg-white hover:shadow-xl hover:scale-105 hover:-translate-y-1 transition-all text-sm shadow-lg flex items-center justify-center gap-2">
             <i class="bi bi-grid-1x2-fill"></i>ดูระบบทั้งหมด
-        </a>
-        <a href="behavior/student_view.php" class="px-10 py-4 bg-violet-600 text-white rounded-2xl font-black shadow-2xl shadow-violet-200/50 hover:shadow-violet-300/70 hover:scale-105 hover:-translate-y-1 transition-all text-sm flex items-center justify-center gap-2">
-            <i class="bi bi-mortarboard-fill"></i>สำหรับนักเรียน (เช็คคะแนน)
         </a>
     </div>
     <?php endif; ?>

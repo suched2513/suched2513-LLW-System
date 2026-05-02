@@ -104,6 +104,7 @@ $subMenus = [
         ['icon' => 'fas fa-chart-bar',            'label' => 'รายงาน',             'url' => $base_path . '/bus/admin/reports.php'],
         ['icon' => 'fas fa-file-invoice-dollar',  'label' => 'บันทึกการชำระเงิน', 'url' => $base_path . '/bus/finance/payments.php',       'roles' => ['super_admin','bus_admin','bus_finance','wfh_admin']],
         ['icon' => 'fas fa-times-circle',         'label' => 'คำขอยกเลิก',        'url' => $base_path . '/bus/finance/cancellations.php',  'roles' => ['super_admin','bus_admin','bus_finance','wfh_admin']],
+        ['icon' => 'fas fa-poll',                 'label' => 'สำรวจการเดินทาง',   'url' => $base_path . '/student/admin/survey_report.php', 'roles' => ['super_admin','bus_admin','wfh_admin','att_teacher']],
     ],
 ];
 
