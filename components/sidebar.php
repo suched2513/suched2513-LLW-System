@@ -22,6 +22,7 @@ elseif (strpos($full_url, '/school_project/') !== false)     $activeSystem = 'bu
 elseif (basename($full_url) === 'student_info.php' || basename($full_url) === 'teacher_info.php') $activeSystem = 'info';
 elseif (strpos($full_url, '/bus/admin/') !== false || strpos($full_url, '/bus/finance/') !== false) $activeSystem = 'bus';
 elseif (strpos($full_url, '/edocument/') !== false)        $activeSystem = 'edoc';
+elseif (strpos($full_url, '/student_leave/') !== false)   $activeSystem = 'student_leave';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
 
 /**
@@ -54,6 +55,10 @@ $subMenus = [
         ['icon' => 'fas fa-check-double',   'label' => 'เช็คชื่อเข้าแถว',   'url' => $base_path . '/assembly/dashboard.php'],
         ['icon' => 'fas fa-chart-line',     'label' => 'รายงานผู้บริหาร',   'url' => $base_path . '/assembly/admin.php',            'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-users-cog',      'label' => 'จัดการนักเรียน',    'url' => $base_path . '/assembly/manage_students.php',  'roles' => ['super_admin']],
+    ],
+    'student_leave' => [
+        ['icon' => 'fas fa-clipboard-list', 'label' => 'รายการใบลา',  'url' => $base_path . '/student_leave/teacher.php'],
+        ['icon' => 'fas fa-clock',          'label' => 'รออนุมัติ',    'url' => $base_path . '/student_leave/teacher.php?status=pending'],
     ],
     'attendance' => [
         ['icon' => 'fas fa-tachometer-alt', 'label' => 'Dashboard',         'url' => $base_path . '/attendance_system/dashboard.php'],
@@ -191,6 +196,26 @@ $subMenus = [
                     <ul class="nav nav-treeview">
                         <?php foreach ($subMenus['assembly'] as $sub): 
                              if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                        ?>
+                        <li class="nav-item">
+                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
+                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
+                                <p><?= $sub['label'] ?></p>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </li>
+
+                <!-- Student Leave -->
+                <li class="nav-item <?= $activeSystem === 'student_leave' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'student_leave' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-file-medical-alt"></i>
+                        <p>ใบลานักเรียน <i class="nav-arrow fas fa-angle-left"></i></p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <?php foreach ($subMenus['student_leave'] as $sub):
+                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
                         ?>
                         <li class="nav-item">
                             <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">

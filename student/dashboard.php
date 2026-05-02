@@ -287,15 +287,15 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
 
 <!-- ── Second row: ใบลา + ชุมนุม (coming soon) ─────────────────── -->
 <div class="grid grid-cols-2 gap-3">
-    <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 opacity-50 flex items-center gap-3">
+    <a href="/student_leave/index.php" class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 active:scale-95 transition-transform flex items-center gap-3">
         <div class="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <i class="bi bi-file-earmark-text-fill text-rose-400 text-xl"></i>
+            <i class="bi bi-file-earmark-text-fill text-rose-500 text-xl"></i>
         </div>
         <div>
             <p class="font-black text-slate-600 text-xs">ใบลาออนไลน์</p>
-            <p class="text-slate-400 text-xs">เร็วๆ นี้</p>
+            <p class="text-rose-500 text-[11px]">ยื่นใบลา</p>
         </div>
-    </div>
+    </a>
     <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 opacity-50 flex items-center gap-3">
         <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
             <i class="bi bi-people-fill text-indigo-400 text-xl"></i>
