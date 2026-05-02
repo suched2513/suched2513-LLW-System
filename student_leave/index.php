@@ -106,7 +106,7 @@ body { font-family: 'Prompt', sans-serif; overscroll-behavior-y: contain; }
 
     <!-- ผู้ปกครอง -->
     <div class="bg-slate-50 rounded-2xl p-4 space-y-3">
-        <p class="text-xs font-black text-slate-500 uppercase tracking-wider">ข้อมูลผู้ปกครอง (ไม่บังคับ)</p>
+        <p class="text-xs font-black text-slate-500 uppercase tracking-wider">ข้อมูลผู้ปกครอง <span class="text-rose-500">*</span></p>
         <input type="text" id="f_parent_name" placeholder="ชื่อผู้ปกครอง"
                class="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none transition-all">
         <input type="tel" id="f_parent_phone" placeholder="เบอร์โทรศัพท์"
@@ -197,7 +197,8 @@ async function submitLeave() {
     if (!date_from)  { Swal.fire({ icon: 'warning', title: 'กรุณาระบุวันที่เริ่มลา',  confirmButtonColor: '#0d9488' }); return; }
     if (!date_to)    { Swal.fire({ icon: 'warning', title: 'กรุณาระบุวันที่สิ้นสุด',  confirmButtonColor: '#0d9488' }); return; }
     if (date_to < date_from) { Swal.fire({ icon: 'warning', title: 'วันที่ไม่ถูกต้อง', text: 'วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น', confirmButtonColor: '#0d9488' }); return; }
-    if (!reason)     { Swal.fire({ icon: 'warning', title: 'กรุณาระบุเหตุผลการลา',   confirmButtonColor: '#0d9488' }); return; }
+    if (!reason)       { Swal.fire({ icon: 'warning', title: 'กรุณาระบุเหตุผลการลา',     confirmButtonColor: '#0d9488' }); return; }
+    if (!parent_name)  { Swal.fire({ icon: 'warning', title: 'กรุณาระบุชื่อผู้ปกครอง', confirmButtonColor: '#0d9488' }); return; }
 
     const btn = document.getElementById('submit_btn');
     btn.disabled = true;
