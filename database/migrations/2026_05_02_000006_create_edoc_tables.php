@@ -11,11 +11,11 @@ return [
         }
 
         // 1. Incoming Documents
-        $pdo->exec("CREATE TABLE IF NOT EXISTS edoc_incoming_documents (
+        $pdo->exec("CREATE TABLE IF NOT EXISTS edoc_incoming (
             id           INT AUTO_INCREMENT PRIMARY KEY,
             doc_number   VARCHAR(100) NOT NULL,
             doc_date     DATE NOT NULL,
-            subject      VARCHAR(255) NOT NULL,
+            subject      TEXT NOT NULL,
             status       ENUM('ประกาศใช้แล้ว', 'รออนุมัติ', 'ยกเลิก') NOT NULL DEFAULT 'รออนุมัติ',
             school_id    VARCHAR(50) DEFAULT NULL,
             year_be      INT NOT NULL,
@@ -28,11 +28,11 @@ return [
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // 2. Outgoing Documents
-        $pdo->exec("CREATE TABLE IF NOT EXISTS edoc_outgoing_documents (
+        $pdo->exec("CREATE TABLE IF NOT EXISTS edoc_outgoing (
             id           INT AUTO_INCREMENT PRIMARY KEY,
             doc_number   VARCHAR(100) NOT NULL,
             doc_date     DATE NOT NULL,
-            subject      VARCHAR(255) NOT NULL,
+            subject      TEXT NOT NULL,
             status       ENUM('ประกาศใช้แล้ว', 'รออนุมัติ', 'ยกเลิก') NOT NULL DEFAULT 'รออนุมัติ',
             school_id    VARCHAR(50) DEFAULT NULL,
             year_be      INT NOT NULL,
@@ -49,7 +49,7 @@ return [
             id           INT AUTO_INCREMENT PRIMARY KEY,
             doc_number   VARCHAR(100) NOT NULL,
             doc_date     DATE NOT NULL,
-            subject      VARCHAR(255) NOT NULL,
+            subject      TEXT NOT NULL,
             status       ENUM('ประกาศใช้แล้ว', 'รออนุมัติ', 'ยกเลิก') NOT NULL DEFAULT 'รออนุมัติ',
             school_id    VARCHAR(50) DEFAULT NULL,
             year_be      INT NOT NULL,
@@ -66,7 +66,7 @@ return [
             id           INT AUTO_INCREMENT PRIMARY KEY,
             doc_number   VARCHAR(100) NOT NULL,
             doc_date     DATE NOT NULL,
-            subject      VARCHAR(255) NOT NULL,
+            subject      TEXT NOT NULL,
             status       ENUM('ประกาศใช้แล้ว', 'รออนุมัติ', 'ยกเลิก') NOT NULL DEFAULT 'รออนุมัติ',
             school_id    VARCHAR(50) DEFAULT NULL,
             year_be      INT NOT NULL,
@@ -93,7 +93,7 @@ return [
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         // 6. Document Links
-        $pdo->exec("CREATE TABLE IF NOT EXISTS edoc_document_links (
+        $pdo->exec("CREATE TABLE IF NOT EXISTS edoc_links (
             id           INT AUTO_INCREMENT PRIMARY KEY,
             ref_table    VARCHAR(50) NOT NULL,
             ref_id       INT NOT NULL,
@@ -118,11 +118,11 @@ return [
     },
     'down' => function (PDO $pdo) {
         $pdo->exec("DROP TABLE IF EXISTS edoc_involved_users");
-        $pdo->exec("DROP TABLE IF EXISTS edoc_document_links");
+        $pdo->exec("DROP TABLE IF EXISTS edoc_links");
         $pdo->exec("DROP TABLE IF EXISTS edoc_attachments");
         $pdo->exec("DROP TABLE IF EXISTS edoc_memos");
         $pdo->exec("DROP TABLE IF EXISTS edoc_orders");
-        $pdo->exec("DROP TABLE IF EXISTS edoc_outgoing_documents");
-        $pdo->exec("DROP TABLE IF EXISTS edoc_incoming_documents");
+        $pdo->exec("DROP TABLE IF EXISTS edoc_outgoing");
+        $pdo->exec("DROP TABLE IF EXISTS edoc_incoming");
     },
 ];
