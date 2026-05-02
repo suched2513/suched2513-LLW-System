@@ -50,13 +50,13 @@ function extractFirstName($fullName) {
     $name = trim($fullName);
     $prefixes = ['เด็กชาย', 'เด็กหญิง', 'ด.ช.', 'ด.ญ.', 'นาย', 'นางสาว', 'นาง', 'น.ส.'];
     foreach ($prefixes as $p) {
-        if (strncmp($name, $p, strlen($p)) === 0) {
-            $name = trim(substr($name, strlen($p)));
+        if (mb_strpos($name, $p, 0, 'UTF-8') === 0) {
+            $name = ltrim(mb_substr($name, mb_strlen($p, 'UTF-8'), null, 'UTF-8'));
             break;
         }
     }
-    $parts = explode(' ', $name);
-    return $parts[0];
+    $parts = preg_split('/\s+/u', $name);
+    return $parts[0] ?? $name;
 }
 
 function thaiDate($dateStr) {
@@ -123,21 +123,15 @@ body {
 .body-line { margin-bottom: 3mm; }
 .underline { border-bottom: 1px solid #000; min-width: 60px; display: inline-block; }
 .signature-section { margin-top: 10mm; }
-.signature-row { margin-bottom: 6mm; }
-.sig-wrap {
-    display: inline-block;
-    text-align: center;
-    min-width: 200px;
-    margin: 0 4px;
-    vertical-align: bottom;
+.sig-table {
+    border-collapse: collapse;
+    margin-left: auto;
+    margin-right: 10mm;
 }
-.sig-line {
-    display: block;
-    border-bottom: 1px dotted #000;
-    width: 100%;
-    line-height: 1.8;
-}
-.sig-name { display: block; font-size: 14pt; color: #333; }
+.sig-table td { padding: 0; }
+.sig-table .td-label { white-space: nowrap; padding: 0 6px; vertical-align: bottom; }
+.sig-table .td-line  { width: 200px; border-bottom: 1px dotted #000; vertical-align: bottom; text-align: center; }
+.sig-table .td-name  { text-align: center; font-size: 14pt; color: #333; padding-top: 2px; }
 .divider { border-top: 1px solid #999; margin: 8mm 0 6mm 0; }
 .teacher-section { background: #f9f9f9; padding: 4mm 6mm; border: 1px solid #ccc; border-radius: 4px; }
 .print-btn {
@@ -203,26 +197,42 @@ body {
 
     <!-- Signatures -->
     <div class="signature-section">
-        <div class="signature-row" style="text-align: right; margin-right: 10mm;">
-            ลงชื่อ
-            <span class="sig-wrap">
-                <span class="sig-line">&nbsp;</span>
-                <span class="sig-name">(<?= htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') ?>)</span>
-            </span>
-            นักเรียน
-        </div>
 
-        <div class="signature-row" style="text-align: right; margin-right: 10mm; margin-top: 8mm;">
-            ลงชื่อ
-            <span class="sig-wrap">
-                <span class="sig-line">&nbsp;</span>
-                <span class="sig-name">(<?= htmlspecialchars($parentFirstName, ENT_QUOTES, 'UTF-8') ?>)</span>
-            </span>
-            ผู้ปกครอง
+        <!-- นักเรียน -->
+        <table class="sig-table" style="margin-bottom: 8mm;">
+            <tr>
+                <td class="td-label">ลงชื่อ</td>
+                <td class="td-line">&nbsp;</td>
+                <td class="td-label">นักเรียน</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td class="td-name">(<?= htmlspecialchars($studentFirstName, ENT_QUOTES, 'UTF-8') ?>)</td>
+                <td></td>
+            </tr>
+        </table>
+
+        <!-- ผู้ปกครอง -->
+        <table class="sig-table">
+            <tr>
+                <td class="td-label">ลงชื่อ</td>
+                <td class="td-line">&nbsp;</td>
+                <td class="td-label">ผู้ปกครอง</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td class="td-name">(<?= htmlspecialchars($parentFirstName, ENT_QUOTES, 'UTF-8') ?>)</td>
+                <td></td>
+            </tr>
             <?php if ($parentPhone): ?>
-            <br><span style="font-size:13pt; color:#555; margin-right:4px;">โทร. <strong><?= htmlspecialchars($parentPhone, ENT_QUOTES, 'UTF-8') ?></strong></span>
+            <tr>
+                <td></td>
+                <td class="td-name" style="font-size:13pt; color:#555;">โทร. <?= htmlspecialchars($parentPhone, ENT_QUOTES, 'UTF-8') ?></td>
+                <td></td>
+            </tr>
             <?php endif; ?>
-        </div>
+        </table>
+
     </div>
 
     <!-- Teacher Section -->
@@ -235,26 +245,36 @@ body {
         <div style="margin-bottom: 8mm; border-bottom: 1px dotted #999; padding-bottom: 4mm;">&nbsp;</div>
         <div style="margin-bottom: 8mm; border-bottom: 1px dotted #999; padding-bottom: 4mm;">&nbsp;</div>
         <?php endif; ?>
-        <div style="margin-top: 4mm;">
-            <span style="font-weight: 700;">
-                <?php if ($req['status'] === 'approved'): ?>
-                    <span style="color: #16a34a;">✓ อนุญาต</span>
-                <?php elseif ($req['status'] === 'rejected'): ?>
-                    <span style="color: #dc2626;">✗ ไม่อนุญาต</span>
-                <?php else: ?>
-                    [ ] อนุญาต &nbsp;&nbsp; [ ] ไม่อนุญาต
-                <?php endif; ?>
-            </span><br>
-            ลงชื่อ
-            <span class="sig-wrap">
-                <span class="sig-line">&nbsp;</span>
-                <span class="sig-name">&nbsp;</span>
-            </span>
-            ครูที่ปรึกษา
-            <?php if ($req['approved_at']): ?>
-            <br><span style="font-size: 13pt; color: #666;">วันที่ <?= thaiDate(substr($req['approved_at'], 0, 10)) ?></span>
+        <div style="margin-top: 4mm; font-weight: 700;">
+            <?php if ($req['status'] === 'approved'): ?>
+                <span style="color: #16a34a;">✓ อนุญาต</span>
+            <?php elseif ($req['status'] === 'rejected'): ?>
+                <span style="color: #dc2626;">✗ ไม่อนุญาต</span>
+            <?php else: ?>
+                [ ] อนุญาต &nbsp;&nbsp; [ ] ไม่อนุญาต
             <?php endif; ?>
         </div>
+
+        <!-- ครูที่ปรึกษา -->
+        <table class="sig-table" style="margin-top: 4mm;">
+            <tr>
+                <td class="td-label">ลงชื่อ</td>
+                <td class="td-line">&nbsp;</td>
+                <td class="td-label">ครูที่ปรึกษา</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td class="td-name">&nbsp;</td>
+                <td></td>
+            </tr>
+            <?php if ($req['approved_at']): ?>
+            <tr>
+                <td></td>
+                <td class="td-name" style="font-size:13pt; color:#666;">วันที่ <?= thaiDate(substr($req['approved_at'], 0, 10)) ?></td>
+                <td></td>
+            </tr>
+            <?php endif; ?>
+        </table>
     </div>
 
 </div>
