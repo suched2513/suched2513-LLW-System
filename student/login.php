@@ -43,11 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare("UPDATE att_students SET last_login = NOW() WHERE id = ?")
                     ->execute([$student['id']]);
 
-                // Bridge bus session so student can access bus pages without re-login
+                // Bridge bus session — already verified via att_students, no re-verify needed
                 $busStmt = $pdo->prepare("SELECT * FROM bus_students WHERE student_id = ? AND is_active = 1 LIMIT 1");
                 $busStmt->execute([$sid]);
                 $busRow = $busStmt->fetch(PDO::FETCH_ASSOC);
-                if ($busRow && password_verify($nid, $busRow['national_id_hash'])) {
+                if ($busRow) {
                     $_SESSION['bus_student_id']    = $busRow['id'];
                     $_SESSION['bus_student_sid']   = $busRow['student_id'];
                     $_SESSION['bus_student_name']  = $busRow['fullname'];
@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $rd = filter_var($redirect, FILTER_SANITIZE_URL);
-                header('Location: ' . (str_starts_with($rd, '/') ? $rd : '/student/dashboard.php'));
+                header('Location: ' . (strncmp($rd, '/', 1) === 0 ? $rd : '/student/dashboard.php'));
                 exit();
             } else {
                 $error = 'รหัสนักเรียนหรือเลขบัตรประชาชนไม่ถูกต้อง';

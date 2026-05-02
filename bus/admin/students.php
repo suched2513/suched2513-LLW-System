@@ -19,40 +19,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if ($action === 'add') {
             $sid      = trim($_POST['student_id'] ?? '');
+            if ($sid !== '' && ctype_digit($sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
             $fullname = trim($_POST['fullname'] ?? '');
             $class    = trim($_POST['classroom'] ?? '');
             $village  = trim($_POST['village'] ?? '') ?: null;
-            $nid      = preg_replace('/\D/', '', $_POST['national_id'] ?? '');
 
-            if ($sid === '' || $fullname === '' || strlen($nid) !== 13) {
-                $err = 'กรุณากรอกข้อมูลให้ครบถ้วน (รหัสนักเรียน ชื่อ-นามสกุล เลขบัตรประชาชน 13 หลัก)';
+            if ($sid === '' || $fullname === '') {
+                $err = 'กรุณากรอกรหัสนักเรียนและชื่อ-นามสกุล';
             } else {
-                $hash   = password_hash($nid, PASSWORD_BCRYPT);
-                $masked = busMaskNid($nid);
-                $stmt   = $pdo->prepare("INSERT INTO bus_students (student_id, fullname, classroom, village, national_id_hash, national_id_masked) VALUES (?,?,?,?,?,?)");
-                $stmt->execute([$sid, $fullname, $class, $village, $hash, $masked]);
-                $msg = 'เพิ่มนักเรียนเรียบร้อยแล้ว';
+                $pdo->prepare("INSERT INTO bus_students (student_id, fullname, classroom, village, is_active) VALUES (?,?,?,?,1)")
+                    ->execute([$sid, $fullname, $class, $village]);
+                $msg = 'เพิ่มนักเรียนเรียบร้อยแล้ว (รหัสผ่านจาก att_students)';
             }
         } elseif ($action === 'edit') {
             $id       = (int)($_POST['stu_id'] ?? 0);
             $fullname = trim($_POST['fullname'] ?? '');
             $class    = trim($_POST['classroom'] ?? '');
             $village  = trim($_POST['village'] ?? '') ?: null;
-            $nidRaw   = preg_replace('/\D/', '', $_POST['national_id'] ?? '');
             $isActive = isset($_POST['is_active']) ? 1 : 0;
 
             if ($fullname === '') {
                 $err = 'กรุณากรอกชื่อ-นามสกุล';
             } else {
-                if (strlen($nidRaw) === 13) {
-                    $hash   = password_hash($nidRaw, PASSWORD_BCRYPT);
-                    $masked = busMaskNid($nidRaw);
-                    $pdo->prepare("UPDATE bus_students SET fullname=?, classroom=?, village=?, national_id_hash=?, national_id_masked=?, is_active=? WHERE id=?")
-                        ->execute([$fullname, $class, $village, $hash, $masked, $isActive, $id]);
-                } else {
-                    $pdo->prepare("UPDATE bus_students SET fullname=?, classroom=?, village=?, is_active=? WHERE id=?")
-                        ->execute([$fullname, $class, $village, $isActive, $id]);
-                }
+                $pdo->prepare("UPDATE bus_students SET fullname=?, classroom=?, village=?, is_active=? WHERE id=?")
+                    ->execute([$fullname, $class, $village, $isActive, $id]);
                 $msg = 'แก้ไขข้อมูลเรียบร้อยแล้ว';
             }
         } elseif ($action === 'import_csv') {
@@ -69,50 +59,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $bom = fread($handle, 3);
                     if ($bom !== "\xEF\xBB\xBF") rewind($handle);
 
-                    // UPSERT: insert new or update existing — atomic, no separate SELECT needed
+                    // CSV format: student_id, name, classroom, village (NID managed in att_students)
                     $stmtUpsert = $pdo->prepare("
-                        INSERT INTO bus_students
-                            (student_id, fullname, classroom, village, national_id_hash, national_id_masked, is_active)
-                        VALUES (?, ?, ?, ?, ?, ?, 1)
+                        INSERT INTO bus_students (student_id, fullname, classroom, village, is_active)
+                        VALUES (?, ?, ?, ?, 1)
                         ON DUPLICATE KEY UPDATE
-                            fullname          = IF(VALUES(fullname) != '', VALUES(fullname), fullname),
-                            classroom         = IF(VALUES(classroom) != '', VALUES(classroom), classroom),
-                            national_id_hash  = VALUES(national_id_hash),
-                            national_id_masked = VALUES(national_id_masked),
-                            is_active         = 1
+                            fullname  = IF(VALUES(fullname) != '', VALUES(fullname), fullname),
+                            classroom = IF(VALUES(classroom) != '', VALUES(classroom), classroom),
+                            village   = COALESCE(VALUES(village), village),
+                            is_active = 1
                     ");
 
                     $countNew = $countUpd = $countSkip = 0;
-                    $rowNum   = 0;
 
                     while (($row = fgetcsv($handle)) !== false) {
-                        $rowNum++;
                         $sid = trim($row[0] ?? '');
-                        // Normalize: pad purely numeric student IDs to 5 digits (4853 → 04853)
-                        if ($sid !== '' && ctype_digit($sid)) {
-                            $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
-                        }
-                        $nid = preg_replace('/\D/', '', $row[1] ?? '');
+                        if ($sid !== '' && ctype_digit($sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
+                        $name    = trim($row[1] ?? '');
+                        $class   = trim($row[2] ?? '');
+                        $village = trim($row[3] ?? '') ?: null;
 
-                        if ($sid === '' || strlen($nid) !== 13) {
-                            $countSkip++;
-                            continue;
-                        }
+                        if ($sid === '' || $name === '') { $countSkip++; continue; }
 
-                        $hash    = password_hash($nid, PASSWORD_BCRYPT);
-                        $masked  = busMaskNid($nid);
-                        $name    = trim($row[2] ?? '');
-                        $class   = trim($row[3] ?? '');
-                        $village = trim($row[4] ?? '') ?: null;
-
-                        $stmtUpsert->execute([$sid, $name, $class, $village, $hash, $masked]);
-                        // rowCount() = 1 for insert, 2 for update-changed, 0 for update-unchanged
+                        $stmtUpsert->execute([$sid, $name, $class, $village]);
                         $affected = $stmtUpsert->rowCount();
                         if ($affected === 1) $countNew++;
                         else $countUpd++;
                     }
                     fclose($handle);
-                    $msg = "นำเข้า CSV สำเร็จ: เพิ่มใหม่ {$countNew} คน · อัพเดทรหัส {$countUpd} คน · ข้ามไป {$countSkip} แถว";
+                    $msg = "นำเข้า CSV สำเร็จ: เพิ่มใหม่ {$countNew} คน · อัพเดท {$countUpd} คน · ข้ามไป {$countSkip} แถว";
                 }
             }
         } elseif ($action === 'import_att') {
@@ -125,17 +100,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ORDER BY a.classroom, a.student_id
             ")->fetchAll(PDO::FETCH_ASSOC);
 
-            $defaultNid = '0000000000000';
-            $hash       = password_hash($defaultNid, PASSWORD_BCRYPT);
-            $masked     = '0-0000-xxxxx-xx-0';
-
-            $stmt = $pdo->prepare("INSERT INTO bus_students (student_id, fullname, classroom, national_id_hash, national_id_masked, is_active) VALUES (?,?,?,?,?,0)");
+            $stmt = $pdo->prepare("INSERT INTO bus_students (student_id, fullname, classroom, is_active) VALUES (?,?,?,1)");
             $count = 0;
             foreach ($rows as $r) {
-                $stmt->execute([str_pad(preg_replace('/\D/', '', $r['student_id']), 5, '0', STR_PAD_LEFT) ?: $r['student_id'], $r['fullname'], $r['classroom'], $hash, $masked]);
+                $stmt->execute([str_pad(preg_replace('/\D/', '', $r['student_id']), 5, '0', STR_PAD_LEFT) ?: $r['student_id'], $r['fullname'], $r['classroom']]);
                 $count++;
             }
-            $msg = "นำเข้าข้อมูล {$count} คนเรียบร้อยแล้ว (ต้องอัพเดทเลขบัตรประชาชนก่อนเปิดใช้งาน)";
+            $msg = "นำเข้าข้อมูล {$count} คนเรียบร้อยแล้ว (รหัสผ่านใช้จาก att_students)";
 
         } elseif ($action === 'delete_garbled') {
             $pdo->beginTransaction();
@@ -265,7 +236,10 @@ try {
     $total   = (int)$cntStmt->fetchColumn();
     $pages   = max(1, (int)ceil($total / $perPage));
 
-    $listStmt = $pdo->prepare("SELECT * FROM bus_students $where ORDER BY classroom, student_id LIMIT $perPage OFFSET $offset");
+    $listStmt = $pdo->prepare("SELECT b.*, a.national_id_masked AS att_nid_masked
+        FROM bus_students b
+        LEFT JOIN att_students a ON a.student_id = b.student_id
+        $where ORDER BY b.classroom, b.student_id LIMIT $perPage OFFSET $offset");
     $listStmt->execute($params);
     $students = $listStmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
@@ -319,10 +293,9 @@ require_once __DIR__ . '/../../components/layout_start.php';
               <input type="text" name="village" id="fVillage" class="form-control" maxlength="200" placeholder="เช่น บ้านประชาพัฒนา">
               <div class="form-text">ใช้สำหรับรายงานสรุปตามพื้นที่</div>
             </div>
-            <div class="mb-3">
-              <label class="form-label fw-bold small">เลขบัตรประชาชน 13 หลัก <span class="text-danger">*</span></label>
-              <input type="text" name="national_id" id="fNid" class="form-control" maxlength="13" inputmode="numeric" placeholder="ใส่เฉพาะตัวเลข 13 หลัก">
-              <div class="form-text" id="nidHint">ใช้เป็นรหัสผ่านในการเข้าระบบ</div>
+            <div class="mb-3 p-3 bg-light rounded-3 small text-muted">
+              <i class="fas fa-shield-alt me-1 text-success"></i>
+              <strong>รหัสผ่านนักเรียน</strong> จัดการที่ <a href="/attendance_system/import_students.php" class="fw-bold">จัดการข้อมูลนักเรียน</a> (เลขบัตรประชาชน 13 หลัก)
             </div>
             <div class="mb-3 form-check" id="activeRow" style="display:none">
               <input type="checkbox" name="is_active" class="form-check-input" id="fActive">
@@ -348,15 +321,13 @@ require_once __DIR__ . '/../../components/layout_start.php';
           <hr>
 
           <!-- Activate all inactive students -->
-          <form method="POST" onsubmit="return confirm('เปิดใช้งานนักเรียนทุกคนที่ยังปิดอยู่?\n\nรหัสผ่านชั่วคราวคือ: 0000000000000')">
+          <form method="POST" onsubmit="return confirm('เปิดใช้งานนักเรียนทุกคนที่ยังปิดอยู่?')">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="activate_all">
             <button type="submit" class="btn btn-success w-100 fw-bold small">
               <i class="fas fa-user-check me-1"></i> เปิดใช้งานทุกคน
             </button>
-            <div class="form-text mt-1">
-              เปิดเฉพาะที่ยังปิดอยู่ · password ชั่วคราว: <code>0000000000000</code>
-            </div>
+            <div class="form-text mt-1">เปิดเฉพาะที่ยังปิดอยู่ · รหัสผ่านใช้จาก att_students</div>
           </form>
 
           <hr>
@@ -364,7 +335,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
           <!-- Import CSV (primary) -->
           <div class="mb-2">
             <p class="fw-black small mb-2"><i class="fas fa-file-csv me-1 text-success"></i>นำเข้าจากไฟล์ CSV</p>
-            <p class="text-muted small mb-2">คอลัมน์: <code>รหัสนักเรียน, เลขบัตรประชาชน, ชื่อ-นามสกุล, ห้อง</code></p>
+            <p class="text-muted small mb-2">คอลัมน์: <code>รหัสนักเรียน, ชื่อ-นามสกุล, ห้อง, บ้าน</code></p>
             <a href="/bus/admin/students_template.php" class="btn btn-outline-success btn-sm w-100 mb-2 fw-bold">
               <i class="fas fa-download me-1"></i> ดาวน์โหลด Template CSV
             </a>
@@ -441,7 +412,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
                 <tr>
                   <th class="text-xs fw-bold text-uppercase text-muted ps-4">นักเรียน</th>
                   <th class="text-xs fw-bold text-uppercase text-muted">บ้าน</th>
-                  <th class="text-xs fw-bold text-uppercase text-muted">บัตรประชาชน</th>
+                  <th class="text-xs fw-bold text-uppercase text-muted">รหัสผ่าน (att_students)</th>
                   <th class="text-xs fw-bold text-uppercase text-muted text-center">สถานะ</th>
                   <th class="text-xs fw-bold text-uppercase text-muted text-end pe-4">จัดการ</th>
                 </tr>
@@ -456,7 +427,13 @@ require_once __DIR__ . '/../../components/layout_start.php';
                   <td class="small <?= $s['village'] ? 'text-dark' : 'text-muted' ?>">
                     <?= $s['village'] ? htmlspecialchars($s['village']) : '<span class="text-muted fst-italic">ไม่ระบุ</span>' ?>
                   </td>
-                  <td class="small text-muted font-monospace"><?= htmlspecialchars($s['national_id_masked']) ?></td>
+                  <td class="small">
+                    <?php if (!empty($s['att_nid_masked'])): ?>
+                    <span class="text-success font-monospace"><i class="fas fa-check-circle me-1"></i><?= htmlspecialchars($s['att_nid_masked']) ?></span>
+                    <?php else: ?>
+                    <span class="badge bg-danger bg-opacity-10 text-danger fw-bold"><i class="fas fa-exclamation-triangle me-1"></i>ยังไม่มีรหัสผ่าน</span>
+                    <?php endif; ?>
+                  </td>
                   <td class="text-center">
                     <span class="badge bg-<?= $s['is_active'] ? 'success' : 'secondary' ?> bg-opacity-10 text-<?= $s['is_active'] ? 'success' : 'secondary' ?> fw-bold">
                       <?= $s['is_active'] ? 'ใช้งาน' : 'ปิด' ?>
@@ -502,8 +479,6 @@ function editStu(s) {
     document.getElementById('fFullname').value = s.fullname;
     document.getElementById('fClass').value = s.classroom ?? '';
     document.getElementById('fVillage').value = s.village ?? '';
-    document.getElementById('fNid').placeholder = 'เว้นว่างถ้าไม่ต้องการเปลี่ยนรหัสผ่าน';
-    document.getElementById('nidHint').textContent = 'ถ้าไม่กรอก รหัสผ่านเดิมจะยังคงอยู่';
     document.getElementById('fActive').checked = s.is_active == 1;
     document.getElementById('activeRow').style.display = '';
     document.getElementById('stuFormCard').scrollIntoView({behavior:'smooth'});
@@ -514,8 +489,6 @@ function resetStuForm() {
     document.getElementById('stuAction').value = 'add';
     document.getElementById('stuId').value = '';
     document.getElementById('fSid').readOnly = false;
-    document.getElementById('fNid').placeholder = 'ใส่เฉพาะตัวเลข 13 หลัก';
-    document.getElementById('nidHint').textContent = 'ใช้เป็นรหัสผ่านในการเข้าระบบ';
     document.getElementById('activeRow').style.display = 'none';
     document.getElementById('stuForm').reset();
 }

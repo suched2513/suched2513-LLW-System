@@ -29,19 +29,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $pdo = getPdo();
-            $stmt = $pdo->prepare("SELECT * FROM bus_students WHERE student_id = ? AND is_active = 1 LIMIT 1");
-            $stmt->execute([$sid]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($row && password_verify($nid, $row['national_id_hash'])) {
-                $_SESSION['bus_student_id']    = $row['id'];
-                $_SESSION['bus_student_sid']   = $row['student_id'];
-                $_SESSION['bus_student_name']  = $row['fullname'];
-                $_SESSION['bus_student_class'] = $row['classroom'];
-                header('Location: ' . filter_var($redirect, FILTER_SANITIZE_URL));
-                exit();
+            // Authenticate via att_students (central student auth)
+            $attStmt = $pdo->prepare("SELECT * FROM att_students WHERE student_id = ? AND national_id_hash IS NOT NULL LIMIT 1");
+            $attStmt->execute([$sid]);
+            $attRow = $attStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$attRow || !password_verify($nid, $attRow['national_id_hash'])) {
+                $error = 'รหัสนักเรียนหรือเลขบัตรประชาชนไม่ถูกต้อง';
             } else {
-                $error = 'รหัสนักเรียนหรือเลขบัตรประชาชนไม่ถูกต้อง หรือบัญชีถูกปิดใช้งาน';
+                // Check bus registration
+                $busStmt = $pdo->prepare("SELECT * FROM bus_students WHERE student_id = ? AND is_active = 1 LIMIT 1");
+                $busStmt->execute([$sid]);
+                $busRow = $busStmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$busRow) {
+                    $error = 'ไม่พบชื่อในระบบรถรับส่ง กรุณาติดต่อเจ้าหน้าที่';
+                } else {
+                    $_SESSION['bus_student_id']    = $busRow['id'];
+                    $_SESSION['bus_student_sid']   = $busRow['student_id'];
+                    $_SESSION['bus_student_name']  = $busRow['fullname'];
+                    $_SESSION['bus_student_class'] = $busRow['classroom'];
+                    header('Location: ' . filter_var($redirect, FILTER_SANITIZE_URL));
+                    exit();
+                }
             }
         } catch (Exception $e) {
             error_log($e->getMessage());
