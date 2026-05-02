@@ -21,6 +21,7 @@ elseif (strpos($full_url, '/homeroom/') !== false)          $activeSystem = 'hom
 elseif (strpos($full_url, '/school_project/') !== false)     $activeSystem = 'budget';
 elseif (basename($full_url) === 'student_info.php' || basename($full_url) === 'teacher_info.php') $activeSystem = 'info';
 elseif (strpos($full_url, '/bus/admin/') !== false || strpos($full_url, '/bus/finance/') !== false) $activeSystem = 'bus';
+elseif (strpos($full_url, '/edocument/') !== false)        $activeSystem = 'edoc';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
 
 /**
@@ -106,6 +107,12 @@ $subMenus = [
         ['icon' => 'fas fa-file-invoice-dollar',  'label' => 'บันทึกการชำระเงิน', 'url' => $base_path . '/bus/finance/payments.php',       'roles' => ['super_admin','bus_admin','bus_finance','wfh_admin']],
         ['icon' => 'fas fa-times-circle',         'label' => 'คำขอยกเลิก',        'url' => $base_path . '/bus/finance/cancellations.php',  'roles' => ['super_admin','bus_admin','bus_finance','wfh_admin']],
         ['icon' => 'fas fa-poll',                 'label' => 'สำรวจการเดินทาง',   'url' => $base_path . '/student/admin/survey_report.php', 'roles' => ['super_admin','bus_admin','wfh_admin','att_teacher']],
+    ],
+    'edoc' => [
+        ['icon' => 'fas fa-inbox',                'label' => 'หนังสือรับ',       'url' => $base_path . '/edocument/incoming.php'],
+        ['icon' => 'fas fa-paper-plane',          'label' => 'หนังสือส่ง',       'url' => $base_path . '/edocument/outgoing.php'],
+        ['icon' => 'fas fa-file-signature',       'label' => 'คำสั่ง',            'url' => $base_path . '/edocument/orders.php'],
+        ['icon' => 'fas fa-sticky-note',          'label' => 'บันทึกข้อความ',     'url' => $base_path . '/edocument/memos.php'],
     ],
 ];
 
@@ -318,6 +325,24 @@ $subMenus = [
                                 <p>ยื่นขออนุมัติ</p>
                             </a>
                         </li>
+                    </ul>
+                </li>
+
+                <!-- e-Document -->
+                <li class="nav-item <?= $activeSystem === 'edoc' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'edoc' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-file-invoice text-info"></i>
+                        <p class="text-info">ระบบงาน e-สารบรรณ <i class="nav-arrow fas fa-angle-left"></i></p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <?php foreach ($subMenus['edoc'] as $sub): ?>
+                        <li class="nav-item">
+                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
+                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
+                                <p><?= $sub['label'] ?></p>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
                     </ul>
                 </li>
 

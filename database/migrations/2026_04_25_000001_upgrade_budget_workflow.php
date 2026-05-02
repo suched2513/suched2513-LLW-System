@@ -1,6 +1,6 @@
 <?php
-class CreateBudgetWorkflowTables {
-    public function up($pdo) {
+return [
+    'up' => function (PDO $pdo) {
         // Add workflow columns to budget_disbursements
         $sql = "ALTER TABLE budget_disbursements 
                 ADD COLUMN doc_no VARCHAR(50) NULL AFTER disbursement_id,
@@ -42,12 +42,8 @@ class CreateBudgetWorkflowTables {
                 ADD INDEX (status)";
         
         $pdo->exec($sql);
-        return "Upgrade budget_disbursements for Phase 3 workflow successfully.";
-    }
-
-    public function down($pdo) {
-        // Normally we don't drop columns in down for safety, 
-        // but for migration structure:
+    },
+    'down' => function (PDO $pdo) {
         $sql = "ALTER TABLE budget_disbursements 
                 DROP COLUMN doc_no, DROP COLUMN current_step,
                 DROP COLUMN project_head_id, DROP COLUMN project_head_signed_at,
@@ -59,4 +55,4 @@ class CreateBudgetWorkflowTables {
                 DROP COLUMN director_id, DROP COLUMN director_signed_at, DROP COLUMN director_result";
         $pdo->exec($sql);
     }
-}
+];
