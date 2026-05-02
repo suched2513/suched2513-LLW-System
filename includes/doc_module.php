@@ -93,7 +93,7 @@ function renderDocumentList($doc_type, $config = []) {
         const year = $('#filterYear').val();
         
         $.ajax({
-            url: '/ajax/documents.php',
+            url: '../ajax/documents.php',
             type: 'GET',
             data: {
                 action: 'list',
@@ -107,7 +107,12 @@ function renderDocumentList($doc_type, $config = []) {
                 if (res.success) {
                     renderTable(res.data);
                     renderPagination(res.pagination);
+                } else {
+                    $('#docListBody').html(`<tr><td colspan="5" class="text-center py-10 text-rose-500 font-bold"><i class="bi bi-exclamation-triangle me-2"></i>Error: ${res.message}</td></tr>`);
                 }
+            },
+            error: function(xhr) {
+                $('#docListBody').html(`<tr><td colspan="5" class="text-center py-10 text-rose-500 font-bold"><i class="bi bi-exclamation-triangle me-2"></i>ไม่สามารถโหลดข้อมูลได้ (HTTP ${xhr.status})</td></tr>`);
             }
         });
     }
@@ -396,7 +401,7 @@ function renderDocumentModal($doc_type, $config = []) {
 
     function loadUsers() {
         if ($('#involved_users').children().length > 0) return;
-        $.get('/ajax/documents.php', { action: 'get_users' }, function(res) {
+        $.get('../ajax/documents.php', { action: 'get_users' }, function(res) {
             if (res.success) {
                 res.data.forEach(user => {
                     $('#involved_users').append(new Option(user.text, user.id, false, false));
@@ -427,7 +432,7 @@ function renderDocumentModal($doc_type, $config = []) {
         });
 
         $.ajax({
-            url: '/ajax/documents.php',
+            url: '../ajax/documents.php',
             type: 'POST',
             data: formData,
             processData: false,
@@ -441,14 +446,14 @@ function renderDocumentModal($doc_type, $config = []) {
                     const sendTele = $('#sendTelegram').is(':checked');
 
                     if (involvedUsers && involvedUsers.length > 0) {
-                        $.post('/ajax/documents.php', {
+                        $.post('../ajax/documents.php', {
                             action: 'assign',
                             ref_id: docId,
                             ref_table: docTable,
                             user_ids: involvedUsers
                         }, function() {
                             if (sendTele) {
-                                $.post('/ajax/documents.php', {
+                                $.post('../ajax/documents.php', {
                                     action: 'send_telegram',
                                     ref_id: docId,
                                     ref_table: docTable,

@@ -43,7 +43,7 @@ require_once __DIR__ . '/../components/layout_end.php';
 // Custom logic for this page if any
 function editDoc(id) {
     $.ajax({
-        url: '/ajax/documents.php',
+        url: '../ajax/documents.php',
         type: 'GET',
         data: { action: 'get', type: 'incoming', id: id },
         success: function(res) {
@@ -68,7 +68,7 @@ function editDoc(id) {
                 
                 // Load involved users
                 loadUsers();
-                $.get('/ajax/documents.php', { action: 'get_involved_users', ref_id: id, ref_table: 'edoc_incoming' }, function(invRes) {
+                $.get('../ajax/documents.php', { action: 'get_involved_users', ref_id: id, ref_table: 'edoc_incoming' }, function(invRes) {
                     if (invRes.success) {
                         const invUserIds = invRes.data.map(u => u.user_id);
                         $('#involved_users').val(invUserIds).trigger('change');
@@ -94,7 +94,7 @@ function deleteDoc(id) {
     }).then((result) => {
         if (result.isConfirmed) {
             $.ajax({
-                url: '/ajax/documents.php',
+                url: '../ajax/documents.php',
                 type: 'POST',
                 data: { action: 'delete', type: 'incoming', id: id },
                 success: function(res) {
@@ -123,7 +123,7 @@ function removeFile(uiId, dbId) {
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: '/ajax/documents.php',
+                    url: '../ajax/documents.php',
                     type: 'POST',
                     data: { action: 'delete_attachment', attachment_id: dbId },
                     success: function(res) {
