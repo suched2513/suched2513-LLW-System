@@ -8,12 +8,16 @@ require_once __DIR__ . '/../config/database.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: /login.php'); exit; }
 
 $pdo = getPdo();
-$stats = [
-    'incoming' => $pdo->query("SELECT COUNT(*) FROM edoc_incoming_documents")->fetchColumn(),
-    'outgoing' => $pdo->query("SELECT COUNT(*) FROM edoc_outgoing_documents")->fetchColumn(),
-    'orders'   => $pdo->query("SELECT COUNT(*) FROM edoc_orders")->fetchColumn(),
-    'memos'    => $pdo->query("SELECT COUNT(*) FROM edoc_memos")->fetchColumn(),
-];
+try {
+    $stats = [
+        'incoming' => $pdo->query("SELECT COUNT(*) FROM edoc_incoming")->fetchColumn(),
+        'outgoing' => $pdo->query("SELECT COUNT(*) FROM edoc_outgoing")->fetchColumn(),
+        'orders'   => $pdo->query("SELECT COUNT(*) FROM edoc_orders")->fetchColumn(),
+        'memos'    => $pdo->query("SELECT COUNT(*) FROM edoc_memos")->fetchColumn(),
+    ];
+} catch (Exception $e) {
+    $stats = ['incoming' => 0, 'outgoing' => 0, 'orders' => 0, 'memos' => 0];
+}
 
 $pageTitle = 'แดชบอร์ดระบบ e-สารบรรณ';
 $activeSystem = 'edoc';

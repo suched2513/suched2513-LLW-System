@@ -60,7 +60,7 @@ try {
  */
 function handleList($pdo) {
     $type = $_GET['type'] ?? 'incoming';
-    $table = "edoc_{$type}_documents"; // Prefix added in migration
+    $table = "edoc_{$type}"; // Prefix added in migration
     $search = $_GET['search'] ?? '';
     $year = $_GET['year'] ?? '';
     $page = (int)($_GET['page'] ?? 1);
@@ -122,7 +122,7 @@ function handleList($pdo) {
 function handleSave($pdo) {
     $id = $_POST['id'] ?? '';
     $type = $_POST['type'] ?? 'incoming';
-    $table = "edoc_{$type}_documents";
+    $table = "edoc_{$type}";
     
     $doc_number = $_POST['doc_number'] ?? '';
     $doc_date = $_POST['doc_date'] ?? '';
@@ -179,7 +179,7 @@ function handleSave($pdo) {
 function handleGet($pdo) {
     $id = $_GET['id'] ?? '';
     $type = $_GET['type'] ?? 'incoming';
-    $table = "edoc_{$type}_documents";
+    $table = "edoc_{$type}";
 
     $stmt = $pdo->prepare("SELECT * FROM $table WHERE id = ?");
     $stmt->execute([$id]);
@@ -206,7 +206,7 @@ function handleDelete($pdo) {
 
     $id = $_POST['id'] ?? '';
     $type = $_POST['type'] ?? 'incoming';
-    $table = "edoc_{$type}_documents";
+    $table = "edoc_{$type}";
 
     $pdo->beginTransaction();
 
@@ -222,7 +222,7 @@ function handleDelete($pdo) {
 
     // Delete records
     $pdo->prepare("DELETE FROM edoc_attachments WHERE ref_table = ? AND ref_id = ?")->execute([$table, $id]);
-    $pdo->prepare("DELETE FROM edoc_document_links WHERE ref_table = ? AND ref_id = ?")->execute([$table, $id]);
+    $pdo->prepare("DELETE FROM edoc_links WHERE ref_table = ? AND ref_id = ?")->execute([$table, $id]);
     $pdo->prepare("DELETE FROM edoc_involved_users WHERE ref_table = ? AND ref_id = ?")->execute([$table, $id]);
     $pdo->prepare("DELETE FROM $table WHERE id = ?")->execute([$id]);
 
