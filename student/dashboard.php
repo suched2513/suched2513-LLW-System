@@ -9,9 +9,7 @@ $code      = $_SESSION['student_code'];
 $name      = $_SESSION['student_name'];
 $class     = $_SESSION['student_class'];
 $hasBus    = !empty($_SESSION['bus_student_id']);
-$semester  = busGetSemester(); // reuse helper from bus/config.php (loaded via config.php → bus auto-load? No)
 
-// Load bus helper independently
 if (!function_exists('busGetSemester')) {
     function busGetSemester(): string {
         $m = (int)date('n'); $y = (int)date('Y') + 543;
