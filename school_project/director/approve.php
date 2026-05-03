@@ -25,7 +25,8 @@ $items->execute([$id]); $itemList = $items->fetchAll();
 
 // Budget balance for this project
 $balStmt = $db->prepare("
-    SELECT bp.total_budget,
+    SELECT (bp.budget_subsidy + bp.budget_quality + bp.budget_revenue
+            + bp.budget_operation + bp.budget_reserve) AS total_budget,
            COALESCE(SUM(CASE WHEN pr2.status IN ('submitted','approved') AND pr2.id != ? THEN pr2.amount_requested ELSE 0 END), 0) AS committed
     FROM budget_projects bp
     LEFT JOIN project_requests pr2 ON pr2.budget_project_id = bp.id
@@ -364,9 +365,23 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
               <textarea name="note" class="form-control" rows="4" placeholder="ระบุข้อความประกอบการลงนาม (ถ้ามี)"></textarea>
             </div>
             <div class="d-grid gap-2">
+              <?php if ($budgetOverLimit && $req['current_step'] === 'submitted'): ?>
+              <button type="button" class="btn btn-secondary btn-lg" disabled>
+                <i class="bi bi-lock me-1"></i> ลงนามไม่ได้ — วงเงินเกินงบ
+              </button>
+              <div class="alert alert-warning py-2 small mb-0">
+                <i class="bi bi-info-circle me-1"></i>
+                <?php if ($pendingAmendment): ?>
+                  รอผู้บริหารอนุมัติขอเพิ่มวงเงิน <?= number_format($pendingAmendment['amount'], 2) ?> บาทก่อน
+                <?php else: ?>
+                  กดปุ่ม <strong>"ยื่นขอเพิ่มวงเงิน"</strong> ด้านบนเพื่อขอให้ผู้บริหารอนุมัติก่อน
+                <?php endif; ?>
+              </div>
+              <?php else: ?>
               <button type="submit" name="action" value="approve" class="btn btn-success btn-lg shadow" onclick="return confirm('ยืนยันการลงนามดิจิทัล?')">
                 <i class="bi bi-pen me-1"></i> ลงนามดิจิทัล
               </button>
+              <?php endif; ?>
               <button type="submit" name="action" value="reject" class="btn btn-outline-danger" onclick="return confirm('ยืนยันการปฏิเสธคำขอ?')">
                 <i class="bi bi-x-circle me-1"></i> ปฏิเสธ/ตีกลับ
               </button>
