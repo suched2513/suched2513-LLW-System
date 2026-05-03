@@ -54,8 +54,12 @@ function renderSidebar($activePage = '') {
     if (in_array($role, ['admin','super_admin','budget_officer','wfh_admin','director','procurement_head','finance_head','deputy_director'])) {
         echo '<div class="nav-section">รายงาน</div>';
         echo navLink('/reports/budget_overview.php','bi-bar-chart','ภาพรวมงบประมาณ',$activePage);
+        echo navLink('/admin/budget_list.php','bi-table','สถานะรายโครงการ',$activePage);
         echo navLink('/reports/project_progress.php','bi-clipboard-data','ความคืบหน้า',$activePage);
         echo navLink('/reports/annual_summary.php','bi-file-earmark-bar-graph','สรุปประจำปี',$activePage);
+    }
+    if (in_array($role, ['admin','super_admin','director','budget_officer','wfh_admin'])) {
+        echo navLink('/admin/budget_amendment.php','bi-arrow-left-right','ขอโอน/เพิ่มวงเงิน',$activePage);
     }
 
     if (in_array($role, ['admin', 'super_admin'])) {
