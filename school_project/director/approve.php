@@ -23,6 +23,23 @@ if (!$req) { header('Location: pending.php'); exit; }
 $items = $db->prepare("SELECT * FROM request_items WHERE request_id=? ORDER BY item_order");
 $items->execute([$id]); $itemList = $items->fetchAll();
 
+// Budget balance for this project
+$balStmt = $db->prepare("
+    SELECT bp.total_budget,
+           COALESCE(SUM(CASE WHEN pr2.status IN ('submitted','approved') AND pr2.id != ? THEN pr2.amount_requested ELSE 0 END), 0) AS committed
+    FROM budget_projects bp
+    LEFT JOIN project_requests pr2 ON pr2.budget_project_id = bp.id
+    WHERE bp.id = ?
+    GROUP BY bp.id
+");
+$balStmt->execute([$id, $req['budget_project_id']]);
+$budgetInfo      = $balStmt->fetch();
+$budgetTotal     = (float)($budgetInfo['total_budget'] ?? 0);
+$budgetCommitted = (float)($budgetInfo['committed'] ?? 0);
+$budgetRemaining = $budgetTotal - $budgetCommitted;
+$budgetAfter     = $budgetRemaining - (float)$req['amount_requested'];
+$budgetOverLimit = (float)$req['amount_requested'] > $budgetRemaining + 0.01;
+
 // Determine next step logic
 $steps = ['submitted', 'budget_approved', 'procurement_approved', 'finance_approved', 'deputy_approved', 'completed'];
 $currentIndex = array_search($req['current_step'], $steps);
@@ -59,6 +76,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $myCanApprove) {
         header('Location: ' . BASE_URL . '/director/pending.php'); exit;
     } 
     elseif ($action === 'approve') {
+        // Block if budget exceeded (checked at budget_officer step only)
+        if ($req['current_step'] === 'submitted' && $budgetOverLimit) {
+            flashMessage('danger', sprintf(
+                'ไม่สามารถลงนามได้ — วงเงินคำขอ %s บาท เกินงบคงเหลือในโครงการ %s บาท',
+                number_format($req['amount_requested'], 2),
+                number_format(max(0, $budgetRemaining), 2)
+            ));
+            header('Location: approve.php?id=' . $id); exit;
+        }
+
         $nextStep = $steps[$currentIndex + 1] ?? 'completed';
         $status = ($nextStep === 'completed') ? 'approved' : 'submitted';
         
@@ -221,6 +248,47 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
   </div>
 
   <div class="col-lg-4">
+    <!-- Budget Balance Card -->
+    <div class="card mb-3 <?= $budgetOverLimit ? 'border-danger' : 'border-success' ?> shadow-sm">
+      <div class="card-header <?= $budgetOverLimit ? 'bg-danger' : 'bg-success' ?> text-white">
+        <i class="bi bi-wallet2 me-1"></i>งบประมาณโครงการ
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:13px">
+          <tr>
+            <td class="text-muted ps-3">งบประมาณทั้งหมด</td>
+            <td class="text-end pe-3 fw-semibold"><?= number_format($budgetTotal, 2) ?> บาท</td>
+          </tr>
+          <tr>
+            <td class="text-muted ps-3">ใช้ไปแล้ว (คำขออื่น)</td>
+            <td class="text-end pe-3 text-warning fw-semibold"><?= number_format($budgetCommitted, 2) ?> บาท</td>
+          </tr>
+          <tr class="table-light">
+            <td class="text-muted ps-3 fw-bold">คงเหลือก่อนอนุมัติ</td>
+            <td class="text-end pe-3 fw-bold <?= $budgetOverLimit ? 'text-danger' : 'text-success' ?>">
+              <?= number_format($budgetRemaining, 2) ?> บาท
+            </td>
+          </tr>
+          <tr class="<?= $budgetOverLimit ? 'table-danger' : '' ?>">
+            <td class="ps-3 text-muted">คำขอนี้ขอ</td>
+            <td class="text-end pe-3 fw-bold text-primary"><?= number_format($req['amount_requested'], 2) ?> บาท</td>
+          </tr>
+          <tr class="<?= $budgetAfter < 0 ? 'table-danger' : 'table-success' ?>">
+            <td class="ps-3 fw-bold">คงเหลือหลังอนุมัติ</td>
+            <td class="text-end pe-3 fw-black <?= $budgetAfter < 0 ? 'text-danger' : 'text-success' ?>">
+              <?= number_format($budgetAfter, 2) ?> บาท
+            </td>
+          </tr>
+        </table>
+        <?php if ($budgetOverLimit): ?>
+        <div class="alert alert-danger m-2 py-2 small mb-0">
+          <i class="bi bi-exclamation-octagon-fill me-1"></i>
+          <strong>วงเงินเกินงบที่จัดสรร</strong> — ฝ่ายงบประมาณต้องปฏิเสธหรือแก้ไขวงเงินก่อน
+        </div>
+        <?php endif; ?>
+      </div>
+    </div>
+
     <!-- Action Card -->
     <div class="card border-primary shadow-sm mb-3">
       <div class="card-header bg-primary text-white">ดำเนินการลงนาม</div>
