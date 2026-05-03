@@ -296,15 +296,15 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
             <p class="text-rose-500 text-[11px]">ยื่นใบลา</p>
         </div>
     </a>
-    <div class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 opacity-50 flex items-center gap-3">
-        <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <i class="bi bi-people-fill text-indigo-400 text-xl"></i>
+    <a href="/student_club/index.php" class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 active:scale-95 transition-transform flex items-center gap-3">
+        <div class="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <i class="bi bi-people-fill text-violet-500 text-xl"></i>
         </div>
         <div>
-            <p class="font-black text-slate-600 text-xs">เลือกชุมนุม</p>
-            <p class="text-slate-400 text-xs">เร็วๆ นี้</p>
+            <p class="font-black text-slate-600 text-xs">ชุมนุม</p>
+            <p class="text-violet-500 text-[11px]">เลือกชุมนุม</p>
         </div>
-    </div>
+    </a>
 </div>
 
 <!-- ── Footer ──────────────────────────────────────────────────── -->

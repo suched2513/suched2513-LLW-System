@@ -23,6 +23,7 @@ elseif (basename($full_url) === 'student_info.php' || basename($full_url) === 't
 elseif (strpos($full_url, '/bus/admin/') !== false || strpos($full_url, '/bus/finance/') !== false) $activeSystem = 'bus';
 elseif (strpos($full_url, '/edocument/') !== false)        $activeSystem = 'edoc';
 elseif (strpos($full_url, '/student_leave/') !== false)   $activeSystem = 'student_leave';
+elseif (strpos($full_url, '/club/') !== false || strpos($full_url, '/student_club/') !== false) $activeSystem = 'club';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
 
 /**
@@ -59,6 +60,12 @@ $subMenus = [
     'student_leave' => [
         ['icon' => 'fas fa-clipboard-list', 'label' => 'รายการใบลา',  'url' => $base_path . '/student_leave/teacher.php'],
         ['icon' => 'fas fa-clock',          'label' => 'รออนุมัติ',    'url' => $base_path . '/student_leave/teacher.php?status=pending'],
+    ],
+    'club' => [
+        ['icon' => 'fas fa-users',          'label' => 'รายชื่อชุมนุม',   'url' => $base_path . '/club/index.php'],
+        ['icon' => 'fas fa-calendar-alt',   'label' => 'รายงาน',          'url' => $base_path . '/club/report.php'],
+        ['icon' => 'fas fa-plus-circle',    'label' => 'สร้างชุมนุม',     'url' => $base_path . '/club/manage.php',   'roles' => ['super_admin']],
+        ['icon' => 'fas fa-cog',            'label' => 'ตั้งค่า',          'url' => $base_path . '/club/settings.php', 'roles' => ['super_admin']],
     ],
     'attendance' => [
         ['icon' => 'fas fa-tachometer-alt', 'label' => 'Dashboard',         'url' => $base_path . '/attendance_system/dashboard.php'],
@@ -215,6 +222,26 @@ $subMenus = [
                     </a>
                     <ul class="nav nav-treeview">
                         <?php foreach ($subMenus['student_leave'] as $sub):
+                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                        ?>
+                        <li class="nav-item">
+                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
+                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
+                                <p><?= $sub['label'] ?></p>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </li>
+
+                <!-- Club System -->
+                <li class="nav-item <?= $activeSystem === 'club' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'club' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-users"></i>
+                        <p>ระบบชุมนุม <i class="nav-arrow fas fa-angle-left"></i></p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <?php foreach ($subMenus['club'] as $sub):
                             if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
                         ?>
                         <li class="nav-item">
