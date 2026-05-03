@@ -289,7 +289,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
                 $hasPending   = (int)$cs['pending_slips'] > 0;
                 $isSelected   = (int)$cs['reg_id'] === $selectedRegId;
               ?>
-              <a href="/bus/finance/payments.php?classroom=<?= urlencode($filterClass) ?><?= $search ? '&q=' . urlencode($search) : '' ?>&reg_id=<?= (int)$cs['reg_id'] ?>"
+              <a href="/bus/finance/payments.php?classroom=<?= urlencode($filterClass) ?><?= $search ? '&amp;q=' . urlencode($search) : '' ?>&amp;reg_id=<?= (int)$cs['reg_id'] ?>"
                  class="list-group-item list-group-item-action py-2 <?= $isSelected ? 'active' : '' ?> <?= !$cs['reg_id'] ? 'text-muted' : '' ?>">
                 <div class="d-flex justify-content-between align-items-start gap-1">
                   <div class="min-w-0">
@@ -337,7 +337,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
           <?php if (!empty($students)): ?>
           <div class="list-group">
             <?php foreach ($students as $s): ?>
-            <a href="/bus/finance/payments.php?q=<?= urlencode($search) ?><?= $filterClass ? '&classroom=' . urlencode($filterClass) : '' ?>&reg_id=<?= (int)$s['reg_id'] ?>"
+            <a href="/bus/finance/payments.php?q=<?= urlencode($search) ?><?= $filterClass ? '&amp;classroom=' . urlencode($filterClass) : '' ?>&amp;reg_id=<?= (int)$s['reg_id'] ?>"
                class="list-group-item list-group-item-action <?= (int)$s['reg_id'] === $selectedRegId ? 'active' : '' ?>">
               <div class="d-flex justify-content-between">
                 <div>
