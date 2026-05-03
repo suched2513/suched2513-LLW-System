@@ -75,6 +75,34 @@ $roleStepMap = [
     'admin' => $req['current_step']
 ];
 $myCanApprove = ($roleStepMap[$u['role']] ?? '') === $req['current_step'];
+
+// Load signatories keyed by step_key (graceful if migration not run)
+$stepSignatories = [];
+try {
+    $sigRows = $db->query("
+        SELECT s.*, CONCAT(lu.firstname,' ',lu.lastname) AS linked_name
+        FROM signatories s
+        LEFT JOIN llw_users lu ON lu.user_id = s.linked_user_id
+        WHERE s.step_key IS NOT NULL AND s.is_active = 1
+    ")->fetchAll();
+    foreach ($sigRows as $row) {
+        $stepSignatories[$row['step_key']] = $row;
+    }
+} catch (Exception $e) {
+    $stepSignatories = [];
+}
+
+// Check if current user is the designated signer for this step
+$designatedSigner    = $stepSignatories[$req['current_step']] ?? null;
+$signatoryLocked     = false;
+$signatoryLockedMsg  = '';
+if ($myCanApprove && $designatedSigner && !empty($designatedSigner['linked_user_id'])) {
+    if ((int)$u['id'] !== (int)$designatedSigner['linked_user_id']) {
+        $signatoryLocked    = true;
+        $signatoryLockedMsg = 'ขั้นตอนนี้กำหนดให้ <strong>' . h($designatedSigner['full_name']) . '</strong>'
+            . ' (' . h($designatedSigner['role_label']) . ') เป็นผู้ลงนามเท่านั้น';
+    }
+}
 if (isset($_GET['debug'])) {
     echo "<pre>";
     print_r(['user_role' => $u['role'], 'current_step' => $req['current_step'], 'can_approve' => $myCanApprove]);
@@ -105,11 +133,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reque
 }
 
 // POST approve/reject
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $myCanApprove) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $myCanApprove && !$signatoryLocked) {
     verifyCsrf();
     $action = $_POST['action'] ?? '';
     $note   = trim($_POST['note'] ?? '');
-    
+
     if ($action === 'reject') {
         $db->prepare("UPDATE project_requests SET status='rejected', director_note=? WHERE id=?")->execute([$note, $id]);
         addNotification($req['teacher_id'], 'rejected', 'คำขอถูกปฏิเสธโดย' . roleLabel($u['role']), $req['project_name'], $id, 'project_request');
@@ -229,61 +257,42 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
       <div class="card-header">ประวัติการลงนามดิจิทัล</div>
       <div class="card-body p-0">
         <ul class="list-group list-group-flush">
-          <li class="list-group-item d-flex justify-content-between align-items-start <?= $req['budget_ok_at']?'':'opacity-50' ?>">
+          <?php
+          $histSteps = [
+            ['key' => 'submitted',            'label' => 'ฝ่ายงบประมาณ (แผนงาน)', 'ok_at' => $req['budget_ok_at'],  'note' => $req['budget_note'],  'done_label' => 'ลงนามแล้วเมื่อ'],
+            ['key' => 'budget_approved',      'label' => 'ฝ่ายพัสดุ',             'ok_at' => $req['proc_ok_at'],    'note' => $req['proc_note'],    'done_label' => 'ลงนามแล้วเมื่อ'],
+            ['key' => 'procurement_approved', 'label' => 'ฝ่ายการเงิน',           'ok_at' => $req['fin_ok_at'],     'note' => $req['fin_note'],     'done_label' => 'ลงนามแล้วเมื่อ'],
+            ['key' => 'finance_approved',     'label' => 'รองผู้อำนวยการ',        'ok_at' => $req['deputy_ok_at'],  'note' => $req['deputy_note'],  'done_label' => 'ลงนามแล้วเมื่อ'],
+            ['key' => 'deputy_approved',      'label' => 'ผู้อำนวยการโรงเรียน',   'ok_at' => $req['approved_at'],   'note' => $req['director_note'],'done_label' => 'อนุมัติแล้วเมื่อ'],
+          ];
+          foreach ($histSteps as $hs):
+            $sig = $stepSignatories[$hs['key']] ?? null;
+            $isCurrentWaiting = ($req['current_step'] === $hs['key'] && !$hs['ok_at']);
+          ?>
+          <li class="list-group-item d-flex justify-content-between align-items-start <?= $hs['ok_at'] ? '' : 'opacity-50' ?>">
             <div class="ms-2 me-auto">
-              <div class="fw-bold">ฝ่ายงบประมาณ (แผนงาน)</div>
-              <small class="text-muted"><?= $req['budget_note'] ?: '-' ?></small>
+              <div class="fw-bold">
+                <?= h($hs['label']) ?>
+                <?php if ($sig): ?>
+                  <small class="text-primary fw-normal">— <?= h($sig['full_name']) ?></small>
+                <?php endif; ?>
+              </div>
+              <?php if ($sig && $sig['position']): ?>
+                <small class="text-muted d-block"><?= h($sig['position']) ?></small>
+              <?php endif; ?>
+              <?php if ($hs['note']): ?>
+                <small class="text-muted fst-italic"><?= h($hs['note']) ?></small>
+              <?php endif; ?>
             </div>
-            <?php if($req['budget_ok_at']): ?>
-              <span class="badge bg-success rounded-pill">ลงนามแล้วเมื่อ <?= formatDate($req['budget_ok_at'],true) ?></span>
+            <?php if ($hs['ok_at']): ?>
+              <span class="badge bg-success rounded-pill"><?= $hs['done_label'] ?> <?= formatDate($hs['ok_at'], true) ?></span>
+            <?php elseif ($isCurrentWaiting): ?>
+              <span class="badge bg-warning text-dark rounded-pill">รอลงนาม</span>
             <?php else: ?>
               <span class="badge bg-secondary rounded-pill">รอลงนาม</span>
             <?php endif; ?>
           </li>
-          <li class="list-group-item d-flex justify-content-between align-items-start <?= $req['proc_ok_at']?'':'opacity-50' ?>">
-            <div class="ms-2 me-auto">
-              <div class="fw-bold">ฝ่ายพัสดุ</div>
-              <small class="text-muted"><?= $req['proc_note'] ?: '-' ?></small>
-            </div>
-            <?php if($req['proc_ok_at']): ?>
-              <span class="badge bg-success rounded-pill">ลงนามแล้วเมื่อ <?= formatDate($req['proc_ok_at'],true) ?></span>
-            <?php else: ?>
-              <span class="badge bg-secondary rounded-pill">รอลงนาม</span>
-            <?php endif; ?>
-          </li>
-          <li class="list-group-item d-flex justify-content-between align-items-start <?= $req['fin_ok_at']?'':'opacity-50' ?>">
-            <div class="ms-2 me-auto">
-              <div class="fw-bold">ฝ่ายการเงิน</div>
-              <small class="text-muted"><?= $req['fin_note'] ?: '-' ?></small>
-            </div>
-            <?php if($req['fin_ok_at']): ?>
-              <span class="badge bg-success rounded-pill">ลงนามแล้วเมื่อ <?= formatDate($req['fin_ok_at'],true) ?></span>
-            <?php else: ?>
-              <span class="badge bg-secondary rounded-pill">รอลงนาม</span>
-            <?php endif; ?>
-          </li>
-          <li class="list-group-item d-flex justify-content-between align-items-start <?= $req['deputy_ok_at']?'':'opacity-50' ?>">
-            <div class="ms-2 me-auto">
-              <div class="fw-bold">รองผู้อำนวยการ</div>
-              <small class="text-muted"><?= $req['deputy_note'] ?: '-' ?></small>
-            </div>
-            <?php if($req['deputy_ok_at']): ?>
-              <span class="badge bg-success rounded-pill">ลงนามแล้วเมื่อ <?= formatDate($req['deputy_ok_at'],true) ?></span>
-            <?php else: ?>
-              <span class="badge bg-secondary rounded-pill">รอลงนาม</span>
-            <?php endif; ?>
-          </li>
-          <li class="list-group-item d-flex justify-content-between align-items-start <?= $req['approved_at']?'':'opacity-50' ?>">
-            <div class="ms-2 me-auto">
-              <div class="fw-bold">ผู้อำนวยการโรงเรียน</div>
-              <small class="text-muted"><?= $req['director_note'] ?: '-' ?></small>
-            </div>
-            <?php if($req['approved_at']): ?>
-              <span class="badge bg-success rounded-pill">อนุมัติแล้วเมื่อ <?= formatDate($req['approved_at'],true) ?></span>
-            <?php else: ?>
-              <span class="badge bg-secondary rounded-pill">รออนุมัติ</span>
-            <?php endif; ?>
-          </li>
+          <?php endforeach; ?>
         </ul>
       </div>
     </div>
@@ -365,7 +374,15 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
               <textarea name="note" class="form-control" rows="4" placeholder="ระบุข้อความประกอบการลงนาม (ถ้ามี)"></textarea>
             </div>
             <div class="d-grid gap-2">
-              <?php if ($budgetOverLimit && $req['current_step'] === 'submitted'): ?>
+              <?php if ($signatoryLocked): ?>
+              <button type="button" class="btn btn-secondary btn-lg" disabled>
+                <i class="bi bi-person-lock me-1"></i> กำหนดผู้ลงนามเฉพาะ
+              </button>
+              <div class="alert alert-warning py-2 small mb-0">
+                <i class="bi bi-info-circle me-1"></i>
+                <?= $signatoryLockedMsg ?>
+              </div>
+              <?php elseif ($budgetOverLimit && $req['current_step'] === 'submitted'): ?>
               <button type="button" class="btn btn-secondary btn-lg" disabled>
                 <i class="bi bi-lock me-1"></i> ลงนามไม่ได้ — วงเงินเกินงบ
               </button>
