@@ -44,14 +44,13 @@ $totalPages = max(1, (int)ceil($total / $perPage));
 $page       = min($page, $totalPages);
 $offset     = ($page - 1) * $perPage;
 
-$dataParams   = array_merge($params, [$perPage, $offset]);
 $stmt = $db->prepare("SELECT pr.*,bp.project_name,bp.activity,
                              CONCAT(u.firstname,' ',u.lastname) AS teacher_name,
                              d.name AS dept_name
                       $baseQuery
                       ORDER BY pr.created_at ASC
-                      LIMIT ? OFFSET ?");
-$stmt->execute($dataParams);
+                      LIMIT $perPage OFFSET $offset");
+$stmt->execute($params);
 $requests = $stmt->fetchAll();
 
 renderHead('รออนุมัติ');
