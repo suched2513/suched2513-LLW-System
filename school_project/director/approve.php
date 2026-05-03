@@ -43,15 +43,19 @@ $budgetOverLimit = (float)$req['amount_requested'] > $budgetRemaining + 0.01;
 // Check for existing amendment request for this project
 $pendingAmendment = null;
 if ($budgetOverLimit) {
-    $amStmt = $db->prepare("
-        SELECT ba.*, CONCAT(rv.firstname,' ',rv.lastname) AS reviewed_by_name
-        FROM budget_amendments ba
-        LEFT JOIN llw_users rv ON rv.user_id = ba.reviewed_by
-        WHERE ba.to_project_id = ? AND ba.linked_request_id = ? AND ba.status = 'pending'
-        ORDER BY ba.created_at DESC LIMIT 1
-    ");
-    $amStmt->execute([$req['budget_project_id'], $id]);
-    $pendingAmendment = $amStmt->fetch() ?: null;
+    try {
+        $amStmt = $db->prepare("
+            SELECT ba.*, CONCAT(rv.firstname,' ',rv.lastname) AS reviewed_by_name
+            FROM budget_amendments ba
+            LEFT JOIN llw_users rv ON rv.user_id = ba.reviewed_by
+            WHERE ba.to_project_id = ? AND ba.linked_request_id = ? AND ba.status = 'pending'
+            ORDER BY ba.created_at DESC LIMIT 1
+        ");
+        $amStmt->execute([$req['budget_project_id'], $id]);
+        $pendingAmendment = $amStmt->fetch() ?: null;
+    } catch (Exception $e) {
+        $pendingAmendment = null;
+    }
 }
 
 // Determine next step logic

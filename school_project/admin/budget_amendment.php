@@ -10,6 +10,17 @@ $db = getDB();
 
 $isAdmin = in_array($u['role'], ['admin', 'super_admin', 'director']);
 
+// ── Ensure table exists (graceful fallback before migration) ─
+try {
+    $db->query("SELECT 1 FROM budget_amendments LIMIT 1");
+} catch (Exception $e) {
+    flashMessage('warning', 'ยังไม่ได้รัน migration กรุณาเปิด _migrate.php?run=1 ก่อน');
+    renderHead('ขอโอน/เพิ่มวงเงิน');
+    echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('การขอโอน/เพิ่มวงเงินงบประมาณ'); echo '<div class="page-content">'; showFlash();
+    echo '</div></div></div>'; renderFooter();
+    exit;
+}
+
 // ── POST: submit new amendment request ──────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'request') {
     $type      = $_POST['type'] === 'transfer' ? 'transfer' : 'increase';
