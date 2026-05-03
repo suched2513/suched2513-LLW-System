@@ -16,6 +16,9 @@ body { font-family: 'Sarabun', sans-serif; font-size: 15px; background: #f8fafc;
 .sidebar-nav::-webkit-scrollbar { width: 4px; }
 .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
 .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 2px; }
+.sidebar-footer { flex-shrink: 0; border-top: 1px solid rgba(255,255,255,.1); padding: 6px 0; }
+.sidebar-footer a { display: flex; align-items: center; gap: 10px; padding: 9px 16px; color: var(--sidebar-text); text-decoration: none; font-size: 14px; transition: all .2s; }
+.sidebar-footer a:hover { background: rgba(255,255,255,.08); color: #fff; }
 .nav-section { padding: 8px 16px 4px; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
 .sidebar-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 16px; color: var(--sidebar-text); text-decoration: none; font-size: 14px; transition: all .2s; }
 .sidebar-nav a:hover, .sidebar-nav a.active { background: rgba(255,255,255,.08); color: #fff; border-right: 3px solid var(--sidebar-active); }

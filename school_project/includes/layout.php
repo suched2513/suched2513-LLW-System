@@ -70,10 +70,12 @@ function renderSidebar($activePage = '') {
         echo navLink('/admin/settings.php','bi-gear','ตั้งค่าระบบ',$activePage);
         echo navLink('/admin/import_budget.php','bi-upload','Import งบประมาณ',$activePage);
     }
-    echo '<div class="nav-section">บัญชี</div>';
+    echo '</div>'; // end sidebar-nav
+    echo '<div class="sidebar-footer">';
     echo '<a href="/index.php"><i class="bi bi-grid-fill"></i> กลับเมนูหลัก LLW</a>';
-    echo '<a href="' . BASE_URL . '/logout.php"><i class="bi bi-box-arrow-right"></i> ออกจากระบบ</a>';
-    echo '</div></div>';
+    echo '<a href="' . BASE_URL . '/logout.php"><i class="bi bi-box-arrow-right text-danger"></i> <span class="text-danger">ออกจากระบบ</span></a>';
+    echo '</div>';
+    echo '</div>'; // end sidebar
 }
 function renderTopbar($title) {
     $u = getCurrentUser(); $notifs = getUnreadNotifications($u['id']); $nCount = count($notifs);
