@@ -3,7 +3,7 @@ session_start();
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/constants.php';
-require_once __DIR__ . '/../../includes/layout.php';
+require_once __DIR__ . '/../includes/layout.php';
 requireLogin();
 
 $u       = getCurrentUser();
@@ -89,8 +89,8 @@ $statusColors = [
     'revision'  => 'danger',
 ];
 
-renderHead('รายงานโฮมรูม');
-echo '<div class="d-flex">'; renderSidebar('/homeroom/reports/list.php'); echo '<div class="main-content flex-grow-1">'; renderTopbar('รายงานโฮมรูม'); echo '<div class="page-content">'; showFlash();
+hrRenderHead('รายงานโฮมรูม');
+echo '<div class="d-flex">'; hrRenderSidebar('/homeroom/reports/list.php'); echo '<div class="main-content flex-grow-1">'; hrRenderTopbar('รายงานโฮมรูม'); echo '<div class="page-content">'; hrShowFlash();
 ?>
 
 <?php if (!$migrationReady): ?>
@@ -245,4 +245,4 @@ echo '<div class="d-flex">'; renderSidebar('/homeroom/reports/list.php'); echo '
   </div>
 </div>
 
-<?php echo '</div></div></div>'; renderFooter(); ?>
+<?php echo '</div></div></div>'; hrRenderFooter(); ?>

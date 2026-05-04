@@ -3,7 +3,7 @@ session_start();
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/constants.php';
-require_once __DIR__ . '/../../includes/layout.php';
+require_once __DIR__ . '/../includes/layout.php';
 requireLogin();
 
 $u       = getCurrentUser();
@@ -187,8 +187,8 @@ $defaultSemester  = $report['semester'] ?? 1;
 
 $pageTitle = $id > 0 ? 'แก้ไขรายงานโฮมรูม' : 'สร้างรายงานโฮมรูม';
 
-renderHead($pageTitle);
-echo '<div class="d-flex">'; renderSidebar('/homeroom/reports/list.php'); echo '<div class="main-content flex-grow-1">'; renderTopbar($pageTitle); echo '<div class="page-content">'; showFlash();
+hrRenderHead($pageTitle);
+echo '<div class="d-flex">'; hrRenderSidebar('/homeroom/reports/list.php'); echo '<div class="main-content flex-grow-1">'; hrRenderTopbar($pageTitle); echo '<div class="page-content">'; hrShowFlash();
 ?>
 
 <?php if ($report && $report['status'] === 'revision' && $report['review_note']): ?>
@@ -622,4 +622,4 @@ if (REPORT_ID) {
 }
 </script>
 
-<?php echo '</div></div></div>'; renderFooter(); ?>
+<?php echo '</div></div></div>'; hrRenderFooter(); ?>

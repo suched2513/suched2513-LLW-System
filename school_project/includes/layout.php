@@ -49,9 +49,6 @@ function renderSidebar($activePage = '') {
         echo '<div class="nav-section">โครงการของฉัน</div>';
         echo navLink('/teacher/my_projects.php','bi-folder2-open','โครงการของฉัน',$activePage);
         echo navLink('/teacher/request_list.php','bi-list-check','ประวัติคำขอ',$activePage);
-        echo '<div class="nav-section">โฮมรูม</div>';
-        echo navLink('/homeroom/reports/list.php','bi-journal-text','รายงานโฮมรูม',$activePage);
-        echo navLink('/homeroom/reports/edit.php','bi-plus-circle','สร้างรายงาน',$activePage);
     }
 
     if (in_array($role, ['admin','super_admin','budget_officer','wfh_admin','director','procurement_head','finance_head','deputy_director'])) {
@@ -66,8 +63,6 @@ function renderSidebar($activePage = '') {
     }
 
     if (in_array($role, ['admin', 'super_admin'])) {
-        echo '<div class="nav-section">โฮมรูม</div>';
-        echo navLink('/homeroom/admin/inbox.php','bi-inbox','Inbox รายงานโฮมรูม',$activePage);
         echo '<div class="nav-section">ตั้งค่า</div>';
         echo navLink('/admin/users.php','bi-people','จัดการผู้ใช้',$activePage);
         echo navLink('/admin/departments.php','bi-building','ฝ่าย',$activePage);

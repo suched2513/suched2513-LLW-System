@@ -3,7 +3,7 @@ session_start();
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/constants.php';
-require_once __DIR__ . '/../../includes/layout.php';
+require_once __DIR__ . '/../includes/layout.php';
 requireRole(['admin']);
 
 $u  = getCurrentUser();
@@ -50,8 +50,8 @@ $rows = $reports->fetchAll();
 $statusLabels = ['draft' => 'ร่าง', 'submitted' => 'รออนุมัติ', 'approved' => 'อนุมัติแล้ว', 'revision' => 'ส่งคืน'];
 $statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'approved' => 'success', 'revision' => 'danger'];
 
-renderHead('Inbox รายงานโฮมรูม');
-echo '<div class="d-flex">'; renderSidebar('/homeroom/admin/inbox.php'); echo '<div class="main-content flex-grow-1">'; renderTopbar('Inbox รายงานโฮมรูม'); echo '<div class="page-content">'; showFlash();
+hrRenderHead('Inbox รายงานโฮมรูม');
+echo '<div class="d-flex">'; hrRenderSidebar('/homeroom/admin/inbox.php'); echo '<div class="main-content flex-grow-1">'; hrRenderTopbar('Inbox รายงานโฮมรูม'); echo '<div class="page-content">'; hrShowFlash();
 ?>
 
 <!-- KPI cards -->
@@ -237,4 +237,4 @@ function quickReturn(id) {
 }
 </script>
 
-<?php echo '</div></div></div>'; renderFooter(); ?>
+<?php echo '</div></div></div>'; hrRenderFooter(); ?>
