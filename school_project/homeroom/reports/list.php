@@ -51,18 +51,25 @@ if ($filterType) {
 
 $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
-$reports = $db->prepare("
-    SELECT r.*,
-           CONCAT(u.firstname,' ',u.lastname) AS teacher_name,
-           (SELECT COUNT(*) FROM hr_report_photos p WHERE p.report_id = r.id) AS photo_count,
-           (SELECT COUNT(*) FROM hr_report_activities a WHERE a.report_id = r.id) AS activity_count
-    FROM hr_reports r
-    JOIN llw_users u ON u.user_id = r.teacher_id
-    $whereSQL
-    ORDER BY r.period_start DESC, r.created_at DESC
-");
-$reports->execute($params);
-$rows = $reports->fetchAll();
+$rows = [];
+$migrationReady = false;
+try {
+    $reports = $db->prepare("
+        SELECT r.*,
+               CONCAT(u.firstname,' ',u.lastname) AS teacher_name,
+               (SELECT COUNT(*) FROM hr_report_photos p WHERE p.report_id = r.id) AS photo_count,
+               (SELECT COUNT(*) FROM hr_report_activities a WHERE a.report_id = r.id) AS activity_count
+        FROM hr_reports r
+        JOIN llw_users u ON u.user_id = r.teacher_id
+        $whereSQL
+        ORDER BY r.period_start DESC, r.created_at DESC
+    ");
+    $reports->execute($params);
+    $rows = $reports->fetchAll();
+    $migrationReady = true;
+} catch (Exception $e) {
+    $migrationReady = false;
+}
 
 // Counts per status (for tabs) — same filters minus status
 $countParams = array_slice($params, $isAdmin ? 0 : 1);
@@ -86,7 +93,13 @@ renderHead('รายงานโฮมรูม');
 echo '<div class="d-flex">'; renderSidebar('/homeroom/reports/list.php'); echo '<div class="main-content flex-grow-1">'; renderTopbar('รายงานโฮมรูม'); echo '<div class="page-content">'; showFlash();
 ?>
 
-<?php if (!$isAdmin && empty($myClassrooms)): ?>
+<?php if (!$migrationReady): ?>
+<div class="alert alert-danger">
+  <i class="bi bi-exclamation-octagon me-2"></i>
+  <strong>ยังไม่ได้ run migration</strong> — ตารางฐานข้อมูลสำหรับระบบโฮมรูมยังไม่มี<br>
+  กรุณาเปิด <a href="<?= BASE_URL ?>/_migrate.php?run=1" target="_blank"><strong>_migrate.php?run=1</strong></a> แล้วรีโหลดหน้านี้
+</div>
+<?php elseif (!$isAdmin && empty($myClassrooms)): ?>
 <div class="alert alert-warning">
   <i class="bi bi-exclamation-triangle me-2"></i>
   <strong>ยังไม่มีห้องเรียนที่รับผิดชอบ</strong>
