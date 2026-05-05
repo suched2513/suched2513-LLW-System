@@ -14,14 +14,16 @@ if ($classroom === '') {
     echo json_encode(['ok' => false, 'msg' => 'classroom required']); exit;
 }
 
-// 1. หานักเรียนในห้อง — ลอง exact match ก่อน แล้ว fallback LIKE
+// แปลง assembly status (ย่อ) → full word
+$assemblyStatusMap = ['ม' => 'มา', 'ข' => 'ขาด', 'ล' => 'ลา', 'ด' => 'โดด', 'ส' => 'สาย'];
+
+// 1. หานักเรียนในห้อง (ลอง att_students ก่อน ถ้าไม่เจอลอง assembly_students)
 $students = [];
+$source   = '';
 try {
     $stmt = $db->prepare("SELECT student_id, name FROM att_students WHERE classroom = ? ORDER BY student_id");
     $stmt->execute([$classroom]);
     $students = $stmt->fetchAll();
-
-    // fallback: trim whitespace และลอง LIKE ถ้าไม่เจอ
     if (empty($students)) {
         $stmt = $db->prepare("SELECT student_id, name FROM att_students WHERE TRIM(classroom) = ? ORDER BY student_id");
         $stmt->execute([trim($classroom)]);
@@ -32,22 +34,65 @@ try {
         $stmt->execute(['%' . trim($classroom) . '%']);
         $students = $stmt->fetchAll();
     }
-} catch (Exception $e) {
-    echo json_encode(['ok' => false, 'msg' => 'att_students error: ' . $e->getMessage()]); exit;
+    if (!empty($students)) $source = 'att_students';
+} catch (Exception $e) {}
+
+// fallback: assembly_students
+if (empty($students)) {
+    try {
+        $stmt = $db->prepare("SELECT student_id, name FROM assembly_students WHERE classroom = ? ORDER BY student_id");
+        $stmt->execute([$classroom]);
+        $students = $stmt->fetchAll();
+        if (empty($students)) {
+            $stmt = $db->prepare("SELECT student_id, name FROM assembly_students WHERE classroom LIKE ? ORDER BY student_id");
+            $stmt->execute(['%' . trim($classroom) . '%']);
+            $students = $stmt->fetchAll();
+        }
+        if (!empty($students)) $source = 'assembly_students';
+    } catch (Exception $e) {}
 }
 
 if (empty($students)) {
-    echo json_encode(['ok' => false, 'msg' => 'ไม่พบนักเรียนในห้อง ' . $classroom, 'count' => 0]); exit;
+    echo json_encode(['ok' => false, 'msg' => 'ไม่พบนักเรียนในห้อง ' . $classroom]); exit;
 }
 
-// 2. ดึงสถานะจาก att_attendance ทุก period ของวันนั้น เอา period แรกสุดต่อคน
 $sidList = array_column($students, 'student_id');
 $ph      = implode(',', array_fill(0, count($sidList), '?'));
 $attMap  = [];
 
+// 2a. ดึงจาก assembly_attendance (เช็คชื่อเข้าแถว) — ลำดับความสำคัญสูงสุด
 try {
     $stmt = $db->prepare("
-        SELECT student_id, status, period, time_in
+        SELECT student_id, status
+        FROM assembly_attendance
+        WHERE date = ? AND classroom = ?
+    ");
+    $stmt->execute([$date, $classroom]);
+    foreach ($stmt->fetchAll() as $r) {
+        $fullStatus = $assemblyStatusMap[$r['status']] ?? $r['status'];
+        $attMap[$r['student_id']] = ['status' => $fullStatus, 'source' => 'เข้าแถว'];
+    }
+    // ถ้าไม่เจอด้วย classroom ตรง ลอง LIKE
+    if (empty($attMap)) {
+        $stmt = $db->prepare("
+            SELECT student_id, status
+            FROM assembly_attendance
+            WHERE date = ? AND student_id IN ($ph)
+        ");
+        $stmt->execute(array_merge([$date], $sidList));
+        foreach ($stmt->fetchAll() as $r) {
+            $fullStatus = $assemblyStatusMap[$r['status']] ?? $r['status'];
+            if (!isset($attMap[$r['student_id']])) {
+                $attMap[$r['student_id']] = ['status' => $fullStatus, 'source' => 'เข้าแถว'];
+            }
+        }
+    }
+} catch (Exception $e) { /* assembly table อาจไม่มี */ }
+
+// 2b. fallback: att_attendance (เช็คชื่อรายคาบ) สำหรับคนที่ไม่มีใน assembly
+try {
+    $stmt = $db->prepare("
+        SELECT student_id, status, period
         FROM att_attendance
         WHERE date = ? AND student_id IN ($ph)
         ORDER BY period ASC
@@ -55,16 +100,10 @@ try {
     $stmt->execute(array_merge([$date], $sidList));
     foreach ($stmt->fetchAll() as $r) {
         if (!isset($attMap[$r['student_id']])) {
-            $attMap[$r['student_id']] = [
-                'status' => $r['status'],
-                'period' => (int)$r['period'],
-                'time'   => $r['time_in'] ? substr($r['time_in'], 0, 5) : '',
-            ];
+            $attMap[$r['student_id']] = ['status' => $r['status'], 'source' => 'คาบ ' . $r['period']];
         }
     }
-} catch (Exception $e) {
-    echo json_encode(['ok' => false, 'msg' => 'att_attendance error: ' . $e->getMessage()]); exit;
-}
+} catch (Exception $e) {}
 
 // 3. สร้าง result
 $result  = [];
@@ -78,9 +117,8 @@ foreach ($students as $s) {
     $result[] = [
         'student_id' => $s['student_id'],
         'name'       => $s['name'],
-        'status'     => $st,   // null = ไม่มีข้อมูล
-        'period'     => $att ? $att['period'] : null,
-        'time'       => $att ? $att['time'] : '',
+        'status'     => $st,
+        'source'     => $att ? $att['source'] : null,
     ];
 }
 
@@ -92,4 +130,5 @@ echo json_encode([
     'students'  => $result,
     'date'      => $date,
     'classroom' => $classroom,
+    'data_source' => $source,
 ]);

@@ -678,7 +678,7 @@ function syncFromAtt() {
                 }
             });
 
-            alert(`ดึงข้อมูลสำเร็จ ${updated} คน\nมา: ${d.counts['มา']||0}, ขาด: ${d.counts['ขาด']||0}, สาย: ${d.counts['สาย']||0}, ลา: ${d.counts['ลา']||0}`);
+            alert(`ดึงข้อมูลสำเร็จ ${updated} คน\nมา: ${d.counts['มา']||0}  ขาด: ${d.counts['ขาด']||0}  สาย: ${d.counts['สาย']||0}  ลา: ${d.counts['ลา']||0}`);
         })
         .catch(() => {
             btn.disabled = false;
