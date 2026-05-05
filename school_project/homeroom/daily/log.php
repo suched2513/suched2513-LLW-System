@@ -342,8 +342,11 @@ echo '<div class="d-flex">'; hrRenderSidebar(); echo '<div class="main-content f
           <span class="text-muted fw-normal ms-1" style="font-size:13px"><?= date('d/m/Y', strtotime($selectedDate)) ?></span>
         </span>
         <?php if (!$isReadOnly && !empty($students)): ?>
-        <div class="btn-group btn-group-sm">
-          <button type="button" class="btn btn-outline-success" onclick="setAllStatus('มา')">
+        <div class="d-flex gap-2 flex-wrap">
+          <button type="button" class="btn btn-outline-primary btn-sm" onclick="syncFromAtt()" id="syncBtn">
+            <i class="bi bi-arrow-repeat me-1"></i>ดึงข้อมูลจากระบบเช็คชื่อ
+          </button>
+          <button type="button" class="btn btn-outline-success btn-sm" onclick="setAllStatus('มา')">
             <i class="bi bi-check-all me-1"></i>มาทั้งหมด
           </button>
         </div>
@@ -622,6 +625,64 @@ function recalcStats() {
     document.getElementById('stat_late').textContent    = l;
     document.getElementById('stat_leave').textContent   = lv;
     document.getElementById('stat_total').textContent   = total;
+}
+
+function syncFromAtt() {
+    const btn = document.getElementById('syncBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>กำลังดึงข้อมูล...';
+
+    const classroom = <?= json_encode($selectedClassroom) ?>;
+    const date      = <?= json_encode($selectedDate) ?>;
+
+    fetch(`<?= BASE_URL ?>/homeroom/api/sync_att.php?classroom=${encodeURIComponent(classroom)}&date=${date}`)
+        .then(r => r.json())
+        .then(d => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>ดึงข้อมูลจากระบบเช็คชื่อ';
+
+            if (!d.ok) {
+                alert('ไม่สามารถดึงข้อมูลได้: ' + d.msg);
+                return;
+            }
+            if (!d.has_data) {
+                alert('ไม่พบข้อมูลเช็คชื่อในระบบสำหรับ ' + classroom + ' วันที่ ' + date);
+                return;
+            }
+
+            // อัปเดตสถานะแต่ละคน
+            let updated = 0;
+            d.students.forEach(s => {
+                if (s.status && document.getElementById('stu_' + s.student_id)) {
+                    const col = {มา:'success',สาย:'warning',ขาด:'danger',ลา:'info',โดด:'danger'}[s.status] || 'secondary';
+                    setStatus(s.student_id, s.status, col, null);
+                    updated++;
+                }
+            });
+
+            // อัปเดต badge "จากระบบเช็คชื่อ"
+            d.students.forEach(s => {
+                if (!s.status) return;
+                const row = document.getElementById('row_' + s.student_id);
+                if (!row) return;
+                let badge = row.querySelector('.att-badge');
+                if (!badge) {
+                    const nameCell = row.querySelector('td:nth-child(2)');
+                    badge = document.createElement('span');
+                    badge.className = 'badge bg-light text-secondary border att-badge ms-1';
+                    badge.style.fontSize = '10px';
+                    badge.innerHTML = '<i class="bi bi-arrow-down-circle me-1"></i>จากระบบเช็คชื่อ' + (s.period ? ' คาบ'+s.period : '');
+                    nameCell.appendChild(badge);
+                }
+            });
+
+            alert(`ดึงข้อมูลสำเร็จ ${updated} คน\nมา: ${d.counts['มา']||0}, ขาด: ${d.counts['ขาด']||0}, สาย: ${d.counts['สาย']||0}, ลา: ${d.counts['ลา']||0}`);
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>ดึงข้อมูลจากระบบเช็คชื่อ';
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+        });
 }
 
 function addActivity() {
