@@ -212,6 +212,11 @@ echo '<div class="d-flex">'; hrRenderSidebar(); echo '<div class="main-content f
             <i class="bi bi-arrow-return-left"></i>
           </button>
           <?php endif; ?>
+          <button class="btn btn-outline-danger btn-sm ms-1"
+                  onclick="confirmDelete(<?= $log['id'] ?>, '<?= h($cls) ?>', '<?= h($selectedDate) ?>')"
+                  title="ลบรายการนี้">
+            <i class="bi bi-trash"></i>
+          </button>
           <?php else: ?>
           <a href="<?= BASE_URL ?>/homeroom/daily/log.php?date=<?= $selectedDate ?>&classroom=<?= urlencode($cls) ?>"
              class="btn btn-outline-primary btn-sm">
@@ -268,6 +273,20 @@ function quickReturn(id) {
     const btn = document.getElementById('qBtn');
     btn.className = 'btn btn-danger btn-sm'; btn.textContent = 'ส่งคืน';
     new bootstrap.Modal(document.getElementById('quickModal')).show();
+}
+</script>
+
+<!-- Delete form (hidden) -->
+<form method="POST" action="delete_log.php" id="deleteForm">
+  <input type="hidden" name="csrf_token" value="<?= csrfToken() ?>">
+  <input type="hidden" name="log_id" id="deleteLogId">
+</form>
+
+<script>
+function confirmDelete(logId, classroom, date) {
+    if (!confirm('ลบบันทึกโฮมรูม ' + classroom + ' วันที่ ' + date + '?\n\nข้อมูลเช็คชื่อและรูปภาพจะถูกลบด้วย')) return;
+    document.getElementById('deleteLogId').value = logId;
+    document.getElementById('deleteForm').submit();
 }
 </script>
 
