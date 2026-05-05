@@ -18,7 +18,6 @@ try {
     $myClassrooms = $cs->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) { $myClassrooms = []; }
 
-// ถ้าเป็น admin ให้เลือก classroom ได้ทั้งหมด
 if ($isAdmin && empty($myClassrooms)) {
     try {
         $cs = $db->prepare("SELECT DISTINCT classroom FROM llw_class_advisors ORDER BY classroom");
@@ -55,198 +54,216 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // สถิติการมาเรียน
-    $totalSt  = (int)($_POST['total_students'] ?? 0);
-    $present  = (int)($_POST['present_count'] ?? 0);
-    $absent   = (int)($_POST['absent_count'] ?? 0);
-    $late     = (int)($_POST['late_count'] ?? 0);
-    $leave    = (int)($_POST['leave_count'] ?? 0);
-    $attSync  = (int)($_POST['att_synced'] ?? 0);
+    // สถานะนักเรียนรายคน (key = student_id)
+    $studentStatuses = $_POST['stu_status'] ?? [];   // ['04684' => 'มา', ...]
+    $studentNotes    = $_POST['stu_note']   ?? [];
 
-    $newStatus     = ($postAction === 'submit') ? 'submitted' : 'draft';
-    $submittedAt   = ($postAction === 'submit') ? date('Y-m-d H:i:s') : null;
+    // คำนวณสถิติจากสถานะรายคน
+    $totalSt = count($studentStatuses);
+    $present = $absent = $late = $leave = 0;
+    foreach ($studentStatuses as $sid => $st) {
+        if ($st === 'มา')                    $present++;
+        elseif ($st === 'ขาด' || $st === 'โดด') $absent++;
+        elseif ($st === 'สาย')               $late++;
+        elseif ($st === 'ลา')                $leave++;
+    }
+
+    $newStatus   = ($postAction === 'submit') ? 'submitted' : 'draft';
+    $submittedAt = ($postAction === 'submit') ? date('Y-m-d H:i:s') : null;
 
     try {
+        $db->beginTransaction();
+
         $editId = (int)($_POST['log_id'] ?? 0);
 
         if ($editId > 0) {
-            // ตรวจสิทธิ์
             $chk = $db->prepare("SELECT teacher_id, status FROM hr_daily_logs WHERE id = ?");
             $chk->execute([$editId]);
             $existing = $chk->fetch();
             if (!$existing || (!$isAdmin && (int)$existing['teacher_id'] !== (int)$u['id'])) {
-                flashMessage('danger', 'ไม่มีสิทธิ์แก้ไขรายการนี้'); header('Location: log.php'); exit;
+                $db->rollBack();
+                flashMessage('danger', 'ไม่มีสิทธิ์แก้ไข'); header('Location: log.php'); exit;
             }
             if (!in_array($existing['status'], ['draft', 'revision'])) {
-                flashMessage('warning', 'รายการนี้ส่งแล้ว ไม่สามารถแก้ไขได้'); header('Location: log.php?date=' . $postDate . '&classroom=' . urlencode($postClassroom)); exit;
+                $db->rollBack();
+                flashMessage('warning', 'รายการนี้ส่งแล้ว ไม่สามารถแก้ไขได้');
+                header('Location: log.php?date=' . $postDate . '&classroom=' . urlencode($postClassroom)); exit;
             }
-
-            $stmt = $db->prepare("UPDATE hr_daily_logs SET
+            $db->prepare("UPDATE hr_daily_logs SET
                 notes=?, activities=?, total_students=?, present_count=?, absent_count=?,
-                late_count=?, leave_count=?, att_synced=?, status=?, submitted_at=?, updated_at=NOW()
-                WHERE id=?");
-            $stmt->execute([
+                late_count=?, leave_count=?, att_synced=1, status=?, submitted_at=?, updated_at=NOW()
+                WHERE id=?")->execute([
                 $postNotes, json_encode($activities, JSON_UNESCAPED_UNICODE),
-                $totalSt, $present, $absent, $late, $leave, $attSync,
+                $totalSt, $present, $absent, $late, $leave,
                 $newStatus, $submittedAt, $editId
             ]);
             $logId = $editId;
         } else {
-            // ตรวจว่ามีของวันนี้อยู่แล้วหรือเปล่า
             $chk = $db->prepare("SELECT id FROM hr_daily_logs WHERE classroom=? AND log_date=?");
             $chk->execute([$postClassroom, $postDate]);
             $dup = $chk->fetch();
             if ($dup) {
+                $db->rollBack();
                 flashMessage('warning', 'มีบันทึกของวันนี้ในห้อง ' . $postClassroom . ' แล้ว');
                 header('Location: log.php?date=' . $postDate . '&classroom=' . urlencode($postClassroom) . '&id=' . $dup['id']); exit;
             }
-
-            $stmt = $db->prepare("INSERT INTO hr_daily_logs
-                (teacher_id, classroom, log_date, academic_year, semester, notes, activities,
-                 total_students, present_count, absent_count, late_count, leave_count, att_synced, status, submitted_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-            $stmt->execute([
+            $db->prepare("INSERT INTO hr_daily_logs
+                (teacher_id,classroom,log_date,academic_year,semester,notes,activities,
+                 total_students,present_count,absent_count,late_count,leave_count,att_synced,status,submitted_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)")->execute([
                 $u['id'], $postClassroom, $postDate, $postYear, $postSemester,
                 $postNotes, json_encode($activities, JSON_UNESCAPED_UNICODE),
-                $totalSt, $present, $absent, $late, $leave, $attSync,
+                $totalSt, $present, $absent, $late, $leave,
                 $newStatus, $submittedAt
             ]);
             $logId = (int)$db->lastInsertId();
         }
 
-        if ($postAction === 'submit') {
-            flashMessage('success', 'ส่งบันทึกโฮมรูม ' . $postDate . ' เรียบร้อย');
-            header('Location: log.php?date=' . $postDate . '&classroom=' . urlencode($postClassroom)); exit;
-        } else {
-            flashMessage('success', 'บันทึกร่างแล้ว');
-            header('Location: log.php?date=' . $postDate . '&classroom=' . urlencode($postClassroom) . '&id=' . $logId); exit;
+        // บันทึกสถานะรายคน
+        if ($logId > 0 && !empty($studentStatuses)) {
+            $db->prepare("DELETE FROM hr_daily_attendance WHERE log_id = ?")->execute([$logId]);
+            $ins = $db->prepare("INSERT INTO hr_daily_attendance (log_id,student_id,student_name,status,note) VALUES (?,?,?,?,?)");
+            foreach ($studentStatuses as $sid => $st) {
+                $sname = trim($_POST['stu_name'][$sid] ?? '');
+                $snote = trim($studentNotes[$sid] ?? '');
+                $ins->execute([$logId, $sid, $sname, $st, $snote]);
+            }
         }
 
+        $db->commit();
+
+        $msg = $postAction === 'submit' ? 'ส่งบันทึกโฮมรูมเรียบร้อย' : 'บันทึกร่างแล้ว';
+        flashMessage('success', $msg);
+        header('Location: log.php?date=' . $postDate . '&classroom=' . urlencode($postClassroom) . '&id=' . $logId); exit;
+
     } catch (Exception $e) {
+        if ($db->inTransaction()) $db->rollBack();
         error_log('hr_daily_log save: ' . $e->getMessage());
-        flashMessage('danger', 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+        flashMessage('danger', 'เกิดข้อผิดพลาด: ' . $e->getMessage());
         header('Location: log.php?date=' . $postDate . '&classroom=' . urlencode($postClassroom)); exit;
     }
 }
 
 // ============================================================
-// โหลดข้อมูลสำหรับแสดงฟอร์ม
+// โหลด log ที่มีอยู่
 // ============================================================
-$existingLog = null;
+$existingLog    = null;
 $existingPhotos = [];
+$savedAttendance = [];  // ['student_id' => ['status'=>..,'note'=>..]]
 
-// โหลด log ที่มีอยู่ (จาก id หรือค้นหาจาก date+classroom)
-if ($logId > 0) {
-    $stmt = $db->prepare("SELECT * FROM hr_daily_logs WHERE id = ?");
-    $stmt->execute([$logId]);
-    $existingLog = $stmt->fetch();
-    if ($existingLog) {
-        $selectedClassroom = $existingLog['classroom'];
-        $selectedDate      = $existingLog['log_date'];
+$migrationReady = false;
+try {
+    $db->query("SELECT 1 FROM hr_daily_logs LIMIT 1");
+    $migrationReady = true;
+} catch (Exception $e) {}
 
-        $phStmt = $db->prepare("SELECT * FROM hr_daily_photos WHERE log_id = ? ORDER BY order_no, id");
-        $phStmt->execute([$logId]);
-        $existingPhotos = $phStmt->fetchAll();
-    }
-} else {
-    try {
-        $stmt = $db->prepare("SELECT * FROM hr_daily_logs WHERE classroom = ? AND log_date = ?");
-        $stmt->execute([$selectedClassroom, $selectedDate]);
-        $existingLog = $stmt->fetch() ?: null;
+if ($migrationReady) {
+    if ($logId > 0) {
+        $stmt = $db->prepare("SELECT * FROM hr_daily_logs WHERE id = ?");
+        $stmt->execute([$logId]);
+        $existingLog = $stmt->fetch();
         if ($existingLog) {
-            $logId = $existingLog['id'];
+            $selectedClassroom = $existingLog['classroom'];
+            $selectedDate      = $existingLog['log_date'];
+        }
+    } else {
+        try {
+            $stmt = $db->prepare("SELECT * FROM hr_daily_logs WHERE classroom = ? AND log_date = ?");
+            $stmt->execute([$selectedClassroom, $selectedDate]);
+            $existingLog = $stmt->fetch() ?: null;
+            if ($existingLog) $logId = $existingLog['id'];
+        } catch (Exception $e) {}
+    }
+
+    if ($logId > 0) {
+        try {
             $phStmt = $db->prepare("SELECT * FROM hr_daily_photos WHERE log_id = ? ORDER BY order_no, id");
             $phStmt->execute([$logId]);
             $existingPhotos = $phStmt->fetchAll();
-        }
-    } catch (Exception $e) { $existingLog = null; }
+        } catch (Exception $e) {}
+
+        try {
+            $attStmt = $db->prepare("SELECT student_id, status, note FROM hr_daily_attendance WHERE log_id = ?");
+            $attStmt->execute([$logId]);
+            foreach ($attStmt->fetchAll() as $row) {
+                $savedAttendance[$row['student_id']] = $row;
+            }
+        } catch (Exception $e) {}
+    }
 }
 
 $isReadOnly = $existingLog && !in_array($existingLog['status'], ['draft', 'revision']);
 
 // ============================================================
-// ดึงนักเรียนจาก att_students + att_attendance วันนี้
+// ดึงรายชื่อนักเรียน + att_attendance วันนี้ (คาบ 1) สำหรับอ้างอิง
 // ============================================================
-$students       = [];
-$attDoneToday   = false;   // ครูเช็คชื่อในระบบ att แล้วหรือยัง
-$attWarning     = '';
+$students   = [];
+$attMapExt  = [];   // สถานะจากระบบเช็คชื่อรายคาบ (อ้างอิง)
 
 if ($selectedClassroom !== '') {
     try {
-        // นักเรียนในห้อง
-        $stmtSt = $db->prepare("SELECT student_id, name FROM att_students WHERE classroom = ? ORDER BY name");
+        $stmtSt = $db->prepare("SELECT student_id, name FROM att_students WHERE classroom = ? ORDER BY student_id");
         $stmtSt->execute([$selectedClassroom]);
         $rawStudents = $stmtSt->fetchAll();
 
         if (!empty($rawStudents)) {
-            // ดึงสถานะการเช็คชื่อวันนี้ period 1 (เข้าแถว)
             $sidList = array_column($rawStudents, 'student_id');
-            $inPlaceholders = implode(',', array_fill(0, count($sidList), '?'));
-
-            $attParams = array_merge([$selectedDate, 1], $sidList);
-            $attStmt = $db->prepare("
-                SELECT student_id, status, time_in
-                FROM att_attendance
-                WHERE date = ? AND period = ? AND student_id IN ($inPlaceholders)
-            ");
-            $attStmt->execute($attParams);
-            $attMap = [];
-            foreach ($attStmt->fetchAll() as $row) {
-                $attMap[$row['student_id']] = $row;
-            }
-            $attDoneToday = !empty($attMap);
-
-            foreach ($rawStudents as $s) {
-                $att = $attMap[$s['student_id']] ?? null;
-                $students[] = [
-                    'student_id' => $s['student_id'],
-                    'name'       => $s['name'],
-                    'att_status' => $att ? $att['status'] : null,
-                    'att_time'   => $att ? $att['time_in'] : null,
-                ];
-            }
+            $ph      = implode(',', array_fill(0, count($sidList), '?'));
+            $attStmt = $db->prepare("SELECT student_id, status FROM att_attendance WHERE date = ? AND period = 1 AND student_id IN ($ph)");
+            $attStmt->execute(array_merge([$selectedDate], $sidList));
+            foreach ($attStmt->fetchAll() as $r) $attMapExt[$r['student_id']] = $r['status'];
         }
-    } catch (Exception $e) {
-        // att tables might not be accessible
-    }
+
+        foreach ($rawStudents as $s) {
+            // ลำดับความสำคัญ: hr_daily_attendance (บันทึกแล้ว) > att_attendance > มา (default)
+            $savedStatus = $savedAttendance[$s['student_id']]['status'] ?? null;
+            $attStatus   = $attMapExt[$s['student_id']] ?? null;
+            $students[]  = [
+                'student_id'   => $s['student_id'],
+                'name'         => $s['name'],
+                'status'       => $savedStatus ?? $attStatus ?? 'มา',
+                'note'         => $savedAttendance[$s['student_id']]['note'] ?? '',
+                'from_att'     => ($savedStatus === null && $attStatus !== null),
+            ];
+        }
+    } catch (Exception $e) {}
 }
 
-// คำนวณสถิติอัตโนมัติจาก att
-$autoStats = ['total' => count($students), 'present' => 0, 'absent' => 0, 'late' => 0, 'leave' => 0];
-$statusMap  = ['มา' => 'present', 'สาย' => 'late', 'ขาด' => 'absent', 'ลา' => 'leave', 'โดด' => 'absent'];
+// สถิติ live จาก $students (ใช้ JS เพื่ออัปเดต real-time)
+$initStats = ['total' => count($students), 'present' => 0, 'absent' => 0, 'late' => 0, 'leave' => 0];
 foreach ($students as $s) {
-    if ($s['att_status'] && isset($statusMap[$s['att_status']])) {
-        $autoStats[$statusMap[$s['att_status']]]++;
-    } elseif ($s['att_status'] === 'มา') {
-        $autoStats['present']++;
-    }
+    if ($s['status'] === 'มา')                        $initStats['present']++;
+    elseif (in_array($s['status'], ['ขาด','โดด']))    $initStats['absent']++;
+    elseif ($s['status'] === 'สาย')                   $initStats['late']++;
+    elseif ($s['status'] === 'ลา')                    $initStats['leave']++;
 }
-
-// warning ถ้ายังไม่ได้เช็คชื่อในระบบ att
-if (!$attDoneToday && !empty($students) && $selectedDate === date('Y-m-d')) {
-    $attWarning = 'ยังไม่มีข้อมูลเช็คชื่อเข้าแถวในระบบเช็คชื่อวันนี้ ข้อมูลจำนวนนักเรียนจะต้องกรอกเอง';
+if ($existingLog) {
+    $initStats = [
+        'total'   => $existingLog['total_students'],
+        'present' => $existingLog['present_count'],
+        'absent'  => $existingLog['absent_count'],
+        'late'    => $existingLog['late_count'],
+        'leave'   => $existingLog['leave_count'],
+    ];
 }
-
-// ค่าเริ่มต้นสำหรับ form
-$formStats = $existingLog ? [
-    'total'   => $existingLog['total_students'],
-    'present' => $existingLog['present_count'],
-    'absent'  => $existingLog['absent_count'],
-    'late'    => $existingLog['late_count'],
-    'leave'   => $existingLog['leave_count'],
-] : $autoStats;
 
 $formActivities = [];
 if ($existingLog && $existingLog['activities']) {
     $formActivities = json_decode($existingLog['activities'], true) ?: [];
 }
 
-$statusLabels = ['draft' => 'ร่าง', 'submitted' => 'รออนุมัติ', 'approved' => 'อนุมัติแล้ว', 'revision' => 'ส่งคืน'];
-$statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'approved' => 'success', 'revision' => 'danger'];
+$statusLabels = ['draft'=>'ร่าง','submitted'=>'รออนุมัติ','approved'=>'อนุมัติแล้ว','revision'=>'ส่งคืน'];
+$statusColors = ['draft'=>'secondary','submitted'=>'warning','approved'=>'success','revision'=>'danger'];
 
 hrRenderHead('บันทึกโฮมรูมประจำวัน');
 echo '<div class="d-flex">'; hrRenderSidebar(); echo '<div class="main-content flex-grow-1">'; hrRenderTopbar('บันทึกโฮมรูมประจำวัน'); echo '<div class="page-content">'; hrShowFlash();
 ?>
+
+<?php if (!$migrationReady): ?>
+<div class="alert alert-warning">
+  ยังไม่ได้รัน migration — <a href="<?= BASE_URL ?>/../_migrate.php?run=1" class="alert-link">คลิกที่นี่เพื่อรัน</a>
+</div>
+<?php else: ?>
 
 <!-- Date / Classroom selector -->
 <div class="card mb-3">
@@ -279,133 +296,138 @@ echo '<div class="d-flex">'; hrRenderSidebar(); echo '<div class="main-content f
 </div>
 
 <?php if ($selectedClassroom === ''): ?>
-<div class="alert alert-warning">ไม่พบข้อมูลห้องเรียนที่รับผิดชอบ กรุณาติดต่อผู้ดูแลระบบเพื่อตั้งค่าห้องเรียน</div>
+<div class="alert alert-warning">ไม่พบข้อมูลห้องเรียนที่รับผิดชอบ กรุณาติดต่อผู้ดูแลระบบ</div>
 <?php else: ?>
 
-<?php if ($attWarning): ?>
-<div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
-  <i class="bi bi-exclamation-triangle-fill fs-5"></i>
-  <div>
-    <strong>แจ้งเตือน:</strong> <?= h($attWarning) ?>
-    <a href="/attendance_system/attendance.php" class="ms-2 btn btn-sm btn-warning" target="_blank">
-      <i class="bi bi-arrow-right-circle me-1"></i>ไปเช็คชื่อ
-    </a>
-  </div>
-</div>
-<?php endif; ?>
-
-<?php if ($isReadOnly): ?>
+<?php if ($isReadOnly && $existingLog): ?>
 <div class="alert alert-info d-flex align-items-center gap-2">
   <i class="bi bi-lock-fill"></i>
-  รายการนี้ถูกส่งแล้ว สถานะ: <strong><?= $statusLabels[$existingLog['status']] ?></strong>
-  <?php if ($existingLog['status'] === 'approved'): ?>
-  — ผ่านการอนุมัติแล้ว
-  <?php endif; ?>
+  สถานะ: <strong><?= $statusLabels[$existingLog['status']] ?></strong>
   <?php if ($existingLog['review_note']): ?>
-  <span class="ms-2 text-danger">หมายเหตุ: <?= h($existingLog['review_note']) ?></span>
+  — <span class="text-danger"><?= h($existingLog['review_note']) ?></span>
   <?php endif; ?>
 </div>
 <?php endif; ?>
 
 <form method="POST" id="logForm">
   <input type="hidden" name="csrf_token" value="<?= csrfToken() ?>">
-  <input type="hidden" name="log_id" value="<?= $logId ?>">
-  <input type="hidden" name="classroom" value="<?= h($selectedClassroom) ?>">
-  <input type="hidden" name="log_date" value="<?= h($selectedDate) ?>">
+  <input type="hidden" name="log_id"       value="<?= $logId ?>">
+  <input type="hidden" name="classroom"    value="<?= h($selectedClassroom) ?>">
+  <input type="hidden" name="log_date"     value="<?= h($selectedDate) ?>">
   <input type="hidden" name="academic_year" value="<?= (int)date('Y') + 543 ?>">
-  <input type="hidden" name="semester" value="1">
-  <input type="hidden" name="att_synced" value="<?= $attDoneToday ? 1 : 0 ?>">
+  <input type="hidden" name="semester"     value="1">
 
 <div class="row g-3">
 
-  <!-- คอลัมน์ซ้าย: สถิติ + กิจกรรม -->
+  <!-- คอลัมน์ซ้าย -->
   <div class="col-lg-8">
 
-    <!-- สถิติการมา -->
+    <!-- เช็คชื่อเข้าแถว -->
     <div class="card mb-3">
-      <div class="card-header py-2 d-flex align-items-center justify-content-between">
-        <span class="fw-semibold"><i class="bi bi-people me-1 text-primary"></i>สถิติการมาโรงเรียน — <?= h($selectedClassroom) ?> วันที่ <?= date('d/m/Y', strtotime($selectedDate)) ?></span>
-        <?php if ($attDoneToday): ?>
-        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>ดึงจากระบบเช็คชื่อแล้ว</span>
-        <?php else: ?>
-        <span class="badge bg-secondary">กรอกเอง</span>
+      <div class="card-header py-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <span class="fw-semibold">
+          <i class="bi bi-people-fill me-1 text-primary"></i>
+          เช็คชื่อเข้าแถว — <?= h($selectedClassroom) ?>
+          <span class="text-muted fw-normal ms-1" style="font-size:13px"><?= date('d/m/Y', strtotime($selectedDate)) ?></span>
+        </span>
+        <?php if (!$isReadOnly && !empty($students)): ?>
+        <div class="btn-group btn-group-sm">
+          <button type="button" class="btn btn-outline-success" onclick="setAllStatus('มา')">
+            <i class="bi bi-check-all me-1"></i>มาทั้งหมด
+          </button>
+        </div>
         <?php endif; ?>
       </div>
-      <div class="card-body">
-        <div class="row g-3 text-center">
+
+      <!-- KPI row -->
+      <div class="card-body border-bottom py-2">
+        <div class="row g-2 text-center" id="statsRow">
           <?php
-          $statFields = [
-            ['key'=>'total_students',  'label'=>'นร.ทั้งหมด', 'color'=>'primary',   'icon'=>'bi-people'],
-            ['key'=>'present_count',   'label'=>'มาเรียน',    'color'=>'success',   'icon'=>'bi-check-circle'],
-            ['key'=>'absent_count',    'label'=>'ขาด/โดด',    'color'=>'danger',    'icon'=>'bi-x-circle'],
-            ['key'=>'late_count',      'label'=>'มาสาย',      'color'=>'warning',   'icon'=>'bi-clock'],
-            ['key'=>'leave_count',     'label'=>'ลา',         'color'=>'info',      'icon'=>'bi-calendar-check'],
+          $statDefs = [
+            ['key'=>'present','label'=>'มาเรียน','color'=>'success','icon'=>'bi-check-circle-fill'],
+            ['key'=>'absent', 'label'=>'ขาด/โดด','color'=>'danger', 'icon'=>'bi-x-circle-fill'],
+            ['key'=>'late',   'label'=>'มาสาย',  'color'=>'warning','icon'=>'bi-clock-fill'],
+            ['key'=>'leave',  'label'=>'ลา',      'color'=>'info',   'icon'=>'bi-calendar-check-fill'],
+            ['key'=>'total',  'label'=>'ทั้งหมด', 'color'=>'secondary','icon'=>'bi-people-fill'],
           ];
-          foreach ($statFields as $sf): ?>
+          foreach ($statDefs as $sd): ?>
           <div class="col">
-            <div class="border rounded p-2">
-              <i class="bi <?= $sf['icon'] ?> text-<?= $sf['color'] ?>"></i>
-              <div class="small text-muted mt-1"><?= $sf['label'] ?></div>
-              <?php if ($isReadOnly): ?>
-              <div class="fw-bold fs-5 text-<?= $sf['color'] ?>"><?= $formStats[str_replace(['_students','_count'], ['',''], $sf['key'])] ?? $existingLog[$sf['key']] ?></div>
-              <?php else: ?>
-              <input type="number" name="<?= $sf['key'] ?>" class="form-control form-control-sm text-center mt-1 fw-bold text-<?= $sf['color'] ?>"
-                     value="<?= $sf['key'] === 'total_students' ? $formStats['total'] : $formStats[str_replace('_count','',$sf['key'])] ?>"
-                     min="0" style="max-width:70px;margin:auto">
-              <?php endif; ?>
+            <div class="border rounded py-2 px-1">
+              <i class="bi <?= $sd['icon'] ?> text-<?= $sd['color'] ?>"></i>
+              <div class="fw-bold text-<?= $sd['color'] ?>" id="stat_<?= $sd['key'] ?>"><?= $initStats[$sd['key']] ?></div>
+              <div class="text-muted" style="font-size:11px"><?= $sd['label'] ?></div>
             </div>
           </div>
           <?php endforeach; ?>
         </div>
       </div>
-    </div>
 
-    <!-- ตารางนักเรียน (ถ้ามี att data) -->
-    <?php if (!empty($students)): ?>
-    <div class="card mb-3">
-      <div class="card-header py-2">
-        <span class="fw-semibold"><i class="bi bi-list-check me-1"></i>รายชื่อนักเรียน (<?= count($students) ?> คน)</span>
-        <?php if (!$attDoneToday): ?>
-        <small class="text-warning ms-2"><i class="bi bi-exclamation-circle me-1"></i>ยังไม่มีข้อมูลเช็คชื่อจากระบบ</small>
-        <?php endif; ?>
+      <!-- รายชื่อ -->
+      <?php if (empty($students)): ?>
+      <div class="card-body text-center text-muted py-4">
+        <i class="bi bi-person-x fs-3"></i>
+        <p class="mt-2 mb-0">ไม่พบข้อมูลนักเรียนในห้อง <?= h($selectedClassroom) ?></p>
       </div>
+      <?php else: ?>
       <div class="card-body p-0">
-        <table class="table table-sm table-hover mb-0" style="font-size:13px">
-          <thead class="table-light">
+        <table class="table table-sm table-hover mb-0 align-middle" style="font-size:13px">
+          <thead class="table-light sticky-top">
             <tr>
-              <th class="ps-3">#</th>
-              <th>รหัส</th>
+              <th class="ps-3" style="width:40px">#</th>
               <th>ชื่อ-สกุล</th>
-              <th class="text-center">สถานะ (คาบ 1)</th>
-              <th class="text-center">เวลา</th>
+              <th class="text-center" style="width:220px">สถานะ</th>
+              <th style="width:140px">หมายเหตุ</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="studentTable">
           <?php foreach ($students as $i => $s):
-            $stColor = ['มา'=>'success','สาย'=>'warning','ขาด'=>'danger','ลา'=>'info','โดด'=>'danger'];
-            $stIcon  = ['มา'=>'bi-check-circle','สาย'=>'bi-clock','ขาด'=>'bi-x-circle','ลา'=>'bi-calendar-check','โดด'=>'bi-exclamation-circle'];
-            $sc = $stColor[$s['att_status']] ?? 'secondary';
-            $si = $stIcon[$s['att_status']]  ?? 'bi-dash';
+            $sc = ['มา'=>'success','ขาด'=>'danger','สาย'=>'warning','ลา'=>'info','โดด'=>'danger'];
           ?>
-          <tr>
+          <tr id="row_<?= h($s['student_id']) ?>" class="<?= $s['status'] !== 'มา' ? 'table-'.(($sc[$s['status']]??'secondary')) : '' ?>" style="opacity:<?= $s['status']==='มา'?'1':'1' ?>">
             <td class="ps-3 text-muted"><?= $i+1 ?></td>
-            <td class="text-muted"><?= h($s['student_id']) ?></td>
-            <td><?= h($s['name']) ?></td>
+            <td>
+              <div class="fw-semibold"><?= h($s['name']) ?></div>
+              <?php if ($s['from_att']): ?>
+              <span class="badge bg-light text-secondary border" style="font-size:10px">
+                <i class="bi bi-arrow-down-circle me-1"></i>จากระบบเช็คชื่อ
+              </span>
+              <?php endif; ?>
+              <input type="hidden" name="stu_name[<?= h($s['student_id']) ?>]" value="<?= h($s['name']) ?>">
+            </td>
             <td class="text-center">
-              <?php if ($s['att_status']): ?>
-              <span class="badge bg-<?= $sc ?>"><i class="bi <?= $si ?> me-1"></i><?= h($s['att_status']) ?></span>
+              <?php if ($isReadOnly): ?>
+              <span class="badge bg-<?= $sc[$s['status']] ?? 'secondary' ?>"><?= h($s['status']) ?></span>
               <?php else: ?>
-              <span class="text-muted">—</span>
+              <input type="hidden" name="stu_status[<?= h($s['student_id']) ?>]"
+                     id="stu_<?= h($s['student_id']) ?>" value="<?= h($s['status']) ?>">
+              <div class="btn-group btn-group-sm" role="group">
+                <?php foreach (['มา'=>'success','สาย'=>'warning','ขาด'=>'danger','ลา'=>'info'] as $st => $col): ?>
+                <button type="button"
+                        class="btn btn-<?= $s['status']===$st ? $col : 'outline-'.$col ?> status-btn"
+                        data-sid="<?= h($s['student_id']) ?>" data-st="<?= $st ?>" data-col="<?= $col ?>"
+                        onclick="setStatus('<?= h($s['student_id']) ?>','<?= $st ?>','<?= $col ?>',this)">
+                  <?= $st ?>
+                </button>
+                <?php endforeach; ?>
+              </div>
               <?php endif; ?>
             </td>
-            <td class="text-center text-muted small"><?= $s['att_time'] ? substr($s['att_time'],0,5) : '—' ?></td>
+            <td>
+              <?php if ($isReadOnly): ?>
+              <span class="text-muted small"><?= h($s['note']) ?></span>
+              <?php else: ?>
+              <input type="text" name="stu_note[<?= h($s['student_id']) ?>]"
+                     class="form-control form-control-sm" placeholder="โน้ต..."
+                     value="<?= h($s['note']) ?>" style="font-size:12px">
+              <?php endif; ?>
+            </td>
           </tr>
           <?php endforeach; ?>
           </tbody>
         </table>
       </div>
+      <?php endif; ?>
     </div>
-    <?php endif; ?>
 
     <!-- กิจกรรม -->
     <div class="card mb-3">
@@ -413,7 +435,7 @@ echo '<div class="d-flex">'; hrRenderSidebar(); echo '<div class="main-content f
         <span class="fw-semibold"><i class="bi bi-calendar-event me-1"></i>กิจกรรม / ข่าวสาร</span>
         <?php if (!$isReadOnly): ?>
         <button type="button" class="btn btn-sm btn-outline-primary" onclick="addActivity()">
-          <i class="bi bi-plus me-1"></i>เพิ่มกิจกรรม
+          <i class="bi bi-plus me-1"></i>เพิ่ม
         </button>
         <?php endif; ?>
       </div>
@@ -422,7 +444,7 @@ echo '<div class="d-flex">'; hrRenderSidebar(); echo '<div class="main-content f
           <?php if (empty($formActivities)): ?>
           <p class="text-muted small mb-0">— ไม่มีกิจกรรม —</p>
           <?php else: ?>
-          <?php foreach ($formActivities as $i => $act): ?>
+          <?php foreach ($formActivities as $act): ?>
           <div class="border rounded p-2 mb-2 bg-light">
             <div class="fw-semibold"><?= h($act['name']) ?></div>
             <?php if ($act['desc']): ?><div class="small text-muted"><?= nl2br(h($act['desc'])) ?></div><?php endif; ?>
@@ -431,18 +453,18 @@ echo '<div class="d-flex">'; hrRenderSidebar(); echo '<div class="main-content f
           <?php endif; ?>
         <?php else: ?>
           <?php if (empty($formActivities)): ?>
-          <div id="noActivity" class="text-muted small">กดปุ่มเพิ่มกิจกรรม เพื่อบันทึกกิจกรรมที่เกิดขึ้น</div>
+          <div id="noActivity" class="text-muted small">กดปุ่มเพิ่มเพื่อบันทึกกิจกรรมที่เกิดขึ้นในวันนี้</div>
           <?php else: ?>
-          <?php foreach ($formActivities as $i => $act): ?>
+          <?php foreach ($formActivities as $act): ?>
           <div class="activity-row row g-2 mb-2">
             <div class="col-md-4">
               <input type="text" name="act_name[]" class="form-control form-control-sm" placeholder="ชื่อกิจกรรม" value="<?= h($act['name']) ?>">
             </div>
             <div class="col">
-              <input type="text" name="act_desc[]" class="form-control form-control-sm" placeholder="รายละเอียด (ไม่บังคับ)" value="<?= h($act['desc']) ?>">
+              <input type="text" name="act_desc[]" class="form-control form-control-sm" placeholder="รายละเอียด" value="<?= h($act['desc']) ?>">
             </div>
             <div class="col-auto">
-              <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(this)">
+              <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.activity-row').remove()">
                 <i class="bi bi-trash"></i>
               </button>
             </div>
@@ -455,10 +477,10 @@ echo '<div class="d-flex">'; hrRenderSidebar(); echo '<div class="main-content f
 
   </div><!-- /col-lg-8 -->
 
-  <!-- คอลัมน์ขวา: โน้ต + รูปภาพ -->
+  <!-- คอลัมน์ขวา -->
   <div class="col-lg-4">
 
-    <!-- บันทึกเพิ่มเติม -->
+    <!-- บันทึก -->
     <div class="card mb-3">
       <div class="card-header py-2">
         <span class="fw-semibold"><i class="bi bi-pencil-square me-1"></i>บันทึกประจำวัน</span>
@@ -479,25 +501,20 @@ echo '<div class="d-flex">'; hrRenderSidebar(); echo '<div class="main-content f
         <span class="fw-semibold"><i class="bi bi-images me-1"></i>รูปภาพกิจกรรม</span>
       </div>
       <div class="card-body">
-
         <?php if (!$isReadOnly && $logId > 0): ?>
-        <!-- Drop zone -->
         <div id="dropZone" class="border border-2 border-dashed rounded text-center p-3 mb-3 text-muted"
              style="cursor:pointer" onclick="document.getElementById('photoInput').click()"
              ondragover="event.preventDefault();this.classList.add('border-primary')"
              ondragleave="this.classList.remove('border-primary')"
              ondrop="handleDrop(event)">
           <i class="bi bi-cloud-upload fs-4"></i>
-          <p class="small mb-0 mt-1">คลิกหรือลากไฟล์มาวาง<br><span class="text-muted" style="font-size:11px">JPEG/PNG/WEBP ≤ 5MB</span></p>
+          <p class="small mb-0 mt-1">คลิกหรือลากไฟล์มาวาง<br><span style="font-size:11px">JPEG/PNG ≤ 5MB</span></p>
         </div>
         <input type="file" id="photoInput" accept="image/*" multiple class="d-none" onchange="uploadPhotos(this.files)">
-        <?php elseif (!$isReadOnly && $logId === 0): ?>
-        <div class="text-muted small text-center py-2">
-          <i class="bi bi-save me-1"></i>บันทึกร่างก่อนเพื่ออัปโหลดรูปภาพ
-        </div>
+        <?php elseif (!$isReadOnly): ?>
+        <div class="text-muted small text-center py-2"><i class="bi bi-save me-1"></i>บันทึกร่างก่อนเพื่ออัปโหลดรูป</div>
         <?php endif; ?>
 
-        <!-- Gallery -->
         <div id="photoGallery" class="row g-2">
           <?php foreach ($existingPhotos as $ph): ?>
           <div class="col-6" id="photo-<?= $ph['id'] ?>">
@@ -514,7 +531,6 @@ echo '<div class="d-flex">'; hrRenderSidebar(); echo '<div class="main-content f
           </div>
           <?php endforeach; ?>
         </div>
-
       </div>
     </div>
 
@@ -532,34 +548,81 @@ echo '<div class="d-flex">'; hrRenderSidebar(); echo '<div class="main-content f
     <?php endif; ?>
 
   </div><!-- /col-lg-4 -->
+
 </div><!-- /row -->
 </form>
 <?php endif; // selectedClassroom ?>
+<?php endif; // migrationReady ?>
+
+<style>
+.status-btn { min-width: 44px; font-size: 12px; padding: 2px 6px; }
+tr.absent-row { background: rgba(220,53,69,.04); }
+</style>
 
 <script>
+// สถานะนักเรียน initial จาก PHP
+const initStatuses = <?= json_encode(array_column(array_combine(
+    array_column($students,'student_id'),
+    $students
+), 'status', 'student_id'), JSON_UNESCAPED_UNICODE) ?>;
+
+let currentStats = <?= json_encode($initStats) ?>;
+
+function setStatus(sid, st, col, btn) {
+    // อัปเดต hidden input
+    document.getElementById('stu_' + sid).value = st;
+
+    // อัปเดตปุ่ม
+    const row = document.getElementById('row_' + sid);
+    row.querySelectorAll('.status-btn').forEach(b => {
+        const bc = b.dataset.col;
+        b.className = b.dataset.st === st
+            ? 'btn btn-' + bc + ' btn-sm status-btn'
+            : 'btn btn-outline-' + bc + ' btn-sm status-btn';
+    });
+
+    // สีแถว
+    row.className = st !== 'มา' ? 'table-' + col : '';
+
+    recalcStats();
+}
+
+function setAllStatus(st) {
+    document.querySelectorAll('[id^="stu_"]').forEach(inp => {
+        const sid = inp.id.replace('stu_', '');
+        const col = {มา:'success',สาย:'warning',ขาด:'danger',ลา:'info'}[st] || 'secondary';
+        const btn = document.querySelector(`.status-btn[data-sid="${sid}"][data-st="${st}"]`);
+        setStatus(sid, st, col, btn);
+    });
+}
+
+function recalcStats() {
+    let p=0, a=0, l=0, lv=0;
+    document.querySelectorAll('[id^="stu_"]').forEach(inp => {
+        const v = inp.value;
+        if (v==='มา') p++;
+        else if (v==='ขาด'||v==='โดด') a++;
+        else if (v==='สาย') l++;
+        else if (v==='ลา') lv++;
+    });
+    const total = p+a+l+lv;
+    document.getElementById('stat_present').textContent = p;
+    document.getElementById('stat_absent').textContent  = a;
+    document.getElementById('stat_late').textContent    = l;
+    document.getElementById('stat_leave').textContent   = lv;
+    document.getElementById('stat_total').textContent   = total;
+}
+
 function addActivity() {
     const noMsg = document.getElementById('noActivity');
     if (noMsg) noMsg.remove();
-    const list = document.getElementById('activityList');
     const row = document.createElement('div');
     row.className = 'activity-row row g-2 mb-2';
     row.innerHTML = `
-        <div class="col-md-4">
-            <input type="text" name="act_name[]" class="form-control form-control-sm" placeholder="ชื่อกิจกรรม">
-        </div>
-        <div class="col">
-            <input type="text" name="act_desc[]" class="form-control form-control-sm" placeholder="รายละเอียด (ไม่บังคับ)">
-        </div>
-        <div class="col-auto">
-            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeRow(this)">
-                <i class="bi bi-trash"></i>
-            </button>
-        </div>`;
-    list.appendChild(row);
-}
-
-function removeRow(btn) {
-    btn.closest('.activity-row').remove();
+        <div class="col-md-4"><input type="text" name="act_name[]" class="form-control form-control-sm" placeholder="ชื่อกิจกรรม"></div>
+        <div class="col"><input type="text" name="act_desc[]" class="form-control form-control-sm" placeholder="รายละเอียด"></div>
+        <div class="col-auto"><button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.activity-row').remove()"><i class="bi bi-trash"></i></button></div>`;
+    document.getElementById('activityList').appendChild(row);
 }
 
 function handleDrop(e) {
@@ -567,41 +630,27 @@ function handleDrop(e) {
     document.getElementById('dropZone').classList.remove('border-primary');
     uploadPhotos(e.dataTransfer.files);
 }
-
 function uploadPhotos(files) {
     Array.from(files).forEach(file => {
         if (!file.type.startsWith('image/')) return;
         const fd = new FormData();
         fd.append('photo', file);
         fd.append('log_id', <?= $logId ?>);
-        fd.append('type', 'daily');
-        fetch('<?= BASE_URL ?>/homeroom/api/upload_daily_photo.php', { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(d => { if (d.ok) appendPhoto(d.id, d.url); });
+        fetch('<?= BASE_URL ?>/homeroom/api/upload_daily_photo.php', {method:'POST',body:fd})
+            .then(r=>r.json()).then(d=>{if(d.ok)appendPhoto(d.id,d.url);});
     });
 }
-
 function appendPhoto(id, url) {
-    const gallery = document.getElementById('photoGallery');
     const col = document.createElement('div');
-    col.className = 'col-6'; col.id = 'photo-' + id;
-    col.innerHTML = `<div class="position-relative">
-        <img src="${url}" class="img-fluid rounded" style="height:80px;width:100%;object-fit:cover">
-        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 py-0 px-1"
-                onclick="deletePhoto(${id})" style="font-size:10px"><i class="bi bi-x"></i></button>
-    </div>`;
-    gallery.appendChild(col);
+    col.className='col-6'; col.id='photo-'+id;
+    col.innerHTML=`<div class="position-relative"><img src="${url}" class="img-fluid rounded" style="height:80px;width:100%;object-fit:cover">
+        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 py-0 px-1" onclick="deletePhoto(${id})" style="font-size:10px"><i class="bi bi-x"></i></button></div>`;
+    document.getElementById('photoGallery').appendChild(col);
 }
-
 function deletePhoto(id) {
     if (!confirm('ลบรูปนี้?')) return;
-    fetch('<?= BASE_URL ?>/homeroom/api/delete_daily_photo.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({photo_id: id})
-    }).then(r => r.json()).then(d => {
-        if (d.ok) document.getElementById('photo-' + id)?.remove();
-    });
+    fetch('<?= BASE_URL ?>/homeroom/api/delete_daily_photo.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({photo_id:id})})
+        .then(r=>r.json()).then(d=>{if(d.ok)document.getElementById('photo-'+id)?.remove();});
 }
 </script>
 
