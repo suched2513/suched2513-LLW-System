@@ -10,19 +10,35 @@ $depts    = $db->query("SELECT * FROM departments ORDER BY order_no")->fetchAll(
 $deptMap  = [];
 foreach ($depts as $d) $deptMap[$d['name']] = $d['id'];
 
-// จับคู่ชื่อฝ่ายแบบ fuzzy — exact → contains → similar_text ≥75%
+// จับคู่ชื่อฝ่ายแบบ fuzzy — exact → contains → keyword → similar_text ≥65%
 function matchDept(string $name, array $deptMap): ?int {
     $name = trim($name);
+    // 1. exact
     if (isset($deptMap[$name])) return $deptMap[$name];
+    // 2. contains (A ใน B หรือ B ใน A)
     foreach ($deptMap as $k => $v) {
         if (mb_strpos($k, $name) !== false || mb_strpos($name, $k) !== false) return $v;
     }
+    // 3. ตัดคำนำหน้า แล้วเช็ค keyword
+    $prefixes = ['ฝ่ายบริหารงาน','ฝ่ายบริหาร','กลุ่มสาระการเรียนรู้','กลุ่มสาระ','กลุ่ม','ฝ่าย'];
+    $strip = function(string $s) use ($prefixes): string {
+        foreach ($prefixes as $p) {
+            if (mb_strpos($s, $p) === 0) return mb_substr($s, mb_strlen($p));
+        }
+        return $s;
+    };
+    $strippedName = $strip($name);
+    foreach ($deptMap as $k => $v) {
+        $sk = $strip($k);
+        if ($sk && (mb_strpos($strippedName, $sk) !== false || mb_strpos($sk, $strippedName) !== false)) return $v;
+    }
+    // 4. similar_text ≥65%
     $best = null; $bestPct = 0;
     foreach ($deptMap as $k => $v) {
         similar_text($name, $k, $pct);
         if ($pct > $bestPct) { $bestPct = $pct; $best = $v; }
     }
-    return $bestPct >= 75 ? $best : null;
+    return $bestPct >= 65 ? $best : null;
 }
 
 // แปลงประเภทเงิน → ชื่อ column ใน budget_projects
