@@ -57,11 +57,15 @@ function hrRenderSidebar() {
     echo '<div class="sidebar-nav">';
 
     if ($isAdmin) {
-        echo '<div class="nav-section">ผู้ดูแล</div>';
+        echo '<div class="nav-section">บันทึกประจำวัน</div>';
+        echo hrNavLink('/homeroom/admin/daily_overview.php', 'bi-grid-3x3-gap', 'ภาพรวมรายวัน');
+        echo '<div class="nav-section">รายงาน</div>';
         echo hrNavLink('/homeroom/admin/inbox.php', 'bi-inbox', 'Inbox รายงาน');
         echo hrNavLink('/homeroom/reports/list.php', 'bi-journal-text', 'รายงานทั้งหมด');
     } else {
-        echo '<div class="nav-section">รายงานโฮมรูม</div>';
+        echo '<div class="nav-section">บันทึกประจำวัน</div>';
+        echo hrNavLink('/homeroom/daily/log.php', 'bi-pencil-square', 'บันทึกวันนี้');
+        echo '<div class="nav-section">รายงาน</div>';
         echo hrNavLink('/homeroom/reports/list.php', 'bi-journal-text', 'รายงานของฉัน');
         echo hrNavLink('/homeroom/reports/edit.php', 'bi-plus-circle', 'สร้างรายงานใหม่');
     }
