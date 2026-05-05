@@ -57,7 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ─── CSV ──────────────────────────────────────────────────
     if ($action === 'csv' && isset($_FILES['csv_file'])) {
-        $fy   = (int)($_POST['fiscal_year'] ?? FISCAL_YEAR);
+        $fy        = (int)($_POST['fiscal_year'] ?? FISCAL_YEAR);
+        $clearFirst = !empty($_POST['clear_first']);
         $file = $_FILES['csv_file']['tmp_name'];
         $count = 0; $errors = []; $line = 1;
 
@@ -73,6 +74,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             fgetcsv($handle, 2000, $delimiter); // skip header
             $db->beginTransaction();
+            if ($clearFirst) {
+                $db->prepare("DELETE FROM budget_projects WHERE fiscal_year = ?")->execute([$fy]);
+            }
             while (($data = fgetcsv($handle, 2000, $delimiter)) !== false) {
                 $line++;
                 if (empty(array_filter($data))) continue;
@@ -172,6 +176,12 @@ if (!empty($_SESSION['import_errors'])) {
           <div class="mb-3">
             <label class="form-label fw-semibold">ไฟล์ CSV</label>
             <input type="file" name="csv_file" class="form-control" accept=".csv" required>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="clear_first" value="1" id="clearFirst">
+            <label class="form-check-label text-danger fw-semibold small" for="clearFirst">
+              <i class="bi bi-trash me-1"></i>ลบโครงการเดิมของปีงบประมาณนี้ก่อน import
+            </label>
           </div>
           <button type="submit" class="btn btn-success w-100 mb-2">
             <i class="bi bi-file-earmark-arrow-up me-1"></i>Import CSV
