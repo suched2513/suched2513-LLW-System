@@ -287,7 +287,7 @@ echo '<div class="d-flex">'; hrRenderSidebar(); echo '<div class="main-content f
   <i class="bi bi-exclamation-triangle-fill fs-5"></i>
   <div>
     <strong>แจ้งเตือน:</strong> <?= h($attWarning) ?>
-    <a href="<?= BASE_URL ?>/../../attendance_system/attendance.php" class="ms-2 btn btn-sm btn-warning" target="_blank">
+    <a href="/attendance_system/attendance.php" class="ms-2 btn btn-sm btn-warning" target="_blank">
       <i class="bi bi-arrow-right-circle me-1"></i>ไปเช็คชื่อ
     </a>
   </div>
