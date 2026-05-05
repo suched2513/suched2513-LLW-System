@@ -12,9 +12,11 @@ try {
     $stmt = $db->prepare("
         SELECT
             d.name AS department_name,
-            COALESCE(SUM(bp.budget_subsidy),  0) AS alloc_subsidy,
-            COALESCE(SUM(bp.budget_quality),  0) AS alloc_quality,
-            COALESCE(SUM(bp.budget_revenue),  0) AS alloc_revenue,
+            COALESCE(SUM(bp.budget_subsidy),   0) AS alloc_subsidy,
+            COALESCE(SUM(bp.budget_quality),   0) AS alloc_quality,
+            COALESCE(SUM(bp.budget_revenue),   0) AS alloc_revenue,
+            COALESCE(SUM(bp.budget_operation), 0) AS alloc_operation,
+            COALESCE(SUM(bp.budget_reserve),   0) AS alloc_reserve,
             COALESCE(SUM(bp.budget_subsidy + bp.budget_quality + bp.budget_revenue
                          + bp.budget_operation + bp.budget_reserve), 0) AS alloc_total,
             COALESCE(SUM(CASE WHEN pr.status = 'approved'  THEN pr.amount_requested ELSE 0 END), 0) AS used_total,
@@ -38,6 +40,26 @@ try {
 } catch (Exception $e) {
     $rows = [];
     error_log($e->getMessage());
+}
+
+// สรุปรายประเภทเงิน
+$budgetTypes = [
+    'budget_subsidy'   => ['label' => 'งบประมาณเงินอุดหนุน',      'color' => '#1a56db', 'icon' => 'bi-bank'],
+    'budget_quality'   => ['label' => 'งบพัฒนาคุณภาพผู้เรียน',    'color' => '#7c3aed', 'icon' => 'bi-mortarboard'],
+    'budget_revenue'   => ['label' => 'เงินรายได้สถานศึกษา',       'color' => '#0891b2', 'icon' => 'bi-coin'],
+    'budget_operation' => ['label' => 'งบดำเนินการ',                'color' => '#d97706', 'icon' => 'bi-gear'],
+    'budget_reserve'   => ['label' => 'งบสำรอง',                   'color' => '#6b7280', 'icon' => 'bi-piggy-bank'],
+];
+$colToKey = [
+    'budget_subsidy'   => 'alloc_subsidy',
+    'budget_quality'   => 'alloc_quality',
+    'budget_revenue'   => 'alloc_revenue',
+    'budget_operation' => 'alloc_operation',
+    'budget_reserve'   => 'alloc_reserve',
+];
+$typesSummary = [];
+foreach ($budgetTypes as $col => $meta) {
+    $typesSummary[$col] = array_merge($meta, ['alloc' => array_sum(array_column($rows, $colToKey[$col]))]);
 }
 
 $totalAlloc     = array_sum(array_column($rows, 'alloc_total'));
@@ -92,6 +114,50 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
       <div class="stat-value"><?= number_format(max(0, $totalAvailable), 0) ?></div>
       <div class="stat-label">คงเหลือใช้ได้จริง (บาท)</div>
     </div>
+  </div>
+</div>
+
+<!-- สรุปรายประเภทเงิน -->
+<div class="card mb-4">
+  <div class="card-header fw-semibold"><i class="bi bi-pie-chart me-2"></i>สรุปงบประมาณแยกตามประเภทเงิน ปี <?= $fy ?></div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-4">ประเภทเงิน</th>
+          <th class="text-end">งบจัดสรร (บาท)</th>
+          <th class="text-end">สัดส่วน</th>
+          <th style="min-width:200px">แผนภูมิ</th>
+        </tr>
+      </thead>
+      <tbody>
+      <?php foreach ($typesSummary as $col => $t):
+          $pct = $totalAlloc > 0 ? round($t['alloc'] / $totalAlloc * 100, 1) : 0;
+      ?>
+      <?php if ($t['alloc'] > 0): ?>
+      <tr>
+        <td class="ps-4">
+          <i class="<?= $t['icon'] ?> me-2" style="color:<?= $t['color'] ?>"></i>
+          <span class="fw-semibold"><?= $t['label'] ?></span>
+        </td>
+        <td class="text-end fw-bold" style="color:<?= $t['color'] ?>"><?= number_format($t['alloc'], 2) ?></td>
+        <td class="text-end"><?= $pct ?>%</td>
+        <td>
+          <div class="progress" style="height:14px;border-radius:7px;background:#e5e7eb">
+            <div class="progress-bar" style="width:<?= $pct ?>%;background:<?= $t['color'] ?>;border-radius:7px"></div>
+          </div>
+        </td>
+      </tr>
+      <?php endif; ?>
+      <?php endforeach; ?>
+      <tr class="table-light fw-bold">
+        <td class="ps-4">รวมทั้งหมด</td>
+        <td class="text-end text-primary"><?= number_format($totalAlloc, 2) ?></td>
+        <td class="text-end">100%</td>
+        <td></td>
+      </tr>
+      </tbody>
+    </table>
   </div>
 </div>
 
