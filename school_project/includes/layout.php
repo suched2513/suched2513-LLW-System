@@ -63,6 +63,8 @@ function renderSidebar($activePage = '') {
     }
 
     if (in_array($role, ['admin', 'super_admin'])) {
+        echo '<div class="nav-section">บริหารงาน</div>';
+        echo navLink('/admin/workload.php','bi-person-lines-fill','ปริมาณงานรายบุคคล',$activePage);
         echo '<div class="nav-section">ตั้งค่า</div>';
         echo navLink('/admin/users.php','bi-people','จัดการผู้ใช้',$activePage);
         echo navLink('/admin/departments.php','bi-building','ฝ่าย',$activePage);
