@@ -209,9 +209,20 @@ if ($selectedClassroom !== '') {
         if (!empty($rawStudents)) {
             $sidList = array_column($rawStudents, 'student_id');
             $ph      = implode(',', array_fill(0, count($sidList), '?'));
-            $attStmt = $db->prepare("SELECT student_id, status FROM att_attendance WHERE date = ? AND period = 1 AND student_id IN ($ph)");
+            // ดึงทุก period ของวันนั้น เอา period น้อยสุดของแต่ละคน (เข้าแถว = คาบแรกที่เช็ค)
+            $attStmt = $db->prepare("
+                SELECT student_id, status
+                FROM att_attendance
+                WHERE date = ? AND student_id IN ($ph)
+                ORDER BY period ASC
+            ");
             $attStmt->execute(array_merge([$selectedDate], $sidList));
-            foreach ($attStmt->fetchAll() as $r) $attMapExt[$r['student_id']] = $r['status'];
+            foreach ($attStmt->fetchAll() as $r) {
+                // เก็บเฉพาะอันแรก (period น้อยสุด) ต่อนักเรียน 1 คน
+                if (!isset($attMapExt[$r['student_id']])) {
+                    $attMapExt[$r['student_id']] = $r['status'];
+                }
+            }
         }
 
         foreach ($rawStudents as $s) {
