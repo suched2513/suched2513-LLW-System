@@ -7,8 +7,10 @@ require_once __DIR__ . '/../includes/layout.php';
 requireRole(['admin','director','budget_officer','procurement_head','finance_head','deputy_director']);
 $db = getDB();
 
-$dept = (int)($_GET['dept'] ?? 0);
-$fy   = (int)($_GET['fy']   ?? FISCAL_YEAR);
+$dept    = (int)($_GET['dept']   ?? 0);
+$fy      = (int)($_GET['fy']     ?? FISCAL_YEAR);
+$q       = trim($_GET['q']       ?? '');
+$status  = $_GET['status']       ?? 'all';
 
 $params = [$fy];
 $sql = "
@@ -17,14 +19,32 @@ $sql = "
         d.name AS dept_name,
         COALESCE(SUM(CASE WHEN pr.status = 'approved'  THEN pr.amount_requested ELSE 0 END), 0) AS used_total,
         COALESCE(SUM(CASE WHEN pr.status = 'submitted' THEN pr.amount_requested ELSE 0 END), 0) AS committed_total,
-        COUNT(CASE WHEN pr.status = 'submitted' THEN 1 END) AS pending_count
+        COUNT(CASE WHEN pr.status = 'submitted' THEN 1 END) AS pending_count,
+        COALESCE(
+            CASE
+                WHEN SUM(CASE WHEN pr.status='approved'  THEN 1 ELSE 0 END)>0 THEN 'approved'
+                WHEN SUM(CASE WHEN pr.status='submitted' THEN 1 ELSE 0 END)>0 THEN 'submitted'
+                WHEN SUM(CASE WHEN pr.status='rejected'  THEN 1 ELSE 0 END)>0 THEN 'rejected'
+                WHEN SUM(CASE WHEN pr.status='draft'     THEN 1 ELSE 0 END)>0 THEN 'draft'
+                ELSE 'none'
+            END, 'none'
+        ) AS proj_status
     FROM budget_projects bp
     JOIN departments d ON bp.department_id = d.id
     LEFT JOIN project_requests pr ON pr.budget_project_id = bp.id
     WHERE bp.is_active = 1 AND bp.fiscal_year = ?
 ";
 if ($dept) { $sql .= " AND bp.department_id = ?"; $params[] = $dept; }
-$sql .= " GROUP BY bp.id ORDER BY d.order_no, bp.id";
+if ($q)    {
+    $sql .= " AND (bp.project_name LIKE ? OR bp.activity LIKE ? OR bp.owner_name LIKE ?)";
+    $like = '%' . $q . '%';
+    $params[] = $like; $params[] = $like; $params[] = $like;
+}
+$sql .= " GROUP BY bp.id";
+if ($status !== 'all') {
+    $sql .= " HAVING proj_status = ?"; $params[] = $status;
+}
+$sql .= " ORDER BY d.order_no, bp.id";
 
 $s = $db->prepare($sql);
 $s->execute($params);
@@ -43,32 +63,91 @@ foreach ($projects as $p) {
 }
 $grandAvailable = $grandAlloc - $grandUsed - $grandCommitted;
 
+// นับ KPI ตามสถานะ (ไม่ผ่านตัวกรอง q/status)
+try {
+    $kpiParams = [$fy];
+    $kpiWhere  = $dept ? " AND bp.department_id = ?" : "";
+    if ($dept) $kpiParams[] = $dept;
+    $kpiSql = "SELECT
+        COALESCE(CASE
+            WHEN SUM(CASE WHEN pr.status='approved'  THEN 1 ELSE 0 END)>0 THEN 'approved'
+            WHEN SUM(CASE WHEN pr.status='submitted' THEN 1 ELSE 0 END)>0 THEN 'submitted'
+            WHEN SUM(CASE WHEN pr.status='rejected'  THEN 1 ELSE 0 END)>0 THEN 'rejected'
+            WHEN SUM(CASE WHEN pr.status='draft'     THEN 1 ELSE 0 END)>0 THEN 'draft'
+            ELSE 'none'
+        END,'none') AS s, COUNT(*) AS cnt
+        FROM budget_projects bp
+        LEFT JOIN project_requests pr ON pr.budget_project_id = bp.id
+        WHERE bp.is_active=1 AND bp.fiscal_year=? $kpiWhere
+        GROUP BY bp.id";
+    $kpiRows = $db->prepare("SELECT s, COUNT(*) AS cnt FROM ($kpiSql) sub GROUP BY s");
+    $kpiRows->execute($kpiParams);
+    $kpi = ['all'=>0,'none'=>0,'draft'=>0,'submitted'=>0,'approved'=>0,'rejected'=>0];
+    foreach ($kpiRows->fetchAll() as $k) { $kpi[$k['s']] = (int)$k['cnt']; $kpi['all'] += (int)$k['cnt']; }
+} catch (Exception $e) { $kpi = array_fill_keys(['all','none','draft','submitted','approved','rejected'],0); }
+
 renderHead('รายการงบประมาณ');
 echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('รายการงบประมาณโครงการ'); echo '<div class="page-content">'; showFlash();
 ?>
 
 <!-- Filter -->
-<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
-  <div class="d-flex gap-2 flex-wrap">
-    <select class="form-select form-select-sm" style="width:auto"
-            onchange="location='?fy='+this.value+'&dept=<?= $dept ?>'">
-      <?php for ($y = 2567; $y <= 2572; $y++): ?>
-      <option value="<?= $y ?>" <?= $fy == $y ? 'selected' : '' ?>><?= $y ?></option>
-      <?php endfor; ?>
-    </select>
-    <select class="form-select form-select-sm" style="width:auto"
-            onchange="location='?fy=<?= $fy ?>&dept='+this.value">
-      <option value="0">-- ทุกฝ่าย --</option>
-      <?php foreach ($depts as $d): ?>
-      <option value="<?= $d['id'] ?>" <?= $dept == $d['id'] ? 'selected' : '' ?>><?= h($d['name']) ?></option>
-      <?php endforeach; ?>
-    </select>
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="GET" class="d-flex flex-wrap gap-2 align-items-center">
+      <select name="fy" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        <?php for ($y=2567;$y<=2572;$y++): ?>
+        <option value="<?=$y?>" <?=$fy==$y?'selected':''?>><?=$y?></option>
+        <?php endfor; ?>
+      </select>
+      <select name="dept" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        <option value="0">-- ทุกฝ่าย --</option>
+        <?php foreach ($depts as $d): ?>
+        <option value="<?=$d['id']?>" <?=$dept==$d['id']?'selected':''?>><?=h($d['name'])?></option>
+        <?php endforeach; ?>
+      </select>
+      <input type="hidden" name="status" value="<?= h($status) ?>">
+      <div class="input-group input-group-sm" style="width:260px">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" name="q" class="form-control" placeholder="ค้นหาโครงการ / กิจกรรม / ผู้รับผิดชอบ"
+               value="<?= h($q) ?>">
+        <?php if ($q): ?>
+        <a href="?fy=<?=$fy?>&dept=<?=$dept?>&status=<?=h($status)?>" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-x"></i>
+        </a>
+        <?php endif; ?>
+      </div>
+      <?php if (in_array((getCurrentUser())['role'], ['admin','super_admin'])): ?>
+      <a href="<?= BASE_URL ?>/admin/import_budget.php" class="btn btn-sm btn-success ms-auto">
+        <i class="bi bi-upload me-1"></i>Import
+      </a>
+      <?php endif; ?>
+    </form>
   </div>
-  <?php if (in_array((getCurrentUser())['role'], ['admin','super_admin'])): ?>
-  <a href="<?= BASE_URL ?>/admin/import_budget.php" class="btn btn-sm btn-success">
-    <i class="bi bi-upload me-1"></i>Import งบประมาณ
+</div>
+
+<!-- Status tabs -->
+<?php
+$tabs = [
+    'all'       => ['label'=>'ทั้งหมด',           'color'=>'secondary'],
+    'none'      => ['label'=>'ยังไม่ดำเนินการ',   'color'=>'warning'],
+    'draft'     => ['label'=>'ร่าง/เตรียมการ',    'color'=>'secondary'],
+    'submitted' => ['label'=>'รออนุมัติ',          'color'=>'info'],
+    'approved'  => ['label'=>'อนุมัติแล้ว',        'color'=>'success'],
+    'rejected'  => ['label'=>'ปฏิเสธ',             'color'=>'danger'],
+];
+?>
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <?php foreach ($tabs as $val => $tab):
+      $cnt   = $val === 'all' ? $kpi['all'] : ($kpi[$val] ?? 0);
+      $active = $status === $val;
+  ?>
+  <a href="?fy=<?=$fy?>&dept=<?=$dept?>&q=<?=urlencode($q)?>&status=<?=$val?>"
+     class="btn btn-sm <?= $active ? 'btn-'.$tab['color'] : 'btn-outline-'.$tab['color'] ?>">
+    <?= $tab['label'] ?>
+    <span class="badge <?= $active ? 'bg-white text-dark' : 'bg-'.$tab['color'].' text-white' ?> ms-1"><?=$cnt?></span>
   </a>
-  <?php endif; ?>
+  <?php endforeach; ?>
+  <span class="ms-auto small text-muted align-self-center">แสดง <?= count($projects) ?> รายการ</span>
 </div>
 
 <!-- Summary KPIs -->
