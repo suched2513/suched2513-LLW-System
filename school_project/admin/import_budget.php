@@ -10,6 +10,16 @@ $depts    = $db->query("SELECT * FROM departments ORDER BY order_no")->fetchAll(
 $deptMap  = [];
 foreach ($depts as $d) $deptMap[$d['name']] = $d['id'];
 
+// จับคู่ชื่อฝ่ายแบบ fuzzy — ลอง exact → contains → contained-in
+function matchDept(string $name, array $deptMap): ?int {
+    $name = trim($name);
+    if (isset($deptMap[$name])) return $deptMap[$name];
+    foreach ($deptMap as $k => $v) {
+        if (mb_strpos($k, $name) !== false || mb_strpos($name, $k) !== false) return $v;
+    }
+    return null;
+}
+
 // แปลงประเภทเงิน → ชื่อ column ใน budget_projects
 function mapBudgetType(string $type): string {
     $t = trim($type);
@@ -92,9 +102,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $amount     = (float)str_replace(',', '', $data[4]);
                 $ownerName  = trim($data[5] ?? '');
 
-                $deptId = $deptMap[$deptName] ?? null;
+                $deptId = matchDept($deptName, $deptMap);
                 if (!$deptId) {
-                    $errors[] = "บรรทัดที่ $line: ไม่พบฝ่าย '$deptName' ในระบบ";
+                    $knownDepts = implode(', ', array_keys($deptMap));
+                    $errors[] = "บรรทัดที่ $line: ไม่พบฝ่าย '$deptName' (ในระบบมี: $knownDepts)";
                     continue;
                 }
 
