@@ -10,14 +10,19 @@ $depts    = $db->query("SELECT * FROM departments ORDER BY order_no")->fetchAll(
 $deptMap  = [];
 foreach ($depts as $d) $deptMap[$d['name']] = $d['id'];
 
-// จับคู่ชื่อฝ่ายแบบ fuzzy — ลอง exact → contains → contained-in
+// จับคู่ชื่อฝ่ายแบบ fuzzy — exact → contains → similar_text ≥75%
 function matchDept(string $name, array $deptMap): ?int {
     $name = trim($name);
     if (isset($deptMap[$name])) return $deptMap[$name];
     foreach ($deptMap as $k => $v) {
         if (mb_strpos($k, $name) !== false || mb_strpos($name, $k) !== false) return $v;
     }
-    return null;
+    $best = null; $bestPct = 0;
+    foreach ($deptMap as $k => $v) {
+        similar_text($name, $k, $pct);
+        if ($pct > $bestPct) { $bestPct = $pct; $best = $v; }
+    }
+    return $bestPct >= 75 ? $best : null;
 }
 
 // แปลงประเภทเงิน → ชื่อ column ใน budget_projects
