@@ -12,16 +12,18 @@ $isAdmin = in_array($u['role'], ['admin', 'super_admin']);
 
 // ห้องเรียนของครู
 $myClassrooms = [];
-try {
-    $cs = $db->prepare("SELECT classroom FROM llw_class_advisors WHERE user_id = ? ORDER BY classroom");
-    $cs->execute([$u['id']]);
-    $myClassrooms = $cs->fetchAll(PDO::FETCH_COLUMN);
-} catch (Exception $e) { $myClassrooms = []; }
-
-if ($isAdmin && empty($myClassrooms)) {
+if ($isAdmin) {
+    // Admin: ดึงห้องทั้งหมดจาก att_students — ไม่ต้องรอผูกครูที่ปรึกษา
     try {
-        $cs = $db->prepare("SELECT DISTINCT classroom FROM llw_class_advisors ORDER BY classroom");
+        $cs = $db->prepare("SELECT DISTINCT classroom FROM att_students WHERE classroom != '' ORDER BY classroom");
         $cs->execute();
+        $myClassrooms = $cs->fetchAll(PDO::FETCH_COLUMN);
+    } catch (Exception $e) { $myClassrooms = []; }
+} else {
+    // ครู: ดึงเฉพาะห้องที่ตัวเองรับผิดชอบ
+    try {
+        $cs = $db->prepare("SELECT classroom FROM llw_class_advisors WHERE user_id = ? ORDER BY classroom");
+        $cs->execute([$u['id']]);
         $myClassrooms = $cs->fetchAll(PDO::FETCH_COLUMN);
     } catch (Exception $e) { $myClassrooms = []; }
 }

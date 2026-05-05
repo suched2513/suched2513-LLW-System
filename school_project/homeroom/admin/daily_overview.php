@@ -12,16 +12,18 @@ $db = getDB();
 $selectedDate = $_GET['date'] ?? date('Y-m-d');
 
 // ดึงห้องทั้งหมดที่มีครูที่ปรึกษา
+// ดึงห้องทั้งหมดจาก att_students LEFT JOIN ครูที่ปรึกษา (ถ้ามี)
 $classrooms = [];
 try {
     $stmt = $db->prepare("
-        SELECT ca.classroom,
-               CONCAT(u.firstname,' ',u.lastname) AS teacher_name,
-               u.user_id AS teacher_id
-        FROM llw_class_advisors ca
-        JOIN llw_users u ON u.user_id = ca.user_id
-        WHERE ca.role_type = 'primary'
-        ORDER BY ca.classroom
+        SELECT
+            s.classroom,
+            COALESCE(CONCAT(u.firstname,' ',u.lastname), '— ยังไม่ผูกครู —') AS teacher_name,
+            u.user_id AS teacher_id
+        FROM (SELECT DISTINCT classroom FROM att_students WHERE classroom != '') s
+        LEFT JOIN llw_class_advisors ca ON ca.classroom = s.classroom AND ca.role_type = 'primary'
+        LEFT JOIN llw_users u ON u.user_id = ca.user_id
+        ORDER BY s.classroom
     ");
     $stmt->execute();
     $classrooms = $stmt->fetchAll();
