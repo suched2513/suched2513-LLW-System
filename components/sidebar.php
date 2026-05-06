@@ -71,7 +71,7 @@ $subMenus = [
         ['icon' => 'fas fa-tachometer-alt', 'label' => 'Dashboard',         'url' => $base_path . '/attendance_system/dashboard.php'],
         ['icon' => 'fas fa-user-check',     'label' => 'เช็คชื่อวิชาเรียน',    'url' => $base_path . '/attendance_system/attendance.php'],
         ['icon' => 'fas fa-chart-bar',      'label' => 'รายงานการเข้าเรียน',  'url' => $base_path . '/attendance_system/report.php'],
-        ['icon' => 'fas fa-users',          'label' => 'จัดการข้อมูลวิชา',    'url' => $base_path . '/attendance_system/admin.php'],
+        ['icon' => 'fas fa-users',          'label' => 'จัดการข้อมูลวิชา',    'url' => $base_path . '/attendance_system/admin.php', 'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-chart-pie',      'label' => 'รายงานผู้บริหาร',   'url' => $base_path . '/attendance_system/report_admin.php', 'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-id-card',        'label' => 'จัดการเลขบัตรประชาชน', 'url' => $base_path . '/student/admin/manage_nid.php', 'roles' => ['super_admin','wfh_admin']],
     ],
@@ -100,16 +100,16 @@ $subMenus = [
         ['icon' => 'fas fa-chart-pie',      'label' => 'รายงานภาพรวม', 'url' => $base_path . '/supervision.php?tab=summary', 'roles' => ['super_admin','wfh_admin']],
     ],
     'behavior' => [
-        ['icon' => 'fas fa-user-edit',      'label' => 'บันทึกพฤติกรรม',    'url' => $base_path . '/behavior/dashboard.php'],
-        ['icon' => 'fas fa-chalkboard-teacher', 'label' => 'จัดการที่ปรึกษา', 'url' => $base_path . '/behavior/manage_advisors_ui.php'],
-        ['icon' => 'fas fa-tachometer-alt',   'label' => 'Admin Dashboard',   'url' => $base_path . '/behavior/admin.php',   'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-user-edit',          'label' => 'บันทึกพฤติกรรม',  'url' => $base_path . '/behavior/dashboard.php'],
+        ['icon' => 'fas fa-chalkboard-teacher', 'label' => 'จัดการที่ปรึกษา', 'url' => $base_path . '/behavior/manage_advisors_ui.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-tachometer-alt',     'label' => 'Admin Dashboard',  'url' => $base_path . '/behavior/admin.php',              'roles' => ['super_admin','wfh_admin']],
     ],
     'homeroom' => [
         ['icon' => 'fas fa-tachometer-alt', 'label' => 'ระบบที่ปรึกษา', 'url' => $base_path . '/homeroom/index.php'],
     ],
     'info' => [
-        ['icon' => 'fas fa-users',          'label' => 'ข้อมูลนักเรียน',   'url' => $base_path . '/student_info.php'],
-        ['icon' => 'fas fa-address-card',   'label' => 'ข้อมูลครูและบุคลากร', 'url' => $base_path . '/teacher_info.php'],
+        ['icon' => 'fas fa-users',          'label' => 'ข้อมูลนักเรียน',      'url' => $base_path . '/student_info.php',  'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-address-card',   'label' => 'ข้อมูลครูและบุคลากร', 'url' => $base_path . '/teacher_info.php', 'roles' => ['super_admin','wfh_admin']],
     ],
     'bus' => [
         ['icon' => 'fas fa-tachometer-alt',       'label' => 'ภาพรวมระบบ',       'url' => $base_path . '/bus/admin/dashboard.php'],
@@ -281,14 +281,17 @@ $subMenus = [
                     </ul>
                 </li>
 
-                <!-- Student Info -->
+                <!-- Student Info (admin only) -->
+                <?php if (in_array($userRole, ['super_admin','wfh_admin'])): ?>
                 <li class="nav-item <?= $activeSystem === 'info' ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= $activeSystem === 'info' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-address-book"></i>
                         <p>สารสนเทศนักเรียน/ครู <i class="nav-arrow fas fa-angle-left"></i></p>
                     </a>
                     <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['info'] as $sub): ?>
+                        <?php foreach ($subMenus['info'] as $sub):
+                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                        ?>
                         <li class="nav-item">
                             <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
                                 <i class="nav-icon <?= $sub['icon'] ?>"></i>
@@ -298,6 +301,7 @@ $subMenus = [
                         <?php endforeach; ?>
                     </ul>
                 </li>
+                <?php endif; ?>
 
                 <!-- 3. ACADEMIC & TEACHING -->
                 <li class="nav-header">งานวิชาการและการสอน</li>
