@@ -2,7 +2,7 @@
 session_start();
 // Auth: super_admin or cb_admin
 if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'cb_admin'])) {
-    header('Location: ../login.php'); exit();
+    header('Location: ../index.php'); exit();
 }
 
 $pageTitle = 'Dashboard Chromebook';

@@ -10,7 +10,7 @@ if (!isset($_SESSION['llw_role'])) {
     header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
 if (!in_array($_SESSION['llw_role'], ['att_teacher', 'super_admin', 'wfh_admin'])) {
-    header('Location: ' . $base_path . '/login.php'); exit();
+    header('Location: ' . $base_path . '/index.php'); exit();
 }
 
 $pageTitle    = 'เช็คชื่อเข้าแถว';
