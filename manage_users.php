@@ -601,6 +601,24 @@ $roleLabel = [
     <input type="hidden" name="user_id" id="delete-uid">
 </form>
 
+<!-- Reset-all-roles form (hidden) -->
+<form id="reset-roles-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="reset_all_roles">
+</form>
+
+<!-- Reset-all-passwords form (hidden) -->
+<form id="reset-pass-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="reset_all_default">
+</form>
+
+<!-- Clear-users form (hidden) -->
+<form id="clear-users-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="clear_users">
+</form>
+
 <script>
 function confirmResetAll() {
     Swal.fire({
@@ -613,13 +631,7 @@ function confirmResetAll() {
         cancelButtonText: 'ยกเลิก',
         customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
     }).then(r => {
-        if (r.isConfirmed) {
-            const f = document.createElement('form');
-            f.method = 'POST';
-            f.innerHTML = '<input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="action" value="reset_all_default">';
-            document.body.appendChild(f);
-            f.submit();
-        }
+        if (r.isConfirmed) document.getElementById('reset-pass-form').submit();
     });
 }
 
@@ -634,13 +646,7 @@ function confirmClear() {
         cancelButtonText: 'ยกเลิก',
         customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
     }).then(r => {
-        if (r.isConfirmed) {
-            const f = document.createElement('form');
-            f.method = 'POST';
-            f.innerHTML = '<input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="action" value="clear_users">';
-            document.body.appendChild(f);
-            f.submit();
-        }
+        if (r.isConfirmed) document.getElementById('clear-users-form').submit();
     });
 }
 
@@ -655,13 +661,7 @@ function confirmResetAllRoles() {
         cancelButtonText: 'ยกเลิก',
         customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
     }).then(r => {
-        if (r.isConfirmed) {
-            const f = document.createElement('form');
-            f.method = 'POST';
-            f.innerHTML = '<input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="action" value="reset_all_roles">';
-            document.body.appendChild(f);
-            f.submit();
-        }
+        if (r.isConfirmed) document.getElementById('reset-roles-form').submit();
     });
 }
 
