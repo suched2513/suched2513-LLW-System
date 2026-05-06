@@ -1,6 +1,7 @@
 <?php
 /**
  * duty/admin/teachers.php — จัดการครูเวร + เชื่อม Telegram
+ * ดึงรายชื่อครูจาก att_teachers (ฐานข้อมูลกลาง)
  */
 session_start();
 require_once __DIR__ . '/../../config.php';
@@ -16,22 +17,60 @@ $pdo = getPdo();
 $stmtBot = $pdo->query("SELECT svalue FROM duty_settings WHERE skey = 'duty_bot_username'");
 $botUsername = (string)($stmtBot->fetchColumn() ?? '');
 
-// ── Action handlers ──
 $msg = '';
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action = $_POST['action'] ?? '';
 
+    // ── นำเข้าครูจาก att_teachers ──
+    if ($action === 'import_from_att') {
+        $ids = $_POST['att_ids'] ?? [];
+        $imported = 0;
+
+        // ดึงรายชื่อที่เลือก
+        if (!empty($ids)) {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $stmtAtt = $pdo->prepare(
+                "SELECT at.id, at.name,
+                        lu.firstname, lu.lastname
+                 FROM att_teachers at
+                 LEFT JOIN llw_users lu ON lu.user_id = at.llw_user_id
+                 WHERE at.id IN ({$placeholders})"
+            );
+            $stmtAtt->execute($ids);
+            $attTeachers = $stmtAtt->fetchAll(PDO::FETCH_ASSOC);
+
+            $stmtIns = $pdo->prepare(
+                "INSERT IGNORE INTO duty_teachers (full_name, status)
+                 SELECT ?, 'active'
+                 FROM DUAL
+                 WHERE NOT EXISTS (SELECT 1 FROM duty_teachers WHERE full_name = ?)"
+            );
+
+            foreach ($attTeachers as $at) {
+                // ใช้ชื่อจาก llw_users ถ้ามี ไม่งั้นใช้จาก att_teachers
+                $fullName = trim(($at['firstname'] ?? '') . ' ' . ($at['lastname'] ?? ''));
+                if (empty(trim($fullName))) {
+                    $fullName = trim($at['name'] ?? '');
+                }
+                if (empty($fullName)) continue;
+
+                $stmtIns->execute([$fullName, $fullName]);
+                if ($stmtIns->rowCount() > 0) $imported++;
+            }
+        }
+        $msg = $imported > 0
+            ? "success:นำเข้าครู {$imported} คนเรียบร้อยแล้ว"
+            : "warning:ไม่มีรายชื่อใหม่ (อาจมีครูเหล่านี้ในระบบแล้ว)";
+    }
+
     if ($action === 'add') {
-        // เพิ่มครูใหม่
         $prefix   = trim($_POST['prefix']    ?? '');
         $fullName = trim($_POST['full_name'] ?? '');
         $phone    = trim($_POST['phone']     ?? '');
-
         if ($fullName !== '') {
-            $stmt = $pdo->prepare(
-                "INSERT INTO duty_teachers (prefix, full_name, phone) VALUES (?, ?, ?)"
-            );
+            $stmt = $pdo->prepare("INSERT INTO duty_teachers (prefix, full_name, phone) VALUES (?, ?, ?)");
             $stmt->execute([$prefix, $fullName, $phone]);
             $msg = 'success:เพิ่มครูเรียบร้อยแล้ว';
         } else {
@@ -45,84 +84,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fullName = trim($_POST['full_name']  ?? '');
         $phone    = trim($_POST['phone']      ?? '');
         $status   = ($_POST['status'] ?? 'active') === 'active' ? 'active' : 'inactive';
-
         if ($id && $fullName !== '') {
-            $stmt = $pdo->prepare(
-                "UPDATE duty_teachers SET prefix=?, full_name=?, phone=?, status=? WHERE id=?"
-            );
-            $stmt->execute([$prefix, $fullName, $phone, $status, $id]);
+            $pdo->prepare("UPDATE duty_teachers SET prefix=?, full_name=?, phone=?, status=? WHERE id=?")
+                ->execute([$prefix, $fullName, $phone, $status, $id]);
             $msg = 'success:บันทึกข้อมูลเรียบร้อยแล้ว';
         }
     }
 
     if ($action === 'gen_link') {
-        // สร้าง link token ใหม่
         $id    = (int)($_POST['id'] ?? 0);
-        $token = bin2hex(random_bytes(20)); // 40 chars
-        $stmt  = $pdo->prepare("UPDATE duty_teachers SET link_token=?, linked_at=NULL WHERE id=?");
-        $stmt->execute([$token, $id]);
+        $token = bin2hex(random_bytes(20));
+        $pdo->prepare("UPDATE duty_teachers SET link_token=?, linked_at=NULL WHERE id=?")->execute([$token, $id]);
         header('Location: teachers.php?linked=1&id=' . $id);
         exit();
     }
 
     if ($action === 'unlink') {
-        // ยกเลิกการผูกบัญชี
-        $id   = (int)($_POST['id'] ?? 0);
-        $stmt = $pdo->prepare(
-            "UPDATE duty_teachers
-             SET telegram_user_id=NULL, telegram_username=NULL, linked_at=NULL, link_token=NULL
-             WHERE id=?"
-        );
-        $stmt->execute([$id]);
+        $id = (int)($_POST['id'] ?? 0);
+        $pdo->prepare("UPDATE duty_teachers SET telegram_user_id=NULL, telegram_username=NULL, linked_at=NULL, link_token=NULL WHERE id=?")
+            ->execute([$id]);
         $msg = 'success:ยกเลิกการเชื่อมบัญชี Telegram เรียบร้อย';
     }
 
     if ($action === 'delete') {
-        $id   = (int)($_POST['id'] ?? 0);
-        $stmt = $pdo->prepare("UPDATE duty_teachers SET status='inactive' WHERE id=?");
-        $stmt->execute([$id]);
+        $id = (int)($_POST['id'] ?? 0);
+        $pdo->prepare("UPDATE duty_teachers SET status='inactive' WHERE id=?")->execute([$id]);
         $msg = 'success:ปิดการใช้งานครูเรียบร้อย';
     }
 }
 
-// ── ดึงรายชื่อครู ──
+// ── ดึงรายชื่อครูเวร ──
 $teachers = $pdo->query(
     "SELECT * FROM duty_teachers ORDER BY status ASC, full_name ASC"
 )->fetchAll(PDO::FETCH_ASSOC);
 
-// ── ถ้าเพิ่งสร้าง link ─ แสดง QR ──
+// ── ดึง att_teachers ทั้งหมดสำหรับ modal นำเข้า ──
+$attTeachers = $pdo->query(
+    "SELECT at.id, at.name,
+            COALESCE(NULLIF(TRIM(CONCAT(lu.firstname,' ',lu.lastname)),''), at.name) AS display_name
+     FROM att_teachers at
+     LEFT JOIN llw_users lu ON lu.user_id = at.llw_user_id
+     ORDER BY display_name ASC"
+)->fetchAll(PDO::FETCH_ASSOC);
+
+// ── ดึงชื่อที่มีในระบบแล้ว (ป้องกัน import ซ้ำ) ──
+$existingNames = $pdo->query("SELECT full_name FROM duty_teachers")
+    ->fetchAll(PDO::FETCH_COLUMN);
+
+// ── ถ้าเพิ่งสร้าง link → แสดง QR ──
 $showQrFor = null;
 if (isset($_GET['linked'], $_GET['id'])) {
-    $qrId = (int)$_GET['id'];
     $stmtQ = $pdo->prepare("SELECT * FROM duty_teachers WHERE id = ?");
-    $stmtQ->execute([$qrId]);
+    $stmtQ->execute([(int)$_GET['id']]);
     $showQrFor = $stmtQ->fetch(PDO::FETCH_ASSOC);
 }
 
-$pageTitle   = 'จัดการครูเวร';
+$pageTitle    = 'จัดการครูเวร';
 $pageSubtitle = 'ข้อมูลครูและการเชื่อมต่อ Telegram Bot';
 $activeSystem = 'duty';
 
 require_once __DIR__ . '/../../components/layout_start.php';
+?>
 
-// ── แสดง alert ──
-if ($msg):
+<?php if ($msg):
     $isErr  = str_starts_with($msg, 'error:');
-    $msgTxt = $isErr ? substr($msg, 6) : substr($msg, 8);
+    $isWarn = str_starts_with($msg, 'warning:');
+    $icon   = $isErr ? 'error' : ($isWarn ? 'warning' : 'success');
+    $msgTxt = substr($msg, strpos($msg, ':') + 1);
 ?>
 <script>
-Swal.fire({
-    icon: '<?= $isErr ? 'error' : 'success' ?>',
-    title: '<?= $isErr ? 'ข้อผิดพลาด' : 'สำเร็จ' ?>',
-    text: '<?= htmlspecialchars($msgTxt, ENT_QUOTES) ?>',
-    confirmButtonColor: '#2563eb'
-});
+Swal.fire({icon:'<?= $icon ?>',title:'<?= $isErr?'ข้อผิดพลาด':($isWarn?'แจ้งเตือน':'สำเร็จ') ?>',
+    text:'<?= htmlspecialchars($msgTxt, ENT_QUOTES) ?>',confirmButtonColor:'#2563eb'});
 </script>
 <?php endif; ?>
 
 <?php if ($showQrFor && $showQrFor['link_token']): ?>
-<!-- Modal แสดง QR Code -->
-<div class="modal fade show d-block" style="background:rgba(0,0,0,.5);" id="qrModal">
+<div class="modal fade show d-block" style="background:rgba(0,0,0,.5);">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -134,12 +171,11 @@ Swal.fire({
             </div>
             <div class="modal-body text-center">
                 <?php
-                $token   = $showQrFor['link_token'];
-                $tgLink  = $botUsername
+                $token  = $showQrFor['link_token'];
+                $tgLink = $botUsername
                     ? "https://t.me/{$botUsername}?start={$token}"
                     : "https://t.me/YOUR_BOT?start={$token}";
-                // Google Charts API สร้าง QR (ไม่ต้อง install library)
-                $qrUrl = 'https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=' . urlencode($tgLink) . '&choe=UTF-8';
+                $qrUrl  = 'https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=' . urlencode($tgLink) . '&choe=UTF-8';
                 ?>
                 <img src="<?= htmlspecialchars($qrUrl) ?>" alt="QR Code" class="img-fluid rounded mb-3" style="max-width:220px;">
                 <p class="small text-muted mb-2">ให้ครูสแกน QR หรือกดลิงก์ด้านล่าง</p>
@@ -165,22 +201,27 @@ Swal.fire({
 </div>
 <?php endif; ?>
 
-<!-- Header Actions -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div>
         <h4 class="mb-0 fw-bold"><i class="fas fa-chalkboard-teacher me-2 text-primary"></i>จัดการครูเวร</h4>
         <small class="text-muted">เชื่อมบัญชี Telegram เพื่อรายงานเวรด้วยรูปถ่าย</small>
     </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
-        <i class="fas fa-plus me-1"></i> เพิ่มครูใหม่
-    </button>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#importModal">
+            <i class="fas fa-file-import me-1"></i> นำเข้าจากระบบ
+        </button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
+            <i class="fas fa-plus me-1"></i> เพิ่มครูใหม่
+        </button>
+    </div>
 </div>
 
 <!-- Table -->
 <div class="card shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0" id="teacherTable">
+            <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
                         <th>#</th>
@@ -195,17 +236,15 @@ Swal.fire({
                 <?php foreach ($teachers as $i => $t): ?>
                     <tr class="<?= $t['status'] === 'inactive' ? 'table-secondary opacity-50' : '' ?>">
                         <td><?= $i + 1 ?></td>
-                        <td>
-                            <strong><?= htmlspecialchars($t['prefix'] . $t['full_name']) ?></strong>
-                        </td>
+                        <td><strong><?= htmlspecialchars($t['prefix'] . $t['full_name']) ?></strong></td>
                         <td><?= htmlspecialchars($t['phone'] ?? '-') ?></td>
                         <td class="text-center">
                             <?php if ($t['linked_at']): ?>
                                 <span class="badge bg-success">
                                     <i class="fab fa-telegram me-1"></i>
                                     <?= $t['telegram_username'] ? '@' . htmlspecialchars($t['telegram_username']) : 'เชื่อมแล้ว' ?>
-                                </span>
-                                <br><small class="text-muted"><?= date('d/m/Y', strtotime($t['linked_at'])) ?></small>
+                                </span><br>
+                                <small class="text-muted"><?= date('d/m/Y', strtotime($t['linked_at'])) ?></small>
                                 <form method="POST" class="d-inline mt-1">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="unlink">
@@ -218,14 +257,12 @@ Swal.fire({
                             <?php elseif ($t['link_token']): ?>
                                 <span class="badge bg-warning text-dark">
                                     <i class="fas fa-clock me-1"></i>รอการเชื่อม
-                                </span>
-                                <br>
+                                </span><br>
                                 <a href="teachers.php?linked=1&id=<?= $t['id'] ?>" class="btn btn-outline-info btn-sm mt-1">
                                     <i class="fas fa-qrcode"></i> ดู QR อีกครั้ง
                                 </a>
                             <?php else: ?>
-                                <span class="badge bg-secondary">ยังไม่เชื่อม</span>
-                                <br>
+                                <span class="badge bg-secondary">ยังไม่เชื่อม</span><br>
                                 <form method="POST" class="d-inline mt-1">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="gen_link">
@@ -250,7 +287,13 @@ Swal.fire({
                     </tr>
                 <?php endforeach; ?>
                 <?php if (empty($teachers)): ?>
-                    <tr><td colspan="6" class="text-center text-muted py-4">ยังไม่มีข้อมูลครูเวร</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-5">
+                        <i class="fas fa-users fa-2x mb-2 d-block opacity-25"></i>
+                        ยังไม่มีข้อมูลครูเวร<br>
+                        <button class="btn btn-success btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#importModal">
+                            <i class="fas fa-file-import me-1"></i> นำเข้าจากระบบเลย
+                        </button>
+                    </td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
@@ -258,7 +301,76 @@ Swal.fire({
     </div>
 </div>
 
-<!-- Add Modal -->
+<!-- ════ Modal: นำเข้าจาก att_teachers ════ -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="POST" class="modal-content">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="import_from_att">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-import me-2 text-success"></i>
+                    นำเข้าครูจากฐานข้อมูลกลาง
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">
+                    เลือกครูจากระบบเช็คชื่อ (att_teachers) ที่ต้องการเพิ่มเข้าระบบเวร<br>
+                    ชื่อที่มีเครื่องหมาย <span class="badge bg-secondary">มีแล้ว</span> อยู่ในระบบแล้ว
+                </p>
+
+                <!-- Search -->
+                <div class="mb-3">
+                    <input type="text" id="searchAtt" class="form-control"
+                           placeholder="🔍 ค้นหาชื่อครู..." oninput="filterAttList()">
+                </div>
+
+                <!-- Select All -->
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="selectAll"
+                           onchange="document.querySelectorAll('.att-check:not(:disabled)').forEach(c=>c.checked=this.checked)">
+                    <label class="form-check-label fw-bold" for="selectAll">เลือกทั้งหมด</label>
+                </div>
+
+                <div id="attList" style="max-height:350px;overflow-y:auto;" class="border rounded p-2">
+                    <?php foreach ($attTeachers as $at):
+                        $alreadyIn = in_array($at['display_name'], $existingNames);
+                    ?>
+                    <div class="att-item d-flex align-items-center py-1 border-bottom"
+                         data-name="<?= htmlspecialchars(mb_strtolower($at['display_name'])) ?>">
+                        <div class="form-check flex-fill mb-0">
+                            <input class="form-check-input att-check"
+                                   type="checkbox"
+                                   name="att_ids[]"
+                                   value="<?= $at['id'] ?>"
+                                   id="att_<?= $at['id'] ?>"
+                                   <?= $alreadyIn ? 'disabled checked' : '' ?>>
+                            <label class="form-check-label w-100" for="att_<?= $at['id'] ?>">
+                                <?= htmlspecialchars($at['display_name']) ?>
+                            </label>
+                        </div>
+                        <?php if ($alreadyIn): ?>
+                        <span class="badge bg-secondary ms-2 flex-shrink-0">มีแล้ว</span>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                    <?php if (empty($attTeachers)): ?>
+                    <p class="text-muted text-center py-3">ไม่พบข้อมูลครูในระบบ att_teachers</p>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-file-import me-1"></i> นำเข้าที่เลือก
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: เพิ่มครูใหม่ด้วยตนเอง -->
 <div class="modal fade" id="addModal" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" class="modal-content">
@@ -283,7 +395,7 @@ Swal.fire({
                     <input type="text" name="full_name" class="form-control" required placeholder="เช่น สมชาย ใจดี">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold">เบอร์โทรศัพท์</label>
+                    <label class="form-label fw-bold">เบอร์โทร</label>
                     <input type="text" name="phone" class="form-control" placeholder="0812345678">
                 </div>
             </div>
@@ -295,7 +407,7 @@ Swal.fire({
     </div>
 </div>
 
-<!-- Edit Modal -->
+<!-- Modal: แก้ไข -->
 <div class="modal fade" id="editModal" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" class="modal-content">
@@ -347,8 +459,15 @@ function openEdit(t) {
     document.getElementById('editPhone').value  = t.phone || '';
     document.getElementById('editStatus').value = t.status;
     const sel = document.getElementById('editPrefix');
-    for (let o of sel.options) { o.selected = (o.value === t.prefix); }
+    for (let o of sel.options) o.selected = (o.value === t.prefix);
     new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+function filterAttList() {
+    const q = document.getElementById('searchAtt').value.toLowerCase();
+    document.querySelectorAll('.att-item').forEach(el => {
+        el.style.display = el.dataset.name.includes(q) ? '' : 'none';
+    });
 }
 </script>
 
