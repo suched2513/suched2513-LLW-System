@@ -397,13 +397,17 @@ $roleLabel = [
             <div>
                 <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Role</label>
                 <select name="role" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                    <option value="wfh_staff">WFH Staff (บุคลากรทั่วไป)</option>
-                    <option value="att_teacher">ครูผู้สอน (Attendance)</option>
-                    <option value="wfh_admin">WFH Admin / ผอ.</option>
-                    <option value="cb_admin">CB Admin (Chromebook)</option>
-                    <option value="bus_admin">Bus Admin (รถรับส่ง)</option>
-                    <option value="bus_finance">Bus Finance (การเงินรถรับส่ง)</option>
-                    <option value="super_admin">Super Admin</option>
+                    <option value="wfh_staff">WFH Staff — บุคลากรทั่วไป (ลงเวลา)</option>
+                    <option value="att_teacher">ครูผู้สอน — ระบบครูทั่วไป</option>
+                    <option value="wfh_admin">WFH Admin — ครู + ตรวจสอบใบลา/WFH</option>
+                    <option value="finance_head">Finance Head — ครู + ลงนามการเงิน</option>
+                    <option value="procurement_head">Procurement Head — ครู + ลงนามจัดซื้อ</option>
+                    <option value="deputy_director">Deputy Director — ครู + รองผู้อำนวยการ</option>
+                    <option value="director">Director — ครู + ผู้อำนวยการ</option>
+                    <option value="cb_admin">CB Admin — จัดการ Chromebook</option>
+                    <option value="bus_admin">Bus Admin — จัดการระบบรถรับส่ง</option>
+                    <option value="bus_finance">Bus Finance — การเงินรถรับส่ง</option>
+                    <option value="super_admin">Super Admin — สิทธิ์สูงสุด</option>
                 </select>
             </div>
             <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
@@ -546,8 +550,12 @@ $roleLabel = [
                 <select name="role" id="edit-role" required
                     class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all">
                     <option value="wfh_staff">WFH Staff — บุคลากรทั่วไป (ลงเวลา)</option>
-                    <option value="att_teacher">ครูผู้สอน — เช็คชื่อ + ดูรายงานรถ</option>
-                    <option value="wfh_admin">WFH Admin — ผู้บริหาร / รองผอ.</option>
+                    <option value="att_teacher">ครูผู้สอน — ระบบครูทั่วไป</option>
+                    <option value="wfh_admin">WFH Admin — ครู + ตรวจสอบใบลา/WFH</option>
+                    <option value="finance_head">Finance Head — ครู + ลงนามการเงิน</option>
+                    <option value="procurement_head">Procurement Head — ครู + ลงนามจัดซื้อ</option>
+                    <option value="deputy_director">Deputy Director — ครู + รองผู้อำนวยการ</option>
+                    <option value="director">Director — ครู + ผู้อำนวยการ</option>
                     <option value="cb_admin">CB Admin — จัดการ Chromebook</option>
                     <option value="bus_admin">Bus Admin — จัดการระบบรถรับส่ง</option>
                     <option value="bus_finance">Bus Finance — การเงินรถรับส่ง</option>
