@@ -23,6 +23,7 @@ elseif (basename($full_url) === 'student_info.php' || basename($full_url) === 't
 elseif (strpos($full_url, '/bus/admin/') !== false || strpos($full_url, '/bus/finance/') !== false) $activeSystem = 'bus';
 elseif (strpos($full_url, '/edocument/') !== false)        $activeSystem = 'edoc';
 elseif (strpos($full_url, '/student_leave/') !== false)   $activeSystem = 'student_leave';
+elseif (strpos($full_url, '/duty/') !== false)            $activeSystem = 'duty';
 elseif (strpos($full_url, '/club/') !== false || strpos($full_url, '/student_club/') !== false) $activeSystem = 'club';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
 
@@ -126,6 +127,11 @@ $subMenus = [
         ['icon' => 'fas fa-paper-plane',          'label' => 'หนังสือส่ง',       'url' => $base_path . '/edocument/outgoing.php'],
         ['icon' => 'fas fa-file-signature',       'label' => 'คำสั่ง',            'url' => $base_path . '/edocument/orders.php'],
         ['icon' => 'fas fa-sticky-note',          'label' => 'บันทึกข้อความ',     'url' => $base_path . '/edocument/memos.php'],
+    ],
+    'duty' => [
+        ['icon' => 'fas fa-tachometer-alt', 'label' => 'ภาพรวมเวร',         'url' => $base_path . '/duty/admin/reports.php',  'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-calendar-alt',   'label' => 'ตารางเวร',           'url' => $base_path . '/duty/admin/schedule.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-chalkboard-teacher', 'label' => 'ครูเวร',         'url' => $base_path . '/duty/admin/teachers.php', 'roles' => ['super_admin','wfh_admin']],
     ],
 ];
 
@@ -421,6 +427,28 @@ $subMenus = [
                         <?php endforeach; ?>
                     </ul>
                 </li>
+
+                <!-- Duty System -->
+                <?php if (in_array($userRole, ['super_admin','wfh_admin'])): ?>
+                <li class="nav-item <?= $activeSystem === 'duty' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'duty' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-shield-alt text-danger"></i>
+                        <p>ระบบเวรประจำวัน <i class="nav-arrow fas fa-angle-left"></i></p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <?php foreach ($subMenus['duty'] as $sub):
+                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                        ?>
+                        <li class="nav-item">
+                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
+                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
+                                <p><?= $sub['label'] ?></p>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </li>
+                <?php endif; ?>
 
                 <!-- 5. PERSONNEL & HR -->
                 <li class="nav-header">งานบุคคลและสวัสดิการ</li>
