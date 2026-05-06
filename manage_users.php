@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lastname  = trim($_POST['lastname']);
         $role      = $_POST['role'];
 
-        $allowed_roles = ['super_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance'];
+        $allowed_roles = ['super_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance','finance_head','procurement_head','deputy_director','director'];
         if (!in_array($role, $allowed_roles)) {
             $msg = 'Role ไม่ถูกต้อง'; $msgType = 'error';
         } else {
@@ -95,6 +95,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'reset_all_roles') {
+        if ($_SESSION['llw_role'] !== 'super_admin') {
+            $msg = 'ไม่มีสิทธิ์'; $msgType = 'error';
+        } else {
+            $myId = (int)$_SESSION['user_id'];
+            $stmt = $pdo->prepare("UPDATE llw_users SET role = 'att_teacher' WHERE role != 'super_admin' AND user_id != ?");
+            $stmt->execute([$myId]);
+            $affected = $stmt->rowCount();
+            $msg = "Reset สำเร็จ — อัปเดต {$affected} บัญชีเป็น att_teacher (ยกเว้น super_admin)";
+        }
+    }
+
     if ($action === 'clear_users') {
         $myId = (int)$_SESSION['user_id'];
         try {
@@ -111,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $firstname = trim($_POST['firstname'] ?? '');
         $lastname  = trim($_POST['lastname'] ?? '');
         $role      = $_POST['role'] ?? '';
-        $allowed_roles = ['super_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance'];
+        $allowed_roles = ['super_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance','finance_head','procurement_head','deputy_director','director'];
         if ($uid <= 0 || empty($firstname) || !in_array($role, $allowed_roles)) {
             $msg = 'ข้อมูลไม่ถูกต้อง'; $msgType = 'error';
         } else {
@@ -216,6 +228,10 @@ $roleLabel = [
             <button onclick="confirmResetAll()"
                 class="flex items-center gap-2 bg-amber-100 text-amber-600 px-6 py-3 rounded-2xl font-bold hover:bg-amber-500 hover:text-white transition-all">
                 <i class="bi bi-arrow-repeat text-lg"></i> Reset รหัสทั้งหมด
+            </button>
+            <button onclick="confirmResetAllRoles()"
+                class="flex items-center gap-2 bg-indigo-100 text-indigo-600 px-6 py-3 rounded-2xl font-bold hover:bg-indigo-500 hover:text-white transition-all">
+                <i class="bi bi-person-fill-slash text-lg"></i> Reset Role ทั้งหมด
             </button>
             <button onclick="confirmClear()"
                 class="flex items-center gap-2 bg-rose-100 text-rose-500 px-6 py-3 rounded-2xl font-bold hover:bg-rose-500 hover:text-white transition-all">
@@ -622,6 +638,27 @@ function confirmClear() {
             const f = document.createElement('form');
             f.method = 'POST';
             f.innerHTML = '<input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="action" value="clear_users">';
+            document.body.appendChild(f);
+            f.submit();
+        }
+    });
+}
+
+function confirmResetAllRoles() {
+    Swal.fire({
+        title: 'Reset Role ผู้ใช้ทั้งหมด?',
+        html: 'ผู้ใช้<b>ทุกคน (ยกเว้น super_admin และคุณ)</b> จะถูกเปลี่ยน role เป็น <b>att_teacher (ครูผู้สอน)</b><br><small class="text-indigo-600 font-bold">ต้องกำหนด role ใหม่ให้ผู้ที่มีหน้าที่พิเศษด้วยตนเอง</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#4f46e5',
+        confirmButtonText: 'ยืนยัน Reset Role',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) {
+            const f = document.createElement('form');
+            f.method = 'POST';
+            f.innerHTML = '<input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>"><input type="hidden" name="action" value="reset_all_roles">';
             document.body.appendChild(f);
             f.submit();
         }
