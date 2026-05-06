@@ -112,7 +112,8 @@ $thaiDate   = 'วัน'.$thaiDays[(int)date('w')].' '.date('j').' '.$thaiMonth
 
 // ── Modules ──────────────────────────────────────────────────────────────────
 // roles: null = ทุก role ที่ login แล้ว, array = เฉพาะ role ที่ระบุ, isPublic = ไม่ต้อง login
-$_T = ['att_teacher','super_admin','wfh_admin'];         // กลุ่มครู/admin
+// ครูทั่วไป + ครูที่มีหน้าที่พิเศษ (ทุกคนต้องใช้ระบบครูได้)
+$_T = ['att_teacher','super_admin','wfh_admin','finance_head','procurement_head','deputy_director','director'];
 $_A = ['super_admin','wfh_admin'];                        // กลุ่ม admin
 $_B = ['bus_admin','bus_finance','super_admin'];           // กลุ่มรถ
 $modules = [

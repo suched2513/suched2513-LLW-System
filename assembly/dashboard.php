@@ -9,7 +9,7 @@ require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) {
     header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
-if (!in_array($_SESSION['llw_role'], ['att_teacher', 'super_admin', 'wfh_admin'])) {
+if (!in_array($_SESSION['llw_role'], ['att_teacher', 'super_admin', 'wfh_admin', 'finance_head', 'procurement_head', 'deputy_director', 'director'])) {
     header('Location: ' . $base_path . '/index.php'); exit();
 }
 
