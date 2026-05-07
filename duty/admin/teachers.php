@@ -13,6 +13,36 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 
 $pdo = getPdo();
 
+// ── Auto-run migration: เพิ่ม att_teacher_id ถ้ายังไม่มี (MySQL 5.7 compatible) ──
+try {
+    // ตรวจว่า column มีอยู่แล้วหรือยัง
+    $colCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME   = 'duty_teachers'
+           AND COLUMN_NAME  = 'att_teacher_id'"
+    );
+    $colCheck->execute();
+    if ((int)$colCheck->fetchColumn() === 0) {
+        $pdo->exec("ALTER TABLE duty_teachers ADD COLUMN att_teacher_id INT NULL COMMENT 'FK att_teachers.id'");
+    }
+    // ตรวจว่า unique key มีหรือยัง
+    $keyCheck = $pdo->prepare(
+        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME   = 'duty_teachers'
+           AND INDEX_NAME   = 'uk_att_teacher_id'"
+    );
+    $keyCheck->execute();
+    if ((int)$keyCheck->fetchColumn() === 0) {
+        try {
+            $pdo->exec("ALTER TABLE duty_teachers ADD UNIQUE KEY uk_att_teacher_id (att_teacher_id)");
+        } catch (Exception $e) { /* ignore duplicate key error */ }
+    }
+} catch (Exception $e) {
+    error_log('duty/teachers migration: ' . $e->getMessage());
+}
+
 // ── ดึง bot username ──
 $stmtBot = $pdo->query("SELECT svalue FROM duty_settings WHERE skey = 'duty_bot_username'");
 $botUsername = (string)($stmtBot->fetchColumn() ?? '');
@@ -157,8 +187,12 @@ $attTeachers = $pdo->query(
 )->fetchAll(PDO::FETCH_ASSOC);
 
 // ── ดึง att_teacher_id ที่ import ไปแล้ว (ป้องกัน import ซ้ำโดยใช้ ID) ──
-$existingAttIds = $pdo->query("SELECT att_teacher_id FROM duty_teachers WHERE att_teacher_id IS NOT NULL")
-    ->fetchAll(PDO::FETCH_COLUMN);
+try {
+    $existingAttIds = $pdo->query("SELECT att_teacher_id FROM duty_teachers WHERE att_teacher_id IS NOT NULL")
+        ->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    $existingAttIds = [];
+}
 
 // ── ถ้าเพิ่งสร้าง link → แสดง QR ──
 $showQrFor = null;
