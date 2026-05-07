@@ -53,41 +53,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action = $_POST['action'] ?? '';
 
-    // ── นำเข้าครูทั้งหมดจาก att_teachers (one-click) ──
+    // ── นำเข้าครูทั้งหมดจาก llw_users (one-click) ──
     if ($action === 'import_all_from_att') {
+        // ดึงจาก llw_users โดยตรง (ยกเว้น role ที่ไม่ใช่บุคลากรการสอน)
         $stmtAll = $pdo->query("
-            SELECT at.id, at.name, at.username,
-                   lu.firstname, lu.lastname
-            FROM att_teachers at
-            LEFT JOIN llw_users lu ON lu.user_id = at.llw_user_id
-            ORDER BY at.id
+            SELECT u.user_id,
+                   TRIM(CONCAT(COALESCE(u.firstname,''), ' ', COALESCE(u.lastname,''))) AS full_name,
+                   at.id AS att_id
+            FROM llw_users u
+            LEFT JOIN att_teachers at ON at.llw_user_id = u.user_id
+            WHERE u.role NOT IN ('cb_admin','bus_admin','bus_finance')
+              AND (u.status = 'active' OR u.status IS NULL)
+              AND TRIM(CONCAT(COALESCE(u.firstname,''),' ',COALESCE(u.lastname,''))) != ''
+            ORDER BY u.firstname, u.lastname
         ");
         $allTeachers = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
         $imported = 0;
 
-        $stmtIns = $pdo->prepare(
-            "INSERT INTO duty_teachers (full_name, att_teacher_id, status)
-             VALUES (?, ?, 'active')
-             ON DUPLICATE KEY UPDATE full_name = VALUES(full_name)"
-        );
-        $stmtLinkExisting = $pdo->prepare(
-            "UPDATE duty_teachers SET att_teacher_id = ?
-             WHERE TRIM(full_name) = ? AND att_teacher_id IS NULL LIMIT 1"
-        );
+        $stmtIns = $pdo->prepare("
+            INSERT INTO duty_teachers (full_name, att_teacher_id, status)
+            VALUES (?, ?, 'active')
+            ON DUPLICATE KEY UPDATE full_name = VALUES(full_name)
+        ");
+        $stmtCheck = $pdo->prepare("SELECT id FROM duty_teachers WHERE att_teacher_id = ? LIMIT 1");
+        $stmtCheckName = $pdo->prepare("SELECT id FROM duty_teachers WHERE TRIM(full_name) = ? LIMIT 1");
+        $stmtLink = $pdo->prepare("UPDATE duty_teachers SET att_teacher_id = ? WHERE TRIM(full_name) = ? AND att_teacher_id IS NULL LIMIT 1");
 
-        foreach ($allTeachers as $at) {
-            $fullName = trim(($at['firstname'] ?? '') . ' ' . ($at['lastname'] ?? ''));
-            if ($fullName === '') $fullName = trim($at['name'] ?? '');
-            if ($fullName === '') $fullName = trim($at['username'] ?? '');
-            if ($fullName === '') $fullName = 'ครู#' . $at['id'];
-            $attId = (int)$at['id'];
+        foreach ($allTeachers as $t) {
+            $fullName = trim($t['full_name']);
+            $attId    = $t['att_id'] ? (int)$t['att_id'] : null;
 
-            $dup = $pdo->prepare("SELECT id FROM duty_teachers WHERE att_teacher_id = ? LIMIT 1");
-            $dup->execute([$attId]);
-            if ($dup->fetchColumn()) continue;
+            // ตรวจ att_teacher_id ซ้ำ
+            if ($attId) {
+                $stmtCheck->execute([$attId]);
+                if ($stmtCheck->fetchColumn()) continue;
+            }
 
-            $stmtLinkExisting->execute([$attId, $fullName]);
-            if ($stmtLinkExisting->rowCount() > 0) { $imported++; continue; }
+            // ตรวจชื่อซ้ำ
+            $stmtCheckName->execute([$fullName]);
+            if ($stmtCheckName->fetchColumn()) {
+                // ผูก att_teacher_id ให้แถวเดิมถ้ายังไม่มี
+                if ($attId) $stmtLink->execute([$attId, $fullName]);
+                continue;
+            }
 
             $stmtIns->execute([$fullName, $attId]);
             if ($stmtIns->rowCount() > 0) $imported++;
@@ -313,8 +321,8 @@ require_once __DIR__ . '/../../components/layout_start.php';
 ?>
 
 <?php if ($msg):
-    $isErr  = str_starts_with($msg, 'error:');
-    $isWarn = str_starts_with($msg, 'warning:');
+    $isErr  = strpos($msg, 'error:')   === 0;
+    $isWarn = strpos($msg, 'warning:') === 0;
     $icon   = $isErr ? 'error' : ($isWarn ? 'warning' : 'success');
     $msgTxt = substr($msg, strpos($msg, ':') + 1);
 ?>
