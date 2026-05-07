@@ -130,10 +130,12 @@ $subMenus = [
         ['icon' => 'fas fa-sticky-note',          'label' => 'บันทึกข้อความ',     'url' => $base_path . '/edocument/memos.php'],
     ],
     'duty' => [
-        ['icon' => 'fas fa-tachometer-alt', 'label' => 'ภาพรวมเวร',         'url' => $base_path . '/duty/admin/reports.php',  'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-calendar-alt',   'label' => 'ตารางเวร',           'url' => $base_path . '/duty/admin/schedule.php', 'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-chalkboard-teacher', 'label' => 'ครูเวร',         'url' => $base_path . '/duty/admin/teachers.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-tachometer-alt',      'label' => 'ภาพรวมเวร',  'url' => $base_path . '/duty/admin/reports.php',  'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-calendar-week',        'label' => 'ตารางเวร',   'url' => $base_path . '/duty/admin/schedule.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-layer-group',          'label' => 'กลุ่มเวร',   'url' => $base_path . '/duty/admin/groups.php',   'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-chalkboard-teacher',   'label' => 'ครูเวร',     'url' => $base_path . '/duty/admin/teachers.php', 'roles' => ['super_admin','wfh_admin']],
     ],
+
 ];
 
 ?>
