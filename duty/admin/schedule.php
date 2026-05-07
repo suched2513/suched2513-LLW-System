@@ -66,23 +66,16 @@ $prevWeek  = date('Y-m-d', strtotime($weekStart . ' -7 days'));
 $nextWeek  = date('Y-m-d', strtotime($weekStart . ' +7 days'));
 
 // ── จำนวนจุดเวร (default 5) ──
-try {
-    $maxPts = (int)($pdo->query("SELECT svalue FROM duty_settings WHERE skey='max_duty_points'")->fetchColumn() ?: 5);
-} catch(Exception $e) { $maxPts = 5; }
-
-// ── ชื่อจุดเวร ──
-$defaultPtNames = ['รับนักเรียน','หน้าเสาธง','ปล่อยกลับบ้าน','ตรวจรอบโรงเรียน','ประธานกิจกรรมหน้าเสาธง'];
-$pointNames = $defaultPtNames;
-try {
-    $pnVal = $pdo->query("SELECT svalue FROM duty_settings WHERE skey='duty_point_names'")->fetchColumn();
-    if ($pnVal) { $decoded = json_decode($pnVal, true); if ($decoded) $pointNames = $decoded; }
-} catch(Exception $e) {}
-if (empty($pointNames)) $pointNames = $defaultPtNames;
-// Auto-seed if not exists
-try {
-    $pdo->prepare("INSERT IGNORE INTO duty_settings (skey,svalue) VALUES ('duty_point_names',?)")
-        ->execute([json_encode($pointNames, JSON_UNESCAPED_UNICODE)]);
-} catch(Exception $e) {}
+// ── ชื่อจุดเวร (hardcode 6 จุด) ──
+$pointNames = [
+    'รับนักเรียนจุดที่ 1',
+    'รับนักเรียนจุดที่ 2',
+    'หน้าเสาธง',
+    'ปล่อยกลับบ้าน',
+    'ตรวจรอบโรงเรียน',
+    'ประธานกิจกรรมหน้าเสาธง'
+];
+$maxPts = count($pointNames);
 
 // ── ดึงตารางเวรทั้งสัปดาห์ (ตาม shift) ──
 $stmtSched = $pdo->prepare("
@@ -361,6 +354,8 @@ const apiUrl     = '../../duty/api/schedule_api.php';
 const maxPtsJS   = <?= (int)$maxPts ?>;
 const curShiftPage = '<?= $shiftParam ?>';
 const pointNamesJS = <?= json_encode($pointNames, JSON_UNESCAPED_UNICODE) ?>;
+const allTeachersData = <?= json_encode($teachers, JSON_UNESCAPED_UNICODE) ?>;
+const CHAIRMAN_INDEX = <?= count($pointNames) ?>; // จุดสุดท้าย = ประธานกิจกรรม
 
 const thDaysFull = ['','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
 const thMonAbbr  = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
@@ -487,62 +482,74 @@ function renderDayForm(dayGroup, members, maxPts) {
         return;
     }
 
-    // build point→member map
-    const ptMap = {};
-    members.forEach(m => { if (m.point_no) ptMap[m.point_no] = m; });
+    // build point→member map (รองรับ 2 คนต่อจุด)
+    const ptMap = {}; // ptMap[point_no] = [member1, member2]
+    members.forEach(m => {
+        if (m.point_no) {
+            if (!ptMap[m.point_no]) ptMap[m.point_no] = [];
+            ptMap[m.point_no].push(m);
+        }
+    });
 
     // build teacher options (เฉพาะในกลุ่ม)
     const blankOpt = '<option value="">— ไม่จัด —</option>';
-    function buildOpts(selectedId) {
-        return blankOpt + members.map(m =>
+    function buildOpts(list, selectedId) {
+        return blankOpt + list.map(m =>
             `<option value="${m.id}" ${m.id == selectedId ? 'selected' : ''}>${m.prefix||''}${m.full_name}</option>`
         ).join('');
     }
 
-    // point rows
+    // point rows (2 dropdowns per point)
+    const gc = dayGroup.group_color || '#6c757d';
     let rows = '';
     for (let i = 1; i <= maxPts; i++) {
-        const m    = ptMap[i];
+        const assigned = ptMap[i] || [];
+        const t1 = assigned[0] || null;
+        const t2 = assigned[1] || null;
         const ptName = (pointNamesJS[i-1]) || ('จุดที่ '+i);
-        const gc   = dayGroup.group_color || '#6c757d';
+        const isChairman = (i === CHAIRMAN_INDEX);
+        // ประธานกิจกรรม → แสดงครูทุกคน, จุดอื่น → เฉพาะกลุ่ม
+        const optList = isChairman ? allTeachersData : members;
         rows += `
         <tr class="point-row" data-point="${i}">
-            <td class="align-middle" style="width:140px">
+            <td class="align-middle" style="width:160px">
                 <div class="d-flex align-items-center gap-2">
                     <div class="rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center text-white fw-bold"
-                         style="width:30px;height:30px;background:${gc};font-size:12px">${i}</div>
+                         style="width:28px;height:28px;background:${gc};font-size:11px">${i}</div>
                     <span class="fw-bold small text-secondary">${ptName}</span>
                 </div>
+                ${isChairman ? '<span class="badge bg-warning text-dark" style="font-size:9px">ครูทั้งหมด</span>' : ''}
             </td>
             <td class="align-middle">
+                <select class="form-select form-select-sm mb-1" data-field="teacher_id" onchange="refreshUnassigned()">
+                    ${buildOpts(optList, t1 ? t1.id : '')}
+                </select>
                 <select class="form-select form-select-sm" data-field="teacher_id" onchange="refreshUnassigned()">
-                    ${buildOpts(m ? m.id : '')}
+                    ${buildOpts(optList, t2 ? t2.id : '')}
                 </select>
             </td>
-            <td class="align-middle" style="width:120px">
+            <td class="align-middle" style="width:80px">
                 <input type="hidden" data-field="role" value="${esc(ptName)}">
-                <span class="badge bg-light text-dark small">${ptName}</span>
             </td>
         </tr>`;
     }
 
-    const gc   = dayGroup.group_color || '#6c757d';
-    const gn   = dayGroup.group_name  || 'กลุ่มเวร';
-    const cnt  = members.length;
+    const gn  = dayGroup.group_name  || 'กลุ่มเวร';
+    const cnt = members.length;
     body.innerHTML = `
         <div class="d-flex align-items-center gap-2 mb-3">
             <span class="badge rounded-pill px-3 py-2" style="background:${gc};font-size:13px">
                 ${gn}
             </span>
-            <span class="text-muted small">${cnt} คนในกลุ่ม — เลือกครูลงแต่ละจุดเวร (เฉพาะกลุ่มนี้)</span>
+            <span class="text-muted small">${cnt} คนในกลุ่ม — เลือกครูลงแต่ละจุด (2 คน/จุด)</span>
         </div>
         <div class="table-responsive">
             <table class="table table-sm table-hover mb-2">
                 <thead class="table-light">
                     <tr>
                         <th>จุดเวร</th>
-                        <th>ครูผู้รับผิดชอบ</th>
-                        <th>หน้าที่/บทบาท</th>
+                        <th>ครูคนที่ 1 / คนที่ 2</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody id="pointTbody">${rows}</tbody>
@@ -570,14 +577,16 @@ function refreshUnassigned() {
         : '<span class="text-success fw-bold">ทุกคนถูกจัดแล้ว ✅</span>';
 }
 
-// ─── บันทึกทั้งวัน ───────────────────────────────────────────
+// ─── บันทึกทั้งวัน (เก็บ 2 คนต่อจุด) ────────────────────────
 function saveDay() {
     const assignments = [];
     document.querySelectorAll('.point-row').forEach(row => {
         const ptNo = parseInt(row.dataset.point);
-        const tid  = row.querySelector('[data-field="teacher_id"]').value;
         const role = row.querySelector('[data-field="role"]').value.trim();
-        if (tid) assignments.push({teacher_id: tid, point_no: ptNo, role: role});
+        // เก็บทุก dropdown ที่มีค่า
+        row.querySelectorAll('[data-field="teacher_id"]').forEach(sel => {
+            if (sel.value) assignments.push({teacher_id: sel.value, point_no: ptNo, role: role});
+        });
     });
 
     const fd = new FormData();
