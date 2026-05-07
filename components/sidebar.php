@@ -134,6 +134,7 @@ $subMenus = [
         ['icon' => 'fas fa-calendar-week',        'label' => 'ตารางเวร',   'url' => $base_path . '/duty/admin/schedule.php', 'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-layer-group',          'label' => 'กลุ่มเวร',   'url' => $base_path . '/duty/admin/groups.php',   'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-chalkboard-teacher',   'label' => 'ครูเวร',     'url' => $base_path . '/duty/admin/teachers.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-cog',                  'label' => 'ตั้งค่า',    'url' => $base_path . '/duty/admin/settings.php', 'roles' => ['super_admin']],
     ],
 
 ];
