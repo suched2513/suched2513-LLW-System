@@ -71,26 +71,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtAtt->execute($ids);
             $attTeachers = $stmtAtt->fetchAll(PDO::FETCH_ASSOC);
 
-            // INSERT โดยใช้ att_teacher_id เป็น unique key (ไม่ block ครูชื่อซ้ำ)
+            // Import logic:
+            // 1. ถ้ามีแถวชื่อเดิม (att_teacher_id=NULL + ชื่อตรงกัน) → update att_teacher_id ให้แถวเดิม
+            // 2. ถ้าไม่เจอ → INSERT ใหม่ด้วย att_teacher_id
             $stmtIns = $pdo->prepare(
                 "INSERT INTO duty_teachers (full_name, att_teacher_id, status)
                  VALUES (?, ?, 'active')
                  ON DUPLICATE KEY UPDATE full_name = VALUES(full_name)"
             );
+            $stmtLinkExisting = $pdo->prepare(
+                "UPDATE duty_teachers SET att_teacher_id = ?
+                 WHERE TRIM(full_name) = ? AND att_teacher_id IS NULL
+                 LIMIT 1"
+            );
 
             foreach ($attTeachers as $at) {
-                // fallback chain: llw_users fullname → at.name → at.username → ครู#id
+                // fallback chain: llw fullname → at.name → at.username → ครู#id
                 $fullName = trim(($at['firstname'] ?? '') . ' ' . ($at['lastname'] ?? ''));
                 if ($fullName === '') $fullName = trim($at['name'] ?? '');
                 if ($fullName === '') $fullName = trim($at['username'] ?? '');
                 if ($fullName === '') $fullName = 'ครู#' . $at['id'];
+                $attId = (int)$at['id'];
 
-                $stmtIns->execute([$fullName, (int)$at['id']]);
+                // ตรวจว่า att_teacher_id นี้ import แล้วหรือยัง
+                $alreadyByAttId = $pdo->prepare("SELECT id FROM duty_teachers WHERE att_teacher_id = ? LIMIT 1");
+                $alreadyByAttId->execute([$attId]);
+                if ($alreadyByAttId->fetchColumn()) {
+                    // มีแล้ว (att_teacher_id ตรงกัน) → skip
+                    continue;
+                }
+
+                // ตรวจว่ามีแถวชื่อเดิมที่ยังไม่มี att_teacher_id
+                $stmtLinkExisting->execute([$attId, $fullName]);
+                if ($stmtLinkExisting->rowCount() > 0) {
+                    // ผูก att_teacher_id กับแถวเดิมเรียบร้อย
+                    $imported++;
+                    continue;
+                }
+
+                // ไม่เจอเลย → INSERT ใหม่
+                $stmtIns->execute([$fullName, $attId]);
                 if ($stmtIns->rowCount() > 0) $imported++;
             }
         }
         $msg = $imported > 0
-            ? "success:นำเข้าครู {$imported} คนเรียบร้อยแล้ว"
+            ? "success:นำเข้า/อัปเดตครู {$imported} คนเรียบร้อยแล้ว"
             : "warning:ไม่มีรายชื่อใหม่ (ครูเหล่านี้อยู่ในระบบแล้วทั้งหมด)";
     }
 
@@ -142,13 +167,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// ── Auto-dedup: เพิกชื่อซ้ำใน duty_teachers อัตโนมัติทุกครั้งที่โหลดหน้า ──
+try {
+    $dupes = $pdo->query("
+        SELECT full_name,
+               GROUP_CONCAT(id ORDER BY
+                   CASE WHEN telegram_user_id IS NOT NULL THEN 0 ELSE 1 END,
+                   att_teacher_id IS NULL,
+                   id ASC
+               SEPARATOR ',') AS ids,
+               COUNT(*) AS cnt
+        FROM duty_teachers
+        WHERE TRIM(full_name) != '' AND status = 'active'
+        GROUP BY TRIM(full_name)
+        HAVING cnt > 1
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($dupes as $d) {
+        $ids    = array_map('intval', explode(',', $d['ids']));
+        $keepId = $ids[0]; // เอาอันแรก (พรีอิตีได้ telegram แล้วให้เอา > มี att_teacher_id > id ต่ำกว่า)
+        $delIds = array_slice($ids, 1);
+        foreach ($delIds as $oldId) {
+            // ย้าย reference
+            $pdo->prepare("UPDATE IGNORE duty_group_members SET teacher_id=? WHERE teacher_id=?")->execute([$keepId, $oldId]);
+            $pdo->prepare("UPDATE duty_schedule SET teacher_id=? WHERE teacher_id=?")->execute([$keepId, $oldId]);
+            $pdo->prepare("UPDATE duty_reports SET teacher_id=? WHERE teacher_id=?")->execute([$keepId, $oldId]);
+            $pdo->prepare("DELETE FROM duty_group_members WHERE teacher_id=?")->execute([$oldId]); // ลบ duplicate member
+            $pdo->prepare("DELETE FROM duty_teachers WHERE id=?")->execute([$oldId]);
+        }
+        // ถ้า keepId ยังไม่มี att_teacher_id แต่ delIds มี → copy มา
+        $keep = $pdo->prepare("SELECT att_teacher_id FROM duty_teachers WHERE id=?")->execute([$keepId]);
+    }
+} catch (Exception $e) {
+    error_log('duty_teachers dedup: ' . $e->getMessage());
+}
+
 // ── Auto-fix: อัปเดตชื่อว่างใน duty_teachers จาก att_teachers/llw_users ──
-// กรณีครูถูก import ไปก่อนหน้าแต่ชื่อว่าง จะถูก re-sync อัตโนมัติ
 try {
     $pdo->exec("
         UPDATE duty_teachers dt
         JOIN (
-            SELECT
+            SELECT at.id AS att_id,
                 COALESCE(
                     NULLIF(TRIM(CONCAT(COALESCE(lu.firstname,''),' ',COALESCE(lu.lastname,''))), ''),
                     NULLIF(TRIM(at.name), ''),
@@ -156,20 +215,21 @@ try {
                 ) AS resolved_name
             FROM att_teachers at
             LEFT JOIN llw_users lu ON lu.user_id = at.llw_user_id
-        ) src ON src.resolved_name = dt.full_name OR dt.full_name = ''
+        ) src ON src.att_id = dt.att_teacher_id
         SET dt.full_name = src.resolved_name
         WHERE (dt.full_name IS NULL OR TRIM(dt.full_name) = '')
           AND src.resolved_name IS NOT NULL
           AND src.resolved_name != ''
     ");
 } catch (Exception $e) {
-    // ไม่ block ถ้า sync ล้มเหลว
+    error_log('duty_teachers name sync: ' . $e->getMessage());
 }
 
-// ── ดึงรายชื่อครูเวร ──
+// ── ดึงรายชื่อครูเวร (กรองชื่อว่างออกด้วย) ──
 $teachers = $pdo->query(
-    "SELECT * FROM duty_teachers ORDER BY status ASC, full_name ASC"
+    "SELECT * FROM duty_teachers WHERE status='active' AND TRIM(full_name) != '' ORDER BY full_name ASC"
 )->fetchAll(PDO::FETCH_ASSOC);
+
 
 // ── ดึง att_teachers ทั้งหมดสำหรับ modal นำเข้า ──
 // fallback chain: llw_users fullname → at.name → at.username (กรณีชื่อว่างทุก field)

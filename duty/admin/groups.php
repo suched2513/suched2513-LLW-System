@@ -75,7 +75,7 @@ $groups = $pdo->query("
     ORDER BY g.sort_order, g.name
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-$teachers = $pdo->query("SELECT id, prefix, full_name FROM duty_teachers WHERE status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+$teachers = $pdo->query("SELECT id, prefix, full_name FROM duty_teachers WHERE status='active' AND TRIM(full_name) != '' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
 
 // ดึงสมาชิกทุกกลุ่มพร้อมกัน
 $memberMap = [];
