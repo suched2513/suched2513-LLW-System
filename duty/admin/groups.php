@@ -158,7 +158,12 @@ Swal.fire({icon:'<?= $isErr?'error':'success' ?>',title:'<?= $isErr?'ผิด�
                      style="width:40px;height:40px;background:<?= htmlspecialchars($g['color']) ?>"></div>
                 <div class="flex-fill">
                     <h6 class="mb-0 fw-bold"><?= htmlspecialchars($g['name']) ?></h6>
-                    <small class="text-muted"><?= count($members) ?> คน</small>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <span class="badge bg-light text-dark border small" style="font-size:10px">
+                            <?= $typeLabels[$g['group_type']] ?? $g['group_type'] ?>
+                        </span>
+                        <small class="text-muted"><?= count($members) ?> คน</small>
+                    </div>
                 </div>
                 <div class="dropdown">
                     <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">

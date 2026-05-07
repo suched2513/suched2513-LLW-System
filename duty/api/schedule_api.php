@@ -250,16 +250,17 @@ try {
         case 'get_point': {
             $date = $_GET['duty_date'] ?? '';
             $ptNo = (int)($_GET['point_no'] ?? 0);
+            $shift = in_array($_GET['shift']??'',['day','night']) ? $_GET['shift'] : 'day';
             if (!$date || !$ptNo) throw new Exception('ข้อมูลไม่ครบ');
 
             $rows = $pdo->prepare("
                 SELECT ds.teacher_id, ds.role, dt.prefix, dt.full_name
                 FROM duty_schedule ds
                 JOIN duty_teachers dt ON dt.id = ds.teacher_id
-                WHERE ds.duty_date = ? AND ds.point_no = ? AND ds.shift = 'day'
+                WHERE ds.duty_date = ? AND ds.point_no = ? AND ds.shift = ?
                 ORDER BY ds.id
             ");
-            $rows->execute([$date, $ptNo]);
+            $rows->execute([$date, $ptNo, $shift]);
             echo json_encode(['status'=>'success','teachers'=>$rows->fetchAll(PDO::FETCH_ASSOC)]);
             break;
         }
@@ -268,17 +269,18 @@ try {
         case 'save_point': {
             $date = $_POST['duty_date'] ?? '';
             $ptNo = (int)($_POST['point_no'] ?? 0);
+            $shift = in_array($_POST['shift']??'',['day','night']) ? $_POST['shift'] : 'day';
             $tids = array_values(array_unique(
                 array_filter(array_map('intval', (array)($_POST['teacher_ids'] ?? [])))
             ));
             if (!$date || !$ptNo) throw new Exception('ข้อมูลไม่ครบ');
 
             $pdo->beginTransaction();
-            $pdo->prepare("DELETE FROM duty_schedule WHERE duty_date=? AND point_no=? AND shift='day'")
-                ->execute([$date, $ptNo]);
+            $pdo->prepare("DELETE FROM duty_schedule WHERE duty_date=? AND point_no=? AND shift=?")
+                ->execute([$date, $ptNo, $shift]);
             $stmt = $pdo->prepare("INSERT INTO duty_schedule (duty_date, shift, point_no, teacher_id) VALUES (?,?,?,?)");
             foreach (array_slice($tids, 0, 2) as $tid) {
-                $stmt->execute([$date, 'day', $ptNo, $tid]);
+                $stmt->execute([$date, $shift, $ptNo, $tid]);
             }
             $pdo->commit();
             echo json_encode(['status'=>'success']);
