@@ -78,7 +78,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div>
         <h4 class="mb-0 fw-bold"><i class="fas fa-calendar-week me-2 text-primary"></i>ตารางเวรประจำสัปดาห์</h4>
-        <small class="text-muted">คลิกช่องเพื่อกำหนดครูประจำจุดเวร (สูงสุด 2 คน/จุด)</small>
+        <small class="text-muted">คลิกที่วันใดวันหนึ่งในปฏิทินเพื่อจัดครูทุกจุดในวันนั้น (กรองเฉพาะกลุ่มที่ assign)</small>
     </div>
     <div class="d-flex gap-2 flex-wrap">
         <a href="teachers.php" class="btn btn-outline-secondary btn-sm">
@@ -142,7 +142,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
                         $assigned = $slots[$day][$pt] ?? [];
                     ?>
                     <td class="duty-cell <?= $isToday ? 'today-col' : '' ?>"
-                        onclick="openAssign('<?= $day ?>',<?= $pt ?>)">
+                        onclick="openDayModal('<?= $day ?>')">
                         <div class="duty-cell-inner">
                             <?php if (!empty($assigned)): ?>
                                 <?php foreach ($assigned as $idx => $t): ?>
@@ -151,9 +151,6 @@ require_once __DIR__ . '/../../components/layout_start.php';
                                     <?= htmlspecialchars(mb_substr($t['prefix'].$t['full_name'], 0, 14)) ?>
                                 </span>
                                 <?php endforeach; ?>
-                                <?php if (count($assigned) < 2): ?>
-                                <span class="add-chip"><i class="fas fa-plus" style="font-size:10px"></i>เพิ่ม</span>
-                                <?php endif; ?>
                             <?php else: ?>
                                 <span class="add-chip"><i class="fas fa-plus" style="font-size:10px"></i>จัดเวร</span>
                             <?php endif; ?>
@@ -176,13 +173,13 @@ require_once __DIR__ . '/../../components/layout_start.php';
     <span class="add-chip"><i class="fas fa-plus" style="font-size:10px"></i>ว่าง</span>
 </div>
 
-<!-- ═══ Modal: จัดจุดเวร ═══ -->
+<!-- ═══ Modal: จัดจุดเวรทั้งวัน ═══ -->
 <div class="modal fade" id="assignModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title fw-bold">
-                    <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                    <i class="fas fa-calendar-day me-2 text-primary"></i>
                     จัดเวร — <span id="assignTitle"></span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -191,11 +188,11 @@ require_once __DIR__ . '/../../components/layout_start.php';
                 <div class="text-center py-3"><i class="fas fa-spinner fa-spin text-muted fa-2x"></i></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-danger me-auto" onclick="clearPoint()">
-                    <i class="fas fa-times me-1"></i>ล้างจุดนี้
+                <button type="button" class="btn btn-outline-danger me-auto" onclick="clearDay()">
+                    <i class="fas fa-trash me-1"></i>ล้างทั้งวัน
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                <button type="button" class="btn btn-primary" onclick="savePoint()">
+                <button type="button" class="btn btn-primary" onclick="saveDay()">
                     <i class="fas fa-save me-1"></i>บันทึก
                 </button>
             </div>
@@ -204,93 +201,161 @@ require_once __DIR__ . '/../../components/layout_start.php';
 </div>
 
 <script>
-const csrfToken = '<?= htmlspecialchars(csrf_token(), ENT_QUOTES) ?>';
-const apiUrl    = '../../duty/api/schedule_api.php';
+const csrfToken  = '<?= htmlspecialchars(csrf_token(), ENT_QUOTES) ?>';
+const apiUrl     = '../../duty/api/schedule_api.php';
+const maxPtsJS   = <?= (int)$maxPts ?>;
 
-let curDate  = '';
-let curPoint = 0;
+const thDaysFull = ['','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+const thMonAbbr  = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
-const thDays    = ['','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
-const teacherOpts = <?= json_encode(array_map(fn($t) => [
-    'id'   => $t['id'],
-    'name' => $t['prefix'] . $t['full_name']
-], $teachers), JSON_UNESCAPED_UNICODE) ?>;
+let curDate    = '';
+let curShift   = 'day';   // ปัจจุบันรองรับ 'day' เสมอ (ขยายภายหลัง)
+let modalMembers = [];    // group members ของวันนั้น
 
-function openAssign(date, ptNo) {
+// ─── เปิด Modal ทั้งวัน ──────────────────────────────────────
+function openDayModal(date, shift) {
     curDate  = date;
-    curPoint = ptNo;
+    curShift = shift || 'day';
 
-    const d     = new Date(date + 'T00:00:00');
-    const dayTh = thDays[d.getDay()];
-    document.getElementById('assignTitle').textContent = 'จุดที่ ' + ptNo + ' — ' + dayTh + ' ' + date;
+    const d   = new Date(date + 'T00:00:00');
+    const mo  = thMonAbbr[d.getMonth()+1];
+    const shiftTh = (curShift === 'night') ? '🌙 กลางคืน' : '☀️ กลางวัน';
+    document.getElementById('assignTitle').textContent =
+        thDaysFull[d.getDay()] + ' ' + d.getDate() + ' ' + mo + ' — ' + shiftTh;
 
     const body = document.getElementById('assignBody');
-    body.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin text-muted fa-2x"></i></div>';
+    body.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><div class="mt-2 small text-muted">กำลังโหลด...</div></div>';
     new bootstrap.Modal(document.getElementById('assignModal')).show();
 
-    fetch(`${apiUrl}?action=get_point&duty_date=${date}&point_no=${ptNo}`)
+    fetch(`${apiUrl}?action=get_day_detail&duty_date=${date}&shift=${curShift}`)
         .then(r => r.json())
         .then(data => {
             if (data.status !== 'success') {
-                body.innerHTML = '<p class="text-danger">โหลดข้อมูลไม่สำเร็จ</p>';
-                return;
+                body.innerHTML = '<p class="text-danger">โหลดข้อมูลไม่สำเร็จ</p>'; return;
             }
-            renderAssignForm(data.teachers || []);
+            const dayGroup = data.day_group;
+            modalMembers   = data.members || [];
+            const maxPts   = data.max_points || maxPtsJS;
+            renderDayForm(dayGroup, modalMembers, maxPts);
         })
         .catch(() => { body.innerHTML = '<p class="text-danger">เชื่อมต่อ server ไม่ได้</p>'; });
 }
 
-function buildSelect(id, label, selectedId, excludeId) {
-    const opts = teacherOpts
-        .filter(t => !excludeId || t.id != excludeId)
-        .map(t => `<option value="${t.id}" ${t.id == selectedId ? 'selected' : ''}>${t.name}</option>`)
-        .join('');
-    return `
-    <div class="mb-3">
-        <label class="form-label fw-bold">${label}</label>
-        <select class="form-select" id="${id}" onchange="refreshSelects()">
-            <option value="">— ไม่ระบุ —</option>
-            ${opts}
-        </select>
-    </div>`;
+// ─── Render ฟอร์ม (จุดเป็น row, ครูกลุ่มเป็น dropdown) ───────
+function renderDayForm(dayGroup, members, maxPts) {
+    const body = document.getElementById('assignBody');
+
+    // ถ้ายังไม่ได้ assign กลุ่ม
+    if (!dayGroup || !dayGroup.group_id) {
+        body.innerHTML = `
+            <div class="alert alert-warning mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                วันนี้ยังไม่ได้กำหนดกลุ่มเวร — ไปที่
+                <a href="schedule.php" class="alert-link">ปฏิทินสัปดาห์</a>
+                แล้วกำหนดกลุ่มก่อน
+            </div>`;
+        return;
+    }
+
+    // build point→member map
+    const ptMap = {};
+    members.forEach(m => { if (m.point_no) ptMap[m.point_no] = m; });
+
+    // build teacher options (เฉพาะในกลุ่ม)
+    const blankOpt = '<option value="">— ไม่จัด —</option>';
+    function buildOpts(selectedId) {
+        return blankOpt + members.map(m =>
+            `<option value="${m.id}" ${m.id == selectedId ? 'selected' : ''}>${m.prefix||''}${m.full_name}</option>`
+        ).join('');
+    }
+
+    // point rows
+    let rows = '';
+    for (let i = 1; i <= maxPts; i++) {
+        const m    = ptMap[i];
+        const role = m ? (m.role || '') : '';
+        const gc   = dayGroup.group_color || '#6c757d';
+        rows += `
+        <tr class="point-row" data-point="${i}">
+            <td class="align-middle" style="width:110px">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center text-white fw-bold"
+                         style="width:30px;height:30px;background:${gc};font-size:12px">${i}</div>
+                    <span class="fw-bold small text-secondary">จุดที่ ${i}</span>
+                </div>
+            </td>
+            <td class="align-middle">
+                <select class="form-select form-select-sm" data-field="teacher_id" onchange="refreshUnassigned()">
+                    ${buildOpts(m ? m.id : '')}
+                </select>
+            </td>
+            <td class="align-middle" style="width:160px">
+                <input type="text" class="form-control form-control-sm" data-field="role"
+                       placeholder="หน้าที่ (ไม่บังคับ)" value="${esc(role)}">
+            </td>
+        </tr>`;
+    }
+
+    const gc   = dayGroup.group_color || '#6c757d';
+    const gn   = dayGroup.group_name  || 'กลุ่มเวร';
+    const cnt  = members.length;
+    body.innerHTML = `
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="badge rounded-pill px-3 py-2" style="background:${gc};font-size:13px">
+                ${gn}
+            </span>
+            <span class="text-muted small">${cnt} คนในกลุ่ม — เลือกครูลงแต่ละจุดเวร (เฉพาะกลุ่มนี้)</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-2">
+                <thead class="table-light">
+                    <tr>
+                        <th>จุดเวร</th>
+                        <th>ครูผู้รับผิดชอบ</th>
+                        <th>หน้าที่/บทบาท</th>
+                    </tr>
+                </thead>
+                <tbody id="pointTbody">${rows}</tbody>
+            </table>
+        </div>
+        <div class="border rounded p-2 bg-light small">
+            <span class="fw-bold text-muted me-2">ครูที่ยังไม่ได้จัด:</span>
+            <span id="unassignedList"></span>
+        </div>`;
+
+    refreshUnassigned();
 }
 
-function renderAssignForm(existing) {
-    const t1 = existing[0] ? existing[0].teacher_id : '';
-    const t2 = existing[1] ? existing[1].teacher_id : '';
-
-    document.getElementById('assignBody').innerHTML = `
-        <p class="text-muted small mb-3">
-            <i class="fas fa-info-circle me-1"></i>
-            เลือกครูประจำจุดเวรนี้ (สูงสุด 2 ท่าน) ไม่บังคับทั้งสองช่อง
-        </p>
-        ${buildSelect('sel1','ครูคนที่ 1',t1,t2)}
-        ${buildSelect('sel2','ครูคนที่ 2',t2,t1)}
-    `;
+// ─── อัปเดต badge ครูที่ยังไม่ได้จัด ────────────────────────
+function refreshUnassigned() {
+    const el = document.getElementById('unassignedList');
+    if (!el) return;
+    const selected = new Set(
+        [...document.querySelectorAll('.point-row [data-field="teacher_id"]')]
+            .map(s => parseInt(s.value)).filter(Boolean)
+    );
+    const unassigned = modalMembers.filter(m => !selected.has(parseInt(m.id)));
+    el.innerHTML = unassigned.length
+        ? unassigned.map(m => `<span class="badge rounded-pill bg-white border text-dark me-1 fw-normal">${m.prefix||''}${m.full_name}</span>`).join('')
+        : '<span class="text-success fw-bold">ทุกคนถูกจัดแล้ว ✅</span>';
 }
 
-function refreshSelects() {
-    const v1 = document.getElementById('sel1')?.value || '';
-    const v2 = document.getElementById('sel2')?.value || '';
-    // rebuild sel2 excluding sel1's value
-    const existing = [{teacher_id: v1},{teacher_id: v2}].filter(t=>t.teacher_id);
-    renderAssignForm(existing);
-    // restore values
-    if (v1) document.getElementById('sel1').value = v1;
-    if (v2) document.getElementById('sel2').value = v2;
-}
-
-function savePoint() {
-    const t1 = document.getElementById('sel1')?.value || '';
-    const t2 = document.getElementById('sel2')?.value || '';
-    const ids = [t1, t2].filter(v => v !== '');
+// ─── บันทึกทั้งวัน ───────────────────────────────────────────
+function saveDay() {
+    const assignments = [];
+    document.querySelectorAll('.point-row').forEach(row => {
+        const ptNo = parseInt(row.dataset.point);
+        const tid  = row.querySelector('[data-field="teacher_id"]').value;
+        const role = row.querySelector('[data-field="role"]').value.trim();
+        if (tid) assignments.push({teacher_id: tid, point_no: ptNo, role: role});
+    });
 
     const fd = new FormData();
-    fd.append('action', 'save_point');
+    fd.append('action', 'save_points');
     fd.append('csrf_token', csrfToken);
     fd.append('duty_date', curDate);
-    fd.append('point_no', curPoint);
-    ids.forEach(id => fd.append('teacher_ids[]', id));
+    fd.append('shift', curShift);
+    fd.append('assignments', JSON.stringify(assignments));
 
     fetch(apiUrl, {method:'POST', body:fd})
         .then(r => r.json())
@@ -299,36 +364,34 @@ function savePoint() {
                 bootstrap.Modal.getInstance(document.getElementById('assignModal'))?.hide();
                 location.reload();
             } else {
-                Swal.fire({icon:'error', title:'ผิดพลาด', text:d.message});
+                Swal.fire({icon:'error', title:'ผิดพลาด', text: d.message || 'บันทึกไม่สำเร็จ', confirmButtonColor:'#2563eb'});
             }
-        });
+        })
+        .catch(() => Swal.fire({icon:'error', title:'เชื่อมต่อไม่ได้', confirmButtonColor:'#2563eb'}));
 }
 
-function clearPoint() {
+// ─── ล้างทั้งวัน ──────────────────────────────────────────────
+function clearDay() {
     Swal.fire({
-        icon:'warning', title:'ล้างจุดนี้?',
-        text:'ครูที่จัดไว้จะถูกลบออกจากจุดที่ ' + curPoint,
+        icon:'warning', title:'ล้างเวรทั้งวัน?',
+        text:'จุดเวรทั้งหมดของวันนี้จะถูกล้าง',
         showCancelButton:true, confirmButtonColor:'#dc3545',
         confirmButtonText:'ล้างเลย', cancelButtonText:'ยกเลิก'
     }).then(r => {
         if (!r.isConfirmed) return;
         const fd = new FormData();
-        fd.append('action', 'save_point');
+        fd.append('action', 'save_points');
         fd.append('csrf_token', csrfToken);
         fd.append('duty_date', curDate);
-        fd.append('point_no', curPoint);
-        // no teacher_ids → clears the slot
+        fd.append('shift', curShift);
+        fd.append('assignments', '[]');
         fetch(apiUrl, {method:'POST', body:fd})
             .then(r => r.json())
-            .then(d => {
-                if (d.status === 'success') {
-                    bootstrap.Modal.getInstance(document.getElementById('assignModal'))?.hide();
-                    location.reload();
-                }
-            });
+            .then(d => { if (d.status === 'success') { bootstrap.Modal.getInstance(document.getElementById('assignModal'))?.hide(); location.reload(); }});
     });
 }
 
+// ─── ล้างทั้งสัปดาห์ ─────────────────────────────────────────
 function confirmClearWeek() {
     Swal.fire({
         icon:'warning', title:'ล้างตารางสัปดาห์นี้?',
@@ -345,10 +408,15 @@ function confirmClearWeek() {
             .then(r => r.json())
             .then(d => {
                 if (d.status === 'success') location.reload();
-                else Swal.fire({icon:'error', title:'ผิดพลาด', text:d.message});
+                else Swal.fire({icon:'error', title:'ผิดพลาด', text: d.message});
             });
     });
 }
+
+// ─── util ─────────────────────────────────────────────────────
+function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;') : ''; }
+
 </script>
+
 
 <?php require_once __DIR__ . '/../../components/layout_end.php'; ?>
