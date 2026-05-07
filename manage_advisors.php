@@ -19,11 +19,11 @@ $activeSystem = 'portal';
 // --- Fetch Students to list Rooms ---
 $rooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE classroom != '' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
-// --- Fetch Teachers for selection (ครูทุกคนใน llw_users ยกเว้น cb_admin) ---
+// --- Fetch Teachers for selection (ครูทุกคน ยกเว้น cb_admin/bus_admin/bus_finance) ---
 $teachers = $pdo->query("
     SELECT DISTINCT u.user_id, u.firstname, u.lastname
     FROM llw_users u
-    WHERE u.role IN ('att_teacher', 'wfh_staff', 'wfh_admin', 'super_admin')
+    WHERE u.role NOT IN ('cb_admin', 'bus_admin', 'bus_finance')
       AND (u.status = 'active' OR u.status IS NULL)
     ORDER BY u.firstname, u.lastname
 ")->fetchAll();
