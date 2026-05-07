@@ -288,14 +288,15 @@ try {
         // ── POST: ล้างตารางทั้งสัปดาห์ ────────────────────────────────
         case 'clear_week': {
             $weekStart = $_POST['week_start'] ?? '';
+            $shift     = in_array($_POST['shift']??'',['day','night']) ? $_POST['shift'] : 'day';
             if (!$weekStart) throw new Exception('ไม่ระบุวันที่');
-            $weekEnd = date('Y-m-d', strtotime($weekStart . ' +4 days'));
+            $weekEnd = date('Y-m-d', strtotime($weekStart . ' +6 days'));
 
             $pdo->beginTransaction();
-            $pdo->prepare("DELETE FROM duty_schedule WHERE duty_date BETWEEN ? AND ? AND shift='day'")
-                ->execute([$weekStart, $weekEnd]);
-            $pdo->prepare("DELETE FROM duty_day_groups WHERE duty_date BETWEEN ? AND ?")
-                ->execute([$weekStart, $weekEnd]);
+            $pdo->prepare("DELETE FROM duty_schedule WHERE duty_date BETWEEN ? AND ? AND shift=?")
+                ->execute([$weekStart, $weekEnd, $shift]);
+            $pdo->prepare("DELETE FROM duty_day_groups WHERE duty_date BETWEEN ? AND ? AND shift=?")
+                ->execute([$weekStart, $weekEnd, $shift]);
             $pdo->commit();
             echo json_encode(['status'=>'success']);
             break;

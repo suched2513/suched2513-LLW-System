@@ -55,10 +55,13 @@ try {
     }
 } catch (Exception $e) { error_log('schedule auto-migrate group_id: ' . $e->getMessage()); }
 
-// ── คำนวณสัปดาห์ (จันทร์-ศุกร์) ──
+// ── Shift param ──
+$shiftParam = in_array($_GET['shift'] ?? '', ['day','night']) ? $_GET['shift'] : 'day';
+
+// ── คำนวณสัปดาห์ (จันทร์-อาทิตย์) ──
 $weekParam = $_GET['week'] ?? date('Y-m-d');
 $weekStart = date('Y-m-d', strtotime('monday this week', strtotime($weekParam)));
-$weekEnd   = date('Y-m-d', strtotime($weekStart . ' +4 days')); // Friday
+$weekEnd   = date('Y-m-d', strtotime($weekStart . ' +6 days')); // Sunday
 $prevWeek  = date('Y-m-d', strtotime($weekStart . ' -7 days'));
 $nextWeek  = date('Y-m-d', strtotime($weekStart . ' +7 days'));
 
@@ -67,16 +70,30 @@ try {
     $maxPts = (int)($pdo->query("SELECT svalue FROM duty_settings WHERE skey='max_duty_points'")->fetchColumn() ?: 5);
 } catch(Exception $e) { $maxPts = 5; }
 
-// ── ดึงตารางเวรทั้งสัปดาห์ ──
+// ── ชื่อจุดเวร ──
+$defaultPtNames = ['รับนักเรียน','หน้าเสาธง','ปล่อยกลับบ้าน','ตรวจรอบโรงเรียน','ประธานกิจกรรมหน้าเสาธง'];
+$pointNames = $defaultPtNames;
+try {
+    $pnVal = $pdo->query("SELECT svalue FROM duty_settings WHERE skey='duty_point_names'")->fetchColumn();
+    if ($pnVal) { $decoded = json_decode($pnVal, true); if ($decoded) $pointNames = $decoded; }
+} catch(Exception $e) {}
+if (empty($pointNames)) $pointNames = $defaultPtNames;
+// Auto-seed if not exists
+try {
+    $pdo->prepare("INSERT IGNORE INTO duty_settings (skey,svalue) VALUES ('duty_point_names',?)")
+        ->execute([json_encode($pointNames, JSON_UNESCAPED_UNICODE)]);
+} catch(Exception $e) {}
+
+// ── ดึงตารางเวรทั้งสัปดาห์ (ตาม shift) ──
 $stmtSched = $pdo->prepare("
     SELECT ds.duty_date, ds.point_no, ds.role,
            dt.id AS teacher_id, dt.prefix, dt.full_name
     FROM duty_schedule ds
     JOIN duty_teachers dt ON dt.id = ds.teacher_id
-    WHERE ds.duty_date BETWEEN ? AND ? AND ds.shift = 'day'
+    WHERE ds.duty_date BETWEEN ? AND ? AND ds.shift = ?
     ORDER BY ds.duty_date, ds.point_no, ds.id
 ");
-$stmtSched->execute([$weekStart, $weekEnd]);
+$stmtSched->execute([$weekStart, $weekEnd, $shiftParam]);
 
 // $slots[date][point_no][] = teacher
 $slots = [];
@@ -97,17 +114,16 @@ try {
     )->fetchAll(PDO::FETCH_ASSOC);
 } catch(Exception $e) { $allGroups = []; }
 
-// ── ดึง day_groups สัปดาห์นี้ ──
-// $dayGroups[date] = ['group_id','group_name','group_color']
+// ── ดึง day_groups สัปดาห์นี้ (ตาม shift) ──
 $dayGroups = [];
 try {
     $dgRows = $pdo->prepare("
         SELECT ddg.duty_date, ddg.group_id, g.name AS group_name, g.color AS group_color
         FROM duty_day_groups ddg
         LEFT JOIN duty_groups g ON g.id = ddg.group_id
-        WHERE ddg.duty_date BETWEEN ? AND ? AND ddg.shift = 'day'
+        WHERE ddg.duty_date BETWEEN ? AND ? AND ddg.shift = ?
     ");
-    $dgRows->execute([$weekStart, $weekEnd]);
+    $dgRows->execute([$weekStart, $weekEnd, $shiftParam]);
     foreach ($dgRows->fetchAll(PDO::FETCH_ASSOC) as $r) {
         $dayGroups[$r['duty_date']] = $r;
     }
@@ -122,7 +138,8 @@ function thDateShort($ymd) {
 }
 $thYear    = (int)date('Y', strtotime($weekEnd)) + 543;
 $weekLabel = thDateShort($weekStart) . ' – ' . thDateShort($weekEnd) . ' ' . $thYear;
-$dayNames  = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์'];
+$dayNames  = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+$numDays   = 7;
 
 $pageTitle    = 'ตารางเวร';
 $pageSubtitle = 'จัดตารางเวรรายสัปดาห์';
@@ -165,15 +182,29 @@ require_once __DIR__ . '/../../components/layout_start.php';
 
 <!-- ── Week Navigation ── -->
 <div class="d-flex align-items-center gap-3 mb-3">
-    <a href="?week=<?= $prevWeek ?>" class="btn btn-outline-secondary btn-sm">
+    <a href="?week=<?= $prevWeek ?>&shift=<?= $shiftParam ?>" class="btn btn-outline-secondary btn-sm">
         <i class="fas fa-chevron-left"></i>
     </a>
     <h5 class="mb-0 fw-bold text-primary"><?= htmlspecialchars($weekLabel) ?></h5>
-    <a href="?week=<?= $nextWeek ?>" class="btn btn-outline-secondary btn-sm">
+    <a href="?week=<?= $nextWeek ?>&shift=<?= $shiftParam ?>" class="btn btn-outline-secondary btn-sm">
         <i class="fas fa-chevron-right"></i>
     </a>
-    <a href="?week=<?= date('Y-m-d') ?>" class="btn btn-sm btn-outline-primary ms-auto">วันนี้</a>
+    <a href="?week=<?= date('Y-m-d') ?>&shift=<?= $shiftParam ?>" class="btn btn-sm btn-outline-primary ms-auto">วันนี้</a>
 </div>
+
+<!-- ── Shift Tabs ── -->
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link <?= $shiftParam==='day' ? 'active fw-bold' : '' ?>" href="?week=<?= $weekStart ?>&shift=day">
+            ☀️ เวรกลางวัน
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= $shiftParam==='night' ? 'active fw-bold' : '' ?>" href="?week=<?= $weekStart ?>&shift=night">
+            🌙 เวรกลางคืน
+        </a>
+    </li>
+</ul>
 
 <?php if (empty($teachers)): ?>
 <div class="alert alert-warning">
@@ -189,12 +220,13 @@ require_once __DIR__ . '/../../components/layout_start.php';
             <table class="table table-bordered mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="text-center align-middle" style="width:90px; font-size:13px;">จุดเวร</th>
-                        <?php for ($i = 0; $i < 5; $i++):
+                        <th class="text-center align-middle" style="width:120px; font-size:13px;">จุดเวร</th>
+                        <?php for ($i = 0; $i < $numDays; $i++):
                             $day     = date('Y-m-d', strtotime($weekStart . " +$i days"));
                             $isToday = ($day === date('Y-m-d'));
+                            $isWkend = ($i >= 5);
                         ?>
-                        <th class="text-center <?= $isToday ? 'table-primary' : '' ?>" style="min-width:140px;">
+                        <th class="text-center <?= $isToday ? 'table-primary' : ($isWkend ? 'table-warning' : '') ?>" style="min-width:120px;">
                             <div class="fw-bold"><?= $dayNames[$i] ?></div>
                             <div class="small <?= $isToday ? 'text-primary fw-bold' : 'text-muted' ?>">
                                 <?= thDateShort($day) ?>
@@ -207,7 +239,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
                         <td class="text-center align-middle group-cell" style="font-size:11px;font-weight:700;color:#6c757d;">
                             <i class="fas fa-layer-group me-1"></i>กลุ่ม
                         </td>
-                        <?php for ($i = 0; $i < 5; $i++):
+                        <?php for ($i = 0; $i < $numDays; $i++):
                             $day = date('Y-m-d', strtotime($weekStart . " +$i days"));
                             $dg  = $dayGroups[$day] ?? null;
                         ?>
@@ -230,12 +262,14 @@ require_once __DIR__ . '/../../components/layout_start.php';
                     </tr>
                 </thead>
                 <tbody>
-                <?php for ($pt = 1; $pt <= $maxPts; $pt++): ?>
+                <?php for ($pt = 1; $pt <= $maxPts; $pt++):
+                    $ptName = $pointNames[$pt-1] ?? 'จุดที่ '.$pt;
+                ?>
                 <tr>
-                    <td class="text-center align-middle point-label">
-                        <span class="badge bg-secondary">จุดที่ <?= $pt ?></span>
+                    <td class="text-center align-middle point-label" style="font-size:11px;">
+                        <span class="badge bg-primary" style="white-space:normal;line-height:1.3"><?= htmlspecialchars($ptName) ?></span>
                     </td>
-                    <?php for ($i = 0; $i < 5; $i++):
+                    <?php for ($i = 0; $i < $numDays; $i++):
                         $day    = date('Y-m-d', strtotime($weekStart . " +$i days"));
                         $isToday = ($day === date('Y-m-d'));
                         $assigned = $slots[$day][$pt] ?? [];
@@ -325,12 +359,14 @@ require_once __DIR__ . '/../../components/layout_start.php';
 const csrfToken  = '<?= htmlspecialchars(csrf_token(), ENT_QUOTES) ?>';
 const apiUrl     = '../../duty/api/schedule_api.php';
 const maxPtsJS   = <?= (int)$maxPts ?>;
+const curShiftPage = '<?= $shiftParam ?>';
+const pointNamesJS = <?= json_encode($pointNames, JSON_UNESCAPED_UNICODE) ?>;
 
 const thDaysFull = ['','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
 const thMonAbbr  = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
 let curDate    = '';
-let curShift   = 'day';
+let curShift   = curShiftPage;
 let modalMembers = [];
 let gpCurDate  = '';  // วันที่ที่กำลัง pick กลุ่ม
 
@@ -342,8 +378,9 @@ function openGroupPicker(date) {
     gpCurDate = date;
     const d  = new Date(date + 'T00:00:00');
     const mo = thMonAbbr[d.getMonth()+1];
+    const shLabel = curShiftPage === 'night' ? '🌙 กลางคืน' : '☀️ กลางวัน';
     document.getElementById('gpDate').textContent =
-        thDaysFull[d.getDay()] + ' ' + d.getDate() + ' ' + mo;
+        thDaysFull[d.getDay()] + ' ' + d.getDate() + ' ' + mo + ' — ' + shLabel;
 
     const body = document.getElementById('gpBody');
     if (!allGroupsData.length) {
@@ -370,7 +407,7 @@ function assignGroup(date, groupId) {
     fd.append('action',     'assign_group');
     fd.append('csrf_token', csrfToken);
     fd.append('duty_date',  date);
-    fd.append('shift',      'day');
+    fd.append('shift',      curShiftPage);
     fd.append('group_id',   groupId);
     fetch(apiUrl, {method:'POST', body:fd})
         .then(r => r.json())
@@ -394,7 +431,7 @@ function clearGroup() {
         fd.append('action',     'assign_group');
         fd.append('csrf_token', csrfToken);
         fd.append('duty_date',  gpCurDate);
-        fd.append('shift',      'day');
+        fd.append('shift',      curShiftPage);
         fd.append('group_id',   '');
         fetch(apiUrl, {method:'POST', body:fd})
             .then(r => r.json())
@@ -408,7 +445,7 @@ function clearGroup() {
 // ─── เปิด Modal ทั้งวัน ──────────────────────────────────────
 function openDayModal(date, shift) {
     curDate  = date;
-    curShift = shift || 'day';
+    curShift = shift || curShiftPage;
 
     const d   = new Date(date + 'T00:00:00');
     const mo  = thMonAbbr[d.getMonth()+1];
@@ -466,15 +503,15 @@ function renderDayForm(dayGroup, members, maxPts) {
     let rows = '';
     for (let i = 1; i <= maxPts; i++) {
         const m    = ptMap[i];
-        const role = m ? (m.role || '') : '';
+        const ptName = (pointNamesJS[i-1]) || ('จุดที่ '+i);
         const gc   = dayGroup.group_color || '#6c757d';
         rows += `
         <tr class="point-row" data-point="${i}">
-            <td class="align-middle" style="width:110px">
+            <td class="align-middle" style="width:140px">
                 <div class="d-flex align-items-center gap-2">
                     <div class="rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center text-white fw-bold"
                          style="width:30px;height:30px;background:${gc};font-size:12px">${i}</div>
-                    <span class="fw-bold small text-secondary">จุดที่ ${i}</span>
+                    <span class="fw-bold small text-secondary">${ptName}</span>
                 </div>
             </td>
             <td class="align-middle">
@@ -482,9 +519,9 @@ function renderDayForm(dayGroup, members, maxPts) {
                     ${buildOpts(m ? m.id : '')}
                 </select>
             </td>
-            <td class="align-middle" style="width:160px">
-                <input type="text" class="form-control form-control-sm" data-field="role"
-                       placeholder="หน้าที่ (ไม่บังคับ)" value="${esc(role)}">
+            <td class="align-middle" style="width:120px">
+                <input type="hidden" data-field="role" value="${esc(ptName)}">
+                <span class="badge bg-light text-dark small">${ptName}</span>
             </td>
         </tr>`;
     }
@@ -597,6 +634,7 @@ function confirmClearWeek() {
         fd.append('action', 'clear_week');
         fd.append('csrf_token', csrfToken);
         fd.append('week_start', '<?= $weekStart ?>');
+        fd.append('shift', curShiftPage);
         fetch(apiUrl, {method:'POST', body:fd})
             .then(r => r.json())
             .then(d => {
