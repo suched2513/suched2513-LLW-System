@@ -15,6 +15,41 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 $pdo    = getPdo();
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
+// ── Auto-migrate: สร้างตาราง duty_groups system ถ้ายังไม่มี ──
+try {
+    $pdo->query("SELECT 1 FROM duty_groups LIMIT 1");
+} catch (Exception $e) {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS duty_groups (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        color VARCHAR(20) DEFAULT '#6c757d',
+        description TEXT, sort_order INT DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS duty_group_members (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        group_id INT NOT NULL, teacher_id INT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_gm (group_id, teacher_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS duty_day_groups (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        duty_date DATE NOT NULL,
+        shift ENUM('day','night') DEFAULT 'day',
+        group_id INT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_ddg (duty_date, shift)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+// ── Auto-migrate: group_id ใน duty_schedule ──
+try {
+    $c = $pdo->query("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='duty_schedule' AND COLUMN_NAME='group_id'");
+    if ((int)$c->fetchColumn() === 0)
+        $pdo->exec("ALTER TABLE duty_schedule ADD COLUMN group_id INT NULL");
+} catch (Exception $e) { /* ignore */ }
+
 // CSRF สำหรับ POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['csrf_token'] ?? '';
