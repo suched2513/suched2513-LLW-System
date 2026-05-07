@@ -49,12 +49,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
             foreach ($attTeachers as $at) {
-                // ใช้ชื่อจาก llw_users ถ้ามี ไม่งั้นใช้จาก att_teachers
+                // fallback chain: llw_users fullname → at.name → at.username → ครู#id
                 $fullName = trim(($at['firstname'] ?? '') . ' ' . ($at['lastname'] ?? ''));
-                if (empty(trim($fullName))) {
-                    $fullName = trim($at['name'] ?? '');
-                }
-                if (empty($fullName)) continue;
+                if ($fullName === '') $fullName = trim($at['name'] ?? '');
+                if ($fullName === '') $fullName = trim($at['username'] ?? '');
+                if ($fullName === '') $fullName = 'ครู#' . $at['id'];
 
                 $stmtIns->execute([$fullName, $fullName]);
                 if ($stmtIns->rowCount() > 0) $imported++;
@@ -113,15 +112,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// ── Auto-fix: อัปเดตชื่อว่างใน duty_teachers จาก att_teachers/llw_users ──
+// กรณีครูถูก import ไปก่อนหน้าแต่ชื่อว่าง จะถูก re-sync อัตโนมัติ
+try {
+    $pdo->exec("
+        UPDATE duty_teachers dt
+        JOIN (
+            SELECT
+                COALESCE(
+                    NULLIF(TRIM(CONCAT(COALESCE(lu.firstname,''),' ',COALESCE(lu.lastname,''))), ''),
+                    NULLIF(TRIM(at.name), ''),
+                    NULLIF(TRIM(at.username), '')
+                ) AS resolved_name
+            FROM att_teachers at
+            LEFT JOIN llw_users lu ON lu.user_id = at.llw_user_id
+        ) src ON src.resolved_name = dt.full_name OR dt.full_name = ''
+        SET dt.full_name = src.resolved_name
+        WHERE (dt.full_name IS NULL OR TRIM(dt.full_name) = '')
+          AND src.resolved_name IS NOT NULL
+          AND src.resolved_name != ''
+    ");
+} catch (Exception $e) {
+    // ไม่ block ถ้า sync ล้มเหลว
+}
+
 // ── ดึงรายชื่อครูเวร ──
 $teachers = $pdo->query(
     "SELECT * FROM duty_teachers ORDER BY status ASC, full_name ASC"
 )->fetchAll(PDO::FETCH_ASSOC);
 
 // ── ดึง att_teachers ทั้งหมดสำหรับ modal นำเข้า ──
+// fallback chain: llw_users fullname → at.name → at.username (กรณีชื่อว่างทุก field)
 $attTeachers = $pdo->query(
-    "SELECT at.id, at.name,
-            COALESCE(NULLIF(TRIM(CONCAT(lu.firstname,' ',lu.lastname)),''), at.name) AS display_name
+    "SELECT at.id, at.name, at.username,
+            COALESCE(
+                NULLIF(TRIM(CONCAT(COALESCE(lu.firstname,''),' ',COALESCE(lu.lastname,''))), ''),
+                NULLIF(TRIM(at.name), ''),
+                NULLIF(TRIM(at.username), ''),
+                CONCAT('ครู#', at.id)
+            ) AS display_name
      FROM att_teachers at
      LEFT JOIN llw_users lu ON lu.user_id = at.llw_user_id
      ORDER BY display_name ASC"
