@@ -53,6 +53,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action = $_POST['action'] ?? '';
 
+    // ── นำเข้าครูทั้งหมดจาก att_teachers (one-click) ──
+    if ($action === 'import_all_from_att') {
+        $stmtAll = $pdo->query("
+            SELECT at.id, at.name, at.username,
+                   lu.firstname, lu.lastname
+            FROM att_teachers at
+            LEFT JOIN llw_users lu ON lu.user_id = at.llw_user_id
+            ORDER BY at.id
+        ");
+        $allTeachers = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
+        $imported = 0;
+
+        $stmtIns = $pdo->prepare(
+            "INSERT INTO duty_teachers (full_name, att_teacher_id, status)
+             VALUES (?, ?, 'active')
+             ON DUPLICATE KEY UPDATE full_name = VALUES(full_name)"
+        );
+        $stmtLinkExisting = $pdo->prepare(
+            "UPDATE duty_teachers SET att_teacher_id = ?
+             WHERE TRIM(full_name) = ? AND att_teacher_id IS NULL LIMIT 1"
+        );
+
+        foreach ($allTeachers as $at) {
+            $fullName = trim(($at['firstname'] ?? '') . ' ' . ($at['lastname'] ?? ''));
+            if ($fullName === '') $fullName = trim($at['name'] ?? '');
+            if ($fullName === '') $fullName = trim($at['username'] ?? '');
+            if ($fullName === '') $fullName = 'ครู#' . $at['id'];
+            $attId = (int)$at['id'];
+
+            $dup = $pdo->prepare("SELECT id FROM duty_teachers WHERE att_teacher_id = ? LIMIT 1");
+            $dup->execute([$attId]);
+            if ($dup->fetchColumn()) continue;
+
+            $stmtLinkExisting->execute([$attId, $fullName]);
+            if ($stmtLinkExisting->rowCount() > 0) { $imported++; continue; }
+
+            $stmtIns->execute([$fullName, $attId]);
+            if ($stmtIns->rowCount() > 0) $imported++;
+        }
+        $total = count($allTeachers);
+        $msg = "success:นำเข้าครูสำเร็จ {$imported} คน (จากทั้งหมด {$total} คน ที่เหลือมีในระบบแล้ว)";
+    }
+
     // ── นำเข้าครูจาก att_teachers ──
     if ($action === 'import_from_att') {
         $ids = $_POST['att_ids'] ?? [];
@@ -330,9 +373,12 @@ Swal.fire({icon:'<?= $icon ?>',title:'<?= $isErr?'ข้อผิดพลาด
         <h4 class="mb-0 fw-bold"><i class="fas fa-chalkboard-teacher me-2 text-primary"></i>จัดการครูเวร</h4>
         <small class="text-muted">เชื่อมบัญชี Telegram เพื่อรายงานเวรด้วยรูปถ่าย</small>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-success" onclick="confirmImportAll()">
+            <i class="fas fa-users me-1"></i> นำเข้าครูทั้งหมด
+        </button>
         <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#importModal">
-            <i class="fas fa-file-import me-1"></i> นำเข้าจากระบบ
+            <i class="fas fa-file-import me-1"></i> เลือกนำเข้า
         </button>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
             <i class="fas fa-plus me-1"></i> เพิ่มครูใหม่
@@ -575,7 +621,25 @@ Swal.fire({icon:'<?= $icon ?>',title:'<?= $isErr?'ข้อผิดพลาด
     </div>
 </div>
 
+<!-- Import-all hidden form -->
+<form id="import-all-form" method="POST" class="d-none">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="import_all_from_att">
+</form>
+
 <script>
+function confirmImportAll() {
+    Swal.fire({
+        title: 'นำเข้าครูทั้งหมด?',
+        html: 'ระบบจะดึงรายชื่อครูทุกคนจากฐานข้อมูลกลาง (<b>att_teachers</b>) เข้าระบบเวร<br><small class="text-muted">ครูที่อยู่ในระบบแล้วจะไม่ถูกเพิ่มซ้ำ</small>',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#198754',
+        confirmButtonText: '<i class="fas fa-users me-1"></i>นำเข้าเลย',
+        cancelButtonText: 'ยกเลิก'
+    }).then(r => { if (r.isConfirmed) document.getElementById('import-all-form').submit(); });
+}
+
 function openEdit(t) {
     document.getElementById('editId').value     = t.id;
     document.getElementById('editName').value   = t.full_name;
