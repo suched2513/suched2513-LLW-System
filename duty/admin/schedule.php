@@ -87,6 +87,30 @@ $teachers = $pdo->query(
     "SELECT id, prefix, full_name FROM duty_teachers WHERE status='active' ORDER BY full_name"
 )->fetchAll(PDO::FETCH_ASSOC);
 
+// ── ดึง duty_groups ทั้งหมด (สำหรับ picker) ──
+$allGroups = [];
+try {
+    $allGroups = $pdo->query(
+        "SELECT id, name, color FROM duty_groups WHERE status='active' ORDER BY sort_order, name"
+    )->fetchAll(PDO::FETCH_ASSOC);
+} catch(Exception $e) { $allGroups = []; }
+
+// ── ดึง day_groups สัปดาห์นี้ ──
+// $dayGroups[date] = ['group_id','group_name','group_color']
+$dayGroups = [];
+try {
+    $dgRows = $pdo->prepare("
+        SELECT ddg.duty_date, ddg.group_id, g.name AS group_name, g.color AS group_color
+        FROM duty_day_groups ddg
+        LEFT JOIN duty_groups g ON g.id = ddg.group_id
+        WHERE ddg.duty_date BETWEEN ? AND ? AND ddg.shift = 'day'
+    ");
+    $dgRows->execute([$weekStart, $weekEnd]);
+    foreach ($dgRows->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $dayGroups[$r['duty_date']] = $r;
+    }
+} catch(Exception $e) { $dayGroups = []; }
+
 // ── Thai helpers ──
 $thMonths = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 function thDateShort($ymd) {
@@ -114,6 +138,11 @@ require_once __DIR__ . '/../../components/layout_start.php';
 .add-chip:hover { color:#2563eb; border-color:#2563eb; background:#f0f5ff; }
 .point-label { font-weight:700; white-space:nowrap; min-width:70px; }
 .today-col { background:rgba(13,110,253,.04) !important; }
+.group-cell { padding:6px 8px; text-align:center; border-bottom:2px solid #dee2e6; background:#f8f9fa; }
+.group-badge { display:inline-flex; align-items:center; gap:5px; border-radius:20px; padding:3px 10px; font-size:11px; font-weight:700; cursor:pointer; border:none; transition:opacity .15s; }
+.group-badge:hover { opacity:.8; }
+.group-empty { display:inline-flex; align-items:center; gap:4px; color:#adb5bd; font-size:11px; cursor:pointer; padding:3px 8px; border:1.5px dashed #dee2e6; border-radius:20px; transition:all .15s; background:transparent; }
+.group-empty:hover { color:#2563eb; border-color:#2563eb; background:#f0f5ff; }
 </style>
 
 <!-- ── Header ── -->
@@ -171,6 +200,32 @@ require_once __DIR__ . '/../../components/layout_start.php';
                         </th>
                         <?php endfor; ?>
                     </tr>
+                    <!-- ── Row: กลุ่มเวร ── -->
+                    <tr>
+                        <td class="text-center align-middle group-cell" style="font-size:11px;font-weight:700;color:#6c757d;">
+                            <i class="fas fa-layer-group me-1"></i>กลุ่ม
+                        </td>
+                        <?php for ($i = 0; $i < 5; $i++):
+                            $day = date('Y-m-d', strtotime($weekStart . " +$i days"));
+                            $dg  = $dayGroups[$day] ?? null;
+                        ?>
+                        <td class="group-cell">
+                            <?php if ($dg && $dg['group_id']): ?>
+                            <button class="group-badge text-white"
+                                    style="background:<?= htmlspecialchars($dg['group_color'] ?? '#6c757d') ?>"
+                                    onclick="openGroupPicker('<?= $day ?>')"
+                                    title="คลิกเพื่อเปลี่ยนกลุ่ม">
+                                <i class="fas fa-users" style="font-size:10px"></i>
+                                <?= htmlspecialchars(mb_substr($dg['group_name'] ?? '', 0, 10)) ?>
+                            </button>
+                            <?php else: ?>
+                            <button class="group-empty" onclick="openGroupPicker('<?= $day ?>')">
+                                <i class="fas fa-plus" style="font-size:10px"></i>เลือกกลุ่ม
+                            </button>
+                            <?php endif; ?>
+                        </td>
+                        <?php endfor; ?>
+                    </tr>
                 </thead>
                 <tbody>
                 <?php for ($pt = 1; $pt <= $maxPts; $pt++): ?>
@@ -215,6 +270,28 @@ require_once __DIR__ . '/../../components/layout_start.php';
     <span class="add-chip"><i class="fas fa-plus" style="font-size:10px"></i>ว่าง</span>
 </div>
 
+<!-- ═══ Modal: เลือกกลุ่มเวร ═══ -->
+<div class="modal fade" id="groupPickerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-layer-group me-2 text-primary"></i>
+                    เลือกกลุ่มเวร — <span id="gpDate"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="gpBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger me-auto" onclick="clearGroup()">
+                    <i class="fas fa-times me-1"></i>ล้างกลุ่มวันนี้
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ═══ Modal: จัดจุดเวรทั้งวัน ═══ -->
 <div class="modal fade" id="assignModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -251,8 +328,80 @@ const thDaysFull = ['','จันทร์','อังคาร','พุธ','�
 const thMonAbbr  = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
 let curDate    = '';
-let curShift   = 'day';   // ปัจจุบันรองรับ 'day' เสมอ (ขยายภายหลัง)
-let modalMembers = [];    // group members ของวันนั้น
+let curShift   = 'day';
+let modalMembers = [];
+let gpCurDate  = '';  // วันที่ที่กำลัง pick กลุ่ม
+
+// allGroups จาก PHP
+const allGroupsData = <?= json_encode($allGroups, JSON_UNESCAPED_UNICODE) ?>;
+
+// ─── เปิด Group Picker Modal ─────────────────────────────────
+function openGroupPicker(date) {
+    gpCurDate = date;
+    const d  = new Date(date + 'T00:00:00');
+    const mo = thMonAbbr[d.getMonth()+1];
+    document.getElementById('gpDate').textContent =
+        thDaysFull[d.getDay()] + ' ' + d.getDate() + ' ' + mo;
+
+    const body = document.getElementById('gpBody');
+    if (!allGroupsData.length) {
+        body.innerHTML = `<div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            ยังไม่มีกลุ่มเวร — <a href="groups.php" class="alert-link">ไปสร้างกลุ่มก่อน</a>
+        </div>`;
+    } else {
+        body.innerHTML = '<div class="d-grid gap-2">' +
+            allGroupsData.map(g => `
+                <button class="btn text-white text-start fw-bold d-flex align-items-center gap-2"
+                        style="background:${g.color}"
+                        onclick="assignGroup('${date}','${g.id}')">
+                    <i class="fas fa-users"></i> ${g.name}
+                </button>`).join('') +
+            '</div>';
+    }
+    new bootstrap.Modal(document.getElementById('groupPickerModal')).show();
+}
+
+// ─── Assign กลุ่มลงวัน ──────────────────────────────────────
+function assignGroup(date, groupId) {
+    const fd = new FormData();
+    fd.append('action',     'assign_group');
+    fd.append('csrf_token', csrfToken);
+    fd.append('duty_date',  date);
+    fd.append('shift',      'day');
+    fd.append('group_id',   groupId);
+    fetch(apiUrl, {method:'POST', body:fd})
+        .then(r => r.json())
+        .then(d => {
+            bootstrap.Modal.getInstance(document.getElementById('groupPickerModal'))?.hide();
+            if (d.status === 'success') location.reload();
+            else Swal.fire({icon:'error', title:'ผิดพลาด', text: d.message});
+        });
+}
+
+// ─── ล้างกลุ่มของวัน ─────────────────────────────────────────
+function clearGroup() {
+    Swal.fire({
+        icon:'warning', title:'ล้างกลุ่มวันนี้?',
+        text:'กลุ่มที่ assign ไว้จะถูกล้าง (จุดเวรยังคงอยู่)',
+        showCancelButton:true, confirmButtonColor:'#dc3545',
+        confirmButtonText:'ล้างเลย', cancelButtonText:'ยกเลิก'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+        const fd = new FormData();
+        fd.append('action',     'assign_group');
+        fd.append('csrf_token', csrfToken);
+        fd.append('duty_date',  gpCurDate);
+        fd.append('shift',      'day');
+        fd.append('group_id',   '');
+        fetch(apiUrl, {method:'POST', body:fd})
+            .then(r => r.json())
+            .then(d => {
+                bootstrap.Modal.getInstance(document.getElementById('groupPickerModal'))?.hide();
+                location.reload();
+            });
+    });
+}
 
 // ─── เปิด Modal ทั้งวัน ──────────────────────────────────────
 function openDayModal(date, shift) {
