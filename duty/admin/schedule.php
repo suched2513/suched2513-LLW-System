@@ -102,9 +102,15 @@ $teachers = $pdo->query(
 // ── ดึง duty_groups ทั้งหมด (สำหรับ picker) ──
 $allGroups = [];
 try {
-    $allGroups = $pdo->query(
-        "SELECT id, name, color FROM duty_groups WHERE status='active' ORDER BY sort_order, name"
-    )->fetchAll(PDO::FETCH_ASSOC);
+    // กรองกลุ่มตามประเภท (Day/Night) หรือแสดงกลุ่ม Chairman ด้วย
+    $stmtAllG = $pdo->prepare("
+        SELECT id, name, color, group_type 
+        FROM duty_groups 
+        WHERE status='active' AND (group_type = ? OR group_type = 'chairman')
+        ORDER BY sort_order, name
+    ");
+    $stmtAllG->execute([$shiftParam]);
+    $allGroups = $stmtAllG->fetchAll(PDO::FETCH_ASSOC);
 } catch(Exception $e) { $allGroups = []; }
 
 // ── ดึง day_groups สัปดาห์นี้ (ตาม shift) ──
