@@ -15,10 +15,20 @@ $pdo = getPdo();
 try {
     $has = $pdo->query("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='duty_groups'")->fetchColumn();
     if (!$has) {
-        $pdo->exec("CREATE TABLE IF NOT EXISTS duty_groups (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, color VARCHAR(7) NOT NULL DEFAULT '#3B82F6', description VARCHAR(255) NULL, sort_order TINYINT NOT NULL DEFAULT 0, status ENUM('active','inactive') NOT NULL DEFAULT 'active', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS duty_groups (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100) NOT NULL, color VARCHAR(7) NOT NULL DEFAULT '#3B82F6', description VARCHAR(255) NULL, group_type ENUM('day','night','chairman') NOT NULL DEFAULT 'day', sort_order TINYINT NOT NULL DEFAULT 0, status ENUM('active','inactive') NOT NULL DEFAULT 'active', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         $pdo->exec("CREATE TABLE IF NOT EXISTS duty_group_members (id INT AUTO_INCREMENT PRIMARY KEY, group_id INT NOT NULL, teacher_id INT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uk_gm(group_id,teacher_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     }
 } catch (Exception $e) { error_log($e->getMessage()); }
+// Auto-migrate: เพิ่ม group_type column ถ้ายังไม่มี
+try {
+    $c = $pdo->query("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='duty_groups' AND COLUMN_NAME='group_type'");
+    if ((int)$c->fetchColumn() === 0) {
+        $pdo->exec("ALTER TABLE duty_groups ADD COLUMN group_type ENUM('day','night','chairman') NOT NULL DEFAULT 'day' AFTER description");
+    }
+} catch (Exception $e) { error_log($e->getMessage()); }
+
+$typeFilter = in_array($_GET['type']??'', ['day','night','chairman']) ? $_GET['type'] : 'day';
+$typeLabels = ['day'=>'☀️ เวรกลางวัน','night'=>'🌙 เวรกลางคืน','chairman'=>'👑 ประธานกิจกรรม'];
 
 $msg = '';
 
@@ -30,8 +40,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name  = trim($_POST['name'] ?? '');
         $color = preg_match('/^#[0-9A-Fa-f]{6}$/', $_POST['color']??'') ? $_POST['color'] : '#3B82F6';
         $desc  = trim($_POST['description'] ?? '');
+        $gtype = in_array($_POST['group_type']??'', ['day','night','chairman']) ? $_POST['group_type'] : 'day';
         if ($name) {
-            $pdo->prepare("INSERT INTO duty_groups (name,color,description) VALUES (?,?,?)")->execute([$name,$color,$desc]);
+            $pdo->prepare("INSERT INTO duty_groups (name,color,description,group_type) VALUES (?,?,?,?)")->execute([$name,$color,$desc,$gtype]);
             $msg = 'success:สร้างกลุ่ม "' . $name . '" เรียบร้อย';
         } else { $msg = 'error:กรุณากรอกชื่อกลุ่ม'; }
     }
@@ -41,8 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name  = trim($_POST['name'] ?? '');
         $color = preg_match('/^#[0-9A-Fa-f]{6}$/', $_POST['color']??'') ? $_POST['color'] : '#3B82F6';
         $desc  = trim($_POST['description'] ?? '');
+        $gtype = in_array($_POST['group_type']??'', ['day','night','chairman']) ? $_POST['group_type'] : 'day';
         if ($id && $name) {
-            $pdo->prepare("UPDATE duty_groups SET name=?,color=?,description=? WHERE id=?")->execute([$name,$color,$desc,$id]);
+            $pdo->prepare("UPDATE duty_groups SET name=?,color=?,description=?,group_type=? WHERE id=?")->execute([$name,$color,$desc,$gtype,$id]);
             $msg = 'success:บันทึกเรียบร้อย';
         }
     }
@@ -65,15 +77,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ── ดึงข้อมูล ──
-$groups = $pdo->query("
+// ── ดึงข้อมูล (filter ตาม type) ──
+$stmtGroups = $pdo->prepare("
     SELECT g.*, COUNT(m.id) as member_count
     FROM duty_groups g
     LEFT JOIN duty_group_members m ON m.group_id=g.id
-    WHERE g.status='active'
+    WHERE g.status='active' AND g.group_type=?
     GROUP BY g.id
     ORDER BY g.sort_order, g.name
-")->fetchAll(PDO::FETCH_ASSOC);
+");
+$stmtGroups->execute([$typeFilter]);
+$groups = $stmtGroups->fetchAll(PDO::FETCH_ASSOC);
 
 $teachers = $pdo->query("SELECT id, prefix, full_name FROM duty_teachers WHERE status='active' AND TRIM(full_name) != '' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -110,6 +124,17 @@ Swal.fire({icon:'<?= $isErr?'error':'success' ?>',title:'<?= $isErr?'ผิด�
         <i class="fas fa-plus me-1"></i> สร้างกลุ่มใหม่
     </button>
 </div>
+
+<!-- Type Tabs -->
+<ul class="nav nav-tabs mb-3">
+    <?php foreach ($typeLabels as $tk => $tl): ?>
+    <li class="nav-item">
+        <a class="nav-link <?= $typeFilter===$tk ? 'active fw-bold' : '' ?>" href="?type=<?= $tk ?>">
+            <?= $tl ?>
+        </a>
+    </li>
+    <?php endforeach; ?>
+</ul>
 
 <?php if (empty($groups)): ?>
 <div class="text-center py-5 text-muted">
@@ -187,6 +212,14 @@ Swal.fire({icon:'<?= $isErr?'error':'success' ?>',title:'<?= $isErr?'ผิด�
             </div>
             <div class="modal-body">
                 <div class="mb-3">
+                    <label class="form-label fw-bold">ประเภทกลุ่ม <span class="text-danger">*</span></label>
+                    <select name="group_type" class="form-select">
+                        <option value="day" <?= $typeFilter==='day'?'selected':'' ?>>☀️ เวรกลางวัน</option>
+                        <option value="night" <?= $typeFilter==='night'?'selected':'' ?>>🌙 เวรกลางคืน</option>
+                        <option value="chairman" <?= $typeFilter==='chairman'?'selected':'' ?>>👑 ประธานกิจกรรม</option>
+                    </select>
+                </div>
+                <div class="mb-3">
                     <label class="form-label fw-bold">ชื่อกลุ่ม <span class="text-danger">*</span></label>
                     <input type="text" name="name" class="form-control" placeholder="เช่น กลุ่ม ก, ทีม 1" required>
                 </div>
@@ -197,7 +230,7 @@ Swal.fire({icon:'<?= $isErr?'error':'success' ?>',title:'<?= $isErr?'ผิด�
                         <div class="d-flex gap-2 flex-wrap" id="colorPresets">
                             <?php foreach(['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#EC4899','#6B7280'] as $c): ?>
                             <div class="rounded-circle" style="width:28px;height:28px;background:<?=$c?>;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #ccc"
-                                 onclick="document.querySelector('[name=color]').value='<?=$c?>'"></div>
+                                 onclick="document.querySelector('#createModal [name=color]').value='<?=$c?>'"></div>
                             <?php endforeach; ?>
                         </div>
                     </div>
@@ -227,6 +260,14 @@ Swal.fire({icon:'<?= $isErr?'error':'success' ?>',title:'<?= $isErr?'ผิด�
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">ประเภทกลุ่ม</label>
+                    <select name="group_type" id="editGroupType" class="form-select">
+                        <option value="day">☀️ เวรกลางวัน</option>
+                        <option value="night">🌙 เวรกลางคืน</option>
+                        <option value="chairman">👑 ประธานกิจกรรม</option>
+                    </select>
+                </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold">ชื่อกลุ่ม <span class="text-danger">*</span></label>
                     <input type="text" name="name" id="editGroupName" class="form-control" required>
@@ -305,6 +346,7 @@ function openEditGroup(g) {
     document.getElementById('editGroupName').value = g.name;
     document.getElementById('editGroupColor').value= g.color;
     document.getElementById('editGroupDesc').value = g.description || '';
+    document.getElementById('editGroupType').value = g.group_type || 'day';
     new bootstrap.Modal(document.getElementById('editModal')).show();
 }
 
