@@ -132,34 +132,54 @@ try {
             $date  = $_GET['duty_date'] ?? '';
             $shift = $_GET['shift'] ?? 'day';
 
-            $ddg = $pdo->prepare("
-                SELECT ddg.*, g.name AS group_name, g.color AS group_color
-                FROM duty_day_groups ddg
-                LEFT JOIN duty_groups g ON g.id=ddg.group_id
-                WHERE ddg.duty_date=? AND ddg.shift=?
-            ");
-            $ddg->execute([$date,$shift]);
-            $dayGroup = $ddg->fetch(PDO::FETCH_ASSOC);
-
-            $members = [];
-            if ($dayGroup && $dayGroup['group_id']) {
-                $ms = $pdo->prepare("
-                    SELECT dt.id, dt.prefix, dt.full_name,
-                           ds.id AS schedule_id, ds.point_no, ds.role
-                    FROM duty_group_members m
-                    JOIN duty_teachers dt ON dt.id=m.teacher_id
-                    LEFT JOIN duty_schedule ds ON ds.teacher_id=dt.id AND ds.duty_date=? AND ds.shift=?
-                    WHERE m.group_id=?
-                    ORDER BY ISNULL(ds.point_no), ds.point_no, dt.full_name
+            // แยก try-catch ทุก query — table ไม่มีก็ไม่ crash ทั้ง response
+            $dayGroup = null;
+            try {
+                $ddg = $pdo->prepare("
+                    SELECT ddg.*, g.name AS group_name, g.color AS group_color
+                    FROM duty_day_groups ddg
+                    LEFT JOIN duty_groups g ON g.id=ddg.group_id
+                    WHERE ddg.duty_date=? AND ddg.shift=?
                 ");
-                $ms->execute([$date,$shift,$dayGroup['group_id']]);
-                $members = $ms->fetchAll(PDO::FETCH_ASSOC);
+                $ddg->execute([$date, $shift]);
+                $dayGroup = $ddg->fetch(PDO::FETCH_ASSOC) ?: null;
+            } catch (Exception $e) {
+                error_log('get_day_detail ddg: ' . $e->getMessage());
             }
 
-            // ดึงจำนวนจุดจาก settings (default 5)
-            $maxPts = (int)($pdo->query("SELECT svalue FROM duty_settings WHERE skey='max_duty_points'")->fetchColumn() ?: 5);
+            $members = [];
+            try {
+                if ($dayGroup && $dayGroup['group_id']) {
+                    $ms = $pdo->prepare("
+                        SELECT dt.id, dt.prefix, dt.full_name,
+                               ds.id AS schedule_id, ds.point_no, ds.role
+                        FROM duty_group_members m
+                        JOIN duty_teachers dt ON dt.id = m.teacher_id
+                        LEFT JOIN duty_schedule ds
+                            ON ds.teacher_id = dt.id
+                            AND ds.duty_date = ? AND ds.shift = ?
+                        WHERE m.group_id = ?
+                        ORDER BY ISNULL(ds.point_no), ds.point_no, dt.full_name
+                    ");
+                    $ms->execute([$date, $shift, $dayGroup['group_id']]);
+                    $members = $ms->fetchAll(PDO::FETCH_ASSOC);
+                }
+            } catch (Exception $e) {
+                error_log('get_day_detail members: ' . $e->getMessage());
+            }
 
-            echo json_encode(['status'=>'success','day_group'=>$dayGroup,'members'=>$members,'max_points'=>$maxPts]);
+            $maxPts = 5;
+            try {
+                $r = $pdo->query("SELECT svalue FROM duty_settings WHERE skey='max_duty_points'");
+                if ($r) $maxPts = (int)($r->fetchColumn() ?: 5);
+            } catch (Exception $e) { /* use default */ }
+
+            echo json_encode([
+                'status'     => 'success',
+                'day_group'  => $dayGroup,
+                'members'    => $members,
+                'max_points' => $maxPts,
+            ]);
             break;
         }
 
