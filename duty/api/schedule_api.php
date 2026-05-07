@@ -153,28 +153,32 @@ try {
             $members = [];
             try {
                 if ($dayGroup && $dayGroup['group_id']) {
+                    // ดึงสมาชิกกลุ่ม + ครูที่ถูกจัดนอกกลุ่ม (เช่น ประธาน)
                     $ms = $pdo->prepare("
-                        SELECT dt.id, dt.prefix, dt.full_name,
+                        SELECT dt.id, dt.prefix, dt.full_name, 
                                ds.id AS schedule_id, ds.point_no, ds.role
-                        FROM duty_group_members m
-                        JOIN duty_teachers dt ON dt.id = m.teacher_id
-                        LEFT JOIN duty_schedule ds
-                            ON ds.teacher_id = dt.id
+                        FROM duty_teachers dt
+                        LEFT JOIN duty_group_members m ON m.teacher_id = dt.id AND m.group_id = ?
+                        LEFT JOIN duty_schedule ds 
+                            ON ds.teacher_id = dt.id 
                             AND ds.duty_date = ? AND ds.shift = ?
-                        WHERE m.group_id = ?
+                        WHERE m.id IS NOT NULL OR ds.id IS NOT NULL
                         ORDER BY ISNULL(ds.point_no), ds.point_no, dt.full_name
                     ");
-                    $ms->execute([$date, $shift, $dayGroup['group_id']]);
+                    $ms->execute([$dayGroup['group_id'], $date, $shift]);
                     $members = $ms->fetchAll(PDO::FETCH_ASSOC);
                 }
             } catch (Exception $e) {
                 error_log('get_day_detail members: ' . $e->getMessage());
             }
 
-            $maxPts = 5;
+            $maxPts = 6;
             try {
                 $r = $pdo->query("SELECT svalue FROM duty_settings WHERE skey='max_duty_points'");
-                if ($r) $maxPts = (int)($r->fetchColumn() ?: 5);
+                if ($r) {
+                    $dbMax = (int)$r->fetchColumn();
+                    if ($dbMax > 0) $maxPts = $dbMax;
+                }
             } catch (Exception $e) { /* use default */ }
 
             echo json_encode([

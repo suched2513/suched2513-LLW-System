@@ -46,14 +46,18 @@ try {
 }
 
 
+// ── Auto-migrate: ตั้งค่า max_duty_points เป็น 6 ──
+try {
+    $pdo->prepare("INSERT INTO duty_settings (skey, svalue) VALUES ('max_duty_points', '6') ON DUPLICATE KEY UPDATE svalue='6'")->execute();
+} catch (Exception $e) { /* ignore */ }
+
 // ── Auto-migrate: เพิ่ม group_id ใน duty_schedule ถ้ายังไม่มี ──
 try {
-    $chk = $pdo->query("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='duty_schedule' AND COLUMN_NAME='group_id'");
+    $chk = $pdo->query("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME='duty_schedule' AND COLUMN_NAME='group_id'");
     if ((int)$chk->fetchColumn() === 0) {
         $pdo->exec("ALTER TABLE duty_schedule ADD COLUMN group_id INT NULL");
     }
-} catch (Exception $e) { error_log('schedule auto-migrate group_id: ' . $e->getMessage()); }
+} catch (Exception $e) { /* ignore */ }
 
 // ── Shift param ──
 $shiftParam = in_array($_GET['shift'] ?? '', ['day','night']) ? $_GET['shift'] : 'day';
