@@ -188,6 +188,61 @@ try {
             break;
         }
 
+        // ── GET: ดึง teachers สำหรับ point+date ─────────────────────
+        case 'get_point': {
+            $date = $_GET['duty_date'] ?? '';
+            $ptNo = (int)($_GET['point_no'] ?? 0);
+            if (!$date || !$ptNo) throw new Exception('ข้อมูลไม่ครบ');
+
+            $rows = $pdo->prepare("
+                SELECT ds.teacher_id, ds.role, dt.prefix, dt.full_name
+                FROM duty_schedule ds
+                JOIN duty_teachers dt ON dt.id = ds.teacher_id
+                WHERE ds.duty_date = ? AND ds.point_no = ? AND ds.shift = 'day'
+                ORDER BY ds.id
+            ");
+            $rows->execute([$date, $ptNo]);
+            echo json_encode(['status'=>'success','teachers'=>$rows->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+        }
+
+        // ── POST: บันทึก teachers สำหรับ point+date (max 2) ──────────
+        case 'save_point': {
+            $date = $_POST['duty_date'] ?? '';
+            $ptNo = (int)($_POST['point_no'] ?? 0);
+            $tids = array_values(array_unique(
+                array_filter(array_map('intval', (array)($_POST['teacher_ids'] ?? [])))
+            ));
+            if (!$date || !$ptNo) throw new Exception('ข้อมูลไม่ครบ');
+
+            $pdo->beginTransaction();
+            $pdo->prepare("DELETE FROM duty_schedule WHERE duty_date=? AND point_no=? AND shift='day'")
+                ->execute([$date, $ptNo]);
+            $stmt = $pdo->prepare("INSERT INTO duty_schedule (duty_date, shift, point_no, teacher_id) VALUES (?,?,?,?)");
+            foreach (array_slice($tids, 0, 2) as $tid) {
+                $stmt->execute([$date, 'day', $ptNo, $tid]);
+            }
+            $pdo->commit();
+            echo json_encode(['status'=>'success']);
+            break;
+        }
+
+        // ── POST: ล้างตารางทั้งสัปดาห์ ────────────────────────────────
+        case 'clear_week': {
+            $weekStart = $_POST['week_start'] ?? '';
+            if (!$weekStart) throw new Exception('ไม่ระบุวันที่');
+            $weekEnd = date('Y-m-d', strtotime($weekStart . ' +4 days'));
+
+            $pdo->beginTransaction();
+            $pdo->prepare("DELETE FROM duty_schedule WHERE duty_date BETWEEN ? AND ? AND shift='day'")
+                ->execute([$weekStart, $weekEnd]);
+            $pdo->prepare("DELETE FROM duty_day_groups WHERE duty_date BETWEEN ? AND ?")
+                ->execute([$weekStart, $weekEnd]);
+            $pdo->commit();
+            echo json_encode(['status'=>'success']);
+            break;
+        }
+
         default:
             throw new Exception('Unknown action: ' . $action);
     }

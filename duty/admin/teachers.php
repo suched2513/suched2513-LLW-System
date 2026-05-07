@@ -55,7 +55,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ── นำเข้าครูทั้งหมดจาก llw_users (one-click) ──
     if ($action === 'import_all_from_att') {
-        // ดึงจาก llw_users โดยตรง (ยกเว้น role ที่ไม่ใช่บุคลากรการสอน)
         $stmtAll = $pdo->query("
             SELECT u.user_id,
                    TRIM(CONCAT(COALESCE(u.firstname,''), ' ', COALESCE(u.lastname,''))) AS full_name,
@@ -70,29 +69,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $allTeachers = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
         $imported = 0;
 
-        $stmtIns = $pdo->prepare("
-            INSERT INTO duty_teachers (full_name, att_teacher_id, status)
-            VALUES (?, ?, 'active')
-            ON DUPLICATE KEY UPDATE full_name = VALUES(full_name)
-        ");
-        $stmtCheck = $pdo->prepare("SELECT id FROM duty_teachers WHERE att_teacher_id = ? LIMIT 1");
-        $stmtCheckName = $pdo->prepare("SELECT id FROM duty_teachers WHERE TRIM(full_name) = ? LIMIT 1");
-        $stmtLink = $pdo->prepare("UPDATE duty_teachers SET att_teacher_id = ? WHERE TRIM(full_name) = ? AND att_teacher_id IS NULL LIMIT 1");
+        $stmtCheck     = $pdo->prepare("SELECT id FROM duty_teachers WHERE att_teacher_id = ? LIMIT 1");
+        $stmtCheckName = $pdo->prepare("SELECT id FROM duty_teachers WHERE full_name = ? LIMIT 1");
+        $stmtLink      = $pdo->prepare("UPDATE duty_teachers SET att_teacher_id = ? WHERE full_name = ? AND att_teacher_id IS NULL LIMIT 1");
+        $stmtIns       = $pdo->prepare("INSERT INTO duty_teachers (full_name, att_teacher_id, status) VALUES (?, ?, 'active')");
 
         foreach ($allTeachers as $t) {
-            $fullName = trim($t['full_name']);
+            // normalize: collapse multiple spaces to single space
+            $fullName = preg_replace('/\s+/', ' ', trim($t['full_name']));
             $attId    = $t['att_id'] ? (int)$t['att_id'] : null;
+            if ($fullName === '') continue;
 
-            // ตรวจ att_teacher_id ซ้ำ
+            // skip if att_teacher_id already imported
             if ($attId) {
                 $stmtCheck->execute([$attId]);
                 if ($stmtCheck->fetchColumn()) continue;
             }
 
-            // ตรวจชื่อซ้ำ
+            // link to existing row if name matches
             $stmtCheckName->execute([$fullName]);
             if ($stmtCheckName->fetchColumn()) {
-                // ผูก att_teacher_id ให้แถวเดิมถ้ายังไม่มี
                 if ($attId) $stmtLink->execute([$attId, $fullName]);
                 continue;
             }
@@ -102,6 +98,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $total = count($allTeachers);
         $msg = "success:นำเข้าครูสำเร็จ {$imported} คน (จากทั้งหมด {$total} คน ที่เหลือมีในระบบแล้ว)";
+    }
+
+    // ── ล้างชื่อซ้ำด้วยตนเอง ──
+    if ($action === 'dedup') {
+        $deleted = 0;
+        $dupes = $pdo->query("
+            SELECT GROUP_CONCAT(id ORDER BY
+                CASE WHEN telegram_user_id IS NOT NULL THEN 0 ELSE 1 END,
+                CASE WHEN att_teacher_id IS NOT NULL THEN 0 ELSE 1 END,
+                id ASC
+            SEPARATOR ',') AS ids,
+            COUNT(*) AS cnt
+            FROM duty_teachers
+            WHERE TRIM(full_name) != '' AND status = 'active'
+            GROUP BY LOWER(TRIM(full_name))
+            HAVING cnt > 1
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($dupes as $d) {
+            $ids    = array_map('intval', explode(',', $d['ids']));
+            $keepId = $ids[0];
+            foreach (array_slice($ids, 1) as $oldId) {
+                $pdo->prepare("UPDATE IGNORE duty_group_members SET teacher_id=? WHERE teacher_id=?")->execute([$keepId, $oldId]);
+                $pdo->prepare("UPDATE duty_schedule SET teacher_id=? WHERE teacher_id=?")->execute([$keepId, $oldId]);
+                try {
+                    $pdo->prepare("UPDATE duty_reports SET teacher_id=? WHERE teacher_id=?")->execute([$keepId, $oldId]);
+                } catch(Exception $e) { /* table may not exist */ }
+                $pdo->prepare("DELETE FROM duty_group_members WHERE teacher_id=?")->execute([$oldId]);
+                $pdo->prepare("DELETE FROM duty_teachers WHERE id=?")->execute([$oldId]);
+                $deleted++;
+            }
+        }
+        $msg = $deleted > 0
+            ? "success:ลบชื่อซ้ำเรียบร้อย {$deleted} รายการ"
+            : "warning:ไม่พบชื่อซ้ำในระบบ";
     }
 
     // ── นำเข้าครูจาก att_teachers ──
@@ -221,16 +252,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ── Auto-dedup: เพิกชื่อซ้ำใน duty_teachers อัตโนมัติทุกครั้งที่โหลดหน้า ──
 try {
     $dupes = $pdo->query("
-        SELECT full_name,
-               GROUP_CONCAT(id ORDER BY
+        SELECT GROUP_CONCAT(id ORDER BY
                    CASE WHEN telegram_user_id IS NOT NULL THEN 0 ELSE 1 END,
-                   att_teacher_id IS NULL,
+                   CASE WHEN att_teacher_id IS NOT NULL THEN 0 ELSE 1 END,
                    id ASC
                SEPARATOR ',') AS ids,
                COUNT(*) AS cnt
         FROM duty_teachers
         WHERE TRIM(full_name) != '' AND status = 'active'
-        GROUP BY TRIM(full_name)
+        GROUP BY LOWER(TRIM(full_name))
         HAVING cnt > 1
     ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -246,8 +276,6 @@ try {
             $pdo->prepare("DELETE FROM duty_group_members WHERE teacher_id=?")->execute([$oldId]); // ลบ duplicate member
             $pdo->prepare("DELETE FROM duty_teachers WHERE id=?")->execute([$oldId]);
         }
-        // ถ้า keepId ยังไม่มี att_teacher_id แต่ delIds มี → copy มา
-        $keep = $pdo->prepare("SELECT att_teacher_id FROM duty_teachers WHERE id=?")->execute([$keepId]);
     }
 } catch (Exception $e) {
     error_log('duty_teachers dedup: ' . $e->getMessage());
@@ -387,6 +415,9 @@ Swal.fire({icon:'<?= $icon ?>',title:'<?= $isErr?'ข้อผิดพลาด
         </button>
         <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#importModal">
             <i class="fas fa-file-import me-1"></i> เลือกนำเข้า
+        </button>
+        <button class="btn btn-outline-warning" onclick="confirmDedup()">
+            <i class="fas fa-broom me-1"></i> ล้างชื่อซ้ำ
         </button>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
             <i class="fas fa-plus me-1"></i> เพิ่มครูใหม่
@@ -635,7 +666,25 @@ Swal.fire({icon:'<?= $icon ?>',title:'<?= $isErr?'ข้อผิดพลาด
     <input type="hidden" name="action" value="import_all_from_att">
 </form>
 
+<!-- Dedup hidden form -->
+<form id="dedup-form" method="POST" class="d-none">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="dedup">
+</form>
+
 <script>
+function confirmDedup() {
+    Swal.fire({
+        title: 'ล้างชื่อซ้ำ?',
+        html: 'ระบบจะรวมรายชื่อที่ซ้ำกันให้เหลือแถวเดียว<br><small class="text-muted">ข้อมูลการจัดเวรจะถูกย้ายไปยังแถวหลัก ไม่สูญหาย</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#fd7e14',
+        confirmButtonText: '<i class="fas fa-broom me-1"></i>ล้างเลย',
+        cancelButtonText: 'ยกเลิก'
+    }).then(r => { if (r.isConfirmed) document.getElementById('dedup-form').submit(); });
+}
+
 function confirmImportAll() {
     Swal.fire({
         title: 'นำเข้าครูทั้งหมด?',
