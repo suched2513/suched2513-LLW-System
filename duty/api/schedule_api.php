@@ -181,10 +181,17 @@ try {
                 }
             } catch (Exception $e) { /* use default */ }
 
+            // ดึงรายชื่อครูทุกคนสำหรับจุดประธาน
+            $allTeachers = [];
+            try {
+                $allTeachers = $pdo->query("SELECT id, prefix, full_name FROM duty_teachers WHERE status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {}
+
             echo json_encode([
                 'status'     => 'success',
                 'day_group'  => $dayGroup,
                 'members'    => $members,
+                'all_teachers' => $allTeachers,
                 'max_points' => $maxPts,
             ]);
             break;

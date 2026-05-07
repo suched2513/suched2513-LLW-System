@@ -470,27 +470,16 @@ function openDayModal(date, shift) {
             }
             const dayGroup = data.day_group;
             modalMembers   = data.members || [];
+            const allTeachers = data.all_teachers || [];
             const maxPts   = data.max_points || maxPtsJS;
-            renderDayForm(dayGroup, modalMembers, maxPts);
+            renderDayForm(dayGroup, modalMembers, maxPts, allTeachers);
         })
         .catch(() => { body.innerHTML = '<p class="text-danger">เชื่อมต่อ server ไม่ได้</p>'; });
 }
 
 // ─── Render ฟอร์ม (จุดเป็น row, ครูกลุ่มเป็น dropdown) ───────
-function renderDayForm(dayGroup, members, maxPts) {
+function renderDayForm(dayGroup, members, maxPts, allTeachers) {
     const body = document.getElementById('assignBody');
-
-    // ถ้ายังไม่ได้ assign กลุ่ม
-    if (!dayGroup || !dayGroup.group_id) {
-        body.innerHTML = `
-            <div class="alert alert-warning mb-0">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                วันนี้ยังไม่ได้กำหนดกลุ่มเวร — ไปที่
-                <a href="schedule.php" class="alert-link">ปฏิทินสัปดาห์</a>
-                แล้วกำหนดกลุ่มก่อน
-            </div>`;
-        return;
-    }
 
     // build point→member map (รองรับ 2 คนต่อจุด)
     const ptMap = {}; // ptMap[point_no] = [member1, member2]
@@ -501,16 +490,17 @@ function renderDayForm(dayGroup, members, maxPts) {
         }
     });
 
-    // build teacher options (เฉพาะในกลุ่ม)
+    // build teacher options
     const blankOpt = '<option value="">— ไม่จัด —</option>';
     function buildOpts(list, selectedId) {
+        if (!list || !list.length) return blankOpt;
         return blankOpt + list.map(m =>
             `<option value="${m.id}" ${m.id == selectedId ? 'selected' : ''}>${m.prefix||''}${m.full_name}</option>`
         ).join('');
     }
 
     // point rows (2 dropdowns per point)
-    const gc = dayGroup.group_color || '#6c757d';
+    const gc = dayGroup?.group_color || '#6c757d';
     let rows = '';
     for (let i = 1; i <= maxPts; i++) {
         const assigned = ptMap[i] || [];
@@ -518,8 +508,8 @@ function renderDayForm(dayGroup, members, maxPts) {
         const t2 = assigned[1] || null;
         const ptName = (pointNamesJS[i-1]) || ('จุดที่ '+i);
         const isChairman = (i === CHAIRMAN_INDEX);
-        // ประธานกิจกรรม → แสดงครูทุกคน, จุดอื่น → เฉพาะกลุ่ม
-        const optList = isChairman ? allTeachersData : members;
+        // ประธานกิจกรรม (จุดที่ 6) → แสดงครูทุกคน
+        const optList = isChairman ? (allTeachers.length ? allTeachers : allTeachersData) : members;
         rows += `
         <tr class="point-row" data-point="${i}">
             <td class="align-middle" style="width:160px">
@@ -544,8 +534,8 @@ function renderDayForm(dayGroup, members, maxPts) {
         </tr>`;
     }
 
-    const gn  = dayGroup.group_name  || 'กลุ่มเวร';
-    const cnt = members.length;
+    const gn  = dayGroup?.group_name  || 'ไม่ได้ระบุกลุ่ม';
+    const cnt = members.filter(m => !m.schedule_id || m.point_no != CHAIRMAN_INDEX).length; // นับเฉพาะในกลุ่ม ไม่นับประธานนอกกลุ่ม
     body.innerHTML = `
         <div class="d-flex align-items-center gap-2 mb-3">
             <span class="badge rounded-pill px-3 py-2" style="background:${gc};font-size:13px">
