@@ -11,17 +11,18 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 
 $pdo = getPdo();
 
-// ── Auto-migrate: สร้างตาราง duty_groups system ถ้ายังไม่มี ──
+// ── Auto-migrate: ตรวจ duty_day_groups โดยตรง ──
 try {
-    $pdo->query("SELECT 1 FROM duty_groups LIMIT 1");
+    $pdo->query("SELECT 1 FROM duty_day_groups LIMIT 1");
 } catch (Exception $e) {
-    // duty_groups ยังไม่มี → สร้างทั้ง 3 ตาราง
+    // duty_day_groups ยังไม่มี → สร้างทุกตาราง (IF NOT EXISTS ปลอดภัย)
     $pdo->exec("CREATE TABLE IF NOT EXISTS duty_groups (
         id          INT AUTO_INCREMENT PRIMARY KEY,
         name        VARCHAR(100) NOT NULL,
         color       VARCHAR(20)  DEFAULT '#6c757d',
         description TEXT,
         sort_order  INT          DEFAULT 0,
+        status      ENUM('active','inactive') DEFAULT 'active',
         created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
@@ -43,6 +44,7 @@ try {
         UNIQUE KEY uk_ddg (duty_date, shift)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
+
 
 // ── Auto-migrate: เพิ่ม group_id ใน duty_schedule ถ้ายังไม่มี ──
 try {
