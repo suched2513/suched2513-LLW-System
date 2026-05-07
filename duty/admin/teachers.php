@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($ids)) {
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
             $stmtAtt = $pdo->prepare(
-                "SELECT at.id, at.name,
+                "SELECT at.id, at.name, at.username,
                         lu.firstname, lu.lastname
                  FROM att_teachers at
                  LEFT JOIN llw_users lu ON lu.user_id = at.llw_user_id
@@ -41,11 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtAtt->execute($ids);
             $attTeachers = $stmtAtt->fetchAll(PDO::FETCH_ASSOC);
 
+            // INSERT โดยใช้ att_teacher_id เป็น unique key (ไม่ block ครูชื่อซ้ำ)
             $stmtIns = $pdo->prepare(
-                "INSERT IGNORE INTO duty_teachers (full_name, status)
-                 SELECT ?, 'active'
-                 FROM DUAL
-                 WHERE NOT EXISTS (SELECT 1 FROM duty_teachers WHERE full_name = ?)"
+                "INSERT INTO duty_teachers (full_name, att_teacher_id, status)
+                 VALUES (?, ?, 'active')
+                 ON DUPLICATE KEY UPDATE full_name = VALUES(full_name)"
             );
 
             foreach ($attTeachers as $at) {
@@ -55,13 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($fullName === '') $fullName = trim($at['username'] ?? '');
                 if ($fullName === '') $fullName = 'ครู#' . $at['id'];
 
-                $stmtIns->execute([$fullName, $fullName]);
+                $stmtIns->execute([$fullName, (int)$at['id']]);
                 if ($stmtIns->rowCount() > 0) $imported++;
             }
         }
         $msg = $imported > 0
             ? "success:นำเข้าครู {$imported} คนเรียบร้อยแล้ว"
-            : "warning:ไม่มีรายชื่อใหม่ (อาจมีครูเหล่านี้ในระบบแล้ว)";
+            : "warning:ไม่มีรายชื่อใหม่ (ครูเหล่านี้อยู่ในระบบแล้วทั้งหมด)";
     }
 
     if ($action === 'add') {
@@ -156,8 +156,8 @@ $attTeachers = $pdo->query(
      ORDER BY display_name ASC"
 )->fetchAll(PDO::FETCH_ASSOC);
 
-// ── ดึงชื่อที่มีในระบบแล้ว (ป้องกัน import ซ้ำ) ──
-$existingNames = $pdo->query("SELECT full_name FROM duty_teachers")
+// ── ดึง att_teacher_id ที่ import ไปแล้ว (ป้องกัน import ซ้ำโดยใช้ ID) ──
+$existingAttIds = $pdo->query("SELECT att_teacher_id FROM duty_teachers WHERE att_teacher_id IS NOT NULL")
     ->fetchAll(PDO::FETCH_COLUMN);
 
 // ── ถ้าเพิ่งสร้าง link → แสดง QR ──
@@ -364,7 +364,7 @@ Swal.fire({icon:'<?= $icon ?>',title:'<?= $isErr?'ข้อผิดพลาด
 
                 <div id="attList" style="max-height:350px;overflow-y:auto;" class="border rounded p-2">
                     <?php foreach ($attTeachers as $at):
-                        $alreadyIn = in_array($at['display_name'], $existingNames);
+                        $alreadyIn = in_array($at['id'], $existingAttIds);
                     ?>
                     <div class="att-item d-flex align-items-center py-1 border-bottom"
                          data-name="<?= htmlspecialchars(mb_strtolower($at['display_name'])) ?>">
