@@ -51,14 +51,23 @@ function getPointPhotos($pdo, $reportId) {
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @page { size: A4; margin: 15mm; }
-        body { font-family: 'Prompt', sans-serif; background: #f1f5f9; color: #334155; line-height: 1.6; }
-        .report-paper { width: 210mm; min-height: 297mm; padding: 20mm; margin: 20px auto; background: white; box-shadow: 0 0 40px rgba(0,0,0,0.1); border-top: 8px solid #1e3a8a; }
+        @page { size: A4; margin: 0; }
+        body { font-family: 'Prompt', sans-serif; background: #f1f5f9; color: #334155; line-height: 1.4; margin: 0; padding: 0; }
+        .report-paper { 
+            width: 210mm; 
+            height: 297mm; 
+            padding: 10mm 15mm; 
+            margin: 0 auto; 
+            background: white; 
+            box-shadow: 0 0 40px rgba(0,0,0,0.1); 
+            border-top: 8px solid #1e3a8a; 
+            overflow: hidden;
+            position: relative;
+        }
         @media print {
-            body { background: white; padding: 0; }
-            .report-paper { margin: 0; box-shadow: none; width: 100%; border-top: none; }
+            body { background: white; }
+            .report-paper { margin: 0; box-shadow: none; border-top: none; }
             .no-print { display: none !important; }
-            .page-break { page-break-after: always; }
         }
         .table-official th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; padding: 12px; border-bottom: 2px solid #e2e8f0; }
         .table-official td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }

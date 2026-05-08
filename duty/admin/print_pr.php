@@ -59,21 +59,23 @@ $shiftName = $report['shift'] === 'day' ? 'กลางวัน' : 'กลา�
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Prompt', sans-serif; background: #f0f9ff; }
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white; padding: 0; margin: 0; }
-            .pr-container { box-shadow: none !important; border: none !important; width: 100% !important; height: 100vh !important; }
-        }
+        @page { size: A4; margin: 0; }
+        body { font-family: 'Prompt', sans-serif; background: #f0f9ff; margin: 0; padding: 0; }
         .pr-container {
             width: 210mm;
-            min-height: 297mm;
-            margin: 20px auto;
+            height: 297mm;
+            margin: 0 auto;
             background: linear-gradient(to bottom, #eff6ff 0%, #ffffff 40%, #ffffff 80%, #f0fdf4 100%);
             position: relative;
             box-shadow: 0 0 50px rgba(0,0,0,0.1);
             overflow: hidden;
-            padding: 40px;
+            padding: 15mm;
             border-top: 10px solid #1e3a8a;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+            .pr-container { box-shadow: none !important; border: none !important; margin: 0; }
         }
         .glass-box { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border-radius: 30px; border: 4px solid #1e3a8a; }
         .title-official { color: #1e3a8a; }
