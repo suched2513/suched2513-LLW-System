@@ -89,18 +89,18 @@ function getPointPhotos($pdo, $reportId) {
     </div>
 
     <div class="report-paper">
-        <!-- Header (Compact) -->
-        <div class="flex justify-between items-center border-bottom-2 border-slate-200 pb-4 mb-6">
-            <div class="flex items-center gap-4">
-                <img src="https://suched2513.github.io/image/%E0%B8%95%E0%B8%A3%E0%B8%B2%E0%B8%A5%E0%B8%B0%E0%B8%A5%E0%B8%A1%E0%B8%A7%E0%B8%B4%E0%B8%9767.png" alt="Logo" class="w-16 h-16 drop-shadow-md">
+        <!-- Header (Extremely Compact) -->
+        <div class="flex justify-between items-center border-bottom-2 border-slate-200 pb-2 mb-4">
+            <div class="flex items-center gap-3">
+                <img src="https://suched2513.github.io/image/%E0%B8%95%E0%B8%A3%E0%B8%B2%E0%B8%A5%E0%B8%B0%E0%B8%A5%E0%B8%A1%E0%B8%A7%E0%B8%B4%E0%B8%9767.png" alt="Logo" class="w-12 h-12">
                 <div>
-                    <h1 class="text-xl font-bold text-slate-900 leading-tight">สรุปผลการปฏิบัติหน้าที่เวรประจำวัน</h1>
-                    <p class="text-md text-blue-700 font-semibold mt-0">โรงเรียนละลมวิทยา</p>
-                    <p class="text-xs text-slate-500 font-medium mt-0">ประจำวันที่ <?= $thaiDate ?></p>
+                    <h1 class="text-lg font-bold text-slate-900 leading-tight">สรุปผลการปฏิบัติหน้าที่เวรประจำวัน</h1>
+                    <p class="text-sm text-blue-700 font-semibold mt-0">โรงเรียนละลมวิทยา</p>
                 </div>
             </div>
             <div class="text-right">
-                <div class="inline-block px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-bold text-slate-500">
+                <p class="text-[10px] text-slate-500 font-bold mb-1">วันที่ <?= $thaiDate ?></p>
+                <div class="inline-block px-2 py-0.5 bg-slate-50 border border-slate-200 rounded text-[8px] font-bold text-slate-400">
                     LLW-DT-<?= date('Ymd', strtotime($targetDate)) ?>
                 </div>
             </div>
@@ -109,32 +109,34 @@ function getPointPhotos($pdo, $reportId) {
         <!-- Detailed Records -->
         <?php foreach (['day' => 'กลางวัน', 'night' => 'กลางคืน'] as $shiftKey => $shiftTitle): ?>
             <?php if (!empty($shifts[$shiftKey])): ?>
-                <div class="mb-4">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                        <span class="w-1 h-4 bg-blue-700 rounded-full"></span>
+                <div class="mb-2">
+                    <h3 class="text-[11px] font-bold text-slate-400 mb-2 flex items-center gap-2 uppercase tracking-widest">
+                        <span class="w-0.5 h-3 bg-blue-700 rounded-full"></span>
                         เวรช่วง<?= $shiftTitle ?>
                     </h3>
 
                     <?php foreach ($shifts[$shiftKey] as $s): 
                         $photos = getPointPhotos($pdo, $s['report_id']);
                     ?>
-                        <div class="mb-4 border border-slate-100 rounded-xl overflow-hidden shadow-sm page-break-inside-avoid">
-                            <div class="bg-slate-50 px-4 py-2 border-bottom flex justify-between items-center">
-                                <div class="text-sm font-bold text-blue-900">จุดที่ <?= $s['point_no'] ?>: <?= htmlspecialchars($s['teacher_prefix'] . $s['teacher_name']) ?></div>
-                                <div class="text-[10px] font-bold text-slate-400">
-                                    <?= $s['completed_at'] ? date('H:i', strtotime($s['completed_at'])) . ' น.' : 'ยังไม่รายงาน' ?>
+                        <div class="mb-2 border border-slate-100 rounded-lg overflow-hidden page-break-inside-avoid">
+                            <div class="bg-slate-50 px-3 py-1.5 border-bottom flex justify-between items-center">
+                                <div class="text-[11px] font-bold text-blue-900">จุดที่ <?= $s['point_no'] ?>: <?= htmlspecialchars($s['teacher_prefix'] . $s['teacher_name']) ?></div>
+                                <div class="text-[9px] font-bold text-slate-400">
+                                    <?= $s['completed_at'] ? date('H:i', strtotime($s['completed_at'])) : '—' ?>
                                 </div>
                             </div>
                             
-                            <div class="p-3">
-                                <div class="text-[11px] text-slate-600 mb-2 leading-relaxed italic">
-                                    <?= !empty($s['report_note']) ? nl2br(htmlspecialchars($s['report_note'])) : 'ปกติ' ?>
+                            <div class="p-2 flex gap-3 align-items-center">
+                                <div class="flex-grow">
+                                    <div class="text-[10px] text-slate-600 leading-tight italic">
+                                        <?= !empty($s['report_note']) ? nl2br(htmlspecialchars($s['report_note'])) : 'ปกติ' ?>
+                                    </div>
                                 </div>
 
                                 <?php if (!empty($photos)): ?>
-                                    <div class="flex gap-2">
+                                    <div class="flex gap-1 flex-shrink-0">
                                         <?php foreach (array_slice($photos, 0, 4) as $p): ?>
-                                            <div class="w-16 h-12 rounded-lg overflow-hidden border border-slate-200">
+                                            <div class="w-12 h-9 rounded border border-slate-200 overflow-hidden">
                                                 <img src="<?= $base_path ?>/duty/api/photo.php?path=<?= urlencode($p['file_path']) ?>" class="w-full h-full object-cover">
                                             </div>
                                         <?php endforeach; ?>
@@ -148,24 +150,24 @@ function getPointPhotos($pdo, $reportId) {
         <?php endforeach; ?>
 
         <!-- Footer / Approval Section -->
-        <div class="mt-8 border-t border-slate-200 pt-6">
+        <div class="mt-4 border-t border-slate-200 pt-4">
             <div class="grid grid-cols-2 gap-10 text-center">
                 <div>
-                    <p class="text-xs text-slate-500 mb-10">(ลงชื่อ)............................................................</p>
-                    <p class="text-sm font-bold text-slate-800"><?= htmlspecialchars($_SESSION['firstname'] . ' ' . $_SESSION['lastname']) ?></p>
-                    <p class="text-[10px] text-slate-500 font-medium">ผู้จัดทำรายงาน</p>
+                    <p class="text-[10px] text-slate-400 mb-6">(ลงชื่อ)............................................................</p>
+                    <p class="text-xs font-bold text-slate-800"><?= htmlspecialchars($_SESSION['firstname'] . ' ' . $_SESSION['lastname']) ?></p>
+                    <p class="text-[9px] text-slate-500 font-medium">ผู้จัดทำรายงาน</p>
                 </div>
                 <div>
-                    <p class="text-xs text-slate-500 mb-10">(ลงชื่อ)............................................................</p>
-                    <p class="text-sm font-bold text-slate-800">นายสมชาย ใจดี</p>
-                    <p class="text-[10px] text-slate-500 font-medium">ผู้อำนวยการโรงเรียนละลมวิทยา</p>
+                    <p class="text-[10px] text-slate-400 mb-6">(ลงชื่อ)............................................................</p>
+                    <p class="text-xs font-bold text-slate-800">นายสมชาย ใจดี</p>
+                    <p class="text-[9px] text-slate-500 font-medium">ผู้อำนวยการโรงเรียนละลมวิทยา</p>
                 </div>
             </div>
         </div>
 
         <!-- System Footer -->
-        <div class="mt-8 text-center border-t border-slate-50 pt-4 opacity-30">
-            <p class="text-[8px] text-slate-300 font-bold uppercase tracking-[0.3em]">
+        <div class="absolute bottom-4 left-0 right-0 text-center opacity-20">
+            <p class="text-[7px] text-slate-300 font-bold uppercase tracking-[0.3em]">
                 LLW Platinum Smart Duty Reporting System
             </p>
         </div>
