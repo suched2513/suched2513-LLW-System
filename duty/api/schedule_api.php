@@ -298,7 +298,24 @@ try {
             break;
         }
 
-        // ── POST: ล้างตารางทั้งสัปดาห์ ────────────────────────────────
+        // ── POST: ล้างตารางตามช่วงวันที่ ──────────────────────────────
+        case 'clear_range': {
+            $start = $_POST['start_date'] ?? '';
+            $end   = $_POST['end_date'] ?? '';
+            $shift = in_array($_POST['shift']??'',['day','night']) ? $_POST['shift'] : 'day';
+            if (!$start || !$end) throw new Exception('ไม่ระบุช่วงวันที่');
+
+            $pdo->beginTransaction();
+            $pdo->prepare("DELETE FROM duty_schedule WHERE duty_date BETWEEN ? AND ? AND shift=?")
+                ->execute([$start, $end, $shift]);
+            $pdo->prepare("DELETE FROM duty_day_groups WHERE duty_date BETWEEN ? AND ? AND shift=?")
+                ->execute([$start, $end, $shift]);
+            $pdo->commit();
+            echo json_encode(['status'=>'success']);
+            break;
+        }
+
+        // ── POST: ล้างตารางทั้งสัปดาห์ (legacy - use clear_range instead) ──
         case 'clear_week': {
             $weekStart = $_POST['week_start'] ?? '';
             $shift     = in_array($_POST['shift']??'',['day','night']) ? $_POST['shift'] : 'day';

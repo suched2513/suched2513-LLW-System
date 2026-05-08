@@ -59,15 +59,36 @@ try {
     }
 } catch (Exception $e) { /* ignore */ }
 
-// ── Shift param ──
+// ── View Mode & Params ──
+$viewParam  = $_GET['view'] ?? ''; // week | month
 $shiftParam = in_array($_GET['shift'] ?? '', ['day','night']) ? $_GET['shift'] : 'day';
 
-// ── คำนวณสัปดาห์ (จันทร์-อาทิตย์) ──
-$weekParam = $_GET['week'] ?? date('Y-m-d');
-$weekStart = date('Y-m-d', strtotime('monday this week', strtotime($weekParam)));
-$weekEnd   = date('Y-m-d', strtotime($weekStart . ' +6 days')); // Sunday
-$prevWeek  = date('Y-m-d', strtotime($weekStart . ' -7 days'));
-$nextWeek  = date('Y-m-d', strtotime($weekStart . ' +7 days'));
+// Default view mode based on shift if not specified
+if (!$viewParam) {
+    $viewParam = ($shiftParam === 'night') ? 'month' : 'week';
+}
+
+// ── คำนวณช่วงวันที่ ──
+$dateParam = $_GET['date'] ?? date('Y-m-d'); // ใช้วันที่อ้างอิง
+
+if ($viewParam === 'month') {
+    $monthParam = date('Y-m', strtotime($dateParam));
+    $firstDay   = "$monthParam-01";
+    $lastDay    = date('Y-m-t', strtotime($firstDay));
+    $weekStart  = date('Y-m-d', strtotime('monday this week', strtotime($firstDay)));
+    $weekEnd    = date('Y-m-d', strtotime('sunday this week', strtotime($lastDay)));
+    
+    $prevDate   = date('Y-m-d', strtotime($firstDay . ' -1 month'));
+    $nextDate   = date('Y-m-d', strtotime($firstDay . ' +1 month'));
+    $pageLabel  = 'เดือน' . thMonthFull(date('n', strtotime($firstDay))) . ' ' . (date('Y', strtotime($firstDay)) + 543);
+} else {
+    $weekStart  = date('Y-m-d', strtotime('monday this week', strtotime($dateParam)));
+    $weekEnd    = date('Y-m-d', strtotime($weekStart . ' +6 days'));
+    
+    $prevDate   = date('Y-m-d', strtotime($weekStart . ' -7 days'));
+    $nextDate   = date('Y-m-d', strtotime($weekStart . ' +7 days'));
+    $pageLabel  = thDateShort($weekStart) . ' – ' . thDateShort($weekEnd) . ' ' . (date('Y', strtotime($weekEnd)) + 543);
+}
 
 // ── จำนวนจุดเวร (default 5) ──
 // ── ชื่อจุดเวร (แยกตามกะ) ──
@@ -138,15 +159,18 @@ try {
 
 // ── Thai helpers ──
 $thMonths = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+$thMonthsFull = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
 function thDateShort($ymd) {
     global $thMonths;
     $ts  = strtotime($ymd);
     return date('j', $ts) . ' ' . $thMonths[(int)date('n', $ts)];
 }
-$thYear    = (int)date('Y', strtotime($weekEnd)) + 543;
-$weekLabel = thDateShort($weekStart) . ' – ' . thDateShort($weekEnd) . ' ' . $thYear;
+function thMonthFull($n) {
+    global $thMonthsFull;
+    return $thMonthsFull[(int)$n];
+}
 $dayNames  = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
-$numDays   = 7;
 
 $pageTitle    = 'ตารางเวร';
 $pageSubtitle = 'จัดตารางเวรรายสัปดาห์';
@@ -169,45 +193,62 @@ require_once __DIR__ . '/../../components/layout_start.php';
 .group-badge:hover { opacity:.8; }
 .group-empty { display:inline-flex; align-items:center; gap:4px; color:#adb5bd; font-size:11px; cursor:pointer; padding:3px 8px; border:1.5px dashed #dee2e6; border-radius:20px; transition:all .15s; background:transparent; }
 .group-empty:hover { color:#2563eb; border-color:#2563eb; background:#f0f5ff; }
+
+/* Calendar Style */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid #dee2e6; border-left: 1px solid #dee2e6; }
+.cal-head { background: #f8f9fa; padding: 10px; text-align: center; font-weight: 700; border-right: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6; font-size: 13px; }
+.cal-day { height: 120px; padding: 8px; border-right: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6; background: #fff; cursor: pointer; transition: all .15s; }
+.cal-day:hover { background: #f0f5ff; }
+.cal-day.other-month { background: #fafafa; color: #ced4da; }
+.cal-day.today { background: #eff6ff; }
+.cal-day .date-num { font-weight: 700; font-size: 14px; margin-bottom: 5px; }
+.cal-day.today .date-num { color: #2563eb; }
+.cal-content { display: flex; flex-direction: column; gap: 4px; }
 </style>
 
 <!-- ── Header ── -->
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div>
-        <h4 class="mb-0 fw-bold"><i class="fas fa-calendar-week me-2 text-primary"></i>ตารางเวรประจำสัปดาห์</h4>
-        <small class="text-muted">คลิกที่วันใดวันหนึ่งในปฏิทินเพื่อจัดครูทุกจุดในวันนั้น (กรองเฉพาะกลุ่มที่ assign)</small>
+        <h4 class="mb-0 fw-bold"><i class="fas fa-calendar-alt me-2 text-primary"></i>ตารางจัดเวร</h4>
+        <small class="text-muted">คลิกที่ช่องวันที่เพื่อจัดการครูเวรในวันนั้นๆ</small>
     </div>
-    <div class="d-flex gap-2 flex-wrap">
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+        <!-- View Toggle -->
+        <div class="btn-group btn-group-sm me-2 shadow-sm">
+            <a href="?view=week&shift=<?= $shiftParam ?>&date=<?= $dateParam ?>" 
+               class="btn <?= $viewParam==='week' ? 'btn-primary' : 'btn-outline-primary' ?>">สัปดาห์</a>
+            <a href="?view=month&shift=<?= $shiftParam ?>&date=<?= $dateParam ?>" 
+               class="btn <?= $viewParam==='month' ? 'btn-primary' : 'btn-outline-primary' ?>">เดือน</a>
+        </div>
         <a href="teachers.php" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-users me-1"></i>จัดการครูเวร
         </a>
-        <button class="btn btn-outline-danger btn-sm" onclick="confirmClearWeek()">
-            <i class="fas fa-trash-alt me-1"></i>ล้างตารางสัปดาห์นี้
-        </button>
     </div>
 </div>
 
-<!-- ── Week Navigation ── -->
+<!-- ── Navigation ── -->
 <div class="d-flex align-items-center gap-3 mb-3">
-    <a href="?week=<?= $prevWeek ?>&shift=<?= $shiftParam ?>" class="btn btn-outline-secondary btn-sm">
+    <a href="?view=<?= $viewParam ?>&shift=<?= $shiftParam ?>&date=<?= $prevDate ?>" class="btn btn-outline-secondary btn-sm shadow-sm">
         <i class="fas fa-chevron-left"></i>
     </a>
-    <h5 class="mb-0 fw-bold text-primary"><?= htmlspecialchars($weekLabel) ?></h5>
-    <a href="?week=<?= $nextWeek ?>&shift=<?= $shiftParam ?>" class="btn btn-outline-secondary btn-sm">
+    <h5 class="mb-0 fw-bold text-primary"><?= htmlspecialchars($pageLabel) ?></h5>
+    <a href="?view=<?= $viewParam ?>&shift=<?= $shiftParam ?>&date=<?= $nextDate ?>" class="btn btn-outline-secondary btn-sm shadow-sm">
         <i class="fas fa-chevron-right"></i>
     </a>
-    <a href="?week=<?= date('Y-m-d') ?>&shift=<?= $shiftParam ?>" class="btn btn-sm btn-outline-primary ms-auto">วันนี้</a>
+    <a href="?view=<?= $viewParam ?>&shift=<?= $shiftParam ?>&date=<?= date('Y-m-d') ?>" class="btn btn-sm btn-outline-primary ms-auto shadow-sm">วันนี้</a>
 </div>
 
 <!-- ── Shift Tabs ── -->
-<ul class="nav nav-tabs mb-3">
+<ul class="nav nav-tabs mb-4 border-bottom-2">
     <li class="nav-item">
-        <a class="nav-link <?= $shiftParam==='day' ? 'active fw-bold' : '' ?>" href="?week=<?= $weekStart ?>&shift=day">
+        <a class="nav-link <?= $shiftParam==='day' ? 'active fw-bold' : '' ?>" 
+           href="?view=<?= $viewParam ?>&shift=day&date=<?= $dateParam ?>">
             ☀️ เวรกลางวัน
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link <?= $shiftParam==='night' ? 'active fw-bold' : '' ?>" href="?week=<?= $weekStart ?>&shift=night">
+        <a class="nav-link <?= $shiftParam==='night' ? 'active fw-bold' : '' ?>" 
+           href="?view=<?= $viewParam ?>&shift=night&date=<?= $dateParam ?>">
             🌙 เวรกลางคืน
         </a>
     </li>
@@ -221,89 +262,127 @@ require_once __DIR__ . '/../../components/layout_start.php';
 <?php endif; ?>
 
 <!-- ── Schedule Grid ── -->
-<div class="card border-0 shadow-sm">
+<div class="card border-0 shadow-lg overflow-hidden">
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-bordered mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="text-center align-middle" style="width:120px; font-size:13px;">จุดเวร</th>
-                        <?php for ($i = 0; $i < $numDays; $i++):
-                            $day     = date('Y-m-d', strtotime($weekStart . " +$i days"));
-                            $isToday = ($day === date('Y-m-d'));
-                            $isWkend = ($i >= 5);
-                        ?>
-                        <th class="text-center <?= $isToday ? 'table-primary' : ($isWkend ? 'table-warning' : '') ?>" style="min-width:120px;">
-                            <div class="fw-bold"><?= $dayNames[$i] ?></div>
-                            <div class="small <?= $isToday ? 'text-primary fw-bold' : 'text-muted' ?>">
-                                <?= thDateShort($day) ?>
-                            </div>
-                        </th>
-                        <?php endfor; ?>
-                    </tr>
-                    <?php if ($shiftParam !== 'night'): ?>
-                    <!-- ── Row: กลุ่มเวร ── -->
-                    <tr>
-                        <td class="text-center align-middle group-cell" style="font-size:11px;font-weight:700;color:#6c757d;">
-                            <i class="fas fa-layer-group me-1"></i>กลุ่ม
-                        </td>
-                        <?php for ($i = 0; $i < $numDays; $i++):
-                            $day = date('Y-m-d', strtotime($weekStart . " +$i days"));
-                            $dg  = $dayGroups[$day] ?? null;
-                        ?>
-                        <td class="group-cell">
-                            <?php if ($dg && $dg['group_id']): ?>
-                            <button class="group-badge text-white"
-                                    style="background:<?= htmlspecialchars($dg['group_color'] ?? '#6c757d') ?>"
-                                    onclick="openGroupPicker('<?= $day ?>')"
-                                    title="คลิกเพื่อเปลี่ยนกลุ่ม">
-                                <i class="fas fa-users" style="font-size:10px"></i>
-                                <?= htmlspecialchars(mb_substr($dg['group_name'] ?? '', 0, 10)) ?>
-                            </button>
-                            <?php else: ?>
-                            <button class="group-empty" onclick="openGroupPicker('<?= $day ?>')">
-                                <i class="fas fa-plus" style="font-size:10px"></i>เลือกกลุ่ม
-                            </button>
-                            <?php endif; ?>
-                        </td>
-                        <?php endfor; ?>
-                    </tr>
-                    <?php endif; ?>
-                </thead>
-                <tbody>
-                <?php for ($pt = 1; $pt <= $maxPts; $pt++):
-                    $ptName = $pointNames[$pt-1] ?? 'จุดที่ '.$pt;
-                ?>
-                <tr>
-                    <td class="text-center align-middle point-label" style="font-size:11px;">
-                        <span class="badge bg-primary" style="white-space:normal;line-height:1.3"><?= htmlspecialchars($ptName) ?></span>
-                    </td>
-                    <?php for ($i = 0; $i < $numDays; $i++):
-                        $day    = date('Y-m-d', strtotime($weekStart . " +$i days"));
-                        $isToday = ($day === date('Y-m-d'));
-                        $assigned = $slots[$day][$pt] ?? [];
+        <?php if ($viewParam === 'month'): ?>
+            <!-- ═══ MONTHLY CALENDAR VIEW ═══ -->
+            <div class="cal-grid">
+                <?php foreach ($dayNames as $dn): ?>
+                    <div class="cal-head"><?= $dn ?></div>
+                <?php endforeach; ?>
+
+                <?php
+                $curr = $weekStart;
+                while ($curr <= $weekEnd) {
+                    $isOther = (date('Y-m', strtotime($curr)) !== $monthParam);
+                    $isToday = ($curr === date('Y-m-d'));
+                    $dayNum  = date('j', strtotime($curr));
                     ?>
-                    <td class="duty-cell <?= $isToday ? 'today-col' : '' ?>"
-                        onclick="openDayModal('<?= $day ?>', '<?= $shiftParam ?>', <?= $pt ?>)">
-                        <div class="duty-cell-inner">
-                            <?php if (!empty($assigned)): ?>
-                                <?php foreach ($assigned as $idx => $t): ?>
-                                <span class="teacher-chip <?= $idx > 0 ? 'chip-2' : '' ?>">
-                                    <i class="fas fa-user" style="font-size:10px"></i>
-                                    <?= htmlspecialchars(mb_substr($t['prefix'].$t['full_name'], 0, 14)) ?>
-                                </span>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <span class="add-chip"><i class="fas fa-plus" style="font-size:10px"></i>จัดเวร</span>
-                            <?php endif; ?>
+                    <div class="cal-day <?= $isOther?'other-month':'' ?> <?= $isToday?'today':'' ?>" 
+                         onclick="openDayModal('<?= $curr ?>')">
+                        <div class="date-num"><?= $dayNum ?></div>
+                        <div class="cal-content">
+                            <?php 
+                            for ($p=1; $p<=$maxPts; $p++) {
+                                $assigned = $slots[$curr][$p] ?? [];
+                                foreach ($assigned as $t) {
+                                    $colorClass = ($p == $maxPts) ? 'chip-2' : ''; // Highlight chairman or night shift
+                                    echo '<span class="teacher-chip '.$colorClass.'"><i class="fas fa-user" style="font-size:9px"></i> '.htmlspecialchars(mb_substr($t['prefix'].$t['full_name'], 0, 10)).'</span>';
+                                }
+                            }
+                            ?>
                         </div>
-                    </td>
+                    </div>
+                    <?php
+                    $curr = date('Y-m-d', strtotime($curr . ' +1 day'));
+                }
+                ?>
+            </div>
+        <?php else: ?>
+            <!-- ═══ WEEKLY LIST VIEW ═══ -->
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center align-middle" style="width:120px; font-size:13px;">จุดเวร</th>
+                            <?php 
+                            for ($i = 0; $i < 7; $i++):
+                                $day     = date('Y-m-d', strtotime($weekStart . " +$i days"));
+                                $isToday = ($day === date('Y-m-d'));
+                                $isWkend = ($i >= 5);
+                            ?>
+                            <th class="text-center <?= $isToday ? 'table-primary' : ($isWkend ? 'table-warning' : '') ?>" style="min-width:120px;">
+                                <div class="fw-bold"><?= $dayNames[$i] ?></div>
+                                <div class="small <?= $isToday ? 'text-primary fw-bold' : 'text-muted' ?>">
+                                    <?= thDateShort($day) ?>
+                                </div>
+                            </th>
+                            <?php endfor; ?>
+                        </tr>
+                        <?php if ($shiftParam !== 'night'): ?>
+                        <!-- ── Row: กลุ่มเวร ── -->
+                        <tr>
+                            <td class="text-center align-middle group-cell" style="font-size:11px;font-weight:700;color:#6c757d;">
+                                <i class="fas fa-layer-group me-1"></i>กลุ่ม
+                            </td>
+                            <?php for ($i = 0; $i < 7; $i++):
+                                $day = date('Y-m-d', strtotime($weekStart . " +$i days"));
+                                $dg  = $dayGroups[$day] ?? null;
+                            ?>
+                            <td class="group-cell">
+                                <?php if ($dg && $dg['group_id']): ?>
+                                <button class="group-badge text-white"
+                                        style="background:<?= htmlspecialchars($dg['group_color'] ?? '#6c757d') ?>"
+                                        onclick="openGroupPicker('<?= $day ?>')"
+                                        title="คลิกเพื่อเปลี่ยนกลุ่ม">
+                                    <i class="fas fa-users" style="font-size:10px"></i>
+                                    <?= htmlspecialchars(mb_substr($dg['group_name'] ?? '', 0, 10)) ?>
+                                </button>
+                                <?php else: ?>
+                                <button class="group-empty" onclick="openGroupPicker('<?= $day ?>')">
+                                    <i class="fas fa-plus" style="font-size:10px"></i>เลือกกลุ่ม
+                                </button>
+                                <?php endif; ?>
+                            </td>
+                            <?php endfor; ?>
+                        </tr>
+                        <?php endif; ?>
+                    </thead>
+                    <tbody>
+                    <?php for ($pt = 1; $pt <= $maxPts; $pt++):
+                        $ptName = $pointNames[$pt-1] ?? 'จุดที่ '.$pt;
+                    ?>
+                    <tr>
+                        <td class="text-center align-middle point-label" style="font-size:11px;">
+                            <span class="badge bg-primary" style="white-space:normal;line-height:1.3"><?= htmlspecialchars($ptName) ?></span>
+                        </td>
+                        <?php for ($i = 0; $i < 7; $i++):
+                            $day    = date('Y-m-d', strtotime($weekStart . " +$i days"));
+                            $isToday = ($day === date('Y-m-d'));
+                            $assigned = $slots[$day][$pt] ?? [];
+                        ?>
+                        <td class="duty-cell <?= $isToday ? 'today-col' : '' ?>"
+                            onclick="openDayModal('<?= $day ?>', '<?= $shiftParam ?>', <?= $pt ?>)">
+                            <div class="duty-cell-inner">
+                                <?php if (!empty($assigned)): ?>
+                                    <?php foreach ($assigned as $idx => $t): ?>
+                                    <span class="teacher-chip <?= $idx > 0 ? 'chip-2' : '' ?>">
+                                        <i class="fas fa-user" style="font-size:10px"></i>
+                                        <?= htmlspecialchars(mb_substr($t['prefix'].$t['full_name'], 0, 14)) ?>
+                                    </span>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <span class="add-chip"><i class="fas fa-plus" style="font-size:10px"></i>จัดเวร</span>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                        <?php endfor; ?>
+                    </tr>
                     <?php endfor; ?>
-                </tr>
-                <?php endfor; ?>
-                </tbody>
-            </table>
-        </div>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -681,19 +760,21 @@ function clearDay() {
     });
 }
 
-// ─── ล้างทั้งสัปดาห์ ─────────────────────────────────────────
+// ─── ล้างทั้งสัปดาห์/เดือน ─────────────────────────────────────────
 function confirmClearWeek() {
+    const modeLabel = '<?= $viewParam === "month" ? "เดือนนี้" : "สัปดาห์นี้" ?>';
     Swal.fire({
-        icon:'warning', title:'ล้างตารางสัปดาห์นี้?',
-        html:`ตารางเวร <b><?= htmlspecialchars($weekLabel, ENT_QUOTES) ?></b> จะถูกลบทั้งหมด`,
+        icon:'warning', title:'ล้างตาราง' + modeLabel + '?',
+        html:`ตารางเวรจะถูกลบทั้งหมดในช่วงเวลานี้`,
         showCancelButton:true, confirmButtonColor:'#dc3545',
         confirmButtonText:'ล้างเลย', cancelButtonText:'ยกเลิก'
     }).then(r => {
         if (!r.isConfirmed) return;
         const fd = new FormData();
-        fd.append('action', 'clear_week');
+        fd.append('action', 'clear_range'); // ใช้ action ใหม่ที่รองรับ range
         fd.append('csrf_token', csrfToken);
-        fd.append('week_start', '<?= $weekStart ?>');
+        fd.append('start_date', '<?= $weekStart ?>');
+        fd.append('end_date', '<?= $weekEnd ?>');
         fd.append('shift', curShiftPage);
         fetch(apiUrl, {method:'POST', body:fd})
             .then(r => r.json())
