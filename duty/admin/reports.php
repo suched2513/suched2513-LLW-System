@@ -250,145 +250,146 @@ Swal.fire({icon:'success',title:'ส่งสรุปแล้ว',text:'ส่
 
 <!-- ── Grid Cards ── -->
 <?php if (empty($schedules)): ?>
-<div class="alert alert-info">
-    <i class="fas fa-info-circle me-2"></i>
-    ไม่มีตารางเวรสำหรับวันที่ <?= htmlspecialchars($filterDate) ?>
-    <a href="schedule.php" class="alert-link ms-2">ไปจัดตารางเวร</a>
+<div class="bg-white rounded-2xl p-10 text-center shadow-sm border border-slate-100">
+    <div class="text-slate-300 mb-4"><i class="fas fa-calendar-times" style="font-size: 4rem"></i></div>
+    <h4 class="fw-black text-slate-800">ไม่มีตารางเวรสำหรับวันนี้</h4>
+    <p class="text-slate-500 mb-4">ยังไม่มีการจัดครูเวรปฏิบัติหน้าที่ในวันที่ <?= htmlspecialchars($filterDate) ?></p>
+    <a href="schedule.php" class="btn btn-primary rounded-xl px-4 fw-bold">
+        <i class="fas fa-calendar-plus me-2"></i>ไปจัดตารางเวร
+    </a>
 </div>
 <?php else: ?>
 
-<!-- Day Shift -->
-<?php
-$daySchedules   = array_filter($schedules, fn($s) => $s['shift'] === 'day');
-$nightSchedules = array_filter($schedules, fn($s) => $s['shift'] === 'night');
-
-function renderScheduleCards(array $items, int $photosRequired, string $basePath): void {
-    if (empty($items)) { echo '<p class="text-muted p-4">ไม่มีข้อมูลการจัดเวร</p>'; return; }
-    echo '<div class="row g-3">';
-    foreach ($items as $s):
-        $status     = $s['status'] ?? 'pending';
-        $shift      = $s['shift'] ?? 'day';
-        $photoCount = (int)($s['photo_count'] ?? 0);
-        $reportId   = $s['report_id'] ?? null;
-        $initials   = mb_substr($s['teacher_name'] ?? '?', 0, 1);
-
-        // Badge config
-        if ($status === 'complete') {
-            $badgeClass = 'badge-glow-success';
-            $badgeText  = '<i class="fas fa-check-circle"></i> ครบ ' . $photosRequired . ' รูป';
-        } elseif ($status === 'partial') {
-            $badgeClass = 'badge-glow-warning';
-            $badgeText  = '<i class="fas fa-clock"></i> ' . $photoCount . '/' . $photosRequired . ' รูป';
-        } else {
-            $badgeClass = 'badge-glow-danger';
-            $badgeText  = '<i class="fas fa-times-circle"></i> ยังไม่รายงาน';
-        }
-        
-        $cardClass = ($shift === 'night') ? 'card-night' : '';
-        ?>
-        <div class="col-md-6 col-lg-4">
-            <div class="report-card card <?= $cardClass ?>">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <span class="status-badge <?= $badgeClass ?>"><?= $badgeText ?></span>
-                        <div class="text-end">
-                            <span class="fw-black text-muted d-block small uppercase tracking-tighter">จุดที่ <?= $s['point_no'] ?></span>
-                        </div>
-                    </div>
+<div class="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-slate-50 border-bottom">
+                <tr>
+                    <th class="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-wider text-center" style="width: 80px">จุดที่</th>
+                    <th class="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">ครูผู้รับผิดชอบ / หน้าที่</th>
+                    <th class="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-wider text-center">สถานะ</th>
+                    <th class="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-wider text-center">รูปภาพ</th>
+                    <th class="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-wider text-center">เวลาส่ง</th>
+                    <th class="px-4 py-4 text-xs font-black text-slate-400 uppercase tracking-wider text-end" style="width: 200px">จัดการ</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                <?php foreach ($schedules as $s): 
+                    $status = $s['status'] ?? 'pending';
+                    $photoCount = (int)($s['photo_count'] ?? 0);
+                    $reportId = $s['report_id'] ?? null;
+                    $initials = mb_substr($s['teacher_name'] ?? '?', 0, 1);
+                ?>
+                <tr class="hover-row transition-all">
+                    <!-- Point No -->
+                    <td class="text-center">
+                        <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 text-slate-700 fw-black">
+                            <?= $s['point_no'] ?>
+                        </span>
+                    </td>
                     
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="teacher-avatar">
-                            <?= htmlspecialchars($initials) ?>
+                    <!-- Teacher & Role -->
+                    <td>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white d-flex align-items-center justify-center fw-black text-sm shadow-lg shadow-blue-100">
+                                <?= htmlspecialchars($initials) ?>
+                            </div>
+                            <div>
+                                <div class="fw-black text-slate-800"><?= htmlspecialchars($s['teacher_name'] ?? '—') ?></div>
+                                <div class="text-slate-400" style="font-size: 11px; font-weight: 700;">
+                                    <i class="fas fa-tag me-1 opacity-50"></i><?= htmlspecialchars($s['role'] ?: 'ครูเวรประจำวัน') ?>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <h6 class="mb-0 fw-black text-dark"><?= htmlspecialchars($s['teacher_name'] ?? '— ไม่ระบุ —') ?></h6>
-                            <?php if ($s['role']): ?>
-                            <span class="text-muted small fw-bold">
-                                <i class="fas fa-tag me-1 opacity-50"></i><?= htmlspecialchars($s['role']) ?>
+                    </td>
+
+                    <!-- Status Badge -->
+                    <td class="text-center">
+                        <?php if ($status === 'complete'): ?>
+                            <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 fw-black" style="font-size: 10px">
+                                <i class="fas fa-check-circle me-1"></i>ครบ <?= $photosRequired ?> รูป
                             </span>
+                        <?php elseif ($status === 'partial'): ?>
+                            <span class="px-3 py-1 rounded-full bg-amber-50 text-amber-600 fw-black" style="font-size: 10px">
+                                <i class="fas fa-hourglass-half me-1"></i><?= $photoCount ?>/<?= $photosRequired ?> รูป
+                            </span>
+                        <?php else: ?>
+                            <span class="px-3 py-1 rounded-full bg-rose-50 text-rose-600 fw-black" style="font-size: 10px">
+                                <i class="fas fa-times-circle me-1"></i>ยังไม่รายงาน
+                            </span>
+                        <?php endif; ?>
+                    </td>
+
+                    <!-- Thumbnail Mini -->
+                    <td class="text-center">
+                        <?php if ($s['first_thumb']): ?>
+                            <a href="<?= htmlspecialchars($base_path . '/duty/api/photo.php?path=' . urlencode($s['first_thumb'])) ?>" 
+                               class="glightbox inline-block" data-gallery="dashboard-gallery">
+                                <div class="w-12 h-12 rounded-xl overflow-hidden border-2 border-white shadow-sm hover:scale-110 transition-all">
+                                    <img src="<?= htmlspecialchars($base_path . '/duty/api/photo.php?path=' . urlencode($s['first_thumb'])) ?>" 
+                                         class="w-full h-full object-cover">
+                                </div>
+                            </a>
+                        <?php else: ?>
+                            <span class="text-slate-300"><i class="fas fa-image"></i></span>
+                        <?php endif; ?>
+                    </td>
+
+                    <!-- Completed Time -->
+                    <td class="text-center">
+                        <?php if ($s['completed_at']): ?>
+                            <span class="fw-bold text-slate-700" style="font-size: 13px">
+                                <?= date('H:i', strtotime($s['completed_at'])) ?> น.
+                            </span>
+                        <?php else: ?>
+                            <span class="text-slate-300 text-xs fw-bold">—:—</span>
+                        <?php endif; ?>
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="text-end px-4">
+                        <div class="d-flex justify-content-end gap-2">
+                            <?php if ($reportId): ?>
+                                <a href="report_detail.php?id=<?= $reportId ?>" 
+                                   class="btn btn-sm btn-light border-0 rounded-xl px-3 fw-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all"
+                                   title="ดูรายละเอียด">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="print_pr.php?id=<?= $reportId ?>" target="_blank"
+                                   class="btn btn-sm text-white rounded-xl px-3 fw-bold shadow-sm"
+                                   style="background: linear-gradient(to right, #ec4899, #8b5cf6); border: none;"
+                                   title="พิมพ์รายงานรายจุด">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                            <?php endif; ?>
+
+                            <?php if ($status !== 'complete' && $s['teacher_id']): ?>
+                                <a href="remind.php?schedule_id=<?= $s['schedule_id'] ?>" 
+                                   class="btn btn-sm btn-amber-light border-0 rounded-xl px-3 fw-bold text-amber-600 bg-amber-50 hover:bg-amber-100 transition-all"
+                                   onclick="return confirm('ส่งการเตือนไปยัง <?= htmlspecialchars($s['teacher_name'] ?? '') ?>?')"
+                                   title="ส่งการเตือน">
+                                    <i class="fas fa-bell"></i>
+                                </a>
                             <?php endif; ?>
                         </div>
-                    </div>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
 
-                    <?php if ($s['completed_at']): ?>
-                    <p class="mb-3 small text-success fw-bold">
-                        <i class="fas fa-history me-1"></i>
-                        ส่งครบเมื่อ <?= date('H:i', strtotime($s['completed_at'])) ?> น.
-                    </p>
-                    <?php endif; ?>
+<style>
+.hover-row:hover { background-color: #f8fafc !important; }
+.btn-amber-light { background: #fffbeb; color: #d97706; }
+.btn-amber-light:hover { background: #fef3c7; }
+</style>
 
-                    <!-- Thumbnail -->
-                    <div class="img-preview-box">
-                        <?php if ($s['first_thumb']): ?>
-                        <a href="<?= htmlspecialchars($basePath . '/duty/api/photo.php?path=' . urlencode($s['first_thumb'])) ?>"
-                           class="glightbox" data-gallery="report-<?= $reportId ?>">
-                            <img src="<?= htmlspecialchars($basePath . '/duty/api/photo.php?path=' . urlencode($s['first_thumb'])) ?>"
-                                 alt="รูปรายงาน">
-                            <div class="img-overlay">
-                                <i class="fas fa-search-plus"></i>
-                            </div>
-                        </a>
-                        <?php else: ?>
-                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted opacity-30">
-                            <i class="fas fa-image mb-2" style="font-size: 2rem"></i>
-                            <span class="small fw-bold">ยังไม่มีรูปภาพ</span>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-
-                    <div class="d-flex gap-2 mt-4">
-                        <?php if ($reportId): ?>
-                        <a href="report_detail.php?id=<?= $reportId ?>"
-                           class="btn btn-primary flex-fill rounded-xl fw-bold shadow-sm">
-                            <i class="fas fa-images me-1"></i>ดูรายงาน
-                        </a>
-                        <!-- ปุ่มพิมพ์รายงานรายจุด -->
-                        <a href="print_pr.php?id=<?= $reportId ?>" target="_blank"
-                           class="btn btn-light rounded-xl fw-bold shadow-sm"
-                           style="background: linear-gradient(to right, #ec4899, #8b5cf6); color: white; border: none;"
-                           title="พิมพ์รายงานรายบุคคล">
-                            <i class="fas fa-print"></i>
-                        </a>
-                        <?php endif; ?>
-                        
-                        <?php if ($status !== 'complete' && $s['teacher_id']): ?>
-                        <a href="remind.php?schedule_id=<?= $s['schedule_id'] ?>"
-                           class="btn btn-warning rounded-xl fw-bold shadow-sm"
-                           title="ส่งการเตือน"
-                           onclick="return confirm('ส่งการเตือนไปยัง <?= htmlspecialchars($s['teacher_name'] ?? '') ?>?')">
-                            <i class="fas fa-bell"></i>
-                        </a>
-                        <?php endif; ?>
-                        
-                        <?php if ($s['telegram_username']): ?>
-                        <a href="https://t.me/<?= htmlspecialchars($s['telegram_username']) ?>"
-                           target="_blank" class="btn btn-info rounded-xl text-white fw-bold shadow-sm" title="ทัก Telegram">
-                            <i class="fab fa-telegram-plane"></i>
-                        </a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <?php
-    endforeach;
-    echo '</div>';
-}
-?>
-
-<?php if (!$filterShift || $filterShift === 'day'): ?>
-<h5 class="fw-bold mb-3"><i class="fas fa-sun text-warning me-2"></i>เวรกลางวัน</h5>
-<?php renderScheduleCards($daySchedules, $photosRequired, $base_path); ?>
-<?php endif; ?>
-
-<?php if (!$filterShift || $filterShift === 'night'): ?>
-<h5 class="fw-bold mt-4 mb-3"><i class="fas fa-moon text-indigo-600 me-2"></i>เวรกลางคืน</h5>
-<?php renderScheduleCards($nightSchedules, $photosRequired, $base_path); ?>
-<?php endif; ?>
-
-<?php endif; ?>
-
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
 <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
-<script>GLightbox({ selector: '.glightbox' });</script>
+<script>const lightbox = GLightbox({ selector: '.glightbox' });</script>
+
+<?php endif; ?>
 
 <?php require_once __DIR__ . '/../../components/layout_end.php'; ?>
