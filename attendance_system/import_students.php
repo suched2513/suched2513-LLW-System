@@ -84,12 +84,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // -- Clean invalid (subject codes imported as students) --
     if ($do === 'clean_invalid') {
         try {
-            // ลบ record ที่ student_id ตรงกับ subject_code ในตารางวิชา
+            // ลบ: (1) student_id ตรงกับ subject_code  (2) student_id ไม่ใช่ตัวเลขล้วน
             $del = $pdo->prepare("
-                DELETE s FROM att_students s
-                WHERE EXISTS (
-                    SELECT 1 FROM att_subjects sub WHERE sub.subject_code = s.student_id
-                )
+                DELETE FROM att_students
+                WHERE student_id NOT REGEXP '^[0-9]+$'
+                   OR student_id IN (SELECT subject_code FROM att_subjects)
             ");
             $del->execute();
             $removed = $del->rowCount();
@@ -111,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $content = @iconv('TIS-620', 'UTF-8//IGNORE', $content);
             }
             $delimiter = (strpos($content, ';') !== false && strpos($content, ',') === false) ? ';' : ',';
-            $lines = explode("\n", str_replace("\r", "", $content));
+            $lines = explode("\n", str_replace(["\r\n", "\r"], "\n", $content));
             $is_first = true;
             foreach ($lines as $idx => $line) {
                 if (empty(trim($line))) continue;
@@ -180,11 +179,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ตรวจหา student records ที่เป็น subject_code (ข้อมูลผิดพลาด)
+// ตรวจหา student records ที่ผิดพลาด: student_id ไม่ใช่ตัวเลขล้วน หรือตรงกับ subject_code
 $invalidStudents = $pdo->query("
     SELECT s.id, s.student_id, s.name, s.classroom
     FROM att_students s
-    WHERE EXISTS (SELECT 1 FROM att_subjects sub WHERE sub.subject_code = s.student_id)
+    WHERE s.student_id NOT REGEXP '^[0-9]+$'
+       OR s.student_id IN (SELECT subject_code FROM att_subjects)
     ORDER BY s.classroom, s.student_id
     LIMIT 100
 ")->fetchAll(PDO::FETCH_ASSOC);

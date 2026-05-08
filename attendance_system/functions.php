@@ -184,10 +184,13 @@ function getStudentsBySubject($subject_id, $pdo) {
         ");
         $stmt->execute([$subject_id]);
     } else {
-        // วิชาบังคับ: ดึงทั้งห้อง (กรองรหัสวิชาที่ปนมาออก)
+        // วิชาบังคับ: ดึงทั้งห้อง
+        // กรอง 2 ชั้น: (1) รหัสนักเรียนต้องเป็นตัวเลขล้วน (04742 ฯลฯ)
+        //              (2) ห้ามซ้ำกับ subject_code ในตารางวิชา
         $stmt = $pdo->prepare("
             SELECT s.* FROM att_students s
             WHERE s.classroom = ?
+              AND s.student_id REGEXP '^[0-9]+$'
               AND s.student_id NOT IN (SELECT subject_code FROM att_subjects)
             ORDER BY s.student_id ASC
         ");
