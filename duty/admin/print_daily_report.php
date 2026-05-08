@@ -80,62 +80,53 @@ function getPointPhotos($pdo, $reportId) {
     </div>
 
     <div class="report-paper">
-        <!-- Header -->
-        <div class="flex justify-between items-start border-bottom-2 border-slate-200 pb-8 mb-8">
-            <div class="flex items-center gap-6">
-                <img src="https://suched2513.github.io/image/%E0%B8%95%E0%B8%A3%E0%B8%B2%E0%B8%A5%E0%B8%B0%E0%B8%A5%E0%B8%A1%E0%B8%A7%E0%B8%B4%E0%B8%9767.png" alt="Logo" class="w-24 h-24 mx-auto mb-4 drop-shadow-lg">
+        <!-- Header (Compact) -->
+        <div class="flex justify-between items-center border-bottom-2 border-slate-200 pb-4 mb-6">
+            <div class="flex items-center gap-4">
+                <img src="https://suched2513.github.io/image/%E0%B8%95%E0%B8%A3%E0%B8%B2%E0%B8%A5%E0%B8%B0%E0%B8%A5%E0%B8%A1%E0%B8%A7%E0%B8%B4%E0%B8%9767.png" alt="Logo" class="w-16 h-16 drop-shadow-md">
                 <div>
-                    <h1 class="text-2xl font-bold text-slate-900 leading-tight">สรุปผลการปฏิบัติหน้าที่เวรประจำวัน</h1>
-                    <p class="text-lg text-blue-700 font-semibold mt-1">โรงเรียนละลมวิทยา</p>
-                    <p class="text-slate-500 mt-2 font-medium">ประจำวันที่ <?= $thaiDate ?></p>
+                    <h1 class="text-xl font-bold text-slate-900 leading-tight">สรุปผลการปฏิบัติหน้าที่เวรประจำวัน</h1>
+                    <p class="text-md text-blue-700 font-semibold mt-0">โรงเรียนละลมวิทยา</p>
+                    <p class="text-xs text-slate-500 font-medium mt-0">ประจำวันที่ <?= $thaiDate ?></p>
                 </div>
             </div>
             <div class="text-right">
-                <div class="inline-block px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-500">
-                    เลขที่เอกสาร: LLW-DT-<?= date('Ymd', strtotime($targetDate)) ?>
+                <div class="inline-block px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-bold text-slate-500">
+                    LLW-DT-<?= date('Ymd', strtotime($targetDate)) ?>
                 </div>
             </div>
         </div>
 
         <!-- Detailed Records -->
-        <?php foreach (['day' => 'ผลการบันทึกเวรช่วงกลางวัน', 'night' => 'ผลการบันทึกเวรช่วงกลางคืน'] as $shiftKey => $shiftTitle): ?>
-            <div class="mb-10 page-break-inside-avoid">
-                <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-3">
-                    <span class="w-1.5 h-6 bg-blue-700 rounded-full"></span>
-                    <?= $shiftTitle ?>
-                </h3>
+        <?php foreach (['day' => 'กลางวัน', 'night' => 'กลางคืน'] as $shiftKey => $shiftTitle): ?>
+            <?php if (!empty($shifts[$shiftKey])): ?>
+                <div class="mb-4">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <span class="w-1 h-4 bg-blue-700 rounded-full"></span>
+                        เวรช่วง<?= $shiftTitle ?>
+                    </h3>
 
-                <?php if (empty($shifts[$shiftKey])): ?>
-                    <div class="p-8 text-center text-slate-400 border border-dashed border-slate-200 rounded-2xl mb-8">
-                        — ไม่มีการบันทึกข้อมูลในกะนี้ —
-                    </div>
-                <?php else: ?>
                     <?php foreach ($shifts[$shiftKey] as $s): 
                         $photos = getPointPhotos($pdo, $s['report_id']);
                     ?>
-                        <div class="mb-12 page-break-inside-avoid">
-                            <div class="flex justify-between items-end mb-4 border-b border-slate-100 pb-2">
-                                <div class="point-title mb-0">จุดที่ <?= $s['point_no'] ?>: <?= htmlspecialchars($s['teacher_prefix'] . $s['teacher_name']) ?></div>
-                                <div class="text-xs font-bold text-slate-400">
-                                    <?php if ($s['completed_at']): ?>
-                                        บันทึกสำเร็จเมื่อเวลา <?= date('H:i', strtotime($s['completed_at'])) ?> น.
-                                    <?php else: ?>
-                                        <span class="text-rose-400">ยังไม่ได้รับการบันทึกข้อมูล</span>
-                                    <?php endif; ?>
+                        <div class="mb-4 border border-slate-100 rounded-xl overflow-hidden shadow-sm page-break-inside-avoid">
+                            <div class="bg-slate-50 px-4 py-2 border-bottom flex justify-between items-center">
+                                <div class="text-sm font-bold text-blue-900">จุดที่ <?= $s['point_no'] ?>: <?= htmlspecialchars($s['teacher_prefix'] . $s['teacher_name']) ?></div>
+                                <div class="text-[10px] font-bold text-slate-400">
+                                    <?= $s['completed_at'] ? date('H:i', strtotime($s['completed_at'])) . ' น.' : 'ยังไม่รายงาน' ?>
                                 </div>
                             </div>
                             
-                            <div class="bg-white p-2">
-                                <div class="text-sm text-slate-600 mb-4 leading-relaxed bg-slate-50/50 p-4 rounded-xl border-l-4 border-slate-200">
-                                    <span class="font-bold text-slate-800 block mb-1">บันทึกรายละเอียดการปฏิบัติงาน:</span>
-                                    <?= !empty($s['report_note']) ? nl2br(htmlspecialchars($s['report_note'])) : 'ไม่ระบุบันทึกรายละเอียด (สถานะปกติ)' ?>
+                            <div class="p-3">
+                                <div class="text-[11px] text-slate-600 mb-2 leading-relaxed italic">
+                                    <?= !empty($s['report_note']) ? nl2br(htmlspecialchars($s['report_note'])) : 'ปกติ' ?>
                                 </div>
 
                                 <?php if (!empty($photos)): ?>
-                                    <div class="photo-grid-mini">
-                                        <?php foreach ($photos as $p): ?>
-                                            <div class="photo-item shadow-sm">
-                                                <img src="<?= $base_path ?>/duty/api/photo.php?path=<?= urlencode($p['file_path']) ?>">
+                                    <div class="flex gap-2">
+                                        <?php foreach (array_slice($photos, 0, 4) as $p): ?>
+                                            <div class="w-16 h-12 rounded-lg overflow-hidden border border-slate-200">
+                                                <img src="<?= $base_path ?>/duty/api/photo.php?path=<?= urlencode($p['file_path']) ?>" class="w-full h-full object-cover">
                                             </div>
                                         <?php endforeach; ?>
                                     </div>
@@ -143,36 +134,30 @@ function getPointPhotos($pdo, $reportId) {
                             </div>
                         </div>
                     <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-            
-            <?php if ($shiftKey === 'day' && !empty($shifts['night'])): ?>
-                <div class="page-break"></div>
+                </div>
             <?php endif; ?>
         <?php endforeach; ?>
 
         <!-- Footer / Approval Section -->
-        <div class="mt-20 border-t border-slate-200 pt-12">
-            <div class="grid grid-cols-2 gap-20 text-center">
+        <div class="mt-8 border-t border-slate-200 pt-6">
+            <div class="grid grid-cols-2 gap-10 text-center">
                 <div>
-                    <p class="text-sm text-slate-500 mb-16 italic">(ลงชื่อ)............................................................</p>
-                    <p class="font-bold text-slate-800"><?= htmlspecialchars($_SESSION['firstname'] . ' ' . $_SESSION['lastname']) ?></p>
-                    <p class="text-xs text-slate-500 font-medium">ผู้รายงาน / ผู้จัดทำเอกสาร</p>
-                    <p class="text-[10px] text-slate-400 mt-1"><?= date('d/m/Y H:i') ?></p>
+                    <p class="text-xs text-slate-500 mb-10">(ลงชื่อ)............................................................</p>
+                    <p class="text-sm font-bold text-slate-800"><?= htmlspecialchars($_SESSION['firstname'] . ' ' . $_SESSION['lastname']) ?></p>
+                    <p class="text-[10px] text-slate-500 font-medium">ผู้จัดทำรายงาน</p>
                 </div>
                 <div>
-                    <p class="text-sm text-slate-500 mb-16 italic">(ลงชื่อ)............................................................</p>
-                    <p class="font-bold text-slate-800">นายสมชาย ใจดี</p>
-                    <p class="text-xs text-slate-500 font-medium">ผู้อำนวยการโรงเรียนละลมวิทยา</p>
-                    <p class="text-[10px] text-slate-400 mt-1">ผู้อนุมัติ/ผู้รับทราบรายงาน</p>
+                    <p class="text-xs text-slate-500 mb-10">(ลงชื่อ)............................................................</p>
+                    <p class="text-sm font-bold text-slate-800">นายสมชาย ใจดี</p>
+                    <p class="text-[10px] text-slate-500 font-medium">ผู้อำนวยการโรงเรียนละลมวิทยา</p>
                 </div>
             </div>
         </div>
 
         <!-- System Footer -->
-        <div class="mt-16 text-center border-t border-slate-50 pt-6">
-            <p class="text-[9px] text-slate-300 font-bold uppercase tracking-[0.3em]">
-                Generated by LLW Platinum Smart Duty Reporting System
+        <div class="mt-8 text-center border-t border-slate-50 pt-4 opacity-30">
+            <p class="text-[8px] text-slate-300 font-bold uppercase tracking-[0.3em]">
+                LLW Platinum Smart Duty Reporting System
             </p>
         </div>
     </div>
