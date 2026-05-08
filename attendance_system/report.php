@@ -44,7 +44,7 @@ if ($selected_subject_id) {
         ");
         $stmt->execute(['subject_id'=>$selected_subject_id,'subject_id2'=>$selected_subject_id,'start_date'=>$start_date,'end_date'=>$end_date]);
     } else {
-        // วิชาบังคับ: ดึงทั้งห้อง
+        // วิชาบังคับ: ดึงทั้งห้อง (กรองวิชาที่ปนมาออก)
         $stmt = $pdo->prepare("
             SELECT
                 s.student_id, s.name,
@@ -59,6 +59,8 @@ if ($selected_subject_id) {
                 AND a.subject_id=:subject_id
                 AND a.date BETWEEN :start_date AND :end_date
             WHERE s.classroom=:classroom
+              AND s.student_id REGEXP '^[0-9]+$'
+              AND s.student_id NOT IN (SELECT subject_code FROM att_subjects)
             GROUP BY s.id ORDER BY s.student_id ASC
         ");
         $stmt->execute(['subject_id'=>$selected_subject_id,'start_date'=>$start_date,'end_date'=>$end_date,'classroom'=>$subject_info['classroom']]);
