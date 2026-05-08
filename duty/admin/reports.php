@@ -342,6 +342,13 @@ function renderScheduleCards(array $items, int $photosRequired, string $basePath
                            class="btn btn-primary flex-fill rounded-xl fw-bold shadow-sm">
                             <i class="fas fa-images me-1"></i>ดูรายงาน
                         </a>
+                        <!-- ปุ่มพิมพ์รายงานรายจุด -->
+                        <a href="print_pr.php?id=<?= $reportId ?>" target="_blank"
+                           class="btn btn-light rounded-xl fw-bold shadow-sm"
+                           style="background: linear-gradient(to right, #ec4899, #8b5cf6); color: white; border: none;"
+                           title="พิมพ์รายงานรายบุคคล">
+                            <i class="fas fa-print"></i>
+                        </a>
                         <?php endif; ?>
                         
                         <?php if ($status !== 'complete' && $s['teacher_id']): ?>
