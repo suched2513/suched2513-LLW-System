@@ -37,7 +37,7 @@ if ($myDutyTeacher) {
     $assignment = $stmtS->fetch(PDO::FETCH_ASSOC);
     
     if (!$assignment) {
-        // ลองหากะอื่นในวันเดียวกัน (เผื่อครูจะรายงานล่วงหน้าหรือย้อนหลังเล็กน้อย)
+        // ลองหากะอื่นในวันเดียวกัน
         $stmtS2 = $pdo->prepare("
             SELECT * FROM duty_schedule 
             WHERE duty_date = ? AND teacher_id = ?
@@ -47,6 +47,20 @@ if ($myDutyTeacher) {
         $stmtS2->execute([$today, $myDutyTeacher['id']]);
         $assignment = $stmtS2->fetch(PDO::FETCH_ASSOC);
     }
+}
+
+// ── [ADMIN PREVIEW] ถ้าเป็น Super Admin และไม่เจอเวร ให้สร้าง Mock Assignment เพื่อดู UI ──
+$isAdminPreview = false;
+if (!$assignment && isset($_SESSION['llw_role']) && $_SESSION['llw_role'] === 'super_admin') {
+    $isAdminPreview = true;
+    $assignment = [
+        'id' => 0,
+        'duty_date' => $today,
+        'shift' => (date('H') >= 17 || date('H') < 5) ? 'night' : 'day',
+        'point_no' => 1,
+        'teacher_id' => 0,
+        'is_preview' => true
+    ];
 }
 
 $pageTitle    = 'รายงานการปฏิบัติหน้าที่';
@@ -179,6 +193,12 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
     <?php else: ?>
         <div class="reporting-card p-6 p-md-8 animate__animated animate__fadeInUp">
+            <?php if ($isAdminPreview): ?>
+                <div class="alert alert-info rounded-2xl border-0 bg-blue-50 text-blue-600 text-xs font-bold mb-6 flex items-center gap-2">
+                    <i class="bi bi-info-circle-fill"></i>
+                    โหมดทดสอบสำหรับ Admin: คุณสามารถทดสอบอัปโหลดรูปภาพได้ (ข้อมูลจะไม่ถูกบันทึกจริง)
+                </div>
+            <?php endif; ?>
             <div class="text-center mb-8">
                 <div class="point-badge">
                     <i class="bi bi-geo-alt-fill me-2 text-primary"></i>
@@ -291,6 +311,16 @@ require_once __DIR__ . '/../components/layout_start.php';
     submitBtn.addEventListener('click', async function() {
         if (photos.length === 0) return;
         
+        <?php if ($isAdminPreview): ?>
+            Swal.fire({
+                icon: 'info',
+                title: 'ทดสอบสำเร็จ',
+                text: 'ในโหมด Admin Preview ระบบจะไม่บันทึกข้อมูลจริงลงฐานข้อมูลครับ',
+                confirmButtonColor: '#2563eb'
+            });
+            return;
+        <?php endif; ?>
+
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> กำลังส่ง...';
         
