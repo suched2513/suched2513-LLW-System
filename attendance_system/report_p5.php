@@ -95,22 +95,29 @@ if ($sid) {
         $weekGroups[$s['isoWeek']]['sessions'][] = $s;
     }
 
-    // ดึงนักเรียน
+    // ดึงนักเรียน (รวม id เพื่อใช้ตรง key กับ att_attendance)
     if (!empty($subject['is_elective'])) {
         $stmt = $pdo->prepare("
-            SELECT s.student_id, s.name
+            SELECT s.id, s.student_id, s.name
             FROM att_students s
             JOIN att_subject_students ss ON ss.student_id = s.id AND ss.subject_id = ?
             ORDER BY s.student_id
         ");
         $stmt->execute([$sid]);
     } else {
-        $stmt = $pdo->prepare("SELECT student_id, name FROM att_students WHERE classroom = ? ORDER BY student_id");
+        $stmt = $pdo->prepare("
+            SELECT id, student_id, name FROM att_students
+            WHERE classroom = ?
+              AND student_id REGEXP '^[0-9]+$'
+              AND student_id NOT IN (SELECT subject_code FROM att_subjects)
+            ORDER BY student_id
+        ");
         $stmt->execute([$subject['classroom']]);
     }
     $students = $stmt->fetchAll();
 
-    // ดึงข้อมูลเช็คชื่อทั้งหมด (ใช้ทั้ง 2 mode)
+    // ดึงข้อมูลเช็คชื่อทั้งหมด
+    // att_attendance.student_id เก็บ str_pad(db_id, 5, '0') จาก saveAttendance
     $stmt = $pdo->prepare("
         SELECT student_id, date, period, status
         FROM att_attendance
@@ -334,7 +341,9 @@ require_once '../components/layout_start.php';
         <?php
         $rowNum = 1;
         foreach ($students as $stu):
-            $sid_str  = $stu['student_id'];
+            $sid_str    = $stu['student_id'];
+            // att_attendance.student_id เก็บเป็น str_pad(db_id, 5, '0', STR_PAD_LEFT)
+            $attendKey  = str_pad($stu['id'], 5, '0', STR_PAD_LEFT);
             $cntCome = $cntAbsent = $cntLeave = $cntSkip = $cntLate = $totalRec = 0;
             $rowClass = ($rowNum % 2 === 0) ? 'row-even' : 'row-odd';
         ?>
@@ -343,7 +352,7 @@ require_once '../components/layout_start.php';
             <td><?= htmlspecialchars($sid_str) ?></td>
             <td class="th-name" style="text-align:left;padding-left:4px"><?= htmlspecialchars($stu['name']) ?></td>
             <?php foreach ($sessions as $s):
-                $status = $attendMap[$sid_str][$s['date']][$s['period']] ?? '';
+                $status = $attendMap[$attendKey][$s['date']][$s['period']] ?? '';
                 $cls    = ['มา'=>'td-come','ขาด'=>'td-absent','ลา'=>'td-leave','โดด'=>'td-skip','สาย'=>'td-late'][$status] ?? 'td-none';
                 if ($status === 'มา')   { $cntCome++;   $totalRec++; }
                 elseif ($status === 'ขาด') { $cntAbsent++; $totalRec++; }
@@ -373,7 +382,8 @@ require_once '../components/layout_start.php';
                 <?php foreach ($sessions as $s):
                     $cnt = 0;
                     foreach ($students as $stu) {
-                        if (($attendMap[$stu['student_id']][$s['date']][$s['period']] ?? '') === 'มา') $cnt++;
+                        $ak = str_pad($stu['id'], 5, '0', STR_PAD_LEFT);
+                        if (($attendMap[$ak][$s['date']][$s['period']] ?? '') === 'มา') $cnt++;
                     }
                 ?>
                 <td style="font-size:9px;color:#15803d"><?= $cnt ?: '' ?></td>
