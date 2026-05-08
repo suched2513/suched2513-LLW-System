@@ -510,28 +510,46 @@ function renderDayForm(dayGroup, members, maxPts, allTeachers) {
         const isChairman = (i === CHAIRMAN_INDEX);
         // ประธานกิจกรรม (จุดที่ 6) → แสดงครูทุกคน
         const optList = isChairman ? (allTeachers.length ? allTeachers : allTeachersData) : members;
-        rows += `
-        <tr class="point-row" data-point="${i}">
-            <td class="align-middle" style="width:160px">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center text-white fw-bold"
-                         style="width:28px;height:28px;background:${gc};font-size:11px">${i}</div>
-                    <span class="fw-bold small text-secondary">${ptName}</span>
-                </div>
-                ${isChairman ? '<span class="badge bg-warning text-dark" style="font-size:9px">ครูทั้งหมด</span>' : ''}
-            </td>
-            <td class="align-middle">
-                <select class="form-select form-select-sm mb-1" data-field="teacher_id" onchange="refreshUnassigned()">
-                    ${buildOpts(optList, t1 ? t1.id : '')}
-                </select>
-                <select class="form-select form-select-sm" data-field="teacher_id" onchange="refreshUnassigned()">
-                    ${buildOpts(optList, t2 ? t2.id : '')}
-                </select>
-            </td>
-            <td class="align-middle" style="width:80px">
-                <input type="hidden" data-field="role" value="${esc(ptName)}">
-            </td>
-        </tr>`;
+
+        if (isChairman) {
+            rows += `
+            <tr class="point-row bg-light" data-point="${i}">
+                <td class="align-middle" style="width:160px">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-crown text-warning"></i>
+                        <span class="fw-bold small text-primary">${ptName}</span>
+                    </div>
+                </td>
+                <td class="align-middle" colspan="2">
+                    <select class="form-select form-select-sm" data-field="teacher_id" onchange="refreshUnassigned()">
+                        ${buildOpts(optList, t1 ? t1.id : '')}
+                    </select>
+                    <input type="hidden" data-field="role" value="${esc(ptName)}">
+                </td>
+            </tr>`;
+        } else {
+            rows += `
+            <tr class="point-row" data-point="${i}">
+                <td class="align-middle" style="width:160px">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center text-white fw-bold"
+                             style="width:28px;height:28px;background:${gc};font-size:11px">${i}</div>
+                        <span class="fw-bold small text-secondary">${ptName}</span>
+                    </div>
+                </td>
+                <td class="align-middle">
+                    <select class="form-select form-select-sm mb-1" data-field="teacher_id" onchange="refreshUnassigned()">
+                        ${buildOpts(optList, t1 ? t1.id : '')}
+                    </select>
+                    <select class="form-select form-select-sm" data-field="teacher_id" onchange="refreshUnassigned()">
+                        ${buildOpts(optList, t2 ? t2.id : '')}
+                    </select>
+                </td>
+                <td class="align-middle" style="width:80px">
+                    <input type="hidden" data-field="role" value="${esc(ptName)}">
+                </td>
+            </tr>`;
+        }
     }
 
     const gn  = dayGroup?.group_name  || 'ไม่ได้ระบุกลุ่ม';
