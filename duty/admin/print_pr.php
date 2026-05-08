@@ -132,40 +132,53 @@ $shiftName = $report['shift'] === 'day' ? 'กลางวัน' : 'กลา�
         </div>
 
         <!-- Main Content -->
-        <div class="glass-box p-8 mb-10 relative z-10 min-h-[250px] shadow-2xl">
-            <div class="text-lg text-slate-700 leading-relaxed font-medium">
-                <div class="flex items-center gap-3 mb-4 text-blue-900">
-                    <i class="fas fa-file-alt text-2xl"></i>
-                    <h4 class="text-xl font-black">รายละเอียดการปฏิบัติหน้าที่ (ใคร ทำอะไร ที่ไหน อย่างไร)</h4>
+        <div class="glass-box p-6 mb-6 relative z-10 min-h-[180px] shadow-2xl">
+            <div class="text-slate-700 leading-relaxed font-medium">
+                <div class="flex items-center gap-3 mb-3 text-blue-900">
+                    <i class="fas fa-file-alt text-xl"></i>
+                    <h4 class="text-lg font-black">รายละเอียดการปฏิบัติหน้าที่ (ใคร ทำอะไร ที่ไหน อย่างไร)</h4>
                 </div>
-                <div class="p-6 bg-blue-50/30 rounded-2xl border-2 border-slate-100 italic">
+                <div class="p-4 bg-blue-50/30 rounded-2xl border-2 border-slate-100 italic text-sm">
                     " <?= !empty($report['report_note']) ? nl2br(htmlspecialchars($report['report_note'])) : 'ปฏิบัติหน้าที่เรียบร้อย เหตุการณ์ทั่วไปปกติ' ?> "
                 </div>
-                <p class="mt-6 text-sm text-slate-500 font-bold flex items-center gap-2">
+                <p class="mt-4 text-xs text-slate-500 font-bold flex items-center gap-2">
                     <i class="fas fa-clock"></i> บันทึกเข้าระบบเมื่อเวลา <?= date('H:i', strtotime($report['completed_at'] ?: $report['created_at'])) ?> น.
                 </p>
             </div>
         </div>
 
         <!-- Photo Grid (2x2) -->
-        <div class="grid grid-cols-2 gap-8 relative z-10">
+        <div class="grid grid-cols-2 gap-6 relative z-10">
             <?php for($i=0; $i<4; $i++): ?>
-                <div class="photo-slot shadow-xl hover:scale-[1.02] transition-all h-[240px]">
+                <div class="photo-slot shadow-xl hover:scale-[1.02] transition-all h-[200px]">
                     <?php if (isset($photos[$i])): ?>
                         <img src="<?= $base_path ?>/duty/api/photo.php?path=<?= urlencode($photos[$i]['file_path']) ?>" alt="Photo">
                     <?php else: ?>
                         <div class="w-full h-full flex items-center justify-center text-blue-100 bg-blue-50/50">
-                            <i class="fas fa-camera text-6xl"></i>
+                            <i class="fas fa-camera text-5xl"></i>
                         </div>
                     <?php endif; ?>
                 </div>
             <?php endfor; ?>
         </div>
 
+        <!-- Signature Section -->
+        <div class="mt-8 flex justify-between gap-10 relative z-10">
+            <div class="flex-1 text-center border-t border-slate-200 pt-4">
+                <div class="h-12"></div>
+                <p class="text-sm font-bold text-slate-800">( <?= htmlspecialchars($report['teacher_prefix'] . $report['teacher_name']) ?> )</p>
+                <p class="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest">ผู้ปฏิบัติหน้าที่</p>
+            </div>
+            <div class="flex-1 text-center border-t border-slate-200 pt-4">
+                <div class="h-12"></div>
+                <p class="text-sm font-bold text-slate-800">( ............................................................ )</p>
+                <p class="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest">หัวหน้าเวร / ผู้ประเมิน</p>
+            </div>
+        </div>
+
         <!-- Footer Deco -->
-        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 text-center w-full">
-            <div class="w-24 h-1 bg-blue-900/10 mx-auto mb-4 rounded-full"></div>
-            <p class="text-blue-900/30 font-black text-[10px] uppercase tracking-[0.5em]">Lalom Wittaya Smart Duty System</p>
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 text-center w-full">
+            <p class="text-blue-900/30 font-black text-[9px] uppercase tracking-[0.5em]">Lalom Wittaya Smart Duty System</p>
         </div>
 
     </div>
