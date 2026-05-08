@@ -434,7 +434,7 @@ $subMenus = [
                 </li>
 
                 <!-- Duty System -->
-                <?php if (in_array($userRole, ['super_admin','wfh_admin'])): ?>
+                <?php if (in_array($userRole, ['super_admin','wfh_admin','att_teacher'])): ?>
                 <li class="nav-item <?= $activeSystem === 'duty' ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= $activeSystem === 'duty' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-shield-alt text-danger"></i>
