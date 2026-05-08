@@ -130,6 +130,7 @@ $subMenus = [
         ['icon' => 'fas fa-sticky-note',          'label' => 'บันทึกข้อความ',     'url' => $base_path . '/edocument/memos.php'],
     ],
     'duty' => [
+        ['icon' => 'fas fa-camera',              'label' => 'ส่งรายงานเวร (ครู)', 'url' => $base_path . '/duty/index.php',          'roles' => ['att_teacher','super_admin','wfh_admin']],
         ['icon' => 'fas fa-chart-line',          'label' => 'รายงานเวรประจำวัน', 'url' => $base_path . '/duty/admin/reports.php',  'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-calendar-week',        'label' => 'จัดการตารางเวร',   'url' => $base_path . '/duty/admin/schedule.php', 'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-layer-group',          'label' => 'จัดการกลุ่มเวร',   'url' => $base_path . '/duty/admin/groups.php',   'roles' => ['super_admin','wfh_admin']],
