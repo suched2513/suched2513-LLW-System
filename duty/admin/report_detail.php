@@ -117,6 +117,21 @@ require_once __DIR__ . '/../../components/layout_start.php';
     <i class="fas fa-chevron-left"></i> กลับหน้ารายงาน
 </a>
 
+<!-- Header Action Section -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-0 fw-black text-dark">จุดที่ <?= $report['point_no'] ?>: <?= htmlspecialchars($report['teacher_name'] ?? '—') ?></h3>
+        <p class="text-muted small mb-0">รายงานเวรวันที่ <?= date('d/m/', strtotime($report['duty_date'])) . (date('Y', strtotime($report['duty_date'])) + 543) ?></p>
+    </div>
+    <div>
+        <a href="print_pr.php?id=<?= $reportId ?>" target="_blank"
+           class="btn btn-lg text-white rounded-2xl px-5 fw-black shadow-lg"
+           style="background: linear-gradient(to right, #ec4899, #8b5cf6); border: none; transform: scale(1.05);">
+            <i class="fas fa-file-invoice me-2"></i>สร้างรายงานรายจุด
+        </a>
+    </div>
+</div>
+
 <!-- Info Card -->
 <div class="info-card mb-4">
     <div class="card-body p-4">
@@ -197,11 +212,13 @@ require_once __DIR__ . '/../../components/layout_start.php';
                 <i class="fas fa-file-archive me-2"></i>ดาวน์โหลด ZIP ทั้งหมด
             </a>
             <?php endif; ?>
+            
             <a href="print_pr.php?id=<?= $reportId ?>" target="_blank"
                class="btn btn-info text-white rounded-xl px-4 fw-bold shadow-sm"
                style="background: linear-gradient(to right, #ec4899, #8b5cf6); border: none;">
-                <i class="fas fa-bullhorn me-2"></i>สร้างจดหมายข่าว (PR News)
+                <i class="fas fa-file-invoice me-2"></i>พิมพ์รายงานรายจุด
             </a>
+
             <?php if ($report['status'] !== 'complete' && $report['teacher_id']): ?>
             <a href="remind.php?report_id=<?= $reportId ?>"
                class="btn btn-warning rounded-xl px-4 fw-bold shadow-sm"
