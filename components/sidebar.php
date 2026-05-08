@@ -74,6 +74,7 @@ $subMenus = [
         ['icon' => 'fas fa-chart-bar',      'label' => 'รายงานการเข้าเรียน',  'url' => $base_path . '/attendance_system/report.php'],
         ['icon' => 'fas fa-file-alt',       'label' => 'รายงาน ปพ.5',          'url' => $base_path . '/attendance_system/report_p5.php'],
         ['icon' => 'fas fa-users',          'label' => 'จัดการข้อมูลวิชา',    'url' => $base_path . '/attendance_system/admin.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-file-csv',       'label' => 'นำเข้ารายวิชา CSV',   'url' => $base_path . '/attendance_system/import_subjects.php', 'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-chart-pie',      'label' => 'รายงานผู้บริหาร',   'url' => $base_path . '/attendance_system/report_admin.php', 'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-id-card',        'label' => 'จัดการเลขบัตรประชาชน', 'url' => $base_path . '/student/admin/manage_nid.php', 'roles' => ['super_admin','wfh_admin']],
     ],
