@@ -9,6 +9,7 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
     header('Location: /login.php'); exit();
 }
 
+$activeSystem = 'duty';
 $pdo = getPdo();
 $reportId = (int)($_GET['id'] ?? 0);
 
