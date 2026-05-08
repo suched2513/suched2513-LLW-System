@@ -147,15 +147,15 @@ $shiftName = $report['shift'] === 'day' ? 'กลางวัน' : 'กลา�
             </div>
         </div>
 
-        <!-- Photo Grid (2x3) -->
-        <div class="grid grid-cols-3 gap-6 relative z-10">
-            <?php for($i=0; $i<6; $i++): ?>
-                <div class="photo-slot shadow-xl hover:scale-[1.02] transition-all">
+        <!-- Photo Grid (2x2) -->
+        <div class="grid grid-cols-2 gap-8 relative z-10">
+            <?php for($i=0; $i<4; $i++): ?>
+                <div class="photo-slot shadow-xl hover:scale-[1.02] transition-all h-[240px]">
                     <?php if (isset($photos[$i])): ?>
                         <img src="<?= $base_path ?>/duty/api/photo.php?path=<?= urlencode($photos[$i]['file_path']) ?>" alt="Photo">
                     <?php else: ?>
-                        <div class="w-full h-full flex items-center justify-center text-blue-100">
-                            <i class="fas fa-camera text-4xl"></i>
+                        <div class="w-full h-full flex items-center justify-center text-blue-100 bg-blue-50/50">
+                            <i class="fas fa-camera text-6xl"></i>
                         </div>
                     <?php endif; ?>
                 </div>
