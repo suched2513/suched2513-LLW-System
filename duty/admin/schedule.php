@@ -70,15 +70,19 @@ $prevWeek  = date('Y-m-d', strtotime($weekStart . ' -7 days'));
 $nextWeek  = date('Y-m-d', strtotime($weekStart . ' +7 days'));
 
 // ── จำนวนจุดเวร (default 5) ──
-// ── ชื่อจุดเวร (hardcode 6 จุด) ──
-$pointNames = [
-    'รับนักเรียนจุดที่ 1',
-    'รับนักเรียนจุดที่ 2',
-    'หน้าเสาธง',
-    'ปล่อยกลับบ้าน',
-    'ตรวจรอบโรงเรียน',
-    'ประธานกิจกรรมหน้าเสาธง'
-];
+// ── ชื่อจุดเวร (แยกตามกะ) ──
+if ($shiftParam === 'night') {
+    $pointNames = ['เวรตรวจความเรียบร้อยกลางคืน'];
+} else {
+    $pointNames = [
+        'รับนักเรียนจุดที่ 1',
+        'รับนักเรียนจุดที่ 2',
+        'หน้าเสาธง',
+        'ปล่อยกลับบ้าน',
+        'ตรวจรอบโรงเรียน',
+        'ประธานกิจกรรมหน้าเสาธง'
+    ];
+}
 $maxPts = count($pointNames);
 
 // ── ดึงตารางเวรทั้งสัปดาห์ (ตาม shift) ──
@@ -237,6 +241,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
                         </th>
                         <?php endfor; ?>
                     </tr>
+                    <?php if ($shiftParam !== 'night'): ?>
                     <!-- ── Row: กลุ่มเวร ── -->
                     <tr>
                         <td class="text-center align-middle group-cell" style="font-size:11px;font-weight:700;color:#6c757d;">
@@ -263,6 +268,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
                         </td>
                         <?php endfor; ?>
                     </tr>
+                    <?php endif; ?>
                 </thead>
                 <tbody>
                 <?php for ($pt = 1; $pt <= $maxPts; $pt++):
@@ -574,12 +580,15 @@ function renderDayForm(dayGroup, members, maxPts, allTeachers) {
         </div>`;
 
     if (isChairmanMode) {
+        const titleText = (curShift === 'night') ? 'กำหนดครูเวรกลางคืน' : 'กำหนดประธานกิจกรรม';
+        const iconClass = (curShift === 'night') ? 'fa-moon' : 'fa-crown';
+        const iconBg    = (curShift === 'night') ? 'bg-primary' : 'bg-warning';
         headerHtml = `
         <div class="mb-3 d-flex align-items-center gap-2">
-            <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" style="width:32px;height:32px;">
-                <i class="fas fa-crown"></i>
+            <div class="${iconBg} rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" style="width:32px;height:32px;">
+                <i class="fas ${iconClass}"></i>
             </div>
-            <h6 class="mb-0 fw-bold text-primary">กำหนดประธานกิจกรรม</h6>
+            <h6 class="mb-0 fw-bold text-primary">${titleText}</h6>
         </div>`;
     }
 

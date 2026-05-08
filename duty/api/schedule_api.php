@@ -172,10 +172,10 @@ try {
                 error_log('get_day_detail members: ' . $e->getMessage());
             }
 
-            $maxPts = 6;
+            $maxPts = ($shift === 'night') ? 1 : 6;
             try {
                 $r = $pdo->query("SELECT svalue FROM duty_settings WHERE skey='max_duty_points'");
-                if ($r) {
+                if ($r && $shift !== 'night') {
                     $dbMax = (int)$r->fetchColumn();
                     if ($dbMax > 0) $maxPts = $dbMax;
                 }
