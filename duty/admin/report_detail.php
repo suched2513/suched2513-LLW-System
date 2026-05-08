@@ -85,87 +85,122 @@ require_once __DIR__ . '/../../components/layout_start.php';
 <script>Swal.fire({icon:'success',title:'ลบรูปแล้ว',timer:1500,showConfirmButton:false});</script>
 <?php endif; ?>
 
+<style>
+.info-card { border: none; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); overflow: hidden; background: #fff; }
+.info-table td { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; }
+.info-table tr:last-child td { border-bottom: none; }
+.label-text { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; }
+.value-text { font-size: 1rem; font-weight: 700; color: #1e293b; }
+
+.status-badge { padding: 6px 12px; border-radius: 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px; }
+.badge-glow-success { background: #ecfdf5; color: #059669; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.1); }
+.badge-glow-warning { background: #fffbeb; color: #d97706; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.1); }
+.badge-glow-danger  { background: #fef2f2; color: #dc2626; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.1); }
+
+.photo-card { border: none; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: all 0.3s ease; overflow: hidden; }
+.photo-card:hover { transform: translateY(-5px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+.photo-img-box { position: relative; height: 180px; overflow: hidden; }
+.photo-img-box img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+.photo-card:hover .photo-img-box img { transform: scale(1.1); }
+.photo-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.2rem; }
+.photo-card:hover .photo-overlay { opacity: 1; }
+
+.back-btn { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: #64748b; transition: all 0.2s; padding: 8px 16px; border-radius: 12px; text-decoration: none; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+.back-btn:hover { background: #f8fafc; color: #1e293b; border-color: #cbd5e1; }
+</style>
+
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
 
 <!-- Back -->
-<div class="mb-3">
-    <a href="reports.php?date=<?= $report['duty_date'] ?>" class="btn btn-outline-secondary btn-sm">
-        <i class="fas fa-arrow-left me-1"></i>กลับหน้ารายงาน
-    </a>
-</div>
+<a href="reports.php?date=<?= $report['duty_date'] ?>" class="back-btn shadow-sm">
+    <i class="fas fa-chevron-left"></i> กลับหน้ารายงาน
+</a>
 
 <!-- Info Card -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-        <div class="row g-3">
+<div class="info-card mb-4">
+    <div class="card-body p-4">
+        <div class="row g-4">
             <div class="col-md-6">
-                <table class="table table-sm table-borderless mb-0">
+                <table class="w-100 info-table">
                     <tr>
-                        <td class="fw-bold text-muted small w-40">วันที่</td>
-                        <td><?= date('d/m/') . (date('Y', strtotime($report['duty_date'])) + 543) ?></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-muted small">กะ</td>
-                        <td><?= $shiftLabel[$report['shift']] ?? $report['shift'] ?></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-muted small">จุดที่</td>
-                        <td><?= $report['point_no'] ?></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold text-muted small">ครู</td>
                         <td>
-                            <?= htmlspecialchars($report['teacher_name'] ?? '— ไม่ระบุ —') ?>
-                            <?php if ($report['telegram_username']): ?>
-                            <a href="https://t.me/<?= htmlspecialchars($report['telegram_username']) ?>"
-                               target="_blank" class="ms-1 text-info small">
-                                <i class="fab fa-telegram"></i> @<?= htmlspecialchars($report['telegram_username']) ?>
-                            </a>
-                            <?php endif; ?>
+                            <div class="label-text">วันที่ปฏิบัติหน้าที่</div>
+                            <div class="value-text"><?= date('d/m/') . (date('Y', strtotime($report['duty_date'])) + 543) ?></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="label-text">ช่วงเวลา (กะ)</div>
+                            <div class="value-text"><?= $shiftLabel[$report['shift']] ?? $report['shift'] ?></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="label-text">ตำแหน่ง/จุดที่</div>
+                            <div class="value-text">จุดที่ <?= $report['point_no'] ?></div>
                         </td>
                     </tr>
                 </table>
             </div>
             <div class="col-md-6">
-                <table class="table table-sm table-borderless mb-0">
+                <table class="w-100 info-table">
                     <tr>
-                        <td class="fw-bold text-muted small w-40">สถานะ</td>
                         <td>
-                            <?php
-                            $stBadge = ['pending'=>'<span class="badge bg-danger">🔴 ยังไม่รายงาน</span>',
-                                        'partial'=>'<span class="badge bg-warning text-dark">🟡 ส่งบางส่วน</span>',
-                                        'complete'=>'<span class="badge bg-success">✅ ครบแล้ว</span>'];
-                            echo $stBadge[$report['status']] ?? $report['status'];
-                            ?>
+                            <div class="label-text">สถานะรายงาน</div>
+                            <div class="mt-1">
+                                <?php
+                                $stBadge = [
+                                    'pending' => '<span class="status-badge badge-glow-danger"><i class="fas fa-times-circle"></i> ยังไม่รายงาน</span>',
+                                    'partial' => '<span class="status-badge badge-glow-warning"><i class="fas fa-hourglass-half"></i> ส่งบางส่วน</span>',
+                                    'complete' => '<span class="status-badge badge-glow-success"><i class="fas fa-check-circle"></i> ครบแล้ว</span>'
+                                ];
+                                echo $stBadge[$report['status']] ?? $report['status'];
+                                ?>
+                            </div>
                         </td>
                     </tr>
                     <tr>
-                        <td class="fw-bold text-muted small">รูปที่ได้รับ</td>
-                        <td><?= count($photos) ?> รูป</td>
+                        <td>
+                            <div class="label-text">ครูผู้รับผิดชอบ</div>
+                            <div class="value-text">
+                                <?= htmlspecialchars($report['teacher_name'] ?? '— ไม่ระบุ —') ?>
+                                <?php if ($report['telegram_username']): ?>
+                                <a href="https://t.me/<?= htmlspecialchars($report['telegram_username']) ?>"
+                                   target="_blank" class="ms-2 text-info text-decoration-none small">
+                                    <i class="fab fa-telegram"></i> @<?= htmlspecialchars($report['telegram_username']) ?>
+                                </a>
+                                <?php endif; ?>
+                            </div>
+                        </td>
                     </tr>
-                    <?php if ($report['completed_at']): ?>
                     <tr>
-                        <td class="fw-bold text-muted small">เวลาครบ</td>
-                        <td><?= date('H:i', strtotime($report['completed_at'])) ?> น.</td>
+                        <td>
+                            <div class="label-text">จำนวนรูป / เวลาที่เสร็จสิ้น</div>
+                            <div class="value-text">
+                                <?= count($photos) ?> รูป 
+                                <?php if ($report['completed_at']): ?>
+                                · <span class="text-success"><?= date('H:i', strtotime($report['completed_at'])) ?> น.</span>
+                                <?php endif; ?>
+                            </div>
+                        </td>
                     </tr>
-                    <?php endif; ?>
                 </table>
             </div>
         </div>
     </div>
-    <div class="card-footer bg-white border-top">
-        <div class="d-flex gap-2 flex-wrap">
+    <div class="card-footer bg-slate-50 border-top p-3 px-4">
+        <div class="d-flex gap-3 flex-wrap">
             <?php if (!empty($photos)): ?>
             <a href="<?= $base_path ?>/duty/api/download_zip.php?report_id=<?= $reportId ?>"
-               class="btn btn-outline-primary btn-sm">
-                <i class="fas fa-file-archive me-1"></i>ดาวน์โหลด ZIP ทั้งหมด
+               class="btn btn-primary rounded-xl px-4 fw-bold shadow-sm">
+                <i class="fas fa-file-archive me-2"></i>ดาวน์โหลด ZIP ทั้งหมด
             </a>
             <?php endif; ?>
             <?php if ($report['status'] !== 'complete' && $report['teacher_id']): ?>
             <a href="remind.php?report_id=<?= $reportId ?>"
-               class="btn btn-outline-warning btn-sm"
+               class="btn btn-warning rounded-xl px-4 fw-bold shadow-sm"
                onclick="return confirm('ส่งการเตือนไปยัง <?= htmlspecialchars($report['teacher_name'] ?? '') ?>?')">
-                <i class="fas fa-bell me-1"></i>ส่งเตือนครู
+                <i class="fas fa-bell me-2"></i>ส่งเตือนครูเวร
             </a>
             <?php endif; ?>
         </div>
@@ -178,37 +213,44 @@ require_once __DIR__ . '/../../components/layout_start.php';
     <i class="fas fa-images me-2"></i>ยังไม่มีรูปภาพในรายงานนี้
 </div>
 <?php else: ?>
-<div class="row g-3">
+<div class="row g-4">
     <?php foreach ($photos as $i => $ph): ?>
     <div class="col-6 col-md-4 col-lg-3">
-        <div class="card border-0 shadow-sm h-100">
-            <a href="<?= $base_path ?>/duty/api/photo.php?path=<?= urlencode($ph['file_path']) ?>"
-               class="glightbox"
-               data-gallery="report-<?= $reportId ?>"
-               data-description="รูปที่ <?= $i+1 ?> — <?= date('H:i', strtotime($ph['received_at'])) ?> น.<?= $ph['caption'] ? ' — ' . htmlspecialchars($ph['caption']) : '' ?>">
-                <img src="<?= $base_path ?>/duty/api/photo.php?path=<?= urlencode($ph['thumbnail_path'] ?: $ph['file_path']) ?>"
-                     alt="รูปที่ <?= $i+1 ?>"
-                     class="card-img-top"
-                     style="height:160px;object-fit:cover;">
-            </a>
-            <div class="card-body p-2">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="small text-muted">
-                        รูปที่ <?= $i+1 ?> · <?= date('H:i', strtotime($ph['received_at'])) ?> น.
-                    </span>
+        <div class="photo-card card">
+            <div class="photo-img-box">
+                <a href="<?= $base_path ?>/duty/api/photo.php?path=<?= urlencode($ph['file_path']) ?>"
+                   class="glightbox"
+                   data-gallery="report-<?= $reportId ?>"
+                   data-description="รูปที่ <?= $i+1 ?> — <?= date('H:i', strtotime($ph['received_at'])) ?> น.<?= $ph['caption'] ? ' — ' . htmlspecialchars($ph['caption']) : '' ?>">
+                    <img src="<?= $base_path ?>/duty/api/photo.php?path=<?= urlencode($ph['thumbnail_path'] ?: $ph['file_path']) ?>"
+                         alt="รูปที่ <?= $i+1 ?>">
+                    <div class="photo-overlay">
+                        <i class="fas fa-search-plus"></i>
+                    </div>
+                </a>
+            </div>
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-dark small">รูปที่ <?= $i+1 ?></span>
                     <form method="POST" class="d-inline">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="delete_photo">
                         <input type="hidden" name="photo_id" value="<?= $ph['id'] ?>">
-                        <button type="submit" class="btn btn-outline-danger btn-sm p-1 lh-1"
+                        <button type="submit" class="btn btn-outline-danger btn-sm p-1 px-2 border-0"
                                 onclick="return confirm('ลบรูปนี้?')"
                                 title="ลบรูป">
-                            <i class="fas fa-trash" style="font-size:.7rem;"></i>
+                            <i class="fas fa-trash-alt" style="font-size: 0.8rem"></i>
                         </button>
                     </form>
                 </div>
+                <div class="d-flex align-items-center gap-2 text-muted small">
+                    <i class="fas fa-clock opacity-50"></i>
+                    <?= date('H:i', strtotime($ph['received_at'])) ?> น.
+                </div>
                 <?php if ($ph['caption']): ?>
-                <small class="text-muted d-block mt-1"><?= htmlspecialchars($ph['caption']) ?></small>
+                <div class="mt-2 p-2 bg-slate-50 rounded-lg small border-start border-3 border-primary">
+                    <?= htmlspecialchars($ph['caption']) ?>
+                </div>
                 <?php endif; ?>
             </div>
         </div>

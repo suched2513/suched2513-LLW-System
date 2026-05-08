@@ -54,6 +54,7 @@ if ($isLoggedIn) {
                 ['url' => 'edocument/index.php',              'icon' => 'bi-file-earmark-text',   'label' => 'e-สารบรรณ',    'color' => 'blue'],
                 ['url' => 'school_project/homeroom/admin/daily_overview.php', 'icon' => 'bi-journal-check', 'label' => 'โฮมรูม', 'color' => 'amber'],
                 ['url' => 'school_project/admin/dashboard.php','icon'=> 'bi-cash-coin',           'label' => 'งบประมาณ SBMS', 'color' => 'amber'],
+                ['url' => 'duty/admin/reports.php',           'icon' => 'bi-shield-check',       'label' => 'รายงานเวร',      'color' => 'rose'],
             ];
             break;
         case 'wfh_admin':
@@ -65,6 +66,7 @@ if ($isLoggedIn) {
                 ['url' => 'behavior/dashboard.php',           'icon' => 'bi-journal-text',        'label' => 'พฤติกรรม',      'color' => 'violet'],
                 ['url' => 'edocument/index.php',              'icon' => 'bi-file-earmark-text',   'label' => 'e-สารบรรณ',    'color' => 'blue'],
                 ['url' => 'school_project/admin/dashboard.php','icon'=> 'bi-cash-coin',           'label' => 'งบประมาณ SBMS', 'color' => 'amber'],
+                ['url' => 'duty/admin/reports.php',           'icon' => 'bi-shield-check',       'label' => 'รายงานเวร',      'color' => 'rose'],
             ];
             break;
         case 'att_teacher':
@@ -122,6 +124,7 @@ $modules = [
     ['url'=>'chromebook/index.php',             'roles'=>['cb_admin','super_admin','wfh_admin'], 'icon'=>'bi-laptop', 'bgIcon'=>'bi-laptop', 'title'=>'จัดการ Chromebook', 'short'=>'Chromebook', 'desc'=>'ระบบยืม-คืนอุปกรณ์ดิจิทัล ตรวจสอบสถานะและคลังพัสดุ',                                'color'=>'indigo', 'gradient'=>'from-indigo-500 to-purple-500',  'delay'=>0.2],
     ['url'=>'index_wfh.php',                   'roles'=>null,'icon'=>'bi-person-badge-fill',       'bgIcon'=>'bi-geo-alt',              'title'=>'ลงเวลาบุคลากร',      'short'=>'ลงเวลา',    'desc'=>'ระบบลงเวลาเข้า-ออกงานด้วย GPS ยืนยันตัวตนผ่านพิกัดโรงเรียน',                       'color'=>'emerald','gradient'=>'from-emerald-500 to-teal-500',   'delay'=>0.3],
     ['url'=>'leave_system.php',                'roles'=>null,'icon'=>'bi-door-open-fill',          'bgIcon'=>'bi-door-open',            'title'=>'ขออนุญาตออกนอก',     'short'=>'ออกนอก',    'desc'=>'ระบบยื่นคำขอลาออนไลน์ พร้อมแจ้งเตือนผู้บริหารผ่าน Telegram',                       'color'=>'rose',   'gradient'=>'from-rose-500 to-pink-500',      'delay'=>0.4],
+    ['url'=>'duty/admin/reports.php',          'roles'=>['super_admin','wfh_admin'],'icon'=>'bi-shield-check',     'bgIcon'=>'bi-shield-shaded',        'title'=>'ระบบเวรประจำวัน',    'short'=>'เวรประจำวัน', 'desc'=>'บริหารจัดการตารางเวร และตรวจสอบรายงานการปฏิบัติหน้าที่แบบ Real-time',              'color'=>'rose',   'gradient'=>'from-rose-600 to-pink-600',      'delay'=>0.45],
     ['url'=>'supervision.php',                 'roles'=>$_T, 'icon'=>'bi-mortarboard-fill',        'bgIcon'=>'bi-mortarboard',          'title'=>'นิเทศการสอน',        'short'=>'นิเทศ',     'desc'=>'ระบบนิเทศการจัดการเรียนรู้เชิงรุก ติดตามสมรรถนะครูรายบุคคล',                       'color'=>'indigo', 'gradient'=>'from-indigo-600 to-blue-600',    'delay'=>0.5],
     ['url'=>'teacher_leave/index.php',         'roles'=>null,'icon'=>'bi-calendar-check-fill',     'bgIcon'=>'bi-file-earmark-text',    'title'=>'ใบลาออนไลน์',        'short'=>'ใบลา',      'desc'=>'ระบบยื่นใบลาป่วย กิจ พักผ่อน ตามระเบียบราชการ พร้อมสถิติสะสม',                    'color'=>'rose',   'gradient'=>'from-rose-600 to-red-600',       'delay'=>0.6],
     ['url'=>'plc_system/dashboard.php',        'roles'=>$_T, 'icon'=>'bi-journal-richtext',        'bgIcon'=>'bi-journal-bookmark',     'title'=>'ระบบ PLC ออนไลน์',   'short'=>'PLC',       'desc'=>'ชุมชนแห่งการเรียนรู้ทางวิชาชีพ บันทึกกิจกรรมตามกระบวนการ PDCA',                  'color'=>'violet', 'gradient'=>'from-violet-600 to-purple-600',  'delay'=>0.7],
@@ -136,8 +139,8 @@ $modules = [
 ];
 // กรองเฉพาะ module ที่ user มีสิทธิ์
 $modules = array_filter($modules, function($m) use ($userRole, $isLoggedIn) {
+    if (!$isLoggedIn) return true; // ถ้ายังไม่ login ให้โชว์ทั้งหมด (จะไปติดหน้า login ตอนกด)
     if (!empty($m['isPublic'])) return true;
-    if (!$isLoggedIn) return !empty($m['isPublic']);
     if ($m['roles'] === null) return true;
     return in_array($userRole, $m['roles']);
 });
