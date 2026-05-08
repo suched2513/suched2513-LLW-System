@@ -81,6 +81,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // -- Clean invalid (subject codes imported as students) --
+    if ($do === 'clean_invalid') {
+        try {
+            // ลบ record ที่ student_id ตรงกับ subject_code ในตารางวิชา
+            $del = $pdo->prepare("
+                DELETE s FROM att_students s
+                WHERE EXISTS (
+                    SELECT 1 FROM att_subjects sub WHERE sub.subject_code = s.student_id
+                )
+            ");
+            $del->execute();
+            $removed = $del->rowCount();
+            $msg = "ลบข้อมูลผิดพลาดสำเร็จ {$removed} รายการ";
+            $msgType = $removed > 0 ? 'success' : 'warning';
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+        }
+    }
+
     // -- CSV Preview --
     if ($do === 'preview' && isset($_FILES['csvfile'])) {
         $file = $_FILES['csvfile'];
@@ -160,6 +180,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// ตรวจหา student records ที่เป็น subject_code (ข้อมูลผิดพลาด)
+$invalidStudents = $pdo->query("
+    SELECT s.id, s.student_id, s.name, s.classroom
+    FROM att_students s
+    WHERE EXISTS (SELECT 1 FROM att_subjects sub WHERE sub.subject_code = s.student_id)
+    ORDER BY s.classroom, s.student_id
+    LIMIT 100
+")->fetchAll(PDO::FETCH_ASSOC);
+
 $filterCls = $_GET['cls'] ?? '';
 $whereQ = $filterCls ? "WHERE classroom = " . $pdo->quote($filterCls) : '';
 $students = $pdo->query("SELECT * FROM att_students $whereQ ORDER BY classroom, student_id LIMIT 500")->fetchAll();
@@ -174,6 +203,39 @@ require_once __DIR__ . '/components/layout_start.php';
 </style>
 
 <div class="space-y-10 mb-20">
+
+    <!-- Invalid Records Banner -->
+    <?php if (!empty($invalidStudents)): ?>
+    <div class="bg-rose-50 border-2 border-rose-300 rounded-[32px] p-6 shadow-lg shadow-rose-100">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-rose-500 rounded-2xl flex items-center justify-center text-white text-xl shrink-0">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div>
+                    <h3 class="font-black text-rose-700 text-base">พบข้อมูลวิชาปนอยู่ในรายชื่อนักเรียน <?= count($invalidStudents) ?> รายการ</h3>
+                    <p class="text-xs text-rose-500 mt-0.5">รหัสเหล่านี้เป็น "รหัสวิชา" ไม่ใช่รหัสนักเรียน — เกิดจากการอัปโหลด CSV วิชาผิดหน้า</p>
+                </div>
+            </div>
+            <form method="POST" onsubmit="return confirm('ยืนยันลบข้อมูลวิชาที่ปนมา <?= count($invalidStudents) ?> รายการ?')">
+                <?= csrf_field() ?>
+                <input type="hidden" name="do" value="clean_invalid">
+                <button class="bg-rose-600 text-white px-6 py-3 rounded-2xl font-black text-sm hover:bg-rose-700 shadow-lg shadow-rose-200 transition-all whitespace-nowrap">
+                    <i class="bi bi-trash3-fill me-2"></i> ลบทั้งหมด <?= count($invalidStudents) ?> รายการ
+                </button>
+            </form>
+        </div>
+        <!-- รายการผิดพลาด -->
+        <div class="mt-4 max-h-40 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+        <?php foreach ($invalidStudents as $inv): ?>
+            <div class="bg-white/70 rounded-xl px-3 py-2 text-xs border border-rose-100">
+                <span class="font-mono font-black text-rose-600"><?= htmlspecialchars($inv['student_id']) ?></span>
+                <span class="text-slate-500 ms-1"><?= htmlspecialchars(mb_strimwidth($inv['name'], 0, 12, '…')) ?></span>
+            </div>
+        <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Top Tools -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
