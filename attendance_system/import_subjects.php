@@ -112,39 +112,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ── Import ──
     if ($do === 'import' && !empty($_POST['json_data'])) {
         $data = json_decode($_POST['json_data'], true);
-        if ($data) {
-            $stmtUpd = $pdo->prepare("
-                UPDATE att_subjects
-                SET subject_name=?, teacher_id=COALESCE(?,teacher_id)
-                WHERE LOWER(TRIM(subject_code))=LOWER(?) AND TRIM(classroom)=?
-            ");
-            $stmtIns = $pdo->prepare("
-                INSERT INTO att_subjects (subject_code, subject_name, classroom, teacher_id)
-                VALUES (?, ?, ?, ?)
-            ");
-            $pdo->beginTransaction();
-            try {
-                foreach ($data as $r) {
-                    $code = trim($r['subject_code']);
-                    $name = trim($r['subject_name']);
-                    $cls  = trim($r['classroom']);
-                    $tid  = $r['teacher_id'] ? (int)$r['teacher_id'] : 0;
-                    if (!$code || !$name) continue;
+        if (!$data) {
+            $msg = 'ข้อมูลไม่ถูกต้อง กรุณาอัปโหลดไฟล์ใหม่'; $msgType = 'error';
+        } else {
+            // ── ตรวจ column teacher_id ว่า NULL ได้หรือไม่ ──
+            $colInfo = $pdo->query("SHOW COLUMNS FROM att_subjects LIKE 'teacher_id'")->fetch(PDO::FETCH_ASSOC);
+            $tidNullable = ($colInfo && strtolower($colInfo['Null'] ?? '') === 'yes');
+            $tidFallback = $tidNullable ? null : 0; // ใช้ค่า default ที่ปลอดภัย
 
-                    if ($r['is_existing']) {
-                        $stmtUpd->execute([$name, $tid ?: null, $code, $cls]);
+            $stmtChk       = $pdo->prepare("SELECT id FROM att_subjects WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?) LIMIT 1");
+            $stmtUpdFull   = $pdo->prepare("UPDATE att_subjects SET subject_name=?, teacher_id=? WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?)");
+            $stmtUpdName   = $pdo->prepare("UPDATE att_subjects SET subject_name=? WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?)");
+            $stmtIns       = $pdo->prepare("INSERT INTO att_subjects (subject_code, subject_name, classroom, teacher_id) VALUES (?, ?, ?, ?)");
+
+            $errors = [];
+            foreach ($data as $r) {
+                $code = trim($r['subject_code'] ?? '');
+                $name = trim($r['subject_name'] ?? '');
+                $cls  = trim($r['classroom']    ?? '');
+                $tid  = isset($r['teacher_id']) && $r['teacher_id'] > 0 ? (int)$r['teacher_id'] : null;
+                if (!$code || !$name) continue;
+
+                try {
+                    $stmtChk->execute([$code, $cls]);
+                    $existId = $stmtChk->fetchColumn();
+                    if ($existId) {
+                        // อัปเดต: ถ้ามีครูให้ update teacher_id ด้วย ถ้าไม่มีก็ update แค่ชื่อ
+                        if ($tid !== null) {
+                            $stmtUpdFull->execute([$name, $tid, $code, $cls]);
+                        } else {
+                            $stmtUpdName->execute([$name, $code, $cls]);
+                        }
                     } else {
-                        $stmtIns->execute([$code, $name, $cls, $tid]);
+                        // Insert ใหม่: teacher_id ใช้ค่าจาก CSV หรือ fallback
+                        $insertTid = $tid !== null ? $tid : $tidFallback;
+                        $stmtIns->execute([$code, $name, $cls, $insertTid]);
                     }
                     $importCount++;
+                } catch (Exception $e) {
+                    error_log("import_subjects row [{$code}|{$cls}]: " . $e->getMessage());
+                    $errors[] = $code . ($cls ? " ({$cls})" : '');
                 }
-                $pdo->commit();
+            }
+
+            if ($importCount > 0) {
                 $msg = "นำเข้า/อัปเดตรายวิชาสำเร็จ {$importCount} รายการ";
-                $msgType = 'success';
-            } catch (Exception $e) {
-                if ($pdo->inTransaction()) $pdo->rollBack();
-                error_log($e->getMessage());
-                $msg = 'เกิดข้อผิดพลาดระหว่างนำเข้า'; $msgType = 'error';
+                if ($errors) $msg .= " (ข้ามไป " . count($errors) . " รายการ: " . implode(', ', array_slice($errors, 0, 5)) . ")";
+                $msgType = $errors ? 'warning' : 'success';
+            } elseif ($errors) {
+                $msg = 'นำเข้าไม่สำเร็จ (' . implode(', ', array_slice($errors, 0, 3)) . ')';
+                $msgType = 'error';
+            } else {
+                $msg = 'ไม่มีข้อมูลที่ต้องนำเข้า'; $msgType = 'warning';
             }
         }
     }
