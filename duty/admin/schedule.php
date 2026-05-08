@@ -278,7 +278,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
                         $assigned = $slots[$day][$pt] ?? [];
                     ?>
                     <td class="duty-cell <?= $isToday ? 'today-col' : '' ?>"
-                        onclick="openDayModal('<?= $day ?>')">
+                        onclick="openDayModal('<?= $day ?>', '<?= $shiftParam ?>', <?= $pt ?>)">
                         <div class="duty-cell-inner">
                             <?php if (!empty($assigned)): ?>
                                 <?php foreach ($assigned as $idx => $t): ?>
@@ -372,6 +372,7 @@ const thMonAbbr  = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.�
 
 let curDate    = '';
 let curShift   = curShiftPage;
+let curTargetPt = null; // จุดที่คลิกเข้ามา
 let modalMembers = [];
 let gpCurDate  = '';  // วันที่ที่กำลัง pick กลุ่ม
 
@@ -448,9 +449,10 @@ function clearGroup() {
 }
 
 // ─── เปิด Modal ทั้งวัน ──────────────────────────────────────
-function openDayModal(date, shift) {
+function openDayModal(date, shift, targetPt) {
     curDate  = date;
     curShift = shift || curShiftPage;
+    curTargetPt = targetPt || null;
 
     const d   = new Date(date + 'T00:00:00');
     const mo  = thMonAbbr[d.getMonth()+1];
@@ -480,6 +482,8 @@ function openDayModal(date, shift) {
 // ─── Render ฟอร์ม (จุดเป็น row, ครูกลุ่มเป็น dropdown) ───────
 function renderDayForm(dayGroup, members, maxPts, allTeachers) {
     const body = document.getElementById('assignBody');
+    const targetPt = curTargetPt;
+    const isChairmanMode = (targetPt === CHAIRMAN_INDEX);
 
     // build point→member map (รองรับ 2 คนต่อจุด)
     const ptMap = {}; // ptMap[point_no] = [member1, member2]
@@ -503,6 +507,12 @@ function renderDayForm(dayGroup, members, maxPts, allTeachers) {
     const gc = dayGroup?.group_color || '#6c757d';
     let rows = '';
     for (let i = 1; i <= maxPts; i++) {
+        // กรองการแสดงผล:
+        // 1. ถ้ามาด้วยการกดช่องประธาน (point 6) -> ให้โชว์เฉพาะแถวประธาน
+        if (isChairmanMode && i !== CHAIRMAN_INDEX) continue;
+        // 2. ถ้ามาด้วยการกดช่องจุดเวรปกติ (1-5) -> ให้โชว์เฉพาะแถว 1-5
+        if (!isChairmanMode && i === CHAIRMAN_INDEX) continue;
+
         const assigned = ptMap[i] || [];
         const t1 = assigned[0] || null;
         const t2 = assigned[1] || null;
@@ -554,29 +564,43 @@ function renderDayForm(dayGroup, members, maxPts, allTeachers) {
 
     const gn  = dayGroup?.group_name  || 'ไม่ได้ระบุกลุ่ม';
     const cnt = members.filter(m => !m.schedule_id || m.point_no != CHAIRMAN_INDEX).length; // นับเฉพาะในกลุ่ม ไม่นับประธานนอกกลุ่ม
-    body.innerHTML = `
+
+    let headerHtml = `
         <div class="d-flex align-items-center gap-2 mb-3">
             <span class="badge rounded-pill px-3 py-2" style="background:${gc};font-size:13px">
                 ${gn}
             </span>
             <span class="text-muted small">${cnt} คนในกลุ่ม — เลือกครูลงแต่ละจุด (2 คน/จุด)</span>
-        </div>
+        </div>`;
+
+    if (isChairmanMode) {
+        headerHtml = `
+        <div class="mb-3 d-flex align-items-center gap-2">
+            <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" style="width:32px;height:32px;">
+                <i class="fas fa-crown"></i>
+            </div>
+            <h6 class="mb-0 fw-bold text-primary">กำหนดประธานกิจกรรม</h6>
+        </div>`;
+    }
+
+    body.innerHTML = headerHtml + `
         <div class="table-responsive">
             <table class="table table-sm table-hover mb-2">
                 <thead class="table-light">
                     <tr>
                         <th>จุดเวร</th>
-                        <th>ครูคนที่ 1 / คนที่ 2</th>
+                        <th>${isChairmanMode ? 'รายชื่อครูทั้งหมด' : 'ครูคนที่ 1 / คนที่ 2'}</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody id="pointTbody">${rows}</tbody>
             </table>
         </div>
+        ${!isChairmanMode ? `
         <div class="border rounded p-2 bg-light small">
             <span class="fw-bold text-muted me-2">ครูที่ยังไม่ได้จัด:</span>
             <span id="unassignedList"></span>
-        </div>`;
+        </div>` : ''}`;
 
     refreshUnassigned();
 }
