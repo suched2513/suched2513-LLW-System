@@ -119,27 +119,15 @@ $shiftName = $report['shift'] === 'day' ? 'กลางวัน' : 'กลา�
             </div>
         </div>
 
-        <!-- Reporter Info (Compact) -->
-        <div class="flex justify-between items-center mb-4 relative z-10 border-l-4 border-blue-900 pl-4">
-             <div>
-                <p class="text-[8px] font-black text-blue-900 uppercase tracking-widest">ผู้รายงาน (ครูเวร)</p>
-                <p class="text-md font-bold text-slate-800"><?= htmlspecialchars($report['teacher_prefix'] . $report['teacher_name']) ?></p>
-             </div>
-             <div class="text-right">
-                <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">วันที่ปฏิบัติหน้าที่</p>
-                <p class="text-md font-black text-blue-900"><?= $thaiDate ?></p>
-             </div>
-        </div>
-
         <!-- Main Content (Super Compact) -->
-        <div class="glass-box p-4 mb-4 relative z-10 min-h-[120px]">
+        <div class="glass-box p-4 mb-4 relative z-10 min-h-[100px]">
             <div class="text-slate-700 leading-tight">
                 <div class="flex items-center gap-2 mb-2 text-blue-900">
                     <i class="fas fa-file-alt text-sm"></i>
                     <h4 class="text-sm font-black">รายละเอียดการปฏิบัติหน้าที่</h4>
                 </div>
                 <div class="p-3 bg-blue-50/50 rounded-xl border border-blue-100 italic text-[11px]">
-                    " <?= !empty($report['report_note']) ? nl2br(htmlspecialchars($report['report_note'])) : 'ปกติ' ?> "
+                    " <?= !empty($report['report_note']) ? nl2br(htmlspecialchars($report['report_note'])) : 'ปฏิบัติหน้าที่เรียบร้อย เหตุการณ์ทั่วไปปกติ' ?> "
                 </div>
                 <p class="mt-2 text-[9px] text-slate-400 font-bold">
                     บันทึกเมื่อเวลา <?= date('H:i', strtotime($report['completed_at'] ?: $report['created_at'])) ?> น.
@@ -147,38 +135,40 @@ $shiftName = $report['shift'] === 'day' ? 'กลางวัน' : 'กลา�
             </div>
         </div>
 
-        <!-- Photo Grid (2x2) - Smaller slots -->
-        <div class="grid grid-cols-2 gap-4 relative z-10">
-            <?php for($i=0; $i<4; $i++): ?>
-                <div class="photo-slot h-[140px] border-2">
-                    <?php if (isset($photos[$i])): ?>
-                        <img src="<?= $base_path ?>/duty/api/photo.php?path=<?= urlencode($photos[$i]['file_path']) ?>" alt="Photo">
-                    <?php else: ?>
-                        <div class="w-full h-full flex items-center justify-center text-blue-100">
-                            <i class="fas fa-camera text-3xl"></i>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            <?php endfor; ?>
+        <!-- Photo Grid (Centered) -->
+        <div class="flex justify-center mb-6 relative z-10">
+            <div class="grid grid-cols-2 gap-4 w-[500px]">
+                <?php for($i=0; $i<4; $i++): ?>
+                    <div class="photo-slot h-[140px] border-2">
+                        <?php if (isset($photos[$i])): ?>
+                            <img src="<?= $base_path ?>/duty/api/photo.php?path=<?= urlencode($photos[$i]['file_path']) ?>" alt="Photo">
+                        <?php else: ?>
+                            <div class="w-full h-full flex items-center justify-center text-blue-50 bg-slate-50">
+                                <i class="fas fa-camera text-3xl"></i>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endfor; ?>
+            </div>
         </div>
 
-        <!-- Signature Section (Tight) -->
-        <div class="mt-6 flex justify-between gap-8 relative z-10">
-            <div class="flex-1 text-center border-t border-slate-200 pt-2">
-                <div class="h-8"></div>
-                <p class="text-xs font-bold text-slate-800">( <?= htmlspecialchars($report['teacher_prefix'] . $report['teacher_name']) ?> )</p>
-                <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">ผู้ปฏิบัติหน้าที่</p>
+        <!-- Signature Section -->
+        <div class="mt-8 flex justify-between gap-12 relative z-10">
+            <div class="flex-1 text-center">
+                <p class="text-xs text-slate-400 mb-8">(ลงชื่อ)............................................................</p>
+                <p class="text-sm font-bold text-slate-800">( <?= htmlspecialchars($report['teacher_prefix'] . $report['teacher_name']) ?> )</p>
+                <p class="text-[10px] font-bold text-blue-900 mt-1 uppercase tracking-widest">ผู้รายงาน / ผู้ปฏิบัติหน้าที่</p>
             </div>
-            <div class="flex-1 text-center border-t border-slate-200 pt-2">
-                <div class="h-8"></div>
-                <p class="text-xs font-bold text-slate-800">( ............................................................ )</p>
-                <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">หัวหน้าเวร / ผู้ประเมิน</p>
+            <div class="flex-1 text-center">
+                <p class="text-xs text-slate-400 mb-8">(ลงชื่อ)............................................................</p>
+                <p class="text-sm font-bold text-slate-800">นายสถาน ปรางมาศ</p>
+                <p class="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest">ผู้อำนวยการโรงเรียนละลมวิทยา</p>
             </div>
         </div>
 
         <!-- Footer Deco (Minimal) -->
-        <div class="absolute bottom-2 left-0 right-0 text-center z-20">
-            <p class="text-blue-900/20 font-black text-[7px] uppercase tracking-[0.5em]">Lalom Wittaya Smart Duty System</p>
+        <div class="absolute bottom-4 left-0 right-0 text-center z-20">
+            <p class="text-blue-900/10 font-black text-[7px] uppercase tracking-[0.5em]">Lalom Wittaya Smart Duty System</p>
         </div>
 
     </div>
