@@ -265,11 +265,47 @@ require_once '../components/layout_start.php';
             </div>
         </form>
     </div>
-    <?php elseif ($selected_subject_id): ?>
-        <div class="bg-amber-50 border border-amber-200 text-amber-800 p-8 rounded-3xl text-center shadow-sm">
-            <i class="bi bi-exclamation-triangle-fill text-3xl mb-3 block opacity-50"></i>
-            <p class="font-bold">ไม่พบรายชื่อนักเรียนในรายวิชานี้</p>
-            <p class="text-xs mt-1">กรุณาตรวจสอบการตั้งค่าวิชาในหน้า Admin หรือนำเข้าข้อมูลนักเรียน</p>
+    <?php elseif ($selected_subject_id):
+        // วินิจฉัย: ดูว่าห้องนี้มีนักเรียนกี่คนในระบบ
+        $diagCls      = $subject_info['classroom'] ?? '';
+        $diagAllCount = (int)$pdo->query("SELECT COUNT(*) FROM att_students")->fetchColumn();
+        $diagCls2     = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+        $diagCount = 0;
+        if ($diagCls) {
+            $dStmt = $pdo->prepare("SELECT COUNT(*) FROM att_students WHERE classroom=?");
+            $dStmt->execute([$diagCls]);
+            $diagCount = (int)$dStmt->fetchColumn();
+        }
+    ?>
+        <div class="bg-amber-50 border border-amber-200 text-amber-800 p-8 rounded-3xl shadow-sm">
+            <div class="text-center mb-4">
+                <i class="bi bi-exclamation-triangle-fill text-3xl mb-3 block opacity-50"></i>
+                <p class="font-bold text-base">ไม่พบรายชื่อนักเรียนในรายวิชานี้</p>
+            </div>
+            <div class="max-w-lg mx-auto space-y-3 text-sm">
+                <div class="bg-white/60 rounded-2xl px-5 py-3 flex justify-between items-center">
+                    <span class="font-bold">ห้องเรียนที่ระบบหา</span>
+                    <span class="font-mono font-black text-amber-700"><?= htmlspecialchars($diagCls ?: '(ว่าง)') ?></span>
+                </div>
+                <div class="bg-white/60 rounded-2xl px-5 py-3 flex justify-between items-center">
+                    <span class="font-bold">นักเรียนในระบบ (รวมทุกห้อง)</span>
+                    <span class="font-black <?= $diagAllCount === 0 ? 'text-rose-600' : 'text-emerald-700' ?>">
+                        <?= $diagAllCount ?> คน
+                    </span>
+                </div>
+                <?php if ($diagAllCount > 0 && $diagCount === 0): ?>
+                <div class="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3">
+                    <p class="font-bold text-rose-700 text-xs mb-1"><i class="bi bi-info-circle me-1"></i>ห้องที่มีนักเรียนในระบบ:</p>
+                    <p class="text-xs text-rose-600 font-mono"><?= implode(', ', array_map('htmlspecialchars', $diagCls2)) ?></p>
+                    <p class="text-xs text-rose-600 mt-2">→ ตรวจสอบว่าชื่อห้องในวิชา <strong>"<?= htmlspecialchars($diagCls) ?>"</strong> ตรงกับห้องของนักเรียนหรือไม่</p>
+                </div>
+                <?php elseif ($diagAllCount === 0): ?>
+                <div class="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-3 text-xs text-rose-700">
+                    <i class="bi bi-database-x me-1"></i>ยังไม่มีนักเรียนในระบบเลย —
+                    <a href="import_students.php" class="font-black underline">นำเข้าข้อมูลนักเรียน CSV</a>
+                </div>
+                <?php endif; ?>
+            </div>
         </div>
     <?php endif; ?>
 
