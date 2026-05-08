@@ -11,7 +11,17 @@ if (!isset($_SESSION['llw_role'])) {
 
 $pdo = getPdo();
 $assignmentId = (int)($_POST['assignment_id'] ?? 0);
-$photos = $_FILES['photos'] ?? null;
+$reportNote   = trim($_POST['report_note'] ?? '');
+$photos       = $_FILES['photos'] ?? null;
+
+// ── Auto-migration: เพิ่ม report_note ถ้ายังไม่มี ──
+try {
+    $colCheck = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'duty_reports' AND COLUMN_NAME = 'report_note'");
+    $colCheck->execute();
+    if ((int)$colCheck->fetchColumn() === 0) {
+        $pdo->exec("ALTER TABLE duty_reports ADD COLUMN report_note TEXT NULL AFTER teacher_id");
+    }
+} catch (Exception $e) {}
 
 if (!$assignmentId || !$photos) {
     echo json_encode(['status' => 'error', 'message' => 'ข้อมูลไม่ครบถ้วน']);
@@ -39,11 +49,14 @@ try {
 
     if (!$reportId) {
         $stmtInsR = $pdo->prepare("
-            INSERT INTO duty_reports (duty_date, shift, point_no, teacher_id, status)
-            VALUES (?, ?, ?, ?, 'partial')
+            INSERT INTO duty_reports (duty_date, shift, point_no, teacher_id, report_note, status)
+            VALUES (?, ?, ?, ?, ?, 'partial')
         ");
-        $stmtInsR->execute([$schedule['duty_date'], $schedule['shift'], $schedule['point_no'], $schedule['teacher_id']]);
+        $stmtInsR->execute([$schedule['duty_date'], $schedule['shift'], $schedule['point_no'], $schedule['teacher_id'], $reportNote]);
         $reportId = $pdo->lastInsertId();
+    } else {
+        // อัปเดต note กรณีส่งเพิ่ม
+        $pdo->prepare("UPDATE duty_reports SET report_note = ? WHERE id = ?")->execute([$reportNote, $reportId]);
     }
 
     // 3. จัดการอัปโหลดไฟล์

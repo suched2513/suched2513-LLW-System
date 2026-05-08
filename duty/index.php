@@ -214,6 +214,17 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </div>
             </div>
 
+            <!-- Details Section -->
+            <div class="mb-8">
+                <label class="text-xs font-black text-slate-600 uppercase tracking-widest mb-3 block">รายละเอียดการปฏิบัติหน้าที่</label>
+                <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100 focus-within:ring-2 focus-within:ring-blue-500 transition-all">
+                    <textarea id="reportNote" 
+                              class="w-full bg-transparent border-0 outline-none text-sm text-slate-700 min-h-[120px] resize-none"
+                              placeholder="ระบุรายละเอียด: ใคร? ทำอะไร? ที่ไหน? เมื่อไหร่? อย่างไร?"></textarea>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-2 font-medium">บันทึกข้อมูลเหตุการณ์ปกติ หรือเหตุการณ์พิเศษที่พบระหว่างปฏิบัติหน้าที่</p>
+            </div>
+
             <!-- Upload Zone -->
             <div class="text-center">
                 <label for="photoInput" class="camera-btn">
@@ -311,11 +322,13 @@ require_once __DIR__ . '/../components/layout_start.php';
     submitBtn.addEventListener('click', async function() {
         if (photos.length === 0) return;
         
+        const reportNote = document.getElementById('reportNote').value;
+        
         <?php if ($isAdminPreview): ?>
             Swal.fire({
                 icon: 'info',
                 title: 'ทดสอบสำเร็จ',
-                text: 'ในโหมด Admin Preview ระบบจะไม่บันทึกข้อมูลจริงลงฐานข้อมูลครับ',
+                html: `<b>บันทึกข้อความ:</b><br>${reportNote}<br><br>ในโหมด Admin Preview ระบบจะไม่บันทึกข้อมูลจริงครับ`,
                 confirmButtonColor: '#2563eb'
             });
             return;
@@ -326,6 +339,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         
         const formData = new FormData();
         formData.append('assignment_id', assignmentId);
+        formData.append('report_note', reportNote);
         photos.forEach((p, i) => {
             formData.append(`photos[]`, p.file);
         });

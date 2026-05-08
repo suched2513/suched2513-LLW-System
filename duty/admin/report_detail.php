@@ -207,6 +207,18 @@ require_once __DIR__ . '/../../components/layout_start.php';
     </div>
 </div>
 
+<!-- Report Note Section -->
+<?php if (!empty($report['report_note'])): ?>
+<div class="info-card mb-4 border-start border-4 border-primary">
+    <div class="card-body p-4">
+        <div class="label-text mb-3"><i class="fas fa-file-alt me-2 text-primary"></i>บันทึกรายละเอียดการปฏิบัติหน้าที่ (ใคร ทำอะไร ที่ไหน เมื่อไร อย่างไร)</div>
+        <div class="p-3 bg-slate-50 rounded-2xl text-slate-700 leading-relaxed" style="white-space: pre-line; font-size: 0.95rem;">
+            <?= htmlspecialchars($report['report_note']) ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Photo Grid -->
 <?php if (empty($photos)): ?>
 <div class="alert alert-secondary">
