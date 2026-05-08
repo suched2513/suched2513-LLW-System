@@ -196,6 +196,11 @@ require_once __DIR__ . '/../../components/layout_start.php';
                 <i class="fas fa-file-archive me-2"></i>ดาวน์โหลด ZIP ทั้งหมด
             </a>
             <?php endif; ?>
+            <a href="print_pr.php?id=<?= $reportId ?>" target="_blank"
+               class="btn btn-info text-white rounded-xl px-4 fw-bold shadow-sm"
+               style="background: linear-gradient(to right, #ec4899, #8b5cf6); border: none;">
+                <i class="fas fa-bullhorn me-2"></i>สร้างจดหมายข่าว (PR News)
+            </a>
             <?php if ($report['status'] !== 'complete' && $report['teacher_id']): ?>
             <a href="remind.php?report_id=<?= $reportId ?>"
                class="btn btn-warning rounded-xl px-4 fw-bold shadow-sm"

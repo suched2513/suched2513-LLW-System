@@ -186,6 +186,37 @@ Swal.fire({icon:'success',title:'ส่งสรุปแล้ว',text:'ส่
         </div>
     </div>
 </div>
+<!-- Actions & Filter -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="glass-panel h-100 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="bg-blue-600 text-white p-3 rounded-2xl shadow-lg">
+                    <i class="fas fa-file-invoice text-2xl"></i>
+                </div>
+                <div>
+                    <h5 class="fw-black mb-0">รายงานสรุปผลการปฏิบัติงาน</h5>
+                    <p class="text-muted small mb-0">รวบรวมข้อมูลทุกจุดเป็นฉบับเดียวเพื่อเสนอผู้บริหาร</p>
+                </div>
+            </div>
+            <a href="print_daily_report.php?date=<?= $filterDate ?>" target="_blank" 
+               class="btn btn-primary rounded-xl px-5 py-3 fw-black shadow-lg shadow-blue-200 hover:scale-[1.02] transition-all">
+                <i class="fas fa-print me-2"></i>พิมพ์รายงานสรุปประจำวัน
+            </a>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="glass-panel">
+            <form method="GET" class="row g-2">
+                <div class="col-12">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">เลือกวันที่</label>
+                    <input type="date" name="date" class="form-control rounded-xl border-slate-200" 
+                           value="<?= $filterDate ?>" onchange="this.form.submit()">
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <?php endif; ?>
 
 <!-- ── Filter & Actions ── -->
