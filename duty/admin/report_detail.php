@@ -198,8 +198,8 @@ require_once __DIR__ . '/../../components/layout_start.php';
             <?php endif; ?>
             <a href="print_pr.php?id=<?= $reportId ?>" target="_blank"
                class="btn btn-info text-white rounded-xl px-4 fw-bold shadow-sm"
-               style="background: linear-gradient(to right, #ec4899, #8b5cf6); border: none;">
-                <i class="fas fa-bullhorn me-2"></i>สร้างจดหมายข่าว (PR News)
+               style="background: linear-gradient(to right, #2563eb, #3b82f6); border: none;">
+                <i class="fas fa-file-invoice me-2"></i>พิมพ์รายงานปฏิบัติหน้าที่ (รายคน)
             </a>
             <?php if ($report['status'] !== 'complete' && $report['teacher_id']): ?>
             <a href="remind.php?report_id=<?= $reportId ?>"
