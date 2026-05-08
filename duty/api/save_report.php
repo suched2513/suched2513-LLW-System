@@ -14,14 +14,18 @@ $assignmentId = (int)($_POST['assignment_id'] ?? 0);
 $reportNote   = trim($_POST['report_note'] ?? '');
 $photos       = $_FILES['photos'] ?? null;
 
-// ── Auto-migration: เพิ่ม report_note ถ้ายังไม่มี ──
+// ── Auto-migration: เพิ่ม report_note และ completed_at ถ้ายังไม่มี ──
 try {
-    $colCheck = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'duty_reports' AND COLUMN_NAME = 'report_note'");
-    $colCheck->execute();
-    if ((int)$colCheck->fetchColumn() === 0) {
-        $pdo->exec("ALTER TABLE duty_reports ADD COLUMN report_note TEXT NULL AFTER teacher_id");
+    $stmtCols = $pdo->query("SHOW COLUMNS FROM duty_reports");
+    $existingCols = $stmtCols->fetchAll(PDO::FETCH_COLUMN);
+    
+    if (!in_array('report_note', $existingCols)) {
+        $pdo->exec("ALTER TABLE duty_reports ADD COLUMN report_note TEXT NULL AFTER status");
     }
-} catch (Exception $e) {}
+    if (!in_array('completed_at', $existingCols)) {
+        $pdo->exec("ALTER TABLE duty_reports ADD COLUMN completed_at DATETIME NULL AFTER report_note");
+    }
+} catch (Exception $e) { error_log("Auto-migration failed: " . $e->getMessage()); }
 
 if (!$assignmentId || !$photos) {
     echo json_encode(['status' => 'error', 'message' => 'ข้อมูลไม่ครบถ้วน']);

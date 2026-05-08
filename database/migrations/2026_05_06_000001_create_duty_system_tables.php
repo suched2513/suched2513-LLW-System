@@ -68,6 +68,7 @@ return [
                 report_round        TINYINT      NOT NULL DEFAULT 1 COMMENT 'รอบที่ (เผื่ออนาคต)',
                 status              ENUM('pending','partial','complete') NOT NULL DEFAULT 'pending',
                 completed_at        TIMESTAMP    NULL COMMENT 'เวลาที่รายงานครบ',
+                report_note         TEXT         NULL COMMENT 'รายละเอียด: ใคร ทำอะไร ที่ไหน เมื่อไหร่ อย่างไร',
                 reminder_sent_at    TIMESTAMP    NULL COMMENT 'เวลาที่ส่งการเตือนล่าสุด',
                 created_at          TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at          TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
