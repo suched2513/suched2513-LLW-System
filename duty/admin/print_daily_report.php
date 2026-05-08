@@ -5,7 +5,7 @@
 session_start();
 require_once __DIR__ . '/../../config.php';
 
-if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin', 'att_teacher'])) {
     header('Location: /login.php'); exit();
 }
 
