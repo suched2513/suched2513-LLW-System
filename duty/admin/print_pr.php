@@ -99,22 +99,15 @@ $shiftName = $report['shift'] === 'day' ? 'กลางวัน' : 'กลา�
             <p class="text-blue-500 font-bold">สำนักงานเขตพื้นที่การศึกษาประถมศึกษาศรีสะเกษ เขต 3</p>
         </div>
 
-        <div class="flex justify-between items-start gap-6 mb-8 relative z-10">
-            <div class="flex-1">
-                <div class="bg-white border-4 border-blue-400 rounded-full py-4 px-10 text-center shadow-lg">
-                    <h3 class="text-2xl font-black text-blue-700">
-                        <?= htmlspecialchars($pointName) ?>
-                    </h3>
-                    <p class="text-blue-400 font-bold">( กะ<?= $shiftName ?> )</p>
-                </div>
-            </div>
-            <div class="w-48 text-center">
-                <div class="w-32 h-32 mx-auto rounded-full border-4 border-blue-400 overflow-hidden mb-2 bg-white shadow-xl">
-                    <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Teacher" class="w-full h-full object-cover">
-                </div>
-                <div class="bg-blue-50 border-2 border-blue-400 rounded-full py-2 px-4 shadow-md">
-                    <p class="text-[9px] font-black text-blue-600 uppercase tracking-tighter">ครูผู้ปฏิบัติหน้าที่</p>
-                    <p class="text-xs font-bold text-blue-800"><?= htmlspecialchars($report['teacher_prefix'] . $report['teacher_name']) ?></p>
+        <div class="mb-8 relative z-10">
+            <div class="bg-white border-4 border-blue-400 rounded-full py-5 px-10 text-center shadow-lg">
+                <p class="text-blue-400 font-black text-xs uppercase tracking-[0.3em] mb-1">รายงานการปฏิบัติหน้าที่</p>
+                <h3 class="text-3xl font-black text-blue-700">
+                    <?= htmlspecialchars($pointName) ?>
+                </h3>
+                <div class="flex items-center justify-center gap-3 mt-2">
+                    <span class="bg-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold">กะ<?= $shiftName ?></span>
+                    <span class="text-blue-800 font-bold">โดย: <?= htmlspecialchars($report['teacher_prefix'] . $report['teacher_name']) ?></span>
                 </div>
             </div>
         </div>
