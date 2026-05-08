@@ -69,26 +69,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $allTeachers = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
         $imported = 0;
 
-        $stmtCheck     = $pdo->prepare("SELECT id FROM duty_teachers WHERE att_teacher_id = ? LIMIT 1");
+        $stmtCheckById = $pdo->prepare("SELECT id, full_name FROM duty_teachers WHERE att_teacher_id = ? LIMIT 1");
         $stmtCheckName = $pdo->prepare("SELECT id FROM duty_teachers WHERE full_name = ? LIMIT 1");
         $stmtLink      = $pdo->prepare("UPDATE duty_teachers SET att_teacher_id = ? WHERE full_name = ? AND att_teacher_id IS NULL LIMIT 1");
-        $stmtIns       = $pdo->prepare("INSERT INTO duty_teachers (full_name, att_teacher_id, status) VALUES (?, ?, 'active')");
+        $stmtUpdateName = $pdo->prepare("UPDATE duty_teachers SET full_name = ? WHERE id = ?");
+        $stmtIns        = $pdo->prepare("INSERT INTO duty_teachers (full_name, att_teacher_id, status) VALUES (?, ?, 'active')");
 
+        $updated = 0;
         foreach ($allTeachers as $t) {
             // normalize: collapse multiple spaces to single space
             $fullName = preg_replace('/\s+/', ' ', trim($t['full_name']));
             $attId    = $t['att_id'] ? (int)$t['att_id'] : null;
             if ($fullName === '') continue;
 
-            // skip if att_teacher_id already imported
+            // ถ้าเจอ att_teacher_id ซ้ำ → UPDATE ชื่อให้เป็นเวอร์ชัน llw_users (แก้สะกดผิด)
             if ($attId) {
-                $stmtCheck->execute([$attId]);
-                if ($stmtCheck->fetchColumn()) continue;
+                $stmtCheckById->execute([$attId]);
+                $existing = $stmtCheckById->fetch(PDO::FETCH_ASSOC);
+                if ($existing) {
+                    if ($existing['full_name'] !== $fullName) {
+                        $stmtUpdateName->execute([$fullName, $existing['id']]);
+                        $updated++;
+                    }
+                    continue;
+                }
             }
 
-            // link to existing row if name matches
+            // ถ้าชื่อตรงกัน → ผูก att_teacher_id ให้แถวเดิม
             $stmtCheckName->execute([$fullName]);
-            if ($stmtCheckName->fetchColumn()) {
+            $existingId = $stmtCheckName->fetchColumn();
+            if ($existingId) {
                 if ($attId) $stmtLink->execute([$attId, $fullName]);
                 continue;
             }
@@ -97,7 +107,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmtIns->rowCount() > 0) $imported++;
         }
         $total = count($allTeachers);
-        $msg = "success:นำเข้าครูสำเร็จ {$imported} คน (จากทั้งหมด {$total} คน ที่เหลือมีในระบบแล้ว)";
+        $extraMsg = $updated > 0 ? ", แก้ชื่อ {$updated} คน" : '';
+        $msg = "success:นำเข้าครูสำเร็จ {$imported} คน{$extraMsg} (จากทั้งหมด {$total} คน)";
     }
 
     // ── ล้างชื่อซ้ำด้วยตนเอง ──
