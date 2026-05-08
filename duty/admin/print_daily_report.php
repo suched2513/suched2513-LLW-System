@@ -83,7 +83,7 @@ function getPointPhotos($pdo, $reportId) {
         <!-- Header -->
         <div class="flex justify-between items-start border-bottom-2 border-slate-200 pb-8 mb-8">
             <div class="flex items-center gap-6">
-                <img src="https://www.krusuched.com/wp-content/uploads/2023/10/logo-llw.png" class="w-24 h-24 object-contain">
+                <img src="https://suched2513.github.io/image/%E0%B8%95%E0%B8%A3%E0%B8%B2%E0%B8%A5%E0%B8%B0%E0%B8%A5%E0%B8%A1%E0%B8%A7%E0%B8%B4%E0%B8%9767.png" alt="Logo" class="w-24 h-24 mx-auto mb-4 drop-shadow-lg">
                 <div>
                     <h1 class="text-2xl font-bold text-slate-900 leading-tight">สรุปผลการปฏิบัติหน้าที่เวรประจำวัน</h1>
                     <p class="text-lg text-blue-700 font-semibold mt-1">โรงเรียนละลมวิทยา</p>
