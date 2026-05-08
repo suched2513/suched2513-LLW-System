@@ -184,8 +184,13 @@ function getStudentsBySubject($subject_id, $pdo) {
         ");
         $stmt->execute([$subject_id]);
     } else {
-        // วิชาบังคับ: ดึงทั้งห้อง
-        $stmt = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? ORDER BY student_id ASC");
+        // วิชาบังคับ: ดึงทั้งห้อง (กรองรหัสวิชาที่ปนมาออก)
+        $stmt = $pdo->prepare("
+            SELECT s.* FROM att_students s
+            WHERE s.classroom = ?
+              AND s.student_id NOT IN (SELECT subject_code FROM att_subjects)
+            ORDER BY s.student_id ASC
+        ");
         $stmt->execute([$subject['classroom']]);
     }
     return $stmt->fetchAll();
