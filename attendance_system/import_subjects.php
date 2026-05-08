@@ -52,6 +52,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $do = $_POST['do'] ?? '';
 
+    // ── Fix classroom: แทนที่ชื่อห้องแบบกลุ่ม ──
+    if ($do === 'fix_classroom') {
+        $from = trim($_POST['cls_from'] ?? '');
+        $to   = trim($_POST['cls_to']   ?? '');
+        if (!$from || !$to) {
+            $msg = 'กรุณากรอกชื่อห้องทั้งสองช่อง'; $msgType = 'error';
+        } else {
+            try {
+                $stmt = $pdo->prepare("UPDATE att_subjects SET classroom=? WHERE classroom=?");
+                $stmt->execute([$to, $from]);
+                $affected = $stmt->rowCount();
+                $msg = "อัปเดตห้องเรียน จาก \"{$from}\" → \"{$to}\" สำเร็จ {$affected} รายวิชา";
+                $msgType = $affected > 0 ? 'success' : 'warning';
+                // refresh classrooms list
+                $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_subjects ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+                $existingSubjects = [];
+                foreach ($pdo->query("SELECT subject_code, classroom FROM att_subjects")->fetchAll(PDO::FETCH_ASSOC) as $s) {
+                    $existingSubjects[strtolower(trim($s['subject_code'])) . '|' . trim($s['classroom'])] = true;
+                }
+            } catch (Exception $e) {
+                error_log($e->getMessage());
+                $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+            }
+        }
+    }
+
     // ── Preview ──
     if ($do === 'preview' && isset($_FILES['csvfile'])) {
         $file = $_FILES['csvfile'];
@@ -383,6 +409,56 @@ require_once __DIR__ . '/components/layout_start.php';
                 </div>
             </div>
 
+            <!-- Fix Classroom Card -->
+            <?php
+            $subjectClassrooms = $pdo->query("SELECT DISTINCT classroom FROM att_subjects ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+            $studentClassrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+            $mismatchCls = array_diff($subjectClassrooms, $studentClassrooms);
+            ?>
+            <div class="glass-card rounded-[40px] p-8 shadow-xl shadow-slate-200/50 border <?= !empty($mismatchCls) ? 'border-rose-200' : 'border-slate-100' ?>">
+                <h3 class="font-black text-slate-800 mb-1 flex items-center gap-2">
+                    <i class="bi bi-pencil-square text-amber-500"></i> แก้ชื่อห้องในวิชา
+                </h3>
+                <p class="text-xs text-slate-400 mb-4">เปลี่ยนชื่อห้องทั้งหมดในวิชา ให้ตรงกับห้องของนักเรียน</p>
+
+                <?php if (!empty($mismatchCls)): ?>
+                <div class="bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 mb-4">
+                    <p class="text-xs font-black text-rose-600 mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>ห้องในวิชาที่ไม่มีนักเรียน:</p>
+                    <?php foreach ($mismatchCls as $mc): ?>
+                    <button type="button" onclick="fillClsFrom('<?= htmlspecialchars($mc, ENT_QUOTES) ?>')"
+                            class="inline-block mt-1 mr-1 px-2 py-0.5 bg-rose-100 text-rose-700 text-xs font-mono font-black rounded-lg hover:bg-rose-200 cursor-pointer transition-colors">
+                        <?= htmlspecialchars($mc) ?>
+                    </button>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+                <form method="POST" class="space-y-3">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="do" value="fix_classroom">
+                    <div>
+                        <label class="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">จากห้อง</label>
+                        <input id="cls_from" name="cls_from" type="text" placeholder="เช่น ท.2/1"
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-amber-400 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">เป็นห้อง</label>
+                        <input id="cls_to" name="cls_to" type="text" placeholder="เช่น ม.2/1"
+                               list="student-cls-list"
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-emerald-400 outline-none">
+                        <datalist id="student-cls-list">
+                        <?php foreach ($studentClassrooms as $sc): ?>
+                        <option value="<?= htmlspecialchars($sc) ?>">
+                        <?php endforeach; ?>
+                        </datalist>
+                    </div>
+                    <button type="submit"
+                            class="w-full bg-amber-500 text-white py-2.5 rounded-xl font-black text-sm hover:bg-amber-600 transition-all shadow-lg shadow-amber-100">
+                        <i class="bi bi-arrow-left-right me-2"></i> เปลี่ยนชื่อห้อง
+                    </button>
+                </form>
+            </div>
+
             <!-- Teacher list quick ref -->
             <div class="glass-card rounded-[40px] p-8 shadow-xl shadow-slate-200/50">
                 <h3 class="font-black text-slate-800 mb-4 flex items-center gap-2">
@@ -479,6 +555,11 @@ dropZone.ondrop = e => {
     fileInput.files = e.dataTransfer.files;
     document.getElementById('importForm').submit();
 };
+
+function fillClsFrom(cls) {
+    const fromEl = document.getElementById('cls_from');
+    if (fromEl) { fromEl.value = cls; fromEl.closest('form').querySelector('#cls_to').focus(); }
+}
 </script>
 
 <?php
