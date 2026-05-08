@@ -9,7 +9,7 @@ $pageTitle    = 'นำเข้ารายวิชา CSV';
 $pageSubtitle = 'อัปโหลดไฟล์ CSV เพื่อเพิ่มหรืออัปเดตรายวิชาในเทอมนี้';
 $activeSystem = 'attendance';
 
-$msg = ''; $msgType = ''; $preview = []; $importCount = 0;
+$msg = ''; $msgType = ''; $preview = []; $skipped = []; $importCount = 0;
 
 // ── ดึงครูทั้งหมดสำหรับ lookup username → teacher_id ──
 $allTeachers = $pdo->query("
@@ -65,20 +65,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!mb_check_encoding($content, 'UTF-8')) {
                 $content = @iconv('TIS-620', 'UTF-8//IGNORE', $content) ?: $content;
             }
+            // normalize ALL line endings (\r\n Windows, \r Mac old, \n Unix)
+            $content = str_replace(["\r\n", "\r"], "\n", $content);
+            // detect delimiter: semicolon only if no comma in file
             $delim = (strpos($content, ';') !== false && strpos($content, ',') === false) ? ';' : ',';
-            $lines = explode("\n", str_replace("\r", '', $content));
-            $first = true;
+            $lines = explode("\n", $content);
+
+            $skipped = []; // เก็บแถวที่ข้ามไปพร้อมเหตุผล
+            $first   = true;
             foreach ($lines as $idx => $line) {
+                $lineNum = $idx + 1;
                 if (empty(trim($line))) continue;
                 $row = str_getcsv($line, $delim);
-                if ($first) { $first = false; continue; } // skip header
-                if (count($row) < 2) continue;
 
-                $code    = trim($row[0] ?? '');
-                $name    = trim($row[1] ?? '');
-                $cls     = trim($row[2] ?? '');
+                // skip header row (first non-empty line)
+                if ($first) {
+                    $first = false;
+                    // ตรวจว่า header row จริงๆ ไม่ใช่ข้อมูล (ถ้า col 0 เป็น subject_code ให้ข้ามจริง)
+                    $h0 = strtolower(trim($row[0] ?? ''));
+                    if (in_array($h0, ['subject_code','รหัสวิชา','code','รหัส'])) continue;
+                    // ถ้าไม่ใช่ header ให้ process row นี้ต่อไปเลย
+                }
+
+                if (count($row) < 2) {
+                    $skipped[] = ['row' => $lineNum, 'reason' => 'คอลัมน์ไม่ครบ (พบ '.count($row).' คอลัมน์)'];
+                    continue;
+                }
+
+                $code       = trim($row[0] ?? '');
+                $name       = trim($row[1] ?? '');
+                $cls        = trim($row[2] ?? '');
                 $rawTeacher = trim($row[3] ?? '');
-                if (!$code || !$name) continue;
+
+                if (!$code) { $skipped[] = ['row' => $lineNum, 'reason' => 'รหัสวิชาว่าง']; continue; }
+                if (!$name) { $skipped[] = ['row' => $lineNum, 'reason' => 'ชื่อวิชาว่าง'];  continue; }
 
                 $tid = resolveTeacher($rawTeacher, $teacherByUsername, $teacherByName);
                 $teacherDisplay = '';
@@ -88,11 +108,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                $key = strtolower($code) . '|' . $cls;
+                $key     = strtolower(trim($code)) . '|' . trim($cls);
                 $isExist = isset($existingSubjects[$key]);
 
                 $preview[] = [
-                    'row'             => $idx + 1,
+                    'row'             => $lineNum,
                     'subject_code'    => $code,
                     'subject_name'    => $name,
                     'classroom'       => $cls,
@@ -231,10 +251,11 @@ require_once __DIR__ . '/components/layout_start.php';
             </div>
 
             <!-- Preview -->
-            <?php if (!empty($preview)):
-                $warnCount = count(array_filter($preview, fn($p) => !$p['teacher_found']));
-                $newCount  = count(array_filter($preview, fn($p) => !$p['is_existing']));
-                $updCount  = count(array_filter($preview, fn($p) =>  $p['is_existing']));
+            <?php
+            $warnCount = count(array_filter($preview, fn($p) => !$p['teacher_found']));
+            $newCount  = count(array_filter($preview, fn($p) => !$p['is_existing']));
+            $updCount  = count(array_filter($preview, fn($p) =>  $p['is_existing']));
+            if (!empty($preview) || !empty($skipped)):
             ?>
             <div class="glass-card rounded-[40px] overflow-hidden shadow-2xl border-2 border-indigo-500/20">
                 <div class="px-8 py-6 bg-gradient-to-r from-indigo-600 to-blue-600 text-white flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -248,6 +269,7 @@ require_once __DIR__ . '/components/layout_start.php';
                                 <span class="font-black text-emerald-200">เพิ่มใหม่ <?= $newCount ?></span>
                                 · <span class="font-black text-amber-200">อัปเดต <?= $updCount ?></span>
                                 <?php if ($warnCount): ?> · <span class="font-black text-rose-200">ไม่พบครู <?= $warnCount ?></span><?php endif; ?>
+                                <?php if (!empty($skipped)): ?> · <span class="font-black text-rose-300">ข้ามไป <?= count($skipped) ?> แถว</span><?php endif; ?>
                             </p>
                         </div>
                     </div>
@@ -303,6 +325,22 @@ require_once __DIR__ . '/components/layout_start.php';
                     </table>
                 </div>
             </div>
+            <?php if (!empty($skipped)): ?>
+            <div class="glass-card rounded-[32px] p-6 shadow-lg border border-rose-200/60">
+                <h4 class="font-black text-rose-600 mb-3 text-sm flex items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    แถวที่ข้ามไป <?= count($skipped) ?> แถว
+                </h4>
+                <div class="space-y-1 max-h-40 overflow-y-auto">
+                <?php foreach ($skipped as $sk): ?>
+                <div class="text-xs flex items-center gap-2 text-slate-600 py-1 border-b border-slate-50">
+                    <span class="font-mono text-rose-500 font-black w-16 shrink-0">แถว <?= (int)$sk['row'] ?></span>
+                    <span><?= htmlspecialchars($sk['reason']) ?></span>
+                </div>
+                <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
             <?php endif; ?>
         </div>
 
