@@ -97,32 +97,6 @@ function getPointPhotos($pdo, $reportId) {
             </div>
         </div>
 
-        <!-- Executive Summary -->
-        <section class="mb-12">
-            <h2 class="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Executive Summary</h2>
-            <div class="grid grid-cols-4 gap-6">
-                <div class="p-5 border border-slate-100 bg-slate-50/50 rounded-2xl">
-                    <p class="text-xs text-slate-500 font-bold mb-1">จุดทั้งหมด</p>
-                    <p class="text-3xl font-bold text-slate-800"><?= count($allSchedules) ?> <span class="text-sm font-normal text-slate-400">จุด</span></p>
-                </div>
-                <div class="p-5 border border-slate-100 bg-emerald-50/50 rounded-2xl">
-                    <p class="text-xs text-emerald-600 font-bold mb-1">รายงานครบถ้วน</p>
-                    <?php $comp = count(array_filter($allSchedules, fn($s) => $s['status'] === 'complete')); ?>
-                    <p class="text-3xl font-bold text-emerald-700"><?= $comp ?> <span class="text-sm font-normal text-emerald-400">จุด</span></p>
-                </div>
-                <div class="p-5 border border-slate-100 bg-amber-50/50 rounded-2xl">
-                    <p class="text-xs text-amber-600 font-bold mb-1">อยู่ระหว่างดำเนินการ</p>
-                    <?php $part = count(array_filter($allSchedules, fn($s) => $s['status'] === 'partial')); ?>
-                    <p class="text-3xl font-bold text-amber-700"><?= $part ?> <span class="text-sm font-normal text-amber-400">จุด</span></p>
-                </div>
-                <div class="p-5 border border-slate-100 bg-rose-50/50 rounded-2xl">
-                    <p class="text-xs text-rose-600 font-bold mb-1">ยังไม่มีการรายงาน</p>
-                    <?php $pend = count(array_filter($allSchedules, fn($s) => $s['status'] === 'pending' || !$s['status'])); ?>
-                    <p class="text-3xl font-bold text-rose-700"><?= $pend ?> <span class="text-sm font-normal text-rose-400">จุด</span></p>
-                </div>
-            </div>
-        </section>
-
         <!-- Detailed Records -->
         <?php foreach (['day' => 'ผลการบันทึกเวรช่วงกลางวัน', 'night' => 'ผลการบันทึกเวรช่วงกลางคืน'] as $shiftKey => $shiftTitle): ?>
             <div class="mb-10 page-break-inside-avoid">
