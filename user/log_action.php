@@ -1,11 +1,21 @@
 <?php
 session_start();
-ob_start(); // กันไม่ให้ PHP warning/notice ปน JSON response
+ob_start();
 
 require_once '../config.php';
 require_once '../includes/telegram_bot.php';
 
 header('Content-Type: application/json; charset=utf-8');
+
+// ดักจับ fatal error ให้ return JSON แทน HTML
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        while (ob_get_level() > 0) ob_end_clean();
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Server error: ' . $error['message']]);
+    }
+});
 
 if (!isset($_SESSION['llw_role'])) {
     ob_end_clean();
@@ -24,6 +34,8 @@ if (!isset($_SESSION['user_id']) || (int)$_SESSION['user_id'] === 0) {
 $user_id = (int)$_SESSION['user_id'];
 $username_session = $_SESSION['username'] ?? '';
 $fullname_session = $_SESSION['fullname'] ?? ($_SESSION['firstname'] ?? '');
+
+try {
 $action  = $_POST['action'] ?? '';
 $lat     = $_POST['lat']    ?? null;
 $lng     = $_POST['lng']    ?? null;
@@ -170,5 +182,11 @@ if ($action === 'checkin') {
 
 } else {
     ob_end_clean(); echo json_encode(['success' => false, 'message' => 'คำสั่งไม่ถูกต้อง']);
+}
+
+} catch (Throwable $e) {
+    while (ob_get_level() > 0) ob_end_clean();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()]);
 }
 ?>
