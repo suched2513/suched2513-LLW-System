@@ -44,7 +44,7 @@ try {
 
     // 2. บันทึกลายเซ็นผู้อนุมัติ (ถ้ามี)
     $sigPath = null;
-    if ($signatureB64 && str_contains($signatureB64, 'base64,')) {
+    if ($signatureB64 && strpos($signatureB64, 'base64,') !== false) {
         $imgData   = explode('base64,', $signatureB64)[1];
         $imgBinary = base64_decode($imgData);
         $sigDir    = __DIR__ . '/../../uploads/signatures/';

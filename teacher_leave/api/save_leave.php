@@ -59,7 +59,7 @@ try {
 
     // ─── 4. จัดการบันทึกลายเซ็น (ภาพ) ───
     $signaturePath = null;
-    if ($signatureData && str_contains($signatureData, 'base64,')) {
+    if ($signatureData && strpos($signatureData, 'base64,') !== false) {
         $imgData = explode('base64,', $signatureData)[1];
         $imgBinary = base64_decode($imgData);
         $fileName = 'sig_' . $userId . '_' . time() . '.png';
