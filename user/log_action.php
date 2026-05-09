@@ -1,19 +1,29 @@
 <?php
 session_start();
+ob_start(); // กันไม่ให้ PHP warning/notice ปน JSON response
+
 require_once '../config.php';
 require_once '../includes/telegram_bot.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
 if (!isset($_SESSION['llw_role'])) {
+    ob_end_clean();
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบก่อน']);
     exit();
 }
 
-$user_id = $_SESSION['user_id'];
-$username_session = $_SESSION['username'];
-$fullname_session = $_SESSION['fullname'];
+if (!isset($_SESSION['user_id']) || (int)$_SESSION['user_id'] === 0) {
+    ob_end_clean();
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Session ไม่สมบูรณ์ กรุณาล็อกอินใหม่']);
+    exit();
+}
+
+$user_id = (int)$_SESSION['user_id'];
+$username_session = $_SESSION['username'] ?? '';
+$fullname_session = $_SESSION['fullname'] ?? ($_SESSION['firstname'] ?? '');
 $action  = $_POST['action'] ?? '';
 $lat     = $_POST['lat']    ?? null;
 $lng     = $_POST['lng']    ?? null;
@@ -55,7 +65,7 @@ if ($lat && $lng) {
             $bot->sendMessage($msg);
         }
         
-        echo json_encode(['success' => false, 'message' => 'คุณอยู่นอกพื้นที่ทำงาน (ห่าง ' . round($distance) . ' เมตร)']);
+        ob_end_clean(); echo json_encode(['success' => false, 'message' => 'คุณอยู่นอกพื้นที่ทำงาน (ห่าง ' . round($distance) . ' เมตร)']);
         exit();
     }
 } else {
@@ -95,7 +105,7 @@ $stmt->close();
 
 if ($action === 'checkin') {
     if ($log && $log['check_in_time']) {
-        echo json_encode(['success' => false, 'message' => 'คุณได้ลงเวลาเข้างานแล้ววันนี้']);
+        ob_end_clean(); echo json_encode(['success' => false, 'message' => 'คุณได้ลงเวลาเข้างานแล้ววันนี้']);
         exit();
     }
 
@@ -121,19 +131,19 @@ if ($action === 'checkin') {
         }
 
         $msg = ($status === 'มาสาย') ? "ลงเวลาเข้างานสำเร็จ ($now) - สถานะ: มาสาย" : "ลงเวลาเข้างานสำเร็จ ($now) - สถานะ: ปกติ";
-        echo json_encode(['success' => true, 'message' => $msg]);
+        ob_end_clean(); echo json_encode(['success' => true, 'message' => $msg]);
     } else {
-        echo json_encode(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการบันทึก']);
+        ob_end_clean(); echo json_encode(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการบันทึก']);
     }
     $stmt->close();
 
 } elseif ($action === 'checkout') {
     if (!$log || !$log['check_in_time']) {
-        echo json_encode(['success' => false, 'message' => 'ยังไม่ได้ลงเวลาเข้างาน']);
+        ob_end_clean(); echo json_encode(['success' => false, 'message' => 'ยังไม่ได้ลงเวลาเข้างาน']);
         exit();
     }
     if ($log['check_out_time']) {
-        echo json_encode(['success' => false, 'message' => 'คุณได้ลงเวลาออกงานแล้ววันนี้']);
+        ob_end_clean(); echo json_encode(['success' => false, 'message' => 'คุณได้ลงเวลาออกงานแล้ววันนี้']);
         exit();
     }
 
@@ -152,13 +162,13 @@ if ($action === 'checkin') {
             $bot->sendMessage($msg);
         }
 
-        echo json_encode(['success' => true, 'message' => "ลงเวลาออกงานสำเร็จ ($now)"]);
+        ob_end_clean(); echo json_encode(['success' => true, 'message' => "ลงเวลาออกงานสำเร็จ ($now)"]);
     } else {
-        echo json_encode(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการบันทึก']);
+        ob_end_clean(); echo json_encode(['success' => false, 'message' => 'เกิดข้อผิดพลาดในการบันทึก']);
     }
     $stmt->close();
 
 } else {
-    echo json_encode(['success' => false, 'message' => 'คำสั่งไม่ถูกต้อง']);
+    ob_end_clean(); echo json_encode(['success' => false, 'message' => 'คำสั่งไม่ถูกต้อง']);
 }
 ?>
