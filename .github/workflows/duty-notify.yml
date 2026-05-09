@@ -2,40 +2,14 @@ name: Duty Notifications
 
 on:
   schedule:
-    - cron: '30 23 * * 0-4'   # 06:30 ICT (Mon-Fri) — เวรเช้า
-    - cron: '20 9 * * 1-5'    # 16:20 ICT (Mon-Fri) — เวรเย็น
-    - cron: '30 10 * * 1-5'   # 17:30 ICT (Mon-Fri) — เวรกลาง
-  workflow_dispatch:
-    inputs:
-      shift:
-        description: 'กะที่ต้องการทดสอบ (day / evening / night)'
-        required: true
-        default: 'day'
+    - cron: '0 23 * * *'   # 06:00 ICT ทุกวัน (23:00 UTC วันก่อน)
+  workflow_dispatch:        # ทดสอบด้วยมือ
 
 jobs:
-  notify-morning:
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.shift == 'day' || github.event.schedule == '30 23 * * 0-4'
+  notify-daily:
     runs-on: ubuntu-latest
     steps:
-      - name: แจ้งเตือนเวรเช้า
+      - name: ส่งสรุปตารางเวรประจำวัน
         run: |
-          curl -sf "https://llw.krusuched.com/duty/cron/notify_duty.php?shift=day&key=${{ secrets.DUTY_NOTIFY_KEY }}" \
-            -o /tmp/result.json && cat /tmp/result.json
-
-  notify-evening:
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.shift == 'evening' || github.event.schedule == '20 9 * * 1-5'
-    runs-on: ubuntu-latest
-    steps:
-      - name: แจ้งเตือนเวรเย็น
-        run: |
-          curl -sf "https://llw.krusuched.com/duty/cron/notify_duty.php?shift=evening&key=${{ secrets.DUTY_NOTIFY_KEY }}" \
-            -o /tmp/result.json && cat /tmp/result.json
-
-  notify-night:
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.shift == 'night' || github.event.schedule == '30 10 * * 1-5'
-    runs-on: ubuntu-latest
-    steps:
-      - name: แจ้งเตือนเวรกลาง
-        run: |
-          curl -sf "https://llw.krusuched.com/duty/cron/notify_duty.php?shift=night&key=${{ secrets.DUTY_NOTIFY_KEY }}" \
+          curl -sf "https://llw.krusuched.com/duty/cron/notify_duty.php?key=${{ secrets.DUTY_NOTIFY_KEY }}" \
             -o /tmp/result.json && cat /tmp/result.json
