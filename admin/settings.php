@@ -24,6 +24,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param('s', $bossName);
         $stmt->execute();
         $msg = 'บันทึกชื่อผู้อำนวยการเรียบร้อย';
+    } elseif (isset($_POST['school_lat'])) {
+        $lat    = (float)$_POST['school_lat'];
+        $lng    = (float)$_POST['school_lng'];
+        $radius = max(50, min(2000, (int)$_POST['geofence_radius']));
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET school_lat=?, school_lng=?, geofence_radius=? WHERE setting_id=1");
+        $stmt->bind_param('ssi', $lat, $lng, $radius);
+        $stmt->execute();
+        $stmt->close();
+        $msg = 'บันทึกพิกัดโรงเรียนเรียบร้อย';
     } elseif (isset($_POST['boss_pin'])) {
         $pin = trim($_POST['boss_pin']);
         if (strlen($pin) >= 4 && strlen($pin) <= 6 && ctype_digit($pin)) {
@@ -62,7 +71,77 @@ require_once __DIR__ . '/../components/layout_start.php';
 <?php endif; ?>
 
 <div class="max-w-4xl mx-auto space-y-8">
-    
+
+    <!-- School GPS / Geofence -->
+    <div class="bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-xl shadow-emerald-100/40 p-8 border border-white/60">
+        <div class="flex items-center gap-4 mb-6">
+            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl">
+                <i class="bi bi-geo-alt-fill"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-black text-slate-800">พิกัดโรงเรียน & รัศมีลงเวลา</h3>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">School Location & Geofence Radius</p>
+            </div>
+        </div>
+
+        <!-- Current values -->
+        <div class="grid grid-cols-3 gap-3 mb-6">
+            <div class="bg-slate-50 rounded-2xl p-4 text-center border border-slate-100">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Latitude</p>
+                <p class="font-black text-slate-700 text-sm" id="cur-lat"><?= $settings['school_lat'] ?? '-' ?></p>
+            </div>
+            <div class="bg-slate-50 rounded-2xl p-4 text-center border border-slate-100">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Longitude</p>
+                <p class="font-black text-slate-700 text-sm" id="cur-lng"><?= $settings['school_lng'] ?? '-' ?></p>
+            </div>
+            <div class="bg-emerald-50 rounded-2xl p-4 text-center border border-emerald-100">
+                <p class="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Radius</p>
+                <p class="font-black text-emerald-700 text-sm"><?= $settings['geofence_radius'] ?? '200' ?> ม.</p>
+            </div>
+        </div>
+
+        <form method="POST" class="space-y-4" id="gps-form">
+            <?= csrf_field() ?>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-black text-slate-700 mb-2">Latitude (ละติจูด)</label>
+                    <input type="number" step="0.000001" name="school_lat" id="inp-lat"
+                        value="<?= htmlspecialchars($settings['school_lat'] ?? '') ?>"
+                        placeholder="เช่น 15.118200"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-black text-slate-700 mb-2">Longitude (ลองจิจูด)</label>
+                    <input type="number" step="0.000001" name="school_lng" id="inp-lng"
+                        value="<?= htmlspecialchars($settings['school_lng'] ?? '') ?>"
+                        placeholder="เช่น 104.223900"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" required>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-black text-slate-700 mb-2">
+                    รัศมีพื้นที่ลงเวลา (เมตร)
+                    <span class="text-xs font-normal text-slate-400 ml-1">— โรงเรียน 49 ไร่ ≈ รัศมี 158 ม. แนะนำ 200 ม.</span>
+                </label>
+                <input type="number" name="geofence_radius" min="50" max="2000"
+                    value="<?= htmlspecialchars($settings['geofence_radius'] ?? '200') ?>"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" required>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" id="btn-gps"
+                    class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-2xl shadow-lg shadow-emerald-100 transition-all hover:scale-[1.02] flex items-center justify-center gap-2">
+                    <i class="bi bi-crosshair2"></i> ใช้พิกัดตำแหน่งปัจจุบัน
+                </button>
+                <button type="submit"
+                    class="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-black py-3 rounded-2xl shadow-lg transition-all hover:scale-[1.02]">
+                    <i class="bi bi-save-fill me-1"></i> บันทึก
+                </button>
+            </div>
+        </form>
+
+        <div id="gps-msg" class="hidden mt-4 p-4 rounded-2xl text-sm font-bold"></div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <!-- Working Time -->
         <div class="bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-xl shadow-indigo-100/40 p-8 border border-white/60">
@@ -244,5 +323,45 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('btn-gps').addEventListener('click', function() {
+    const btn = this;
+    const msg = document.getElementById('gps-msg');
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลังค้นหาตำแหน่ง...';
+    btn.disabled = true;
+    msg.className = 'mt-4 p-4 rounded-2xl text-sm font-bold bg-slate-50 text-slate-600 border border-slate-100';
+    msg.textContent = 'กำลังรับสัญญาณ GPS...';
+    msg.classList.remove('hidden');
+
+    if (!navigator.geolocation) {
+        msg.className = 'mt-4 p-4 rounded-2xl text-sm font-bold bg-rose-50 text-rose-600 border border-rose-100';
+        msg.textContent = 'เบราว์เซอร์นี้ไม่รองรับ Geolocation';
+        btn.innerHTML = '<i class="bi bi-crosshair2"></i> ใช้พิกัดตำแหน่งปัจจุบัน';
+        btn.disabled = false;
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            const lat = pos.coords.latitude.toFixed(6);
+            const lng = pos.coords.longitude.toFixed(6);
+            document.getElementById('inp-lat').value = lat;
+            document.getElementById('inp-lng').value = lng;
+            msg.className = 'mt-4 p-4 rounded-2xl text-sm font-bold bg-emerald-50 text-emerald-700 border border-emerald-100';
+            msg.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>ได้พิกัด: ' + lat + ', ' + lng + ' — ความแม่นยำ ±' + Math.round(pos.coords.accuracy) + ' ม. <br><span class="text-xs font-normal">กด "บันทึก" เพื่อยืนยัน</span>';
+            btn.innerHTML = '<i class="bi bi-crosshair2"></i> ใช้พิกัดตำแหน่งปัจจุบัน';
+            btn.disabled = false;
+        },
+        function(err) {
+            msg.className = 'mt-4 p-4 rounded-2xl text-sm font-bold bg-rose-50 text-rose-600 border border-rose-100';
+            msg.textContent = 'ไม่สามารถรับพิกัดได้: ' + (err.message || 'Permission denied');
+            btn.innerHTML = '<i class="bi bi-crosshair2"></i> ใช้พิกัดตำแหน่งปัจจุบัน';
+            btn.disabled = false;
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+});
+</script>
 
 <?php require_once __DIR__ . '/../components/layout_end.php'; ?>
