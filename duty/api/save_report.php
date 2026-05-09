@@ -148,19 +148,37 @@ try {
             $shiftText  = $shiftLabel[$schedule['shift']] ?? $schedule['shift'];
             $statusIcon = ($status === 'complete') ? '✅ ครบแล้ว' : "⚠️ ยังไม่ครบ ({$photoCount}/{$required} รูป)";
 
-            $msg  = "📸 <b>รายงานเวรประจำวัน</b>\n";
-            $msg .= "📍 จุดที่ {$schedule['point_no']} — {$shiftText}\n";
-            $msg .= "🗓 {$dateStr}\n";
-            $msg .= "👤 ผู้รายงาน: {$teacherName}\n";
-            if ($reportNote !== '') {
-                $msg .= "📝 หมายเหตุ: {$reportNote}\n";
-            }
-            $msg .= "📷 ภาพถ่าย: {$photoCount} รูป\n";
-            $msg .= "สถานะ: {$statusIcon}";
+            $caption  = "📸 <b>รายงานเวรประจำวัน</b>\n";
+            $caption .= "📍 จุดที่ {$schedule['point_no']} — {$shiftText}\n";
+            $caption .= "🗓 {$dateStr}\n";
+            $caption .= "👤 {$teacherName}\n";
+            if ($reportNote !== '') $caption .= "📝 {$reportNote}\n";
+            $caption .= "สถานะ: {$statusIcon}";
 
-            // ใช้ Telegram class (cURL) แทน sendTelegramMessage (file_get_contents)
             Telegram::init($tgToken);
-            $tgResult = Telegram::sendMessage($msg, $tgChatId);
+
+            // ดึง path รูปที่เพิ่งอัปโหลด (เฉพาะ round นี้)
+            $stmtPaths = $pdo->prepare("
+                SELECT file_path FROM duty_report_photos
+                WHERE report_id = ? AND is_deleted = 0
+                ORDER BY id DESC LIMIT 10
+            ");
+            $stmtPaths->execute([$reportId]);
+            $relPaths = $stmtPaths->fetchAll(PDO::FETCH_COLUMN);
+            $baseDir  = realpath(__DIR__ . '/../../');
+            $absPaths = array_filter(array_map(
+                fn($p) => $baseDir . '/' . ltrim(str_replace('\\', '/', $p), '/'),
+                $relPaths
+            ), 'file_exists');
+
+            if (!empty($absPaths)) {
+                // ส่งรูปพร้อม caption
+                $tgResult = Telegram::sendMediaGroup(array_values($absPaths), $caption, $tgChatId);
+            } else {
+                // ถ้าไม่มีรูป ส่งแค่ข้อความ
+                $tgResult = Telegram::sendMessage($caption, $tgChatId);
+            }
+
             if (!($tgResult['ok'] ?? false)) {
                 error_log('[Duty] Telegram send failed: ' . ($tgResult['description'] ?? 'unknown'));
             }

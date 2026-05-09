@@ -227,13 +227,19 @@ require_once __DIR__ . '/../components/layout_start.php';
 
             <!-- Upload Zone -->
             <div class="text-center">
-                <label for="photoInput" class="camera-btn">
+                <label for="photoCapture" class="camera-btn">
                     <i class="bi bi-camera-fill text-4xl"></i>
                     <span class="text-[10px] font-black uppercase tracking-widest mt-1">ถ่ายภาพ</span>
                 </label>
-                <input type="file" id="photoInput" accept="image/*" capture="environment" class="hidden" multiple>
-                
-                <p class="text-slate-400 font-bold text-xs mt-6 uppercase tracking-widest">แตะที่ปุ่มด้านบนเพื่อเพิ่มรูปภาพ</p>
+                <input type="file" id="photoCapture" accept="image/*" capture="environment" class="hidden">
+                <input type="file" id="photoGallery" accept="image/*" class="hidden" multiple>
+
+                <div class="mt-4">
+                    <label for="photoGallery" class="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-sm px-6 py-3 rounded-2xl cursor-pointer transition-all">
+                        <i class="bi bi-images text-lg"></i> เลือกหลายรูปจากคลัง
+                    </label>
+                </div>
+                <p class="text-slate-400 font-bold text-xs mt-3 uppercase tracking-widest">ถ่ายทีละรูป หรือเลือกหลายรูปพร้อมกัน</p>
             </div>
 
             <!-- Progress -->
@@ -262,19 +268,19 @@ require_once __DIR__ . '/../components/layout_start.php';
 </div>
 
 <script>
-    const photoInput = document.getElementById('photoInput');
+    const photoCapture = document.getElementById('photoCapture');
+    const photoGallery = document.getElementById('photoGallery');
     const photoGrid = document.getElementById('photoGrid');
     const progressBar = document.getElementById('progressBar');
     const progressText = document.getElementById('progressText');
     const submitBtn = document.getElementById('submitBtn');
-    
+
     let photos = [];
     const assignmentId = <?= json_encode($assignment['id'] ?? 0) ?>;
-    const requiredPhotos = 3; // ดึงจาก settings ได้ภายหลัง
+    const requiredPhotos = 4;
 
-    photoInput.addEventListener('change', function(e) {
-        const files = Array.from(e.target.files);
-        files.forEach(file => {
+    function addFiles(files) {
+        Array.from(files).forEach(file => {
             const reader = new FileReader();
             reader.onload = function(re) {
                 const id = Date.now() + Math.random();
@@ -283,7 +289,16 @@ require_once __DIR__ . '/../components/layout_start.php';
             };
             reader.readAsDataURL(file);
         });
-        photoInput.value = ''; // clear input
+    }
+
+    photoCapture.addEventListener('change', function(e) {
+        addFiles(e.target.files);
+        photoCapture.value = '';
+    });
+
+    photoGallery.addEventListener('change', function(e) {
+        addFiles(e.target.files);
+        photoGallery.value = '';
     });
 
     function renderPhotos() {
