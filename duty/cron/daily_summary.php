@@ -21,10 +21,10 @@ require_once __DIR__ . '/../../includes/telegram_bot.php';
 $pdo = getPdo();
 
 // ── Settings ──
-$stmtS = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
+$stmtS = $pdo->query("SELECT duty_bot_token, duty_chat_id FROM wfh_system_settings LIMIT 1");
 $sys = $stmtS->fetch(PDO::FETCH_ASSOC);
-$botToken    = $sys['telegram_token'] ?? '';
-$groupChatId = $sys['admin_chat_id']  ?? '';
+$botToken    = $sys['duty_bot_token'] ?? '';
+$groupChatId = $sys['duty_chat_id']   ?? '';
 Telegram::init($botToken, $groupChatId);
 
 $stmtDS = $pdo->query("SELECT skey, svalue FROM duty_settings");

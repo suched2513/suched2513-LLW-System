@@ -83,10 +83,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tg_token        = trim($_POST['telegram_token']);
         $tg_chat_id      = trim($_POST['admin_chat_id']);
         $tg_leave_chat   = trim($_POST['leave_chat_id']);
+        $tg_att_chat     = trim($_POST['att_chat_id']);
         $tg_duty_chat    = trim($_POST['duty_chat_id']);
         $tg_duty_token   = trim($_POST['duty_bot_token']);
-        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=?, leave_chat_id=?, duty_chat_id=?, duty_bot_token=? WHERE setting_id=1");
-        $stmt->bind_param('sssss', $tg_token, $tg_chat_id, $tg_leave_chat, $tg_duty_chat, $tg_duty_token);
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=?, leave_chat_id=?, att_chat_id=?, duty_chat_id=?, duty_bot_token=? WHERE setting_id=1");
+        $stmt->bind_param('ssssss', $tg_token, $tg_chat_id, $tg_leave_chat, $tg_att_chat, $tg_duty_chat, $tg_duty_token);
         $stmt->execute();
         $stmt->close();
         $msg = 'บันทึกการตั้งค่า Telegram เรียบร้อย';
@@ -235,16 +236,17 @@ require_once __DIR__ . '/../components/layout_start.php';
             <?php
                 $tg_ok   = !empty($settings['telegram_token']) && !empty($settings['admin_chat_id']);
                 $lv_ok   = !empty($settings['leave_chat_id']);
+                $att_ok  = !empty($settings['att_chat_id']);
                 $duty_ok = !empty($settings['duty_chat_id']);
-                $done    = array_sum([$tg_ok, $lv_ok, $duty_ok]);
+                $done    = array_sum([$tg_ok, $lv_ok, $att_ok, $duty_ok]);
             ?>
-            <?php if ($done === 3): ?>
+            <?php if ($done === 4): ?>
             <span class="ml-auto px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-xs font-black border border-emerald-100 flex items-center gap-1.5">
-                <i class="bi bi-check-circle-fill"></i> ครบทั้ง 3 กลุ่ม
+                <i class="bi bi-check-circle-fill"></i> ครบทั้ง 4 กลุ่ม
             </span>
             <?php elseif ($tg_ok): ?>
             <span class="ml-auto px-4 py-1.5 rounded-full bg-amber-50 text-amber-600 text-xs font-black border border-amber-100 flex items-center gap-1.5">
-                <i class="bi bi-exclamation-circle-fill"></i> ตั้งค่าแล้ว <?= $done ?>/3 กลุ่ม
+                <i class="bi bi-exclamation-circle-fill"></i> ตั้งค่าแล้ว <?= $done ?>/4 กลุ่ม
             </span>
             <?php else: ?>
             <span class="ml-auto px-4 py-1.5 rounded-full bg-rose-50 text-rose-600 text-xs font-black border border-rose-100 flex items-center gap-1.5">
@@ -314,7 +316,24 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <div id="tg-result-leave" class="hidden p-3 rounded-xl text-sm font-bold"></div>
             </div>
 
-            <!-- Chat ID group 3: เวรประจำวัน -->
+            <!-- Chat ID group 3: เช็คชื่อนักเรียน -->
+            <div class="bg-indigo-50/50 rounded-2xl p-5 border border-indigo-100 space-y-3">
+                <p class="text-xs font-black text-indigo-700 uppercase tracking-widest flex items-center gap-2">
+                    <i class="bi bi-people-fill"></i> กลุ่มแจ้งเตือนเช็คชื่อนักเรียน
+                </p>
+                <input type="text" name="att_chat_id" id="inp-att-chat"
+                    value="<?= htmlspecialchars($settings['att_chat_id'] ?? '') ?>"
+                    placeholder="เช่น -4111333555"
+                    class="w-full bg-white border border-indigo-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold">
+                <p class="text-xs text-indigo-600/70 font-bold">รับแจ้งเตือนเมื่อ: ครูเช็คชื่อรายคาบและมีนักเรียนขาด/โดด</p>
+                <button type="button" onclick="testTelegram('inp-att-chat','tg-result-att')"
+                    class="w-full bg-white hover:bg-indigo-50 text-indigo-600 font-black py-2.5 rounded-xl border border-indigo-200 transition-all text-sm flex items-center justify-center gap-2">
+                    <i class="bi bi-send-fill"></i> ทดสอบกลุ่มเช็คชื่อ
+                </button>
+                <div id="tg-result-att" class="hidden p-3 rounded-xl text-sm font-bold"></div>
+            </div>
+
+            <!-- Chat ID group 4: เวรประจำวัน -->
             <div class="bg-violet-50/50 rounded-2xl p-5 border border-violet-100 space-y-3">
                 <p class="text-xs font-black text-violet-700 uppercase tracking-widest flex items-center gap-2">
                     <i class="bi bi-shield-check"></i> กลุ่มแจ้งเตือนเวรประจำวัน
