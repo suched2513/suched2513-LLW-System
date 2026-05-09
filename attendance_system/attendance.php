@@ -60,30 +60,40 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
         $success_msg = "บันทึกข้อมูลเรียบร้อยแล้ว";
 
         // ── Telegram Auto-Broadcast (Optional / Manual Hook) ──
-        if (isset($_POST['broadcast_now'])) {
-            $settings = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
-            $attToken  = !empty($settings['att_bot_token'])  ? $settings['att_bot_token']  : ($settings['telegram_token'] ?? '');
-            $attChatId = !empty($settings['att_chat_id'])    ? $settings['att_chat_id']    : ($settings['admin_chat_id'] ?? '');
-            if ($settings && $attToken && $attChatId) {
-                $absentees = [];
-                foreach ($student_status as $sid => $status) {
-                    if (in_array($status, ['ขาด', 'โดด'])) {
-                        $st = $pdo->prepare("SELECT name FROM att_students WHERE id = ?");
-                        $st->execute([$sid]);
-                        $absentees[] = "- " . $st->fetchColumn() . " ($status)";
+        if (($_POST['broadcast_now'] ?? '0') === '1') {
+            try {
+                $settings  = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
+                $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
+                $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
+
+                if ($attToken && $attChatId) {
+                    $absentees = [];
+                    foreach ($student_status as $sid => $status) {
+                        if (in_array($status, ['ขาด', 'โดด'])) {
+                            $st = $pdo->prepare("SELECT name FROM att_students WHERE id = ?");
+                            $st->execute([$sid]);
+                            $absentees[] = "- " . $st->fetchColumn() . " ($status)";
+                        }
+                    }
+
+                    if (!empty($absentees)) {
+                        $msg  = "🔔 <b>แจ้งเตือนการเช็คชื่อ</b>\n";
+                        $msg .= "📅 วันที่: " . date('d/m/Y', strtotime($date)) . " | คาบที่: $period\n";
+                        $msg .= "📘 วิชา: " . $subject_info['subject_name'] . "\n";
+                        $msg .= "👤 ครูผู้สอน: " . ($_SESSION['teacher_name'] ?? '') . "\n\n";
+                        $msg .= "<b>นักเรียนที่ไม่เข้าเรียน:</b>\n" . implode("\n", $absentees);
+
+                        Telegram::init($attToken);
+                        $tgResult = Telegram::sendMessage($msg, $attChatId);
+                        if ($tgResult['ok'] ?? false) {
+                            $success_msg .= " และส่งแจ้งเตือน Telegram แล้ว";
+                        } else {
+                            error_log('[Attendance] Telegram failed: ' . ($tgResult['description'] ?? 'unknown'));
+                        }
                     }
                 }
-
-                if (!empty($absentees)) {
-                    $msg = "🔔 <b>แจ้งเตือนการเช็คชื่อ</b>\n";
-                    $msg .= "📅 วันที่: " . date('d/m/Y', strtotime($date)) . " | คาบที่: $period\n";
-                    $msg .= "📘 วิชา: " . $subject_info['subject_name'] . "\n";
-                    $msg .= "👤 ครูผู้สอน: " . $_SESSION['teacher_name'] . "\n\n";
-                    $msg .= "<b>นักเรียนที่ไม่เข้าเรียน:</b>\n" . implode("\n", $absentees);
-                    
-                    sendTelegramMessage($attToken, $attChatId, $msg);
-                    $success_msg .= " และส่งแจ้งเตือน Telegram แล้ว";
-                }
+            } catch (\Throwable $tgEx) {
+                error_log('[Attendance] Telegram error: ' . $tgEx->getMessage());
             }
         }
     } catch (Exception $e) {
