@@ -18,7 +18,7 @@ $activeSystem = 'wfh';
 $today = date('Y-m-d');
 
 // Statistics
-$total_users     = $conn->query("SELECT COUNT(*) as c FROM wfh_users WHERE role='user'")->fetch_assoc()['c'];
+$total_users     = $conn->query("SELECT COUNT(*) as c FROM llw_users WHERE role='wfh_staff' AND status='active'")->fetch_assoc()['c'];
 $s1 = $conn->prepare("SELECT COUNT(*) as c FROM wfh_timelogs WHERE log_date=? AND check_in_time IS NOT NULL");
 $s1->bind_param('s', $today); $s1->execute();
 $checkedin_today = $s1->get_result()->fetch_assoc()['c']; $s1->close();
@@ -30,10 +30,13 @@ $not_yet    = $total_users - $checkedin_today;
 
 // Today's logs
 $s3 = $conn->prepare("
-    SELECT u.firstname, u.lastname, u.pos_id, d.dept_name, t.check_in_time, t.check_out_time, t.check_in_status
+    SELECT lu.firstname, lu.lastname, COALESCE(wu.position,'') as position,
+           COALESCE(d.dept_name,'') as dept_name,
+           t.check_in_time, t.check_out_time, t.check_in_status
     FROM wfh_timelogs t
-    JOIN wfh_users u ON t.user_id = u.user_id
-    LEFT JOIN wfh_departments d ON u.dept_id = d.dept_id
+    JOIN llw_users lu ON t.user_id = lu.user_id
+    LEFT JOIN wfh_users wu ON wu.username = lu.username
+    LEFT JOIN wfh_departments d ON wu.dept_id = d.dept_id
     WHERE t.log_date = ?
     ORDER BY t.check_in_time ASC
 ");

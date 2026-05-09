@@ -11,16 +11,19 @@ $filter_month = $_GET['month'] ?? date('Y-m');
 $filter_dept  = (int)($_GET['dept'] ?? 0);
 
 $base_sql = "
-    SELECT u.firstname, u.lastname, u.position, d.dept_name,
+    SELECT lu.firstname, lu.lastname,
+           COALESCE(wu.position,'') as position,
+           COALESCE(d.dept_name,'') as dept_name,
            t.log_date, t.check_in_time, t.check_out_time, t.check_in_status,
            t.check_in_lat, t.check_in_lng
     FROM wfh_timelogs t
-    JOIN wfh_users u ON t.user_id = u.user_id
-    LEFT JOIN wfh_departments d ON u.dept_id = d.dept_id
+    JOIN llw_users lu ON t.user_id = lu.user_id
+    LEFT JOIN wfh_users wu ON wu.username = lu.username
+    LEFT JOIN wfh_departments d ON wu.dept_id = d.dept_id
     WHERE DATE_FORMAT(t.log_date,'%Y-%m') = ?";
 
 if ($filter_dept) {
-    $stmt = $conn->prepare($base_sql . " AND u.dept_id = ? ORDER BY t.log_date DESC, t.check_in_time ASC");
+    $stmt = $conn->prepare($base_sql . " AND wu.dept_id = ? ORDER BY t.log_date DESC, t.check_in_time ASC");
     $stmt->bind_param('si', $filter_month, $filter_dept);
 } else {
     $stmt = $conn->prepare($base_sql . " ORDER BY t.log_date DESC, t.check_in_time ASC");

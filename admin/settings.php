@@ -13,7 +13,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['regular_time_in'])) {
         $time_in   = $_POST['regular_time_in'];
         $time_late = $_POST['late_time'];
-        $conn->query("UPDATE wfh_system_settings SET regular_time_in='$time_in', late_time='$time_late' WHERE setting_id=1");
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET regular_time_in=?, late_time=? WHERE setting_id=1");
+        $stmt->bind_param('ss', $time_in, $time_late);
+        $stmt->execute();
+        $stmt->close();
         $msg = 'บันทึกการตั้งค่าเวลาเรียบร้อย';
     } elseif (isset($_POST['boss_name'])) {
         $bossName = trim($_POST['boss_name']);
@@ -184,7 +187,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                     ['icon' => 'bi-cpu', 'label' => 'ชื่อระบบ', 'value' => 'WFH:LLW Attendance'],
                     ['icon' => 'bi-building', 'label' => 'หน่วยงาน', 'value' => 'โรงเรียนละลมวิทยา'],
                     ['icon' => 'bi-git', 'label' => 'เวอร์ชั่นคงที่', 'value' => 'v1.2-indigo-unified'],
-                    ['icon' => 'bi-calendar-check', 'label' => 'วันที่ปัจจุบัน', 'value' => date('d/y/').(date('Y')+543)],
+                    ['icon' => 'bi-calendar-check', 'label' => 'วันที่ปัจจุบัน', 'value' => date('d/m/').(date('Y')+543)],
                 ];
                 foreach ($info as $item): 
                 ?>
