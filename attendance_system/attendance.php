@@ -61,6 +61,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
 
         // ── Telegram Auto-Broadcast (ส่งอัตโนมัติทุกครั้ง) ──
         try {
+            // ตรวจและเพิ่มคอลัมน์ถ้ายังไม่มี
+            $existCols = $pdo->query("SHOW COLUMNS FROM wfh_system_settings")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('att_chat_id',   $existCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_chat_id VARCHAR(100) NULL");
+            if (!in_array('att_bot_token', $existCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_bot_token VARCHAR(200) NULL");
+
             $settings  = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
             $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
             $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
