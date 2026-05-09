@@ -9,6 +9,39 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 
 $msg = '';
 
+// AJAX: ทดสอบบอทเวร (ใช้ duty_bot_token แทน telegram_token)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_duty_telegram') {
+    header('Content-Type: application/json; charset=utf-8');
+    require_once '../includes/telegram_bot.php';
+    $token   = trim($_POST['token'] ?? '');
+    $chat_id = trim($_POST['chat_id'] ?? '');
+    if (!$token || !$chat_id) {
+        echo json_encode(['ok' => false, 'message' => 'กรุณากรอก Bot Token และ Chat ID ของบอทเวรก่อน']);
+        exit;
+    }
+    Telegram::init($token);
+    $res = Telegram::sendMessage("🛡️ <b>ทดสอบบอทเวรประจำวัน</b>\nโรงเรียนละลมวิทยา พร้อมใช้งานแล้ว!", $chat_id);
+    if ($res['ok'] ?? false) {
+        echo json_encode(['ok' => true, 'message' => 'ส่งสำเร็จ! ตรวจสอบในกลุ่มเวรได้เลย']);
+    } else {
+        $desc = $res['description'] ?? '';
+        $known = [
+            'chat not found'      => 'ไม่พบกลุ่ม — ตรวจสอบ Chat ID และต้องเพิ่มบอทเข้ากลุ่มก่อน',
+            'bot was kicked'      => 'บอทถูกเตะออกจากกลุ่ม — เพิ่มบอทเข้ากลุ่มใหม่',
+            'bot is not a member' => 'บอทยังไม่ได้เข้ากลุ่ม — เพิ่มบอทเข้ากลุ่มก่อน',
+            'Unauthorized'        => 'Bot Token ไม่ถูกต้อง — ตรวจสอบ Token อีกครั้ง',
+            'not enough rights'   => 'บอทไม่มีสิทธิ์ส่งข้อความในกลุ่มนี้',
+        ];
+        $msg = 'ส่งไม่สำเร็จ';
+        foreach ($known as $en => $th) {
+            if (stripos($desc, $en) !== false) { $msg = $th; break; }
+        }
+        if ($msg === 'ส่งไม่สำเร็จ' && $desc) $msg .= ": {$desc}";
+        echo json_encode(['ok' => false, 'message' => $msg]);
+    }
+    exit;
+}
+
 // AJAX: ทดสอบ Telegram (ก่อน csrf check เพราะ return JSON แล้ว exit)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_telegram') {
     header('Content-Type: application/json; charset=utf-8');
@@ -51,8 +84,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tg_chat_id      = trim($_POST['admin_chat_id']);
         $tg_leave_chat   = trim($_POST['leave_chat_id']);
         $tg_duty_chat    = trim($_POST['duty_chat_id']);
-        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=?, leave_chat_id=?, duty_chat_id=? WHERE setting_id=1");
-        $stmt->bind_param('ssss', $tg_token, $tg_chat_id, $tg_leave_chat, $tg_duty_chat);
+        $tg_duty_token   = trim($_POST['duty_bot_token']);
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=?, leave_chat_id=?, duty_chat_id=?, duty_bot_token=? WHERE setting_id=1");
+        $stmt->bind_param('sssss', $tg_token, $tg_chat_id, $tg_leave_chat, $tg_duty_chat, $tg_duty_token);
         $stmt->execute();
         $stmt->close();
         $msg = 'บันทึกการตั้งค่า Telegram เรียบร้อย';
@@ -285,12 +319,22 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <p class="text-xs font-black text-violet-700 uppercase tracking-widest flex items-center gap-2">
                     <i class="bi bi-shield-check"></i> กลุ่มแจ้งเตือนเวรประจำวัน
                 </p>
+                <p class="text-xs text-violet-500 font-bold -mt-1">ใช้บอทแยก — กรอก Token เฉพาะของบอทเวร</p>
+                <div class="relative">
+                    <input type="password" name="duty_bot_token" id="inp-duty-token"
+                        value="<?= htmlspecialchars($settings['duty_bot_token'] ?? '') ?>"
+                        placeholder="Bot Token ของบอทเวร"
+                        class="w-full bg-white border border-violet-200 rounded-2xl px-4 py-3 pr-12 text-sm focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 outline-none transition-all font-mono">
+                    <button type="button" onclick="toggleDutyToken()" class="absolute right-4 top-1/2 -translate-y-1/2 text-violet-300 hover:text-violet-500 transition-all">
+                        <i class="bi bi-eye-fill" id="eye-duty-icon"></i>
+                    </button>
+                </div>
                 <input type="text" name="duty_chat_id" id="inp-duty-chat"
                     value="<?= htmlspecialchars($settings['duty_chat_id'] ?? '') ?>"
-                    placeholder="เช่น -4111222333"
+                    placeholder="Chat ID กลุ่มเวร เช่น -4111222333"
                     class="w-full bg-white border border-violet-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 outline-none transition-all font-bold">
                 <p class="text-xs text-violet-600/70 font-bold">รับแจ้งเตือนอัตโนมัติ: เวรเช้า 06:30 / เวรเย็น 16:20 / เวรกลาง 17:30</p>
-                <button type="button" onclick="testTelegram('inp-duty-chat','tg-result-duty')"
+                <button type="button" onclick="testDutyTelegram()"
                     class="w-full bg-white hover:bg-violet-50 text-violet-600 font-black py-2.5 rounded-xl border border-violet-200 transition-all text-sm flex items-center justify-center gap-2">
                     <i class="bi bi-send-fill"></i> ทดสอบกลุ่มเวร
                 </button>
@@ -489,6 +533,61 @@ require_once __DIR__ . '/../components/layout_start.php';
 </div>
 
 <script>
+// Toggle Duty Bot Token visibility
+function toggleDutyToken() {
+    const inp  = document.getElementById('inp-duty-token');
+    const icon = document.getElementById('eye-duty-icon');
+    if (inp.type === 'password') {
+        inp.type = 'text';
+        icon.className = 'bi bi-eye-slash-fill';
+    } else {
+        inp.type = 'password';
+        icon.className = 'bi bi-eye-fill';
+    }
+}
+
+// ทดสอบบอทเวร (ใช้ token แยก)
+function testDutyTelegram() {
+    const result = document.getElementById('tg-result-duty');
+    const token  = document.getElementById('inp-duty-token').value.trim();
+    const chatId = document.getElementById('inp-duty-chat').value.trim();
+    const btn    = event.currentTarget;
+
+    if (!token || !chatId) {
+        result.className = 'p-3 rounded-xl text-sm font-bold bg-amber-50 text-amber-700 border border-amber-100';
+        result.textContent = 'กรุณากรอก Bot Token และ Chat ID ของบอทเวรก่อน';
+        result.classList.remove('hidden');
+        return;
+    }
+
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลังส่ง...';
+    btn.disabled = true;
+
+    const fd = new FormData();
+    fd.append('action', 'test_duty_telegram');
+    fd.append('token', token);
+    fd.append('chat_id', chatId);
+
+    fetch('settings.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            result.className = 'p-3 rounded-xl text-sm font-bold border ' +
+                (data.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100');
+            result.innerHTML = (data.ok ? '<i class="bi bi-check-circle-fill me-2"></i>' : '<i class="bi bi-x-circle-fill me-2"></i>') + data.message;
+            result.classList.remove('hidden');
+        })
+        .catch(() => {
+            result.className = 'p-3 rounded-xl text-sm font-bold bg-rose-50 text-rose-600 border border-rose-100';
+            result.textContent = 'เกิดข้อผิดพลาด ไม่สามารถเชื่อมต่อได้';
+            result.classList.remove('hidden');
+        })
+        .finally(() => {
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+        });
+}
+
 // Toggle Bot Token visibility
 function toggleToken() {
     const inp = document.getElementById('inp-tg-token');

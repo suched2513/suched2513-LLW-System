@@ -32,8 +32,8 @@ if (!in_array($shift, ['day', 'evening', 'night'])) {
 }
 
 // ── 2. ดึงการตั้งค่า Telegram ────────────────────────────────────────────
-$settings = $conn->query("SELECT telegram_token, duty_chat_id FROM wfh_system_settings LIMIT 1")->fetch_assoc();
-$token    = $settings['telegram_token'] ?? '';
+$settings = $conn->query("SELECT duty_bot_token, duty_chat_id FROM wfh_system_settings LIMIT 1")->fetch_assoc();
+$token    = $settings['duty_bot_token'] ?? '';
 $chat_id  = $settings['duty_chat_id']   ?? '';
 
 if (!$token || !$chat_id) {
