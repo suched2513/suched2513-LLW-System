@@ -9,6 +9,14 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 
 $msg = '';
 
+// ── Auto-migrate: เพิ่มคอลัมน์ Telegram ใหม่ที่ยังไม่มี ──
+try {
+    $pdo = getPdo();
+    $existingCols = $pdo->query("SHOW COLUMNS FROM wfh_system_settings")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('att_chat_id',   $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_chat_id VARCHAR(100) NULL AFTER leave_chat_id");
+    if (!in_array('att_bot_token', $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_bot_token VARCHAR(200) NULL AFTER att_chat_id");
+} catch (Exception $e) { error_log('settings auto-migrate: ' . $e->getMessage()); }
+
 // AJAX: ทดสอบบอทเวร (ใช้ duty_bot_token แทน telegram_token)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_duty_telegram') {
     header('Content-Type: application/json; charset=utf-8');
