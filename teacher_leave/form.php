@@ -95,6 +95,11 @@ require_once '../components/layout_start.php';
                     </div>
                 </div>
 
+                <div id="days-zero-warning" class="hidden flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                    <i class="bi bi-exclamation-triangle-fill text-amber-500 text-lg mt-0.5 shrink-0"></i>
+                    <p class="text-sm font-bold text-amber-700">ช่วงวันที่เลือกตรงกับวันหยุดหรือวันเสาร์-อาทิตย์ทั้งหมด จำนวนวันลาเป็น 0 — ไม่สามารถยื่นใบลาได้ กรุณาเลือกวันทำการ</p>
+                </div>
+
                 <div class="space-y-4">
                     <label class="text-xs font-black text-slate-400 uppercase tracking-widest block">ในระหว่างการลา ข้าพเจ้าสามารถติดต่อได้ที่</label>
                     <textarea name="contact_info" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-blue-500" placeholder="ที่อยู่ หรือเบอร์โทรศัพท์ที่ติดต่อได้"></textarea>
@@ -254,6 +259,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('display_days').textContent = currentDays;
                 document.getElementById('stat_current').textContent = currentDays;
                 updateStatsView();
+
+                const warnEl = document.getElementById('days-zero-warning');
+                if (currentDays <= 0) {
+                    warnEl.classList.remove('hidden');
+                } else {
+                    warnEl.classList.add('hidden');
+                }
             }
         } catch (e) {
             console.error(e);

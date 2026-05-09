@@ -55,6 +55,9 @@ try {
 
     // ─── 3. คำนวณวันลา ───
     $daysCount = calculateLeaveDays($dateStart, $dateEnd, $pdo);
+    if ($daysCount <= 0) {
+        throw new Exception('ช่วงวันที่ที่เลือกตรงกับวันหยุดหรือวันเสาร์-อาทิตย์ทั้งหมด ไม่สามารถยื่นลาได้');
+    }
     $fiscalYear = getThaiFiscalYear($dateStart);
 
     // ─── 4. จัดการบันทึกลายเซ็น (ภาพ) ───
