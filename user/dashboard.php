@@ -8,9 +8,29 @@ if (!isset($_SESSION['llw_role'])) {
     exit();
 }
 
-$user_id  = $_SESSION['user_id'];
-$fullname = $_SESSION['fullname'] ?? ($_SESSION['firstname'] . ' ' . $_SESSION['lastname']);
+$fullname = $_SESSION['fullname'] ?? ($_SESSION['firstname'] ?? '');
 $today    = date('Y-m-d');
+
+// ค้นหา wfh_users.user_id จาก username (FK ของ wfh_timelogs ผูกกับ wfh_users)
+$_uname = $_SESSION['username'] ?? '';
+$_wq = $conn->prepare("SELECT user_id FROM wfh_users WHERE username = ? LIMIT 1");
+$_wq->bind_param('s', $_uname);
+$_wq->execute();
+$_wfhRow = $_wq->get_result()->fetch_assoc();
+$_wq->close();
+
+if ($_wfhRow) {
+    $user_id = (int)$_wfhRow['user_id'];
+} else {
+    $_parts = explode(' ', $fullname, 2);
+    $_fn = $_parts[0] ?? $fullname;
+    $_ln = $_parts[1] ?? '';
+    $_ins = $conn->prepare("INSERT INTO wfh_users (username, password, firstname, lastname, role) VALUES (?, '', ?, ?, 'user')");
+    $_ins->bind_param('sss', $_uname, $_fn, $_ln);
+    $_ins->execute();
+    $user_id = (int)$conn->insert_id;
+    $_ins->close();
+}
 
 $pageTitle = 'ลงเวลาปฏิบัติงาน';
 $pageSubtitle = 'ระบบลงเวลา WFH สำหรับบุคลากร';

@@ -31,11 +31,31 @@ if (!isset($_SESSION['user_id']) || (int)$_SESSION['user_id'] === 0) {
     exit();
 }
 
-$user_id = (int)$_SESSION['user_id'];
 $username_session = $_SESSION['username'] ?? '';
 $fullname_session = $_SESSION['fullname'] ?? ($_SESSION['firstname'] ?? '');
 
 try {
+
+// ค้นหา wfh_users.user_id จาก username (FK ของ wfh_timelogs ผูกกับ wfh_users)
+$_wq = $conn->prepare("SELECT user_id FROM wfh_users WHERE username = ? LIMIT 1");
+$_wq->bind_param('s', $username_session);
+$_wq->execute();
+$_wfhRow = $_wq->get_result()->fetch_assoc();
+$_wq->close();
+
+if ($_wfhRow) {
+    $user_id = (int)$_wfhRow['user_id'];
+} else {
+    // สร้าง record ใหม่ใน wfh_users เพื่อให้ FK ผ่าน
+    $_parts = explode(' ', $fullname_session, 2);
+    $_fn = $_parts[0] ?? $fullname_session;
+    $_ln = $_parts[1] ?? '';
+    $_ins = $conn->prepare("INSERT INTO wfh_users (username, password, firstname, lastname, role) VALUES (?, '', ?, ?, 'user')");
+    $_ins->bind_param('sss', $username_session, $_fn, $_ln);
+    $_ins->execute();
+    $user_id = (int)$conn->insert_id;
+    $_ins->close();
+}
 $action  = $_POST['action'] ?? '';
 $lat     = $_POST['lat']    ?? null;
 $lng     = $_POST['lng']    ?? null;
