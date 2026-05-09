@@ -105,6 +105,50 @@ try {
     $stmtUpdate->execute([$status, $completedAt, $reportId]);
 
     $pdo->commit();
+
+    // ── 5. ส่งแจ้งเตือน Telegram ────────────────────────────────────────
+    try {
+        require_once __DIR__ . '/../../includes/telegram_bot.php';
+
+        $stmtSet = $pdo->query("SELECT duty_bot_token, duty_chat_id FROM wfh_system_settings LIMIT 1");
+        $tgCfg   = $stmtSet ? $stmtSet->fetch() : null;
+        $tgToken  = $tgCfg['duty_bot_token'] ?? '';
+        $tgChatId = $tgCfg['duty_chat_id']   ?? '';
+
+        if (!empty($tgToken) && !empty($tgChatId)) {
+            // ชื่อครู
+            $stmtT = $pdo->prepare("SELECT prefix, full_name FROM duty_teachers WHERE id = ?");
+            $stmtT->execute([$schedule['teacher_id']]);
+            $teacher     = $stmtT->fetch();
+            $teacherName = trim(($teacher['prefix'] ?? '') . ' ' . ($teacher['full_name'] ?? ''));
+
+            // วันที่ภาษาไทย
+            $dayTh  = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+            $monTh  = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+            $ts     = strtotime($schedule['duty_date']);
+            $dateStr = 'วัน' . $dayTh[date('w', $ts)] . 'ที่ ' . date('j', $ts)
+                     . ' ' . $monTh[(int)date('n', $ts)] . ' ' . (date('Y', $ts) + 543);
+
+            $shiftLabel = ['day' => '🌞 กลางวัน', 'evening' => '🌆 เย็น', 'night' => '🌙 กลางคืน'];
+            $shiftText  = $shiftLabel[$schedule['shift']] ?? $schedule['shift'];
+            $statusIcon = ($status === 'complete') ? '✅ ครบแล้ว' : "⚠️ ยังไม่ครบ ({$photoCount}/{$required} รูป)";
+
+            $msg  = "📸 <b>รายงานเวรประจำวัน</b>\n";
+            $msg .= "📍 จุดที่ {$schedule['point_no']} — {$shiftText}\n";
+            $msg .= "🗓 {$dateStr}\n";
+            $msg .= "👤 ผู้รายงาน: {$teacherName}\n";
+            if ($reportNote !== '') {
+                $msg .= "📝 หมายเหตุ: {$reportNote}\n";
+            }
+            $msg .= "📷 ภาพถ่าย: {$photoCount} รูป\n";
+            $msg .= "สถานะ: {$statusIcon}";
+
+            sendTelegramMessage($tgToken, $tgChatId, $msg);
+        }
+    } catch (\Throwable $tgEx) {
+        error_log('[Duty] Telegram notify error: ' . $tgEx->getMessage());
+    }
+
     echo json_encode(['status' => 'success', 'message' => 'บันทึกรายงานเรียบร้อยแล้ว']);
 
 } catch (Exception $e) {
