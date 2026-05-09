@@ -31,8 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tg_token        = trim($_POST['telegram_token']);
         $tg_chat_id      = trim($_POST['admin_chat_id']);
         $tg_leave_chat   = trim($_POST['leave_chat_id']);
-        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=?, leave_chat_id=? WHERE setting_id=1");
-        $stmt->bind_param('sss', $tg_token, $tg_chat_id, $tg_leave_chat);
+        $tg_duty_chat    = trim($_POST['duty_chat_id']);
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=?, leave_chat_id=?, duty_chat_id=? WHERE setting_id=1");
+        $stmt->bind_param('ssss', $tg_token, $tg_chat_id, $tg_leave_chat, $tg_duty_chat);
         $stmt->execute();
         $stmt->close();
         $msg = 'บันทึกการตั้งค่า Telegram เรียบร้อย';
@@ -179,16 +180,18 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Bot Token & Chat ID</p>
             </div>
             <?php
-                $tg_ok = !empty($settings['telegram_token']) && !empty($settings['admin_chat_id']);
-                $lv_ok = !empty($settings['leave_chat_id']);
+                $tg_ok   = !empty($settings['telegram_token']) && !empty($settings['admin_chat_id']);
+                $lv_ok   = !empty($settings['leave_chat_id']);
+                $duty_ok = !empty($settings['duty_chat_id']);
+                $done    = array_sum([$tg_ok, $lv_ok, $duty_ok]);
             ?>
-            <?php if ($tg_ok && $lv_ok): ?>
+            <?php if ($done === 3): ?>
             <span class="ml-auto px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-xs font-black border border-emerald-100 flex items-center gap-1.5">
-                <i class="bi bi-check-circle-fill"></i> ครบทั้ง 2 กลุ่ม
+                <i class="bi bi-check-circle-fill"></i> ครบทั้ง 3 กลุ่ม
             </span>
             <?php elseif ($tg_ok): ?>
             <span class="ml-auto px-4 py-1.5 rounded-full bg-amber-50 text-amber-600 text-xs font-black border border-amber-100 flex items-center gap-1.5">
-                <i class="bi bi-exclamation-circle-fill"></i> ยังขาดกลุ่มการลา
+                <i class="bi bi-exclamation-circle-fill"></i> ตั้งค่าแล้ว <?= $done ?>/3 กลุ่ม
             </span>
             <?php else: ?>
             <span class="ml-auto px-4 py-1.5 rounded-full bg-rose-50 text-rose-600 text-xs font-black border border-rose-100 flex items-center gap-1.5">
@@ -256,6 +259,23 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <i class="bi bi-send-fill"></i> ทดสอบกลุ่มการลา
                 </button>
                 <div id="tg-result-leave" class="hidden p-3 rounded-xl text-sm font-bold"></div>
+            </div>
+
+            <!-- Chat ID group 3: เวรประจำวัน -->
+            <div class="bg-violet-50/50 rounded-2xl p-5 border border-violet-100 space-y-3">
+                <p class="text-xs font-black text-violet-700 uppercase tracking-widest flex items-center gap-2">
+                    <i class="bi bi-shield-check"></i> กลุ่มแจ้งเตือนเวรประจำวัน
+                </p>
+                <input type="text" name="duty_chat_id" id="inp-duty-chat"
+                    value="<?= htmlspecialchars($settings['duty_chat_id'] ?? '') ?>"
+                    placeholder="เช่น -4111222333"
+                    class="w-full bg-white border border-violet-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 outline-none transition-all font-bold">
+                <p class="text-xs text-violet-600/70 font-bold">รับแจ้งเตือนอัตโนมัติ: เวรเช้า 06:30 / เวรเย็น 16:20 / เวรกลาง 17:30</p>
+                <button type="button" onclick="testTelegram('inp-duty-chat','tg-result-duty')"
+                    class="w-full bg-white hover:bg-violet-50 text-violet-600 font-black py-2.5 rounded-xl border border-violet-200 transition-all text-sm flex items-center justify-center gap-2">
+                    <i class="bi bi-send-fill"></i> ทดสอบกลุ่มเวร
+                </button>
+                <div id="tg-result-duty" class="hidden p-3 rounded-xl text-sm font-bold"></div>
             </div>
 
             <div class="pt-2">
