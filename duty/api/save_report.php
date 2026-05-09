@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 session_start();
-require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../../config/database.php';
 
 if (!isset($_SESSION['llw_role'])) {
     http_response_code(401);
@@ -72,12 +72,22 @@ try {
         VALUES (?, ?, ?, NOW())
     ");
 
+    $allowedMime = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    $allowedExt  = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    $maxFileSize = 10 * 1024 * 1024; // 10 MB
+
     $count = count($photos['name']);
     for ($i = 0; $i < $count; $i++) {
         if ($photos['error'][$i] !== UPLOAD_ERR_OK) continue;
+        if ($photos['size'][$i] > $maxFileSize) continue;
 
-        $ext = pathinfo($photos['name'][$i], PATHINFO_EXTENSION);
-        $fileName = $reportId . '_' . uniqid() . '.' . $ext;
+        $ext = strtolower(pathinfo($photos['name'][$i], PATHINFO_EXTENSION));
+        if (!in_array($ext, $allowedExt, true)) continue;
+
+        $mime = mime_content_type($photos['tmp_name'][$i]);
+        if (!in_array($mime, $allowedMime, true)) continue;
+
+        $fileName = $reportId . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
         $targetPath = $uploadDir . $fileName;
         $relativeDir = 'uploads/reports/' . date('Y-m-d') . '/';
         $dbPath = $relativeDir . $fileName;
@@ -110,8 +120,8 @@ try {
     try {
         require_once __DIR__ . '/../../includes/telegram_bot.php';
 
-        $stmtSet = $pdo->query("SELECT duty_bot_token, duty_chat_id FROM wfh_system_settings LIMIT 1");
-        $tgCfg   = $stmtSet ? $stmtSet->fetch() : null;
+        $stmtSet  = $pdo->query("SELECT duty_bot_token, duty_chat_id FROM wfh_system_settings LIMIT 1");
+        $tgCfg    = $stmtSet ? $stmtSet->fetch() : null;
         $tgToken  = $tgCfg['duty_bot_token'] ?? '';
         $tgChatId = $tgCfg['duty_chat_id']   ?? '';
 
@@ -143,7 +153,12 @@ try {
             $msg .= "📷 ภาพถ่าย: {$photoCount} รูป\n";
             $msg .= "สถานะ: {$statusIcon}";
 
-            sendTelegramMessage($tgToken, $tgChatId, $msg);
+            // ใช้ Telegram class (cURL) แทน sendTelegramMessage (file_get_contents)
+            Telegram::init($tgToken);
+            $tgResult = Telegram::sendMessage($msg, $tgChatId);
+            if (!($tgResult['ok'] ?? false)) {
+                error_log('[Duty] Telegram send failed: ' . ($tgResult['description'] ?? 'unknown'));
+            }
         }
     } catch (\Throwable $tgEx) {
         error_log('[Duty] Telegram notify error: ' . $tgEx->getMessage());
@@ -151,9 +166,12 @@ try {
 
     echo json_encode(['status' => 'success', 'message' => 'บันทึกรายงานเรียบร้อยแล้ว']);
 
-} catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
+} catch (\Throwable $e) {
+    if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-    error_log($e->getMessage());
+    error_log('[Duty] save_report error [' . get_class($e) . ']: ' . $e->getMessage());
+    $msg = ($e instanceof \PDOException || strpos($e->getMessage(), 'SQLSTATE') === 0)
+        ? 'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่'
+        : $e->getMessage();
+    echo json_encode(['status' => 'error', 'message' => $msg]);
 }

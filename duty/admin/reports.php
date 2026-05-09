@@ -16,8 +16,11 @@ $pdo = getPdo();
 $filterDate  = $_GET['date']  ?? date('Y-m-d');
 $filterShift = $_GET['shift'] ?? '';
 
-// ── ถ้ากด "ส่งสรุปตอนนี้" ──
+// ── ถ้ากด "ส่งสรุปตอนนี้" (admin เท่านั้น) ──
 if (isset($_GET['send_summary'])) {
+    if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+        header('Location: reports.php'); exit();
+    }
     csrf_verify();
     include __DIR__ . '/../cron/daily_summary.php';
     header('Location: reports.php?date=' . $filterDate . '&sent=1');
@@ -47,7 +50,7 @@ $sql = "
         dr.reminder_sent_at,
         (SELECT COUNT(*) FROM duty_report_photos drp
          WHERE drp.report_id = dr.id AND drp.is_deleted = 0) AS photo_count,
-        (SELECT drp2.thumbnail_path FROM duty_report_photos drp2
+        (SELECT COALESCE(drp2.thumbnail_path, drp2.file_path) FROM duty_report_photos drp2
          WHERE drp2.report_id = dr.id AND drp2.is_deleted = 0
          ORDER BY drp2.received_at ASC LIMIT 1) AS first_thumb
     FROM duty_schedule ds
@@ -241,11 +244,20 @@ Swal.fire({icon:'success',title:'ส่งสรุปแล้ว',text:'ส่
                     <option value="night" <?= $filterShift==='night' ? 'selected' : '' ?>>🌙 เวรกลางคืน</option>
                 </select>
             </div>
-                    <i class="fab fa-telegram me-1"></i> ส่งสรุปเข้ากลุ่มตอนนี้
-                </a>
-            </div>
-        </form>
-    </div>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary rounded-xl px-4 fw-bold w-100">
+                <i class="fas fa-search me-1"></i>กรอง
+            </button>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <a href="reports.php?date=<?= $filterDate ?>&send_summary=1&csrf_token=<?= csrf_token() ?>"
+               class="btn btn-outline-info rounded-xl px-4 fw-bold w-100"
+               onclick="return confirm('ส่งสรุปเข้ากลุ่ม Telegram ตอนนี้?')">
+                <i class="fab fa-telegram me-1"></i>ส่งสรุปเข้ากลุ่ม
+            </a>
+        </div>
+    </form>
 </div>
 
 <!-- ── Grid Cards ── -->

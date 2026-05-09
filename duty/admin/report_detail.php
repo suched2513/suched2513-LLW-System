@@ -27,8 +27,11 @@ $report = $stmtR->fetch(PDO::FETCH_ASSOC);
 
 if (!$report) { header('Location: reports.php'); exit(); }
 
-// ── ลบรูป (admin) ──
+// ── ลบรูป (admin เท่านั้น) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_photo') {
+    if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+        http_response_code(403); exit();
+    }
     csrf_verify();
     $photoId = (int)($_POST['photo_id'] ?? 0);
 
