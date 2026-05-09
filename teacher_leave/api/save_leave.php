@@ -113,25 +113,30 @@ try {
 
     // ─── 8. ส่งแจ้งเตือน Telegram ───
     try {
-        $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
+        $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id, leave_chat_id FROM wfh_system_settings LIMIT 1");
         $config = $stmtSet->fetch();
         
-        if ($config && !empty($config['telegram_token']) && !empty($config['admin_chat_id'])) {
+        $tgToken  = $config['telegram_token'] ?? '';
+        $tgChatId = !empty($config['leave_chat_id']) ? $config['leave_chat_id'] : ($config['admin_chat_id'] ?? '');
+
+        if ($config && !empty($tgToken) && !empty($tgChatId)) {
             $typeMap = ['sick' => 'ลาป่วย', 'personal' => 'ลากิจส่วนตัว', 'vacation' => 'ลาพักผ่อน', 'maternity' => 'ลาคลอดบุตร', 'other' => 'ลาอื่นๆ'];
             $typeName = $typeMap[$leaveType] ?? 'ไม่ระบุ';
-            
-            $msg = "📝 <b>ยื่นใบลาใหม่</b>\n";
-            if ($attachmentPath) $msg = "📝📎 <b>ยื่นใบลาใหม่ (มีไฟล์แนบ)</b>\n";
-            
+
+            $scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host     = $_SERVER['HTTP_HOST'] ?? 'llw.krusuched.com';
+            $leaveUrl = "{$scheme}://{$host}/teacher_leave/";
+
+            $msg = $attachmentPath ? "📝📎 <b>ยื่นใบลาใหม่ (มีไฟล์แนบ)</b>\n" : "📝 <b>ยื่นใบลาใหม่</b>\n";
             $msg .= "👤 ผู้ลา: " . $_SESSION['fullname'] . "\n";
             $msg .= "📂 ประเภท: " . $typeName . "\n";
             $msg .= "🗓 วันที่: " . $dateStart . " ถึง " . $dateEnd . "\n";
             $msg .= "⏱ จำนวน: " . $daysCount . " วัน\n";
             $msg .= "🔍 เหตุผล: " . $reason . "\n";
             $msg .= "-------------------\n";
-            $msg .= "กรุณาตรวจสอบในระบบจัดการครับ";
-            
-            sendTelegramMessage($config['telegram_token'], $config['admin_chat_id'], $msg);
+            $msg .= "🔗 <a href=\"{$leaveUrl}\">กดที่นี่เพื่ออนุมัติใบลา</a>";
+
+            sendTelegramMessage($tgToken, $tgChatId, $msg);
         }
     } catch (Exception $tgEx) {
         error_log("Telegram Error: " . $tgEx->getMessage());

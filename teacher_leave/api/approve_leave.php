@@ -120,30 +120,32 @@ try {
 // 4. ส่งแจ้งเตือน Telegram (ถ้าดำเนินการสำเร็จ)
 if (isset($requestId) && isset($status)) {
     try {
-        $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
+        $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id, leave_chat_id FROM wfh_system_settings LIMIT 1");
         $config = $stmtSet->fetch();
 
-        if ($config && !empty($config['telegram_token']) && !empty($config['admin_chat_id'])) {
-            // ดึงข้อมูลผู้ลาเพื่อแจ้งเตือน
+        $tgToken  = $config['telegram_token'] ?? '';
+        $tgChatId = !empty($config['leave_chat_id']) ? $config['leave_chat_id'] : ($config['admin_chat_id'] ?? '');
+
+        if ($config && !empty($tgToken) && !empty($tgChatId)) {
             $stmtInfo = $pdo->prepare("SELECT u.firstname, u.lastname, r.leave_type FROM tl_requests r JOIN llw_users u ON r.user_id = u.user_id WHERE r.id = ?");
             $stmtInfo->execute([$requestId]);
             $info = $stmtInfo->fetch();
-            
+
+            $scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host     = $_SERVER['HTTP_HOST'] ?? 'llw.krusuched.com';
+            $leaveUrl = "{$scheme}://{$host}/teacher_leave/";
+
             if ($status == 1) {
-                if ($currentLevel == 1) {
-                    $statusText = "🔍 <b>ตรวจสอบแล้วถูกต้อง</b>";
-                } else {
-                    $statusText = "✅ <b>อนุมัติ</b>";
-                }
+                $statusText = $currentLevel < 2 ? "🔍 <b>ตรวจสอบแล้วถูกต้อง (Level 1)</b>" : "✅ <b>อนุมัติ</b>";
             } else {
                 $statusText = "❌ <b>ไม่อนุมัติ/ตีกลับ</b>";
             }
 
             $levelText = ['1' => 'เจ้าหน้าที่ตรวจสอบ', '2' => 'ผู้อำนวยการ/รองฯ'][$currentLevel] ?? 'ผู้ดูแลระบบ';
-            $typeMap = ['sick' => 'ลาป่วย', 'personal' => 'ลากิจส่วนตัว', 'vacation' => 'ลาพักผ่อน', 'maternity' => 'ลาคลอดบุตร', 'other' => 'ลาอื่นๆ'];
-            $typeName = $typeMap[$info['leave_type']] ?? 'ไม่ระบุ';
+            $typeMap   = ['sick' => 'ลาป่วย', 'personal' => 'ลากิจส่วนตัว', 'vacation' => 'ลาพักผ่อน', 'maternity' => 'ลาคลอดบุตร', 'other' => 'ลาอื่นๆ'];
+            $typeName  = $typeMap[$info['leave_type']] ?? 'ไม่ระบุ';
 
-            $msg = "📢 <b>พิจารณาใบลา</b>\n";
+            $msg  = "📢 <b>พิจารณาใบลา</b>\n";
             $msg .= "👤 ผู้ลา: " . $info['firstname'] . " " . $info['lastname'] . "\n";
             $msg .= "📂 ประเภท: " . $typeName . "\n";
             $msg .= "⚖️ สถานะ: " . $statusText . "\n";
@@ -152,14 +154,15 @@ if (isset($requestId) && isset($status)) {
                 $msg .= "📝 ความเห็น: " . $comment . "\n";
             }
             $msg .= "-------------------\n";
-            
+
             if ($status == 1 && $currentLevel < 2) {
-                $msg .= "📍 สถานะปัจจุบัน: รอการอนุมัติจาก ผอ./รองฯ";
+                $msg .= "📍 รอการอนุมัติจาก ผอ./รองฯ\n";
+                $msg .= "🔗 <a href=\"{$leaveUrl}\">กดที่นี่เพื่ออนุมัติ</a>";
             } elseif ($status == 1 && $currentLevel == 2) {
-                $msg .= "🏁 สถานะปัจจุบัน: อนุมัติเสร็่จสิ้น";
+                $msg .= "🏁 อนุมัติเสร็จสิ้น";
             }
 
-            sendTelegramMessage($config['telegram_token'], $config['admin_chat_id'], $msg);
+            sendTelegramMessage($tgToken, $tgChatId, $msg);
         }
     } catch (Exception $tgEx) {
         error_log("Telegram Error: " . $tgEx->getMessage());
