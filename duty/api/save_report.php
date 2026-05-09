@@ -120,6 +120,11 @@ try {
     try {
         require_once __DIR__ . '/../../includes/telegram_bot.php';
 
+        // auto-migrate duty columns ถ้ายังไม่มี
+        $cols = $pdo->query("SHOW COLUMNS FROM wfh_system_settings")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('duty_chat_id',   $cols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN duty_chat_id VARCHAR(100) NULL");
+        if (!in_array('duty_bot_token', $cols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN duty_bot_token VARCHAR(200) NULL");
+
         $stmtSet  = $pdo->query("SELECT duty_bot_token, duty_chat_id FROM wfh_system_settings LIMIT 1");
         $tgCfg    = $stmtSet ? $stmtSet->fetch() : null;
         $tgToken  = $tgCfg['duty_bot_token'] ?? '';

@@ -9,12 +9,15 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 
 $msg = '';
 
-// ── Auto-migrate: เพิ่มคอลัมน์ Telegram ใหม่ที่ยังไม่มี ──
+// ── Auto-migrate: เพิ่มคอลัมน์ Telegram ทั้งหมดที่อาจยังไม่มี ──
 try {
     $pdo = getPdo();
     $existingCols = $pdo->query("SHOW COLUMNS FROM wfh_system_settings")->fetchAll(PDO::FETCH_COLUMN);
-    if (!in_array('att_chat_id',   $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_chat_id VARCHAR(100) NULL AFTER leave_chat_id");
-    if (!in_array('att_bot_token', $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_bot_token VARCHAR(200) NULL AFTER att_chat_id");
+    if (!in_array('leave_chat_id',  $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN leave_chat_id VARCHAR(100) NULL AFTER admin_chat_id");
+    if (!in_array('att_chat_id',    $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_chat_id VARCHAR(100) NULL AFTER leave_chat_id");
+    if (!in_array('att_bot_token',  $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_bot_token VARCHAR(200) NULL AFTER att_chat_id");
+    if (!in_array('duty_chat_id',   $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN duty_chat_id VARCHAR(100) NULL AFTER att_bot_token");
+    if (!in_array('duty_bot_token', $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN duty_bot_token VARCHAR(200) NULL AFTER duty_chat_id");
 } catch (Exception $e) { error_log('settings auto-migrate: ' . $e->getMessage()); }
 
 // AJAX: ทดสอบบอทเช็คชื่อ
