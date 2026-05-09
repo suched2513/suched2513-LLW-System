@@ -72,15 +72,15 @@ require_once '../components/layout_start.php';
             <div class="flex items-center gap-3">
                 <?php if (!$log): ?>
                     <span class="px-6 py-2 rounded-2xl bg-slate-50 text-slate-400 font-black text-xs uppercase tracking-widest flex items-center gap-2">
-                        <i class="bi bi-circle"></i> Not Checked In
+                        <i class="bi bi-circle"></i> ยังไม่ได้ลงเวลา
                     </span>
                 <?php elseif ($log && !$log['check_out_time']): ?>
                     <span class="px-6 py-2 rounded-2xl bg-emerald-50 text-emerald-600 font-black text-xs uppercase tracking-widest flex items-center gap-2">
-                        <i class="bi bi-check-circle-fill"></i> In: <?= $log['check_in_time'] ?>
+                        <i class="bi bi-check-circle-fill"></i> เข้า: <?= $log['check_in_time'] ?>
                     </span>
                 <?php else: ?>
                     <span class="px-6 py-2 rounded-2xl bg-blue-50 text-blue-600 font-black text-xs uppercase tracking-widest flex items-center gap-2">
-                        <i class="bi bi-check2-all"></i> Done / ออกงานแล้ว
+                        <i class="bi bi-check2-all"></i> ลงเวลาครบแล้ว
                     </span>
                 <?php endif; ?>
             </div>
@@ -89,7 +89,7 @@ require_once '../components/layout_start.php';
         <!-- Verification Card (Camera & GPS) -->
         <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-6">
             <h3 class="font-black text-slate-800 text-sm flex items-center gap-3">
-                <i class="bi bi-shield-lock-fill text-blue-600"></i> Identity Verification
+                <i class="bi bi-shield-lock-fill text-blue-600"></i> ยืนยันตัวตน
             </h3>
             
             <!-- Camera -->
@@ -99,15 +99,15 @@ require_once '../components/layout_start.php';
                     <canvas id="canvas-preview" class="absolute inset-0 w-full h-full object-cover hidden"></canvas>
                     <div id="camera-error" class="hidden absolute inset-0 flex flex-col items-center justify-center text-slate-500 p-6 text-center">
                         <i class="bi bi-camera-video-off text-3xl mb-2"></i>
-                        <p class="text-xs font-bold uppercase tracking-widest">Camera Access Required</p>
+                        <p class="text-xs font-bold uppercase tracking-widest">กรุณาอนุญาตใช้กล้อง</p>
                     </div>
                 </div>
                 <div class="flex gap-2 mt-4">
                     <button class="flex-1 bg-white border border-slate-100 p-3 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all hidden" id="btn-retake">
-                        <i class="bi bi-arrow-counterclockwise mr-1"></i> Retake
+                        <i class="bi bi-arrow-counterclockwise mr-1"></i> ถ่ายใหม่
                     </button>
                     <button class="flex-1 bg-blue-600 text-white p-3 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:scale-[1.02] transition-all" id="btn-capture">
-                        <i class="bi bi-camera-fill mr-1"></i> Capture Photo
+                        <i class="bi bi-camera-fill mr-1"></i> ถ่ายภาพ
                     </button>
                 </div>
                 <input type="hidden" id="photo-data" value="">
@@ -119,8 +119,8 @@ require_once '../components/layout_start.php';
                     <i class="bi bi-geo-alt-fill"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">GPS Location</p>
-                    <p id="gps-status" class="text-xs font-bold text-slate-700 truncate">Searching for location...</p>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">ตำแหน่ง GPS</p>
+                    <p id="gps-status" class="text-xs font-bold text-slate-700 truncate">กำลังค้นหาตำแหน่ง...</p>
                     <p id="gps-coords" class="text-xs font-bold text-slate-300 mt-0.5 truncate"></p>
                 </div>
                 <input type="hidden" id="gps-lat" value="">
@@ -139,7 +139,7 @@ require_once '../components/layout_start.php';
                     </button>
                 <?php else: ?>
                     <div class="w-full p-4 bg-blue-50 text-blue-600 rounded-[1.5rem] font-bold text-xs text-center border border-blue-100">
-                        <i class="bi bi-info-circle mr-1"></i> You have completed attendance for today.
+                        <i class="bi bi-info-circle mr-1"></i> ลงเวลาครบแล้ววันนี้
                     </div>
                 <?php endif; ?>
             </div>
@@ -153,15 +153,15 @@ require_once '../components/layout_start.php';
         <?php if ($log): ?>
         <div class="grid grid-cols-2 lg:grid-cols-3 gap-6 no-print">
             <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Checked In At</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">เวลาเข้างาน</p>
                 <h4 class="text-3xl font-black text-emerald-600"><?= $log['check_in_time'] ?? '--:--' ?></h4>
             </div>
             <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Checked Out At</p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">เวลาออกงาน</p>
                 <h4 class="text-3xl font-black text-rose-500"><?= $log['check_out_time'] ?? '--:--' ?></h4>
             </div>
             <div class="hidden lg:block bg-blue-600 p-8 rounded-[2.5rem] shadow-xl shadow-blue-100 text-white">
-                <p class="text-xs font-black text-blue-200 uppercase tracking-widest mb-1">Work Hours</p>
+                <p class="text-xs font-black text-blue-200 uppercase tracking-widest mb-1">ชั่วโมงทำงาน</p>
                 <?php
                     $hrs = '--'; $mns = '--';
                     if ($log['check_in_time'] && $log['check_out_time']) {
@@ -178,23 +178,23 @@ require_once '../components/layout_start.php';
         <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
             <div class="px-10 py-8 border-b border-slate-50 flex items-center justify-between">
                 <h3 class="font-black text-slate-800 flex items-center gap-3"><i class="bi bi-clock-history text-blue-600"></i> ประวัติการลงเวลา</h3>
-                <span class="text-xs font-black text-slate-400 uppercase tracking-widest font-bold">Past 7 days records</span>
+                <span class="text-xs font-black text-slate-400 uppercase tracking-widest font-bold">ย้อนหลัง 7 วัน</span>
             </div>
             
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
                     <thead class="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                         <tr>
-                            <th class="px-10 py-5 text-left">Date</th>
-                            <th class="px-6 py-5 text-left">In</th>
-                            <th class="px-6 py-5 text-left">Out</th>
-                            <th class="px-6 py-5 text-center">Location/Photo</th>
-                            <th class="px-10 py-5 text-right">Status</th>
+                            <th class="px-10 py-5 text-left">วันที่</th>
+                            <th class="px-6 py-5 text-left">เข้า</th>
+                            <th class="px-6 py-5 text-left">ออก</th>
+                            <th class="px-6 py-5 text-center">GPS/รูป</th>
+                            <th class="px-10 py-5 text-right">สถานะ</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50 text-slate-600">
                         <?php if (empty($history)): ?>
-                            <tr><td colspan="5" class="py-20 text-center font-bold italic text-slate-300">No history found.</td></tr>
+                            <tr><td colspan="5" class="py-20 text-center font-bold italic text-slate-300">ไม่พบประวัติการลงเวลา</td></tr>
                         <?php else: ?>
                             <?php foreach ($history as $h): ?>
                                 <tr class="hover:bg-slate-50/50 transition-all">
@@ -211,11 +211,11 @@ require_once '../components/layout_start.php';
                                     </td>
                                     <td class="px-10 py-5 text-right">
                                         <?php if (!$h['check_in_time']): ?>
-                                            <span class="px-3 py-1 rounded-lg bg-slate-50 text-slate-400 font-black text-xs uppercase tracking-wider">MISSING</span>
+                                            <span class="px-3 py-1 rounded-lg bg-slate-50 text-slate-400 font-black text-xs uppercase tracking-wider">ไม่มีข้อมูล</span>
                                         <?php elseif ($h['check_in_status'] === 'มาสาย'): ?>
-                                            <span class="px-3 py-1 rounded-lg bg-amber-50 text-amber-600 font-black text-xs uppercase tracking-wider">LATE</span>
+                                            <span class="px-3 py-1 rounded-lg bg-amber-50 text-amber-600 font-black text-xs uppercase tracking-wider">มาสาย</span>
                                         <?php else: ?>
-                                            <span class="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-600 font-black text-xs uppercase tracking-wider">ON TIME</span>
+                                            <span class="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-600 font-black text-xs uppercase tracking-wider">ปกติ</span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -282,10 +282,10 @@ require_once '../components/layout_start.php';
         navigator.geolocation.getCurrentPosition(pos => {
             document.getElementById('gps-lat').value = pos.coords.latitude;
             document.getElementById('gps-lng').value = pos.coords.longitude;
-            document.getElementById('gps-status').textContent = 'Location Verified';
-            document.getElementById('gps-coords').textContent = `Lat: ${pos.coords.latitude.toFixed(6)}, Lng: ${pos.coords.longitude.toFixed(6)}`;
+            document.getElementById('gps-status').textContent = 'ยืนยันตำแหน่งแล้ว';
+            document.getElementById('gps-coords').textContent = `ละติจูด: ${pos.coords.latitude.toFixed(6)}, ลองจิจูด: ${pos.coords.longitude.toFixed(6)}`;
         }, () => {
-            document.getElementById('gps-status').textContent = 'Geolocation Denied';
+            document.getElementById('gps-status').textContent = 'ไม่ได้รับอนุญาต GPS';
             document.getElementById('gps-status').classList.add('text-rose-400');
         });
     }
@@ -294,7 +294,7 @@ require_once '../components/layout_start.php';
     function submitLog(action) {
         const btn = document.getElementById('btn-submit');
         const oldText = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-hourglass-split animate-spin mr-2"></i> Processing...';
+        btn.innerHTML = '<i class="bi bi-hourglass-split animate-spin mr-2"></i> กำลังบันทึก...';
         btn.disabled = true;
 
         const fd = new FormData();
@@ -308,14 +308,14 @@ require_once '../components/layout_start.php';
             .then(data => {
                 if (data.success) {
                     Swal.fire({
-                        title: 'Success!',
+                        title: 'สำเร็จ!',
                         text: data.message,
                         icon: 'success',
                         customClass: { popup: 'rounded-[2.5rem]', confirmButton: 'bg-emerald-600 rounded-2xl px-10 py-3 font-black text-xs uppercase' }
                     }).then(() => location.reload());
                 } else {
                     Swal.fire({
-                        title: 'Error',
+                        title: 'ข้อผิดพลาด',
                         text: data.message,
                         icon: 'error',
                         customClass: { popup: 'rounded-[2.5rem]', confirmButton: 'bg-rose-500 rounded-2xl px-10 py-3 font-black text-xs uppercase' }
@@ -325,7 +325,7 @@ require_once '../components/layout_start.php';
                 }
             })
             .catch(() => {
-                Swal.fire('Error', 'Connection failed', 'error');
+                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อได้', 'error');
                 btn.innerHTML = oldText;
                 btn.disabled = false;
             });

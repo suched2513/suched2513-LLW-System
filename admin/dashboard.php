@@ -50,10 +50,10 @@ require_once '../components/layout_start.php';
     
     <!-- Premium Navigation Tabs -->
     <div class="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth">
-        <a href="dashboard.php" class="px-8 py-3.5 bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-blue-100 whitespace-nowrap transition-all border border-blue-600">Overview</a>
-        <a href="../manage_users.php" class="px-8 py-3.5 bg-white text-slate-500 rounded-2xl font-black text-sm uppercase tracking-[0.2em] border border-slate-200/60 hover:bg-slate-50 transition-all whitespace-nowrap">Manage Users</a>
-        <a href="reports.php" class="px-8 py-3.5 bg-white text-slate-500 rounded-2xl font-black text-sm uppercase tracking-[0.2em] border border-slate-200/60 hover:bg-slate-50 transition-all whitespace-nowrap">Annual Reports</a>
-        <a href="settings.php" class="px-8 py-3.5 bg-white text-slate-500 rounded-2xl font-black text-sm uppercase tracking-[0.2em] border border-slate-200/60 hover:bg-slate-50 transition-all whitespace-nowrap">System Settings</a>
+        <a href="dashboard.php" class="px-8 py-3.5 bg-blue-600 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-blue-100 whitespace-nowrap transition-all border border-blue-600">ภาพรวม</a>
+        <a href="../manage_users.php" class="px-8 py-3.5 bg-white text-slate-500 rounded-2xl font-black text-sm uppercase tracking-[0.2em] border border-slate-200/60 hover:bg-slate-50 transition-all whitespace-nowrap">จัดการบุคลากร</a>
+        <a href="reports.php" class="px-8 py-3.5 bg-white text-slate-500 rounded-2xl font-black text-sm uppercase tracking-[0.2em] border border-slate-200/60 hover:bg-slate-50 transition-all whitespace-nowrap">รายงาน</a>
+        <a href="settings.php" class="px-8 py-3.5 bg-white text-slate-500 rounded-2xl font-black text-sm uppercase tracking-[0.2em] border border-slate-200/60 hover:bg-slate-50 transition-all whitespace-nowrap">ตั้งค่าระบบ</a>
     </div>
 
     <!-- Vibrant Stat Cards -->
@@ -67,10 +67,10 @@ require_once '../components/layout_start.php';
                 <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white text-2xl backdrop-blur-sm">
                     <i class="bi bi-people-fill"></i>
                 </div>
-                <span class="text-xs font-black text-indigo-100 uppercase tracking-widest">Total Staff</span>
+                <span class="text-xs font-black text-indigo-100 uppercase tracking-widest">บุคลากรทั้งหมด</span>
             </div>
             <h3 class="text-5xl font-black text-white tracking-tight"><?= number_format($total_users) ?></h3>
-            <p class="text-xs text-indigo-100 font-bold mt-4 uppercase tracking-[0.2em]">Active personnel</p>
+            <p class="text-xs text-indigo-100 font-bold mt-4 uppercase tracking-[0.2em]">ผู้ปฏิบัติงาน</p>
         </div>
 
         <!-- Card 2: Checked-in -->
@@ -82,10 +82,10 @@ require_once '../components/layout_start.php';
                 <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white text-2xl backdrop-blur-sm">
                     <i class="bi bi-person-check-fill"></i>
                 </div>
-                <span class="text-xs font-black text-emerald-50 uppercase tracking-widest">Checked-in</span>
+                <span class="text-xs font-black text-emerald-50 uppercase tracking-widest">ลงเวลาแล้ว</span>
             </div>
             <h3 class="text-5xl font-black text-white tracking-tight"><?= number_format($checkedin_today) ?></h3>
-            <p class="text-xs text-emerald-50 font-bold mt-4 uppercase tracking-[0.2em]">Presence today</p>
+            <p class="text-xs text-emerald-50 font-bold mt-4 uppercase tracking-[0.2em]">วันนี้</p>
         </div>
 
         <!-- Card 3: Late -->
@@ -97,10 +97,10 @@ require_once '../components/layout_start.php';
                 <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white text-2xl backdrop-blur-sm">
                     <i class="bi bi-hourglass-split"></i>
                 </div>
-                <span class="text-xs font-black text-orange-50 uppercase tracking-widest">Today Late</span>
+                <span class="text-xs font-black text-orange-50 uppercase tracking-widest">มาสายวันนี้</span>
             </div>
             <h3 class="text-5xl font-black text-white tracking-tight"><?= number_format($late_today) ?></h3>
-            <p class="text-xs text-orange-50 font-bold mt-4 uppercase tracking-[0.2em]">Efficiency alert</p>
+            <p class="text-xs text-orange-50 font-bold mt-4 uppercase tracking-[0.2em]">ต้องติดตาม</p>
         </div>
 
         <!-- Card 4: Pending -->
@@ -112,10 +112,10 @@ require_once '../components/layout_start.php';
                 <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white text-2xl backdrop-blur-sm">
                     <i class="bi bi-dash-circle-fill"></i>
                 </div>
-                <span class="text-xs font-black text-rose-50 uppercase tracking-widest">Pending</span>
+                <span class="text-xs font-black text-rose-50 uppercase tracking-widest">ยังไม่ลงเวลา</span>
             </div>
             <h3 class="text-5xl font-black text-white tracking-tight"><?= number_format($not_yet) ?></h3>
-            <p class="text-xs text-rose-50 font-bold mt-4 uppercase tracking-[0.2em]">Awaiting logs</p>
+            <p class="text-xs text-rose-50 font-bold mt-4 uppercase tracking-[0.2em]">รอลงเวลา</p>
         </div>
     </div>
 
@@ -130,7 +130,7 @@ require_once '../components/layout_start.php';
                 <canvas id="donutChart"></canvas>
                 <div class="absolute flex flex-col items-center">
                     <span class="text-4xl font-black text-slate-800"><?= $total_users > 0 ? round(($checkedin_today/$total_users)*100) : 0 ?>%</span>
-                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Presence</p>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">สัดส่วน</p>
                 </div>
             </div>
         </div>
@@ -140,7 +140,7 @@ require_once '../components/layout_start.php';
             <div class="px-10 py-9 border-b border-slate-50 flex items-center justify-between bg-slate-50/20">
                 <div class="flex flex-col">
                     <h3 class="font-black text-slate-800 flex items-center gap-3 text-lg"><i class="bi bi-list-stars text-blue-600"></i> รายการปฏิบัติงานวันนี้</h3>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Live tracking personnel attendance logs</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">ติดตามการลงเวลาแบบ real-time</p>
                 </div>
                 <button class="bg-blue-600 text-white p-3 rounded-2xl shadow-xl shadow-blue-100 hover:scale-105 transition-all">
                     <i class="bi bi-arrow-clockwise"></i>
@@ -151,16 +151,16 @@ require_once '../components/layout_start.php';
                 <?php if (empty($today_logs)): ?>
                     <div class="flex flex-col items-center justify-center py-24 text-slate-300">
                         <i class="bi bi-calendar2-x text-7xl mb-6 opacity-30"></i>
-                        <p class="font-black italic uppercase tracking-[0.2em] text-xs">No records detected for today</p>
+                        <p class="font-black italic uppercase tracking-[0.2em] text-xs">ยังไม่มีการลงเวลาวันนี้</p>
                     </div>
                 <?php else: ?>
                     <table class="w-full">
                         <thead class="bg-slate-50/30 text-xs font-black text-slate-400 uppercase tracking-[0.15em]">
                             <tr>
-                                <th class="px-10 py-6 text-left">Staff Member</th>
-                                <th class="px-6 py-6 text-left">Check-in</th>
-                                <th class="px-6 py-6 text-left">Check-out</th>
-                                <th class="px-10 py-6 text-right">Status</th>
+                                <th class="px-10 py-6 text-left">ชื่อ-สกุล</th>
+                                <th class="px-6 py-6 text-left">เวลาเข้า</th>
+                                <th class="px-6 py-6 text-left">เวลาออก</th>
+                                <th class="px-10 py-6 text-right">สถานะ</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50/50 text-slate-600">
@@ -173,7 +173,7 @@ require_once '../components/layout_start.php';
                                             </div>
                                             <div class="flex flex-col">
                                                 <div class="font-black text-slate-800 text-[13px]"><?= htmlspecialchars($r['firstname'].' '.$r['lastname']) ?></div>
-                                                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest"><?= htmlspecialchars($r['dept_name'] ?? 'General') ?></div>
+                                                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest"><?= htmlspecialchars($r['dept_name'] ?? 'ทั่วไป') ?></div>
                                             </div>
                                         </div>
                                     </td>
@@ -190,14 +190,14 @@ require_once '../components/layout_start.php';
                                                 <span class="font-black text-slate-700 text-sm"><?= $r['check_out_time'] ?></span>
                                             </div>
                                         <?php else: ?>
-                                            <span class="text-slate-200 italic font-bold">Waiting...</span>
+                                            <span class="text-slate-200 italic font-bold">รอออกงาน...</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="px-10 py-6 text-right">
                                         <?php if ($r['check_in_status'] === 'มาสาย'): ?>
-                                            <span class="px-4 py-1.5 rounded-xl bg-rose-50 text-rose-600 font-black text-xs uppercase tracking-widest border border-rose-100">LATE</span>
+                                            <span class="px-4 py-1.5 rounded-xl bg-rose-50 text-rose-600 font-black text-xs uppercase tracking-widest border border-rose-100">มาสาย</span>
                                         <?php else: ?>
-                                            <span class="px-4 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-black text-xs uppercase tracking-widest border border-emerald-100">ON TIME</span>
+                                            <span class="px-4 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-black text-xs uppercase tracking-widest border border-emerald-100">ปกติ</span>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -216,7 +216,7 @@ require_once '../components/layout_start.php';
         new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['ON TIME', 'LATE', 'ABSENT'],
+                labels: ['ปกติ', 'มาสาย', 'ขาด'],
                 datasets: [{
                     data: [<?= $checkedin_today - $late_today ?>, <?= $late_today ?>, <?= max(0,$not_yet) ?>],
                     backgroundColor: ['#10b981', '#f59e0b', '#f43f5e'],
