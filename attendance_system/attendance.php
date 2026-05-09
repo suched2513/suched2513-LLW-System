@@ -59,42 +59,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
         $pdo->commit();
         $success_msg = "บันทึกข้อมูลเรียบร้อยแล้ว";
 
-        // ── Telegram Auto-Broadcast (Optional / Manual Hook) ──
-        if (($_POST['broadcast_now'] ?? '0') === '1') {
-            try {
-                $settings  = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
-                $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
-                $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
+        // ── Telegram Auto-Broadcast (ส่งอัตโนมัติทุกครั้ง) ──
+        try {
+            $settings  = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
+            $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
+            $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
 
-                if ($attToken && $attChatId) {
-                    $absentees = [];
-                    foreach ($student_status as $sid => $status) {
-                        if (in_array($status, ['ขาด', 'โดด'])) {
-                            $st = $pdo->prepare("SELECT name FROM att_students WHERE id = ?");
-                            $st->execute([$sid]);
-                            $absentees[] = "- " . $st->fetchColumn() . " ($status)";
-                        }
-                    }
-
-                    if (!empty($absentees)) {
-                        $msg  = "🔔 <b>แจ้งเตือนการเช็คชื่อ</b>\n";
-                        $msg .= "📅 วันที่: " . date('d/m/Y', strtotime($date)) . " | คาบที่: $period\n";
-                        $msg .= "📘 วิชา: " . $subject_info['subject_name'] . "\n";
-                        $msg .= "👤 ครูผู้สอน: " . ($_SESSION['teacher_name'] ?? '') . "\n\n";
-                        $msg .= "<b>นักเรียนที่ไม่เข้าเรียน:</b>\n" . implode("\n", $absentees);
-
-                        Telegram::init($attToken);
-                        $tgResult = Telegram::sendMessage($msg, $attChatId);
-                        if ($tgResult['ok'] ?? false) {
-                            $success_msg .= " และส่งแจ้งเตือน Telegram แล้ว";
-                        } else {
-                            error_log('[Attendance] Telegram failed: ' . ($tgResult['description'] ?? 'unknown'));
-                        }
+            if ($attToken && $attChatId) {
+                $counts = ['มา' => 0, 'ขาด' => 0, 'ลา' => 0, 'โดด' => 0, 'สาย' => 0];
+                $absentees = [];
+                foreach ($student_status as $sid => $status) {
+                    if (isset($counts[$status])) $counts[$status]++;
+                    if (in_array($status, ['ขาด', 'โดด', 'ลา', 'สาย'])) {
+                        $st = $pdo->prepare("SELECT name FROM att_students WHERE id = ?");
+                        $st->execute([$sid]);
+                        $absentees[] = "• " . $st->fetchColumn() . " ($status)";
                     }
                 }
-            } catch (\Throwable $tgEx) {
-                error_log('[Attendance] Telegram error: ' . $tgEx->getMessage());
+
+                $total = array_sum($counts);
+                $msg  = "✅ <b>เช็คชื่อแล้ว</b>\n";
+                $msg .= "📅 " . date('d/m/Y', strtotime($date)) . " | คาบที่ {$period}\n";
+                $msg .= "📘 " . htmlspecialchars($subject_info['subject_name']) . " (" . htmlspecialchars($subject_info['classroom']) . ")\n";
+                $msg .= "👤 " . htmlspecialchars($_SESSION['teacher_name'] ?? '') . "\n";
+                $msg .= "📊 มา {$counts['มา']} | ขาด {$counts['ขาด']} | ลา {$counts['ลา']} | โดด {$counts['โดด']} | สาย {$counts['สาย']} / {$total} คน";
+
+                if (!empty($absentees)) {
+                    $msg .= "\n\n<b>รายชื่อ:</b>\n" . implode("\n", $absentees);
+                }
+
+                Telegram::init($attToken);
+                $tgResult = Telegram::sendMessage($msg, $attChatId);
+                if (!($tgResult['ok'] ?? false)) {
+                    error_log('[Attendance] Telegram failed: ' . ($tgResult['description'] ?? 'unknown'));
+                }
             }
+        } catch (\Throwable $tgEx) {
+            error_log('[Attendance] Telegram error: ' . $tgEx->getMessage());
         }
     } catch (Exception $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -185,7 +186,6 @@ require_once '../components/layout_start.php';
             <input type="hidden" name="period" value="<?= htmlspecialchars($selected_period) ?>">
             <input type="hidden" name="subject_id" value="<?= htmlspecialchars($selected_subject_id) ?>">
             <input type="hidden" name="start_time" value="<?= htmlspecialchars($start_time) ?>">
-            <input type="hidden" name="broadcast_now" id="broadcast_now" value="0">
 
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-100">
@@ -417,20 +417,8 @@ require_once '../components/layout_start.php';
             borderRadius: '20px'
         }).then(r => {
             if(r.isConfirmed) {
-                Swal.fire({
-                    title: 'ส่งแจ้งเตือน Telegram ด้วยหรือไม่?',
-                    text: 'ระบบจะส่งรายชื่อนักเรียนที่ ขาด/โดด เข้ากลุ่มบริหาร',
-                    icon: 'info',
-                    showCancelButton: true,
-                    confirmButtonText: 'บันทึก + ส่ง Telegram',
-                    cancelButtonText: 'บันทึกอย่างเดียว',
-                    confirmButtonColor: '#10b981',
-                    cancelButtonColor: '#2563eb'
-                }).then(res => {
-                    if (res.isConfirmed) document.getElementById('broadcast_now').value = '1';
-                    Swal.fire({ title: 'กำลังดำเนินการ...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-                    document.getElementById('attendance-form').submit();
-                });
+                Swal.fire({ title: 'กำลังดำเนินการ...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                document.getElementById('attendance-form').submit();
             }
         });
         return false;
