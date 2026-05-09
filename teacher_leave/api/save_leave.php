@@ -113,21 +113,27 @@ try {
 
     // ─── 8. ส่งแจ้งเตือน Telegram ───
     try {
-        $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id, leave_chat_id FROM wfh_system_settings LIMIT 1");
-        $config = $stmtSet->fetch();
-        
+        // ดึง admin_chat_id ก่อน (มีอยู่แน่) แล้วค่อย leave_chat_id แยก
+        $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
+        $config  = $stmtSet ? $stmtSet->fetch() : null;
+
+        // leave_chat_id อาจยังไม่มี column (migration ยังไม่รัน) — ดึงแยก
+        $leaveChatId = '';
+        try {
+            $lcs = $pdo->query("SELECT leave_chat_id FROM wfh_system_settings LIMIT 1");
+            if ($lcs) $leaveChatId = (string)($lcs->fetchColumn() ?? '');
+        } catch (\Throwable $ignore) {}
+
         $tgToken  = $config['telegram_token'] ?? '';
-        $tgChatId = !empty($config['leave_chat_id']) ? $config['leave_chat_id'] : ($config['admin_chat_id'] ?? '');
+        $tgChatId = !empty($leaveChatId) ? $leaveChatId : ($config['admin_chat_id'] ?? '');
 
         if ($config && !empty($tgToken) && !empty($tgChatId)) {
-            $typeMap = ['sick' => 'ลาป่วย', 'personal' => 'ลากิจส่วนตัว', 'vacation' => 'ลาพักผ่อน', 'maternity' => 'ลาคลอดบุตร', 'other' => 'ลาอื่นๆ'];
+            $typeMap  = ['sick' => 'ลาป่วย', 'personal' => 'ลากิจส่วนตัว', 'vacation' => 'ลาพักผ่อน', 'maternity' => 'ลาคลอดบุตร', 'other' => 'ลาอื่นๆ'];
             $typeName = $typeMap[$leaveType] ?? 'ไม่ระบุ';
-
             $scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-            $host     = $_SERVER['HTTP_HOST'] ?? 'llw.krusuched.com';
-            $leaveUrl = "{$scheme}://{$host}/teacher_leave/";
+            $leaveUrl = "{$scheme}://" . ($_SERVER['HTTP_HOST'] ?? 'llw.krusuched.com') . "/teacher_leave/";
 
-            $msg = $attachmentPath ? "📝📎 <b>ยื่นใบลาใหม่ (มีไฟล์แนบ)</b>\n" : "📝 <b>ยื่นใบลาใหม่</b>\n";
+            $msg  = $attachmentPath ? "📝📎 <b>ยื่นใบลาใหม่ (มีไฟล์แนบ)</b>\n" : "📝 <b>ยื่นใบลาใหม่</b>\n";
             $msg .= "👤 ผู้ลา: " . $_SESSION['fullname'] . "\n";
             $msg .= "📂 ประเภท: " . $typeName . "\n";
             $msg .= "🗓 วันที่: " . $dateStart . " ถึง " . $dateEnd . "\n";
@@ -138,7 +144,7 @@ try {
 
             sendTelegramMessage($tgToken, $tgChatId, $msg);
         }
-    } catch (Exception $tgEx) {
+    } catch (\Throwable $tgEx) {
         error_log("Telegram Error: " . $tgEx->getMessage());
     }
 

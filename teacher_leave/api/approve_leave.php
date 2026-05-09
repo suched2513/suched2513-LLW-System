@@ -120,11 +120,17 @@ try {
 // 4. ส่งแจ้งเตือน Telegram (ถ้าดำเนินการสำเร็จ)
 if (isset($requestId) && isset($status)) {
     try {
-        $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id, leave_chat_id FROM wfh_system_settings LIMIT 1");
-        $config = $stmtSet->fetch();
+        $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
+        $config  = $stmtSet ? $stmtSet->fetch() : null;
+
+        $leaveChatId = '';
+        try {
+            $lcs = $pdo->query("SELECT leave_chat_id FROM wfh_system_settings LIMIT 1");
+            if ($lcs) $leaveChatId = (string)($lcs->fetchColumn() ?? '');
+        } catch (\Throwable $ignore) {}
 
         $tgToken  = $config['telegram_token'] ?? '';
-        $tgChatId = !empty($config['leave_chat_id']) ? $config['leave_chat_id'] : ($config['admin_chat_id'] ?? '');
+        $tgChatId = !empty($leaveChatId) ? $leaveChatId : ($config['admin_chat_id'] ?? '');
 
         if ($config && !empty($tgToken) && !empty($tgChatId)) {
             $stmtInfo = $pdo->prepare("SELECT u.firstname, u.lastname, r.leave_type FROM tl_requests r JOIN llw_users u ON r.user_id = u.user_id WHERE r.id = ?");
@@ -164,7 +170,7 @@ if (isset($requestId) && isset($status)) {
 
             sendTelegramMessage($tgToken, $tgChatId, $msg);
         }
-    } catch (Exception $tgEx) {
+    } catch (\Throwable $tgEx) {
         error_log("Telegram Error: " . $tgEx->getMessage());
     }
 }
