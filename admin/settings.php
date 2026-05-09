@@ -8,9 +8,34 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 }
 
 $msg = '';
+
+// AJAX: ทดสอบ Telegram (ก่อน csrf check เพราะ return JSON แล้ว exit)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_telegram') {
+    header('Content-Type: application/json; charset=utf-8');
+    require_once '../includes/telegram_bot.php';
+    $token   = trim($_POST['token'] ?? '');
+    $chat_id = trim($_POST['chat_id'] ?? '');
+    if (!$token || !$chat_id) {
+        echo json_encode(['ok' => false, 'message' => 'กรุณากรอก Token และ Chat ID ก่อน']);
+        exit;
+    }
+    $bot = new TelegramBot($token, $chat_id);
+    $result = $bot->sendMessage("✅ <b>ทดสอบการเชื่อมต่อ Telegram</b>\nระบบลงเวลา โรงเรียนละลมวิทยา พร้อมใช้งานแล้ว!");
+    echo json_encode(['ok' => $result, 'message' => $result ? 'ส่งสำเร็จ! ตรวจสอบใน Telegram ได้เลย' : 'ส่งไม่สำเร็จ ตรวจสอบ Token และ Chat ID อีกครั้ง']);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
-    if (isset($_POST['regular_time_in'])) {
+    if (isset($_POST['telegram_token'])) {
+        $tg_token   = trim($_POST['telegram_token']);
+        $tg_chat_id = trim($_POST['admin_chat_id']);
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=? WHERE setting_id=1");
+        $stmt->bind_param('ss', $tg_token, $tg_chat_id);
+        $stmt->execute();
+        $stmt->close();
+        $msg = 'บันทึกการตั้งค่า Telegram เรียบร้อย';
+    } elseif (isset($_POST['regular_time_in'])) {
         $time_in   = $_POST['regular_time_in'];
         $time_late = $_POST['late_time'];
         $stmt = $conn->prepare("UPDATE wfh_system_settings SET regular_time_in=?, late_time=? WHERE setting_id=1");
@@ -140,6 +165,76 @@ require_once __DIR__ . '/../components/layout_start.php';
         </form>
 
         <div id="gps-msg" class="hidden mt-4 p-4 rounded-2xl text-sm font-bold"></div>
+    </div>
+
+    <!-- Telegram Settings -->
+    <div class="bg-white/70 backdrop-blur-xl rounded-[2.5rem] shadow-xl shadow-sky-100/40 p-8 border border-white/60">
+        <div class="flex items-center gap-4 mb-6">
+            <div class="w-12 h-12 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center text-xl">
+                <i class="bi bi-telegram"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-black text-slate-800">การแจ้งเตือน Telegram</h3>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Bot Token & Chat ID</p>
+            </div>
+            <?php if (!empty($settings['telegram_token']) && !empty($settings['admin_chat_id'])): ?>
+            <span class="ml-auto px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-xs font-black border border-emerald-100 flex items-center gap-1.5">
+                <i class="bi bi-check-circle-fill"></i> เชื่อมต่อแล้ว
+            </span>
+            <?php else: ?>
+            <span class="ml-auto px-4 py-1.5 rounded-full bg-amber-50 text-amber-600 text-xs font-black border border-amber-100 flex items-center gap-1.5">
+                <i class="bi bi-exclamation-circle-fill"></i> ยังไม่ได้ตั้งค่า
+            </span>
+            <?php endif; ?>
+        </div>
+
+        <!-- วิธีหา Chat ID -->
+        <div class="bg-sky-50 rounded-2xl p-5 mb-6 border border-sky-100">
+            <p class="text-xs font-black text-sky-700 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <i class="bi bi-info-circle-fill"></i> วิธีหา Chat ID ของคุณ
+            </p>
+            <ol class="space-y-1.5 text-sm text-sky-800 font-bold">
+                <li class="flex items-start gap-2"><span class="shrink-0 w-5 h-5 bg-sky-200 text-sky-700 rounded-full flex items-center justify-center text-xs font-black">1</span> เปิด Telegram แล้วค้นหา <code class="bg-white px-1.5 py-0.5 rounded-lg text-sky-600 font-mono text-xs">@userinfobot</code></li>
+                <li class="flex items-start gap-2"><span class="shrink-0 w-5 h-5 bg-sky-200 text-sky-700 rounded-full flex items-center justify-center text-xs font-black">2</span> กด <strong>Start</strong> หรือพิมพ์ <code class="bg-white px-1.5 py-0.5 rounded-lg text-sky-600 font-mono text-xs">/start</code></li>
+                <li class="flex items-start gap-2"><span class="shrink-0 w-5 h-5 bg-sky-200 text-sky-700 rounded-full flex items-center justify-center text-xs font-black">3</span> บอทจะตอบกลับพร้อม <strong>Id:</strong> นั่นคือ Chat ID ของคุณ</li>
+                <li class="flex items-start gap-2"><span class="shrink-0 w-5 h-5 bg-sky-200 text-sky-700 rounded-full flex items-center justify-center text-xs font-black">4</span> สำหรับ Bot Token: สร้างผ่าน <code class="bg-white px-1.5 py-0.5 rounded-lg text-sky-600 font-mono text-xs">@BotFather</code> → /newbot</li>
+            </ol>
+        </div>
+
+        <form method="POST" class="space-y-4" id="telegram-form">
+            <?= csrf_field() ?>
+            <div>
+                <label class="block text-sm font-black text-slate-700 mb-2">Bot Token</label>
+                <div class="relative">
+                    <input type="password" name="telegram_token" id="inp-tg-token"
+                        value="<?= htmlspecialchars($settings['telegram_token'] ?? '') ?>"
+                        placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 pr-12 text-sm focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 outline-none transition-all font-mono" required>
+                    <button type="button" onclick="toggleToken()" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-all">
+                        <i class="bi bi-eye-fill" id="eye-icon"></i>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-black text-slate-700 mb-2">Chat ID (ของผู้รับแจ้งเตือน)</label>
+                <input type="text" name="admin_chat_id" id="inp-tg-chat"
+                    value="<?= htmlspecialchars($settings['admin_chat_id'] ?? '') ?>"
+                    placeholder="เช่น 123456789"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 outline-none transition-all font-bold" required>
+                <p class="mt-1.5 text-xs text-slate-400 font-bold">ใส่ Chat ID ของผู้บริหาร/แอดมินที่ต้องการรับการแจ้งเตือน</p>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" id="btn-test-tg"
+                    class="flex-1 bg-sky-50 hover:bg-sky-100 text-sky-600 font-black py-3 rounded-2xl border border-sky-200 transition-all hover:scale-[1.02] flex items-center justify-center gap-2">
+                    <i class="bi bi-send-fill"></i> ส่งข้อความทดสอบ
+                </button>
+                <button type="submit"
+                    class="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-black py-3 rounded-2xl shadow-lg transition-all hover:scale-[1.02]">
+                    <i class="bi bi-save-fill me-1"></i> บันทึก
+                </button>
+            </div>
+        </form>
+        <div id="tg-test-result" class="hidden mt-4 p-4 rounded-2xl text-sm font-bold"></div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -325,6 +420,60 @@ require_once __DIR__ . '/../components/layout_start.php';
 </div>
 
 <script>
+// Toggle Bot Token visibility
+function toggleToken() {
+    const inp = document.getElementById('inp-tg-token');
+    const icon = document.getElementById('eye-icon');
+    if (inp.type === 'password') {
+        inp.type = 'text';
+        icon.className = 'bi bi-eye-slash-fill';
+    } else {
+        inp.type = 'password';
+        icon.className = 'bi bi-eye-fill';
+    }
+}
+
+// ทดสอบ Telegram
+document.getElementById('btn-test-tg').addEventListener('click', function() {
+    const btn = this;
+    const result = document.getElementById('tg-test-result');
+    const token = document.getElementById('inp-tg-token').value.trim();
+    const chatId = document.getElementById('inp-tg-chat').value.trim();
+
+    if (!token || !chatId) {
+        result.className = 'mt-4 p-4 rounded-2xl text-sm font-bold bg-amber-50 text-amber-700 border border-amber-100';
+        result.textContent = 'กรุณากรอก Token และ Chat ID ก่อนทดสอบ';
+        result.classList.remove('hidden');
+        return;
+    }
+
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลังส่ง...';
+    btn.disabled = true;
+
+    const fd = new FormData();
+    fd.append('action', 'test_telegram');
+    fd.append('token', token);
+    fd.append('chat_id', chatId);
+
+    fetch('settings.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            result.className = 'mt-4 p-4 rounded-2xl text-sm font-bold border ' +
+                (data.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100');
+            result.innerHTML = (data.ok ? '<i class="bi bi-check-circle-fill me-2"></i>' : '<i class="bi bi-x-circle-fill me-2"></i>') + data.message;
+            result.classList.remove('hidden');
+        })
+        .catch(() => {
+            result.className = 'mt-4 p-4 rounded-2xl text-sm font-bold bg-rose-50 text-rose-600 border border-rose-100';
+            result.textContent = 'เกิดข้อผิดพลาด ไม่สามารถเชื่อมต่อได้';
+            result.classList.remove('hidden');
+        })
+        .finally(() => {
+            btn.innerHTML = '<i class="bi bi-send-fill"></i> ส่งข้อความทดสอบ';
+            btn.disabled = false;
+        });
+});
+
 document.getElementById('btn-gps').addEventListener('click', function() {
     const btn = this;
     const msg = document.getElementById('gps-msg');
