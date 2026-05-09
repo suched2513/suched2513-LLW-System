@@ -84,10 +84,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tg_chat_id      = trim($_POST['admin_chat_id']);
         $tg_leave_chat   = trim($_POST['leave_chat_id']);
         $tg_att_chat     = trim($_POST['att_chat_id']);
+        $tg_att_token    = trim($_POST['att_bot_token']);
         $tg_duty_chat    = trim($_POST['duty_chat_id']);
         $tg_duty_token   = trim($_POST['duty_bot_token']);
-        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=?, leave_chat_id=?, att_chat_id=?, duty_chat_id=?, duty_bot_token=? WHERE setting_id=1");
-        $stmt->bind_param('ssssss', $tg_token, $tg_chat_id, $tg_leave_chat, $tg_att_chat, $tg_duty_chat, $tg_duty_token);
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=?, leave_chat_id=?, att_chat_id=?, att_bot_token=?, duty_chat_id=?, duty_bot_token=? WHERE setting_id=1");
+        $stmt->bind_param('sssssss', $tg_token, $tg_chat_id, $tg_leave_chat, $tg_att_chat, $tg_att_token, $tg_duty_chat, $tg_duty_token);
         $stmt->execute();
         $stmt->close();
         $msg = 'บันทึกการตั้งค่า Telegram เรียบร้อย';
@@ -236,7 +237,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             <?php
                 $tg_ok   = !empty($settings['telegram_token']) && !empty($settings['admin_chat_id']);
                 $lv_ok   = !empty($settings['leave_chat_id']);
-                $att_ok  = !empty($settings['att_chat_id']);
+                $att_ok  = !empty($settings['att_chat_id']) && !empty($settings['att_bot_token']);
                 $duty_ok = !empty($settings['duty_chat_id']);
                 $done    = array_sum([$tg_ok, $lv_ok, $att_ok, $duty_ok]);
             ?>
@@ -321,12 +322,22 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <p class="text-xs font-black text-indigo-700 uppercase tracking-widest flex items-center gap-2">
                     <i class="bi bi-people-fill"></i> กลุ่มแจ้งเตือนเช็คชื่อนักเรียน
                 </p>
+                <p class="text-xs text-indigo-500 font-bold -mt-1">ใช้บอทแยก — กรอก Token เฉพาะของบอทเช็คชื่อ</p>
+                <div class="relative">
+                    <input type="password" name="att_bot_token" id="inp-att-token"
+                        value="<?= htmlspecialchars($settings['att_bot_token'] ?? '') ?>"
+                        placeholder="Bot Token ของบอทเช็คชื่อ"
+                        class="w-full bg-white border border-indigo-200 rounded-2xl px-4 py-3 pr-12 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-mono">
+                    <button type="button" onclick="toggleAttToken()" class="absolute right-4 top-1/2 -translate-y-1/2 text-indigo-300 hover:text-indigo-500 transition-all">
+                        <i class="bi bi-eye-fill" id="eye-att-icon"></i>
+                    </button>
+                </div>
                 <input type="text" name="att_chat_id" id="inp-att-chat"
                     value="<?= htmlspecialchars($settings['att_chat_id'] ?? '') ?>"
-                    placeholder="เช่น -4111333555"
+                    placeholder="Chat ID กลุ่มเช็คชื่อ เช่น -4111333555"
                     class="w-full bg-white border border-indigo-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold">
                 <p class="text-xs text-indigo-600/70 font-bold">รับแจ้งเตือนเมื่อ: ครูเช็คชื่อรายคาบและมีนักเรียนขาด/โดด</p>
-                <button type="button" onclick="testTelegram('inp-att-chat','tg-result-att')"
+                <button type="button" onclick="testAttTelegram()"
                     class="w-full bg-white hover:bg-indigo-50 text-indigo-600 font-black py-2.5 rounded-xl border border-indigo-200 transition-all text-sm flex items-center justify-center gap-2">
                     <i class="bi bi-send-fill"></i> ทดสอบกลุ่มเช็คชื่อ
                 </button>
@@ -552,6 +563,61 @@ require_once __DIR__ . '/../components/layout_start.php';
 </div>
 
 <script>
+// Toggle Att Bot Token visibility
+function toggleAttToken() {
+    const inp  = document.getElementById('inp-att-token');
+    const icon = document.getElementById('eye-att-icon');
+    if (inp.type === 'password') {
+        inp.type = 'text';
+        icon.className = 'bi bi-eye-slash-fill';
+    } else {
+        inp.type = 'password';
+        icon.className = 'bi bi-eye-fill';
+    }
+}
+
+// ทดสอบบอทเช็คชื่อ (ใช้ token แยก)
+function testAttTelegram() {
+    const result = document.getElementById('tg-result-att');
+    const token  = document.getElementById('inp-att-token').value.trim();
+    const chatId = document.getElementById('inp-att-chat').value.trim();
+    const btn    = event.currentTarget;
+
+    if (!token || !chatId) {
+        result.className = 'p-3 rounded-xl text-sm font-bold bg-amber-50 text-amber-700 border border-amber-100';
+        result.textContent = 'กรุณากรอก Bot Token และ Chat ID ของบอทเช็คชื่อก่อน';
+        result.classList.remove('hidden');
+        return;
+    }
+
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลังส่ง...';
+    btn.disabled = true;
+
+    const fd = new FormData();
+    fd.append('action', 'test_duty_telegram');
+    fd.append('token', token);
+    fd.append('chat_id', chatId);
+
+    fetch('settings.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            result.className = 'p-3 rounded-xl text-sm font-bold border ' +
+                (data.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100');
+            result.innerHTML = (data.ok ? '<i class="bi bi-check-circle-fill me-2"></i>' : '<i class="bi bi-x-circle-fill me-2"></i>') + data.message;
+            result.classList.remove('hidden');
+        })
+        .catch(() => {
+            result.className = 'p-3 rounded-xl text-sm font-bold bg-rose-50 text-rose-600 border border-rose-100';
+            result.textContent = 'เกิดข้อผิดพลาด ไม่สามารถเชื่อมต่อได้';
+            result.classList.remove('hidden');
+        })
+        .finally(() => {
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+        });
+}
+
 // Toggle Duty Bot Token visibility
 function toggleDutyToken() {
     const inp  = document.getElementById('inp-duty-token');

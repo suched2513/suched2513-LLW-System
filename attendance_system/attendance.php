@@ -61,9 +61,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
 
         // ── Telegram Auto-Broadcast (Optional / Manual Hook) ──
         if (isset($_POST['broadcast_now'])) {
-            $settings = $pdo->query("SELECT telegram_token, admin_chat_id, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
-            $attChatId = !empty($settings['att_chat_id']) ? $settings['att_chat_id'] : ($settings['admin_chat_id'] ?? '');
-            if ($settings && $settings['telegram_token'] && $attChatId) {
+            $settings = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
+            $attToken  = !empty($settings['att_bot_token'])  ? $settings['att_bot_token']  : ($settings['telegram_token'] ?? '');
+            $attChatId = !empty($settings['att_chat_id'])    ? $settings['att_chat_id']    : ($settings['admin_chat_id'] ?? '');
+            if ($settings && $attToken && $attChatId) {
                 $absentees = [];
                 foreach ($student_status as $sid => $status) {
                     if (in_array($status, ['ขาด', 'โดด'])) {
@@ -80,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
                     $msg .= "👤 ครูผู้สอน: " . $_SESSION['teacher_name'] . "\n\n";
                     $msg .= "<b>นักเรียนที่ไม่เข้าเรียน:</b>\n" . implode("\n", $absentees);
                     
-                    sendTelegramMessage($settings['telegram_token'], $attChatId, $msg);
+                    sendTelegramMessage($attToken, $attChatId, $msg);
                     $success_msg .= " และส่งแจ้งเตือน Telegram แล้ว";
                 }
             }
