@@ -17,6 +17,39 @@ try {
     if (!in_array('att_bot_token', $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_bot_token VARCHAR(200) NULL AFTER att_chat_id");
 } catch (Exception $e) { error_log('settings auto-migrate: ' . $e->getMessage()); }
 
+// AJAX: ทดสอบบอทเช็คชื่อ
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_att_telegram') {
+    header('Content-Type: application/json; charset=utf-8');
+    require_once '../includes/telegram_bot.php';
+    $token   = trim($_POST['token'] ?? '');
+    $chat_id = trim($_POST['chat_id'] ?? '');
+    if (!$token || !$chat_id) {
+        echo json_encode(['ok' => false, 'message' => 'กรุณากรอก Bot Token และ Chat ID ของบอทเช็คชื่อก่อน']);
+        exit;
+    }
+    Telegram::init($token);
+    $res = Telegram::sendMessage("🔔 <b>ทดสอบบอทเช็คชื่อนักเรียน</b>\nโรงเรียนละลมวิทยา พร้อมใช้งานแล้ว!", $chat_id);
+    if ($res['ok'] ?? false) {
+        echo json_encode(['ok' => true, 'message' => 'ส่งสำเร็จ! ตรวจสอบในกลุ่มเช็คชื่อได้เลย']);
+    } else {
+        $desc = $res['description'] ?? '';
+        $known = [
+            'chat not found'      => 'ไม่พบกลุ่ม — ตรวจสอบ Chat ID และต้องเพิ่มบอทเข้ากลุ่มก่อน',
+            'bot was kicked'      => 'บอทถูกเตะออกจากกลุ่ม — เพิ่มบอทเข้ากลุ่มใหม่',
+            'bot is not a member' => 'บอทยังไม่ได้เข้ากลุ่ม — เพิ่มบอทเข้ากลุ่มก่อน',
+            'Unauthorized'        => 'Bot Token ไม่ถูกต้อง — ตรวจสอบ Token อีกครั้ง',
+            'not enough rights'   => 'บอทไม่มีสิทธิ์ส่งข้อความในกลุ่มนี้',
+        ];
+        $errMsg = 'ส่งไม่สำเร็จ';
+        foreach ($known as $en => $th) {
+            if (stripos($desc, $en) !== false) { $errMsg = $th; break; }
+        }
+        if ($errMsg === 'ส่งไม่สำเร็จ' && $desc) $errMsg .= ": {$desc}";
+        echo json_encode(['ok' => false, 'message' => $errMsg]);
+    }
+    exit;
+}
+
 // AJAX: ทดสอบบอทเวร (ใช้ duty_bot_token แทน telegram_token)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_duty_telegram') {
     header('Content-Type: application/json; charset=utf-8');
@@ -603,7 +636,7 @@ function testAttTelegram() {
     btn.disabled = true;
 
     const fd = new FormData();
-    fd.append('action', 'test_duty_telegram');
+    fd.append('action', 'test_att_telegram');
     fd.append('token', token);
     fd.append('chat_id', chatId);
 
