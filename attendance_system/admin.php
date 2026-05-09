@@ -561,8 +561,24 @@ require_once '../components/layout_start.php';
                 <?php if (empty($all_students_by_class)): ?>
                 <p class="text-amber-600 text-sm font-bold py-4">ยังไม่มีนักเรียนในระบบ กรุณาเพิ่มนักเรียนที่แท็บ "จัดการนักเรียน" ก่อน</p>
                 <?php else: ?>
+                <!-- Grade Filter Bar -->
+                <div class="grade-filter-bar flex items-center gap-2 flex-wrap mb-5 pb-4 border-b border-slate-100">
+                    <span class="text-xs font-black text-slate-500 uppercase tracking-widest mr-1">กรองชั้น:</span>
+                    <button type="button" onclick="filterGrade(this)" data-grade="all"
+                        class="grade-btn px-3 py-1 rounded-full text-xs font-bold transition-all bg-violet-600 text-white shadow-sm">ทั้งหมด</button>
+                    <?php
+                        $grades = [];
+                        foreach (array_keys($all_students_by_class) as $cn) {
+                            if (preg_match('/^(ม\.\d+)/', $cn, $m) && !in_array($m[1], $grades)) $grades[] = $m[1];
+                        }
+                        sort($grades);
+                        foreach ($grades as $g): ?>
+                    <button type="button" onclick="filterGrade(this)" data-grade="<?= htmlspecialchars($g) ?>"
+                        class="grade-btn px-3 py-1 rounded-full text-xs font-bold transition-all bg-slate-100 text-slate-600 hover:bg-violet-100 hover:text-violet-700"><?= htmlspecialchars($g) ?></button>
+                    <?php endforeach; ?>
+                </div>
                 <?php foreach ($all_students_by_class as $cls_name => $cls_students): ?>
-                <div class="mb-5">
+                <div class="mb-5 cls-group" data-classroom="<?= htmlspecialchars($cls_name) ?>">
                     <div class="flex items-center gap-2 mb-3">
                         <span class="px-3 py-1 bg-emerald-50 text-emerald-700 font-black text-xs rounded-lg"><?= htmlspecialchars($cls_name) ?></span>
                         <span class="text-xs text-slate-400 font-bold"><?= count($cls_students) ?> คน</span>
@@ -623,6 +639,23 @@ function selectAll(btn) {
             .trim() + (c.checked ? ' bg-violet-50 border-violet-300' : ' bg-slate-50 border-slate-200');
     });
     btn.textContent = allChecked ? 'เลือกทั้งหมด' : 'ยกเลิกทั้งหมด';
+}
+
+function filterGrade(btn) {
+    const grade = btn.dataset.grade;
+    const form  = btn.closest('form');
+    // update active button style
+    form.querySelectorAll('.grade-btn').forEach(b => {
+        b.classList.remove('bg-violet-600','text-white','shadow-sm');
+        b.classList.add('bg-slate-100','text-slate-600');
+    });
+    btn.classList.remove('bg-slate-100','text-slate-600');
+    btn.classList.add('bg-violet-600','text-white','shadow-sm');
+    // show/hide classroom groups
+    form.querySelectorAll('.cls-group').forEach(div => {
+        const cls = div.dataset.classroom || '';
+        div.style.display = (grade === 'all' || cls.startsWith(grade)) ? '' : 'none';
+    });
 }
 
 function selectGroup(btn) {
