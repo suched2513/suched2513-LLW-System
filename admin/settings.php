@@ -19,9 +19,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_
         echo json_encode(['ok' => false, 'message' => 'กรุณากรอก Token และ Chat ID ก่อน']);
         exit;
     }
-    $bot = new TelegramBot($token, $chat_id);
-    $result = $bot->sendMessage("✅ <b>ทดสอบการเชื่อมต่อ Telegram</b>\nระบบลงเวลา โรงเรียนละลมวิทยา พร้อมใช้งานแล้ว!");
-    echo json_encode(['ok' => $result, 'message' => $result ? 'ส่งสำเร็จ! ตรวจสอบใน Telegram ได้เลย' : 'ส่งไม่สำเร็จ ตรวจสอบ Token และ Chat ID อีกครั้ง']);
+    // ใช้ Telegram static class (cURL) เพื่อรับ error จาก API จริง
+    Telegram::init($token);
+    $res = Telegram::sendMessage("✅ <b>ทดสอบการเชื่อมต่อ Telegram</b>\nระบบลงเวลา โรงเรียนละลมวิทยา พร้อมใช้งานแล้ว!", $chat_id);
+    if ($res['ok'] ?? false) {
+        echo json_encode(['ok' => true, 'message' => 'ส่งสำเร็จ! ตรวจสอบใน Telegram ได้เลย']);
+    } else {
+        $desc = $res['description'] ?? '';
+        $known = [
+            'chat not found'        => 'ไม่พบกลุ่ม — ตรวจสอบ Chat ID และต้องเพิ่มบอทเข้ากลุ่มก่อน',
+            'bot was kicked'        => 'บอทถูกเตะออกจากกลุ่ม — เพิ่มบอทเข้ากลุ่มใหม่',
+            'bot is not a member'   => 'บอทยังไม่ได้เข้ากลุ่ม — เพิ่มบอทเข้ากลุ่มก่อน',
+            'Unauthorized'          => 'Bot Token ไม่ถูกต้อง — ตรวจสอบ Token อีกครั้ง',
+            'not enough rights'     => 'บอทไม่มีสิทธิ์ส่งข้อความในกลุ่มนี้',
+            'PEER_ID_INVALID'       => 'Chat ID ไม่ถูกต้อง — ตรวจสอบค่าอีกครั้ง',
+        ];
+        $msg = 'ส่งไม่สำเร็จ';
+        foreach ($known as $en => $th) {
+            if (stripos($desc, $en) !== false) { $msg = $th; break; }
+        }
+        if ($msg === 'ส่งไม่สำเร็จ' && $desc) $msg .= ": {$desc}";
+        echo json_encode(['ok' => false, 'message' => $msg]);
+    }
     exit;
 }
 
