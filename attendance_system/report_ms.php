@@ -52,7 +52,7 @@ if (isset($_GET['export'])) {
 }
 
 // ── Data Fetching ───────────────────────────────────────────────
-$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE student_id REGEXP '^[0-9]+$' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
 $where  = $filter_cls ? "AND st.classroom = :cls" : "";
 $params = $filter_cls ? [':cls' => $filter_cls] : [];

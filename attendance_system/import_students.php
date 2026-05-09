@@ -190,7 +190,9 @@ $invalidStudents = $pdo->query("
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 $filterCls = $_GET['cls'] ?? '';
-$whereQ = $filterCls ? "WHERE classroom = " . $pdo->quote($filterCls) : '';
+$whereQ = $filterCls
+    ? "WHERE classroom = " . $pdo->quote($filterCls) . " AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)"
+    : "WHERE student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)";
 $students = $pdo->query("SELECT * FROM att_students $whereQ ORDER BY classroom, student_id LIMIT 500")->fetchAll();
 
 require_once __DIR__ . '/components/layout_start.php';

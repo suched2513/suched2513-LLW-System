@@ -16,7 +16,7 @@ $pageSubtitle = 'สถิติการเข้าเรียนแยกห
 $activeSystem = 'attendance';
 
 // ดึง classrooms ที่มีในระบบ
-$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE student_id REGEXP '^[0-9]+$' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
 $selected_class   = $_GET['classroom']   ?? ($classrooms[0] ?? '');
 $start_date       = $_GET['start_date']  ?? date('Y-m-01');
@@ -32,7 +32,7 @@ $chart_colors  = [];
 if ($selected_class) {
 
     // --- ดึงรายชื่อนักเรียน ---
-    $st = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? ORDER BY student_id");
+    $st = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) ORDER BY student_id");
     $st->execute([$selected_class]);
     $students = $st->fetchAll();
 

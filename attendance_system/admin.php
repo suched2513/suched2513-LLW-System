@@ -161,17 +161,17 @@ try {
     ")->fetchAll();
 
     $subjects   = $pdo->query("SELECT s.*, t.name as t_name FROM att_subjects s JOIN att_teachers t ON t.id = s.teacher_id ORDER BY s.subject_code")->fetchAll();
-    $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+    $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE student_id REGEXP '^[0-9]+$' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
     if (!$filter_cls) $filter_cls = $classrooms[0] ?? '';
 
     // Students (filter by classroom if selected)
     if ($filter_cls) {
-        $sq = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? ORDER BY student_id");
+        $sq = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) ORDER BY student_id");
         $sq->execute([$filter_cls]);
         $all_students = $sq->fetchAll();
     } else {
-        $all_students = $pdo->query("SELECT * FROM att_students ORDER BY classroom, student_id LIMIT 100")->fetchAll();
+        $all_students = $pdo->query("SELECT * FROM att_students WHERE student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) ORDER BY classroom, student_id LIMIT 100")->fetchAll();
     }
 } catch (Exception $e) {
     $msg = "ระบบยังไม่พร้อมใช้งาน: กรุณารัน Migration ตาราง Attendance (" . $e->getMessage() . ")";
@@ -200,7 +200,7 @@ try {
         }
 
         // นักเรียนทุกคน จัดกลุ่มตามห้อง
-        $all_rows = $pdo->query("SELECT * FROM att_students ORDER BY classroom, student_id")->fetchAll();
+        $all_rows = $pdo->query("SELECT * FROM att_students WHERE student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) ORDER BY classroom, student_id")->fetchAll();
         foreach ($all_rows as $row) {
             $all_students_by_class[$row['classroom']][] = $row;
         }

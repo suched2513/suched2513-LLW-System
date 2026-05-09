@@ -158,7 +158,13 @@ function getSubjectById($subject_id, $pdo) {
  * ดึงรายชื่อนักเรียนในห้อง
  */
 function getStudentsByClassroom($classroom, $pdo) {
-    $stmt = $pdo->prepare("SELECT * FROM att_students WHERE classroom = :classroom ORDER BY student_id ASC");
+    $stmt = $pdo->prepare("
+        SELECT * FROM att_students
+        WHERE classroom = :classroom
+          AND student_id REGEXP '^[0-9]+$'
+          AND student_id NOT IN (SELECT subject_code FROM att_subjects)
+        ORDER BY student_id ASC
+    ");
     $stmt->execute(['classroom' => $classroom]);
     return $stmt->fetchAll();
 }
