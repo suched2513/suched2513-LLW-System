@@ -154,9 +154,12 @@ try {
         'data' => ['request_id' => $requestId, 'days_count' => $daysCount]
     ]);
 
-} catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
-    error_log('[LLW] save_leave error: ' . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด กรุณาลองใหม่']);
+} catch (\Throwable $e) {
+    if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+    error_log('[LLW] save_leave error [' . get_class($e) . ']: ' . $e->getMessage());
+    http_response_code(400);
+    $msg = ($e instanceof \PDOException || strpos($e->getMessage(), 'SQLSTATE') === 0)
+        ? 'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่'
+        : $e->getMessage();
+    echo json_encode(['status' => 'error', 'message' => $msg]);
 }
