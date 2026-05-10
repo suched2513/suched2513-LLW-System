@@ -32,7 +32,7 @@ function csrf_field(): string {
 
 function csrf_verify(): void {
     if (session_status() === PHP_SESSION_NONE) session_start();
-    $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    $token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
         http_response_code(403);
         die(json_encode(['status' => 'error', 'message' => 'CSRF token invalid']));
