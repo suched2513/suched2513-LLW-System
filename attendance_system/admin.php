@@ -544,6 +544,33 @@ require_once '../components/layout_start.php';
             <p class="text-sm mt-1">ไปเพิ่มวิชา และติ๊ก &#34;วิชาเลือก&#34; ที่ฟอร์มเพิ่มวิชาก่อนครับ</p>
         </div>
         <?php else: ?>
+
+        <!-- Teacher Filter -->
+        <?php
+            $teachersInElective = [];
+            foreach ($elective_subjects as $es) {
+                $tid = $es['teacher_id'] ?? 0;
+                if ($tid && !isset($teachersInElective[$tid])) {
+                    $teachersInElective[$tid] = $es['t_name'] ?? 'ไม่ระบุ';
+                }
+            }
+        ?>
+        <div class="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-center gap-3 flex-wrap">
+            <i class="bi bi-person-fill text-violet-500 text-lg flex-shrink-0"></i>
+            <span class="text-xs font-black text-slate-500 uppercase tracking-widest flex-shrink-0">ครูผู้สอน:</span>
+            <button type="button" onclick="filterTeacher('all', this)"
+                class="teacher-filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-violet-600 text-white shadow-sm">
+                ทุกคน (<?= count($elective_subjects) ?> วิชา)
+            </button>
+            <?php foreach ($teachersInElective as $tid => $tname): ?>
+            <?php $cnt = count(array_filter($elective_subjects, fn($e) => ($e['teacher_id'] ?? 0) == $tid)); ?>
+            <button type="button" onclick="filterTeacher('<?= $tid ?>', this)"
+                class="teacher-filter-btn px-4 py-1.5 rounded-full text-xs font-bold transition-all bg-slate-100 text-slate-600 hover:bg-violet-100 hover:text-violet-700">
+                <?= htmlspecialchars($tname) ?> (<?= $cnt ?>)
+            </button>
+            <?php endforeach; ?>
+        </div>
+
         <!-- Export All Banner -->
         <div class="bg-violet-50 border border-violet-200 rounded-2xl px-5 py-4 flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-3">
@@ -563,12 +590,15 @@ require_once '../components/layout_start.php';
             $enrolled_ids = $enrollments[$es['id']] ?? [];
             $total_students = array_sum(array_map('count', $all_students_by_class));
         ?>
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="subject-card bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" data-teacher-id="<?= $es['teacher_id'] ?? 0 ?>">
             <div class="px-6 py-4 border-b border-slate-100 bg-violet-50/50 flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                         <span class="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-black rounded-lg">วิชาเลือก</span>
                         <span class="font-mono text-xs font-bold text-blue-600"><?= $es['subject_code'] ?></span>
+                        <span class="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs font-bold rounded-lg">
+                            <i class="bi bi-person-fill me-1"></i><?= htmlspecialchars($es['t_name'] ?? 'ไม่ระบุครู') ?>
+                        </span>
                     </div>
                     <h3 class="font-black text-slate-800 mt-1"><?= htmlspecialchars($es['subject_name']) ?></h3>
                     <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">ลงทะเบียนแล้ว <?= count($enrolled_ids) ?> คน จากทั้งหมด <?= $total_students ?> คน</p>
@@ -666,6 +696,21 @@ function selectAll(btn) {
             .trim() + (c.checked ? ' bg-violet-50 border-violet-300' : ' bg-slate-50 border-slate-200');
     });
     btn.textContent = allChecked ? 'เลือกทั้งหมด' : 'ยกเลิกทั้งหมด';
+}
+
+function filterTeacher(teacherId, btn) {
+    document.querySelectorAll('.teacher-filter-btn').forEach(b => {
+        b.classList.remove('bg-violet-600','text-white','shadow-sm');
+        b.classList.add('bg-slate-100','text-slate-600');
+    });
+    btn.classList.remove('bg-slate-100','text-slate-600');
+    btn.classList.add('bg-violet-600','text-white','shadow-sm');
+
+    document.querySelectorAll('.subject-card').forEach(card => {
+        card.style.display = (teacherId === 'all' || card.dataset.teacherId === String(teacherId)) ? '' : 'none';
+    });
+    // reset grade filters inside hidden cards
+    document.querySelectorAll('.subject-card:not([style*="none"]) .grade-btn[data-grade="all"]').forEach(b => filterGrade(b));
 }
 
 function filterGrade(btn) {
