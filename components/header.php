@@ -44,11 +44,42 @@
         .brand-link {
             text-decoration: none !important;
         }
+        /* ─── Sidebar Active & Hover ─────────────────────────── */
+
+        /* Active item — ทุกระดับ (parent + sub-menu) */
         .sidebar-menu .nav-link.active {
-            background-color: #0d6efd !important;
+            background: linear-gradient(90deg, #0b5ed7 0%, #0d6efd 100%) !important;
+            color: #fff !important;
+            box-shadow: inset 4px 0 0 rgba(255,255,255,0.75),
+                        0 2px 8px rgba(13,110,253,0.30) !important;
+        }
+
+        /* ไอคอน + ข้อความสีขาวทุกกรณี */
+        .sidebar-menu .nav-link.active .nav-icon,
+        .sidebar-menu .nav-link.active p,
+        .sidebar-menu .nav-link.active .nav-arrow {
             color: #fff !important;
         }
-        
+
+        /* Hover สำหรับ item ที่ยังไม่ active */
+        .sidebar-menu .nav-link:not(.active):hover {
+            background: rgba(255,255,255,0.08) !important;
+            color: #fff !important;
+            box-shadow: inset 4px 0 0 rgba(255,255,255,0.25) !important;
+            transition: all 0.15s ease !important;
+        }
+
+        /* Sub-menu active ให้ indent ตรงกับ left bar */
+        .nav-treeview > .nav-item > .nav-link.active {
+            box-shadow: inset 4px 0 0 rgba(255,255,255,0.75),
+                        0 2px 8px rgba(13,110,253,0.25) !important;
+        }
+
+        /* Smooth transition ทุก nav-link */
+        .sidebar-menu .nav-link {
+            transition: background 0.15s ease, box-shadow 0.15s ease !important;
+        }
+
         /* Sidebar Scroll Fix */
         .app-sidebar {
             height: 100vh !important;
