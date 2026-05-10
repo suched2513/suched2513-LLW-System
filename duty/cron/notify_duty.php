@@ -1,145 +1,150 @@
 <?php
 /**
  * duty/cron/notify_duty.php
- * ส่งสรุปตารางเวรประจำวัน 1 ครั้ง/วัน ตอนเช้า 06:00 ICT
+ * ส่งแจ้งเตือนตารางเวรประจำวัน (กลางวัน + กลางคืน) + preview พรุ่งนี้
  *
- * ข้อความประกอบด้วย:
- *   - เวรกลางวัน/กลางคืน ของวันนี้
- *   - เวรกลางวัน/กลางคืน ของพรุ่งนี้ (preview)
+ * เรียกใช้ 2 แบบ:
+ *   CLI  : php /path/llw/duty/cron/notify_duty.php
+ *   Admin: define('DUTY_CRON_INTERNAL', true) แล้ว include ไฟล์นี้
  *
- * ต้องส่ง ?key=<duty_notify_key> มาทุกครั้ง
+ * Cron: 0 6 * * * php /path/llw/duty/cron/notify_duty.php >> /var/log/duty_notify.log 2>&1
  */
 
-header('Content-Type: application/json; charset=utf-8');
-require_once __DIR__ . '/../../config.php';
+if (php_sapi_name() !== 'cli' && !defined('DUTY_CRON_INTERNAL')) {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    if (!in_array($ip, ['127.0.0.1', '::1'])) {
+        http_response_code(403);
+        exit('CLI or localhost only');
+    }
+}
+
+require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/telegram_bot.php';
 
-// ── 1. ตรวจ key ──────────────────────────────────────────────────────────
-$key      = trim($_GET['key'] ?? '');
-$row      = $conn->query("SELECT svalue FROM duty_settings WHERE skey='duty_notify_key' LIMIT 1")->fetch_assoc();
-$expected = $row['svalue'] ?? '';
+$pdo = getPdo();
 
-if (!$expected || !hash_equals($expected, $key)) {
-    http_response_code(403);
-    echo json_encode(['ok' => false, 'message' => 'Unauthorized']);
-    exit;
+// ── Settings ──────────────────────────────────────────────────────────────
+$stmtSet = $pdo->query("SELECT duty_bot_token, duty_chat_id FROM wfh_system_settings LIMIT 1");
+$sys     = $stmtSet->fetch(PDO::FETCH_ASSOC);
+$token   = $sys['duty_bot_token'] ?? '';
+$chatId  = $sys['duty_chat_id']   ?? '';
+
+if (!$token || !$chatId) {
+    echo "[" . date('H:i:s') . "] ยังไม่ได้ตั้งค่า duty_bot_token / duty_chat_id\n";
+    return;
 }
 
-// ── 2. ดึงการตั้งค่า Telegram (duty bot) ────────────────────────────────
-$settings = $conn->query("SELECT duty_bot_token, duty_chat_id FROM wfh_system_settings LIMIT 1")->fetch_assoc();
-$token    = $settings['duty_bot_token'] ?? '';
-$chat_id  = $settings['duty_chat_id']   ?? '';
+Telegram::init($token);
 
-if (!$token || !$chat_id) {
-    echo json_encode(['ok' => false, 'message' => 'Telegram ยังไม่ได้ตั้งค่า (duty_bot_token / duty_chat_id)']);
-    exit;
-}
-
-// ── 3. Helper: วันที่ภาษาไทย ────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────
 $dayTh = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
-$monTh = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
-           'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+$monTh = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
-function thaiDate(string $date, array $dayTh, array $monTh): string {
+function notifyThaiDate(string $date, array $dayTh, array $monTh): string {
     $ts = strtotime($date);
-    return 'วัน' . $dayTh[date('w', $ts)] . 'ที่ ' . date('j', $ts)
+    return 'วัน' . $dayTh[(int)date('w', $ts)]
+         . 'ที่ ' . (int)date('j', $ts)
          . ' ' . $monTh[(int)date('n', $ts)]
-         . ' พ.ศ. ' . (date('Y', $ts) + 543);
+         . ' ' . ((int)date('Y', $ts) + 543);
 }
 
-// ── 4. Helper: ดึงข้อมูลเวรจาก duty_schedule ────────────────────────────
-function getDutyRows(mysqli $conn, string $date, string $shift): array {
-    $stmt = $conn->prepare("
-        SELECT ds.point_no, ds.role, dt.prefix, dt.full_name
+function getDutyByDate(PDO $pdo, string $date): array {
+    $stmt = $pdo->prepare("
+        SELECT ds.shift, ds.point_no, ds.role,
+               dt.prefix, dt.full_name
         FROM duty_schedule ds
         JOIN duty_teachers dt ON ds.teacher_id = dt.id
-        WHERE ds.duty_date = ? AND ds.shift = ? AND dt.status = 'active'
-        ORDER BY ds.point_no ASC, ds.teacher_seq ASC
+        WHERE ds.duty_date = ? AND dt.status = 'active'
+        ORDER BY ds.shift ASC, ds.point_no ASC
     ");
-    $stmt->bind_param('ss', $date, $shift);
-    $stmt->execute();
-    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
-    return $rows;
+    $stmt->execute([$date]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $result = ['day' => [], 'night' => []];
+    foreach ($rows as $r) {
+        $shift = $r['shift'];
+        if (!array_key_exists($shift, $result)) continue;
+        $result[$shift][] = [
+            'point_no' => (int)$r['point_no'],
+            'role'     => $r['role'] ?? '',
+            'name'     => trim(($r['prefix'] ?? '') . ' ' . $r['full_name']),
+        ];
+    }
+    return $result;
 }
 
-// ── 5. สร้างบล็อกข้อความ (วันนี้ / พรุ่งนี้) ────────────────────────────
-function buildBlock(mysqli $conn, string $date, array $dayTh, array $monTh, bool $isToday): string {
-    $dayRows   = getDutyRows($conn, $date, 'day');
-    $nightRows = getDutyRows($conn, $date, 'night');
-
-    // Header
-    if ($isToday) {
-        $block = thaiDate($date, $dayTh, $monTh) . "\n";
-    } else {
-        $block = "\n✍<b>วันพรุ่งนี้ จิตอาสาตรวจความเรียบร้อยกลางวัน</b>\n";
+function buildDayBlock(array $rows): string {
+    $out = "  ☀️ <b>เวรกลางวัน (06:00–18:00)</b>\n";
+    if (empty($rows)) {
+        return $out . "  — ยังไม่มีข้อมูล\n";
     }
-
-    // กลางวัน 06:00-18:00
-    $block .= "🌙ตั้งแต่เวลา 06.00-18.00 น.\n";
-
-    // แยก "จุดเวร" กับ "ประธาน/ครูเวร"
-    $points   = [];   // [point_no => [name, ...]]
+    $points   = [];
     $chairman = [];
-
-    foreach ($dayRows as $r) {
-        $name = trim(($r['prefix'] ?? '') . ' ' . $r['full_name']);
-        $role = $r['role'] ?? '';
-        if (mb_strpos($role, 'ประธาน') !== false || mb_strpos($role, 'ครูเวร') !== false) {
-            $chairman[] = $name;
+    foreach ($rows as $r) {
+        if (mb_strpos($r['role'], 'ประธาน') !== false || mb_strpos($r['role'], 'ครูเวร') !== false) {
+            $chairman[] = $r['name'];
         } else {
-            $points[(int)$r['point_no']][] = $name;
+            $points[$r['point_no']][] = $r['name'];
         }
     }
-
-    if (!empty($points)) {
-        $first = true;
-        foreach ($points as $pt => $names) {
-            $nameStr = implode(', ', $names);
-            if ($first) {
-                $block .= "😴ตามคำสั่งจุดที่{$pt} คือ\n{$nameStr}\n";
-                $first  = false;
-            } else {
-                $block .= "จุดที่{$pt} {$nameStr}\n";
-            }
-        }
-    } else {
-        $block .= "😴 ยังไม่มีข้อมูลจุดเวรกลางวัน\n";
+    foreach ($points as $pt => $names) {
+        $out .= "  📍 จุดที่ {$pt}: " . implode(', ', $names) . "\n";
     }
-
     if (!empty($chairman)) {
-        $block .= "\n✍ประธานกิจกรรมวิชาหน้าเสาธง/ครูเวรฯ คือ\n" . implode(', ', $chairman) . "\n";
+        $out .= "  ✍️ ประธาน/ครูเวร: " . implode(', ', $chairman) . "\n";
     }
-
-    // กลางคืน 18:00-06:00
-    $block .= "\nจิตอาสาตรวจความเรียบร้อยกลางคืนตั้งแต่ 18.00-06.00\n";
-    if (!empty($nightRows)) {
-        foreach ($nightRows as $r) {
-            $block .= trim(($r['prefix'] ?? '') . ' ' . $r['full_name']) . "\n";
-        }
-    } else {
-        $block .= "ยังไม่มีข้อมูลเวรกลางคืน\n";
-    }
-
-    return $block;
+    return $out;
 }
 
-// ── 6. สร้างข้อความรวม ───────────────────────────────────────────────────
+function buildNightBlock(array $rows): string {
+    $out = "  🌙 <b>เวรกลางคืน (18:00–06:00)</b>\n";
+    if (empty($rows)) {
+        return $out . "  — ยังไม่มีข้อมูล\n";
+    }
+    $points = [];
+    foreach ($rows as $r) {
+        $points[$r['point_no']][] = $r['name'];
+    }
+    foreach ($points as $pt => $names) {
+        $out .= "  📍 จุดที่ {$pt}: " . implode(', ', $names) . "\n";
+    }
+    return $out;
+}
+
+// ── Build Message ─────────────────────────────────────────────────────────
 $today    = date('Y-m-d');
 $tomorrow = date('Y-m-d', strtotime('+1 day'));
 
-$msg  = "โรงเรียนละลมวิทยา\n";
-$msg .= "📣 <b>แจ้งเตือนจิตอาสาตรวจความเรียบร้อยโรงเรียน</b>\n";
-$msg .= buildBlock($conn, $today,    $dayTh, $monTh, true);
-$msg .= buildBlock($conn, $tomorrow, $dayTh, $monTh, false);
+$todayDuty    = getDutyByDate($pdo, $today);
+$tomorrowDuty = getDutyByDate($pdo, $tomorrow);
 
-// ── 7. ส่ง Telegram ───────────────────────────────────────────────────────
-$bot    = new TelegramBot($token, $chat_id);
-$result = $bot->sendMessage($msg);
+if (empty($todayDuty['day']) && empty($todayDuty['night'])) {
+    echo "[" . date('H:i:s') . "] ไม่มีตารางเวรวันนี้ ({$today})\n";
+    return;
+}
 
-echo json_encode([
-    'ok'      => $result,
-    'today'   => $today,
-    'tomorrow'=> $tomorrow,
-    'message' => $result ? 'ส่งสำเร็จ' : 'ส่งไม่สำเร็จ',
-]);
+$msg  = "🏫 <b>โรงเรียนละลมวิทยา</b>\n";
+$msg .= "📋 <b>ตารางเวรประจำวัน</b>\n";
+$msg .= "📅 " . notifyThaiDate($today, $dayTh, $monTh) . "\n";
+$msg .= "━━━━━━━━━━━━━━━\n";
+$msg .= buildDayBlock($todayDuty['day']);
+$msg .= "\n";
+$msg .= buildNightBlock($todayDuty['night']);
+
+if (!empty($tomorrowDuty['day']) || !empty($tomorrowDuty['night'])) {
+    $msg .= "\n━━━━━━━━━━━━━━━\n";
+    $msg .= "🔔 <b>พรุ่งนี้</b> " . notifyThaiDate($tomorrow, $dayTh, $monTh) . "\n";
+    $msg .= buildDayBlock($tomorrowDuty['day']);
+    if (!empty($tomorrowDuty['night'])) {
+        $msg .= "\n";
+        $msg .= buildNightBlock($tomorrowDuty['night']);
+    }
+}
+
+// ── ส่ง ──────────────────────────────────────────────────────────────────
+$res = Telegram::sendMessage($msg, $chatId);
+$ok  = $res['ok'] ?? false;
+echo "[" . date('H:i:s') . "] notify_duty: " . ($ok ? "สำเร็จ" : "ล้มเหลว — " . ($res['description'] ?? '')) . "\n";
+if (!$ok) {
+    error_log('[Duty] notify_duty failed: ' . json_encode($res));
+}

@@ -245,6 +245,12 @@ Swal.fire({icon:'<?= $isErr?'error':'success' ?>',title:'<?= $isErr?'ผิด�
                     </tr>
                     <tr>
                         <td class="px-3 py-2">
+                            <div class="small fw-bold">แจ้งเตือนตารางเวร 06:00</div>
+                            <code class="text-muted" style="font-size:10px">0 6 * * * php /path/llw/duty/cron/notify_duty.php</code>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="px-3 py-2">
                             <div class="small fw-bold">สรุปรายวัน 18:30</div>
                             <code class="text-muted" style="font-size:10px">30 18 * * * php /path/llw/duty/cron/daily_summary.php</code>
                         </td>
@@ -260,10 +266,15 @@ Swal.fire({icon:'<?= $isErr?'error':'success' ?>',title:'<?= $isErr?'ผิด�
             <i class="fas fa-bolt me-2 text-warning"></i>Quick Actions
         </div>
         <div class="card-body d-grid gap-2">
+            <a href="/duty/admin/reports.php?send_notify=1&csrf_token=<?= csrf_token() ?>"
+               class="btn btn-outline-success btn-sm"
+               onclick="return confirm('ส่งแจ้งเตือนตารางเวรวันนี้เข้ากลุ่ม Telegram?')">
+                <i class="fab fa-telegram me-1"></i>ส่งตารางเวรวันนี้ตอนนี้
+            </a>
             <a href="/duty/admin/reports.php?send_summary=1&csrf_token=<?= csrf_token() ?>"
                class="btn btn-outline-primary btn-sm"
                onclick="return confirm('ส่งสรุปเข้ากลุ่ม Telegram ตอนนี้?')">
-                <i class="fab fa-telegram me-1"></i>ส่งสรุปเข้ากลุ่มตอนนี้
+                <i class="fab fa-telegram me-1"></i>ส่งสรุปรายวันตอนนี้
             </a>
             <a href="/duty/cron/check_reminders.php" class="btn btn-outline-warning btn-sm"
                onclick="return confirm('รันตรวจเตือนทันที?')" target="_blank">

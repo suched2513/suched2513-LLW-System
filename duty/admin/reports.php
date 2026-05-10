@@ -17,6 +17,17 @@ $filterDate  = $_GET['date']  ?? date('Y-m-d');
 $filterShift = $_GET['shift'] ?? '';
 
 // ── ถ้ากด "ส่งสรุปตอนนี้" (admin เท่านั้น) ──
+if (isset($_GET['send_notify'])) {
+    if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+        header('Location: reports.php'); exit();
+    }
+    csrf_verify();
+    define('DUTY_CRON_INTERNAL', true);
+    include __DIR__ . '/../cron/notify_duty.php';
+    header('Location: reports.php?date=' . $filterDate . '&notified=1');
+    exit();
+}
+
 if (isset($_GET['send_summary'])) {
     if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
         header('Location: reports.php'); exit();
