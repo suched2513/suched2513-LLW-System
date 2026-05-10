@@ -33,8 +33,14 @@ try {
         $classInfo = ['classroom' => $classroom, 'teacher_name' => '-'];
     }
 
-    // 2. All Students in this room
-    $sStmt = $pdo->prepare("SELECT student_id, name FROM assembly_students WHERE classroom = ? ORDER BY student_id");
+    // 2. All Students in this room (Central Table)
+    $sStmt = $pdo->prepare("
+        SELECT student_id, name FROM att_students
+        WHERE classroom = ?
+          AND student_id REGEXP '^[0-9]+$'
+          AND student_id NOT IN (SELECT subject_code FROM att_subjects)
+        ORDER BY student_id
+    ");
     $sStmt->execute([$classroom]);
     $students = $sStmt->fetchAll();
 

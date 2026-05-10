@@ -25,8 +25,14 @@ if ($classroom === '') {
 try {
     $pdo = getPdo();
 
-    // ดึงนักเรียนทั้งหมดในห้อง
-    $sStmt = $pdo->prepare("SELECT student_id, name FROM assembly_students WHERE classroom = ? ORDER BY student_id");
+    // ดึงนักเรียนทั้งหมดในห้องจาก Central Table (att_students)
+    $sStmt = $pdo->prepare("
+        SELECT student_id, name FROM att_students
+        WHERE classroom = ?
+          AND student_id REGEXP '^[0-9]+$'
+          AND student_id NOT IN (SELECT subject_code FROM att_subjects)
+        ORDER BY student_id
+    ");
     $sStmt->execute([$classroom]);
     $students = $sStmt->fetchAll();
 

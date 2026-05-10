@@ -29,7 +29,13 @@ try {
                    '09'=>'กันยายน','10'=>'ตุลาคม','11'=>'พฤศจิกายน','12'=>'ธันวาคม'];
     $monthLabel = ($month === 'all') ? 'ทุกเดือน' : ($monthNames[$month] ?? $month);
 
-    $sStmt = $pdo->prepare("SELECT student_id, name FROM assembly_students WHERE classroom = ? ORDER BY student_id");
+    $sStmt = $pdo->prepare("
+        SELECT student_id, name FROM att_students
+        WHERE classroom = ?
+          AND student_id REGEXP '^[0-9]+$'
+          AND student_id NOT IN (SELECT subject_code FROM att_subjects)
+        ORDER BY student_id
+    ");
     $sStmt->execute([$classroom]);
     $students = $sStmt->fetchAll();
 

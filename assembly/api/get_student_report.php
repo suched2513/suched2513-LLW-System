@@ -25,15 +25,31 @@ if ($studentId === '') {
 try {
     $pdo = getPdo();
 
-    // ข้อมูลนักเรียน
+    // ข้อมูลนักเรียนจาก Central Table
     $sStmt = $pdo->prepare("
-        SELECT s.student_id, s.name, s.classroom, c.teacher_name
-        FROM assembly_students s
-        LEFT JOIN assembly_classrooms c ON c.classroom = s.classroom
-        WHERE s.student_id = ?
+        SELECT student_id, name, classroom FROM att_students
+        WHERE student_id = ?
+          AND student_id REGEXP '^[0-9]+$'
+          AND student_id NOT IN (SELECT subject_code FROM att_subjects)
+        LIMIT 1
     ");
     $sStmt->execute([$studentId]);
-    $student = $sStmt->fetch();
+    $studentRow = $sStmt->fetch();
+
+    // ดึงชื่อครูที่ปรึกษา
+    $teacherName = '';
+    if ($studentRow) {
+        $tStmt = $pdo->prepare("
+            SELECT GROUP_CONCAT(CONCAT(u.firstname, ' ', u.lastname) ORDER BY a.role_type SEPARATOR ', ')
+            FROM llw_class_advisors a
+            JOIN llw_users u ON u.user_id = a.user_id
+            WHERE a.classroom = ?
+        ");
+        $tStmt->execute([$studentRow['classroom']]);
+        $teacherName = (string)($tStmt->fetchColumn() ?? '');
+    }
+
+    $student = $studentRow ? array_merge($studentRow, ['teacher_name' => $teacherName]) : null;
 
     if (!$student) {
         http_response_code(404);
