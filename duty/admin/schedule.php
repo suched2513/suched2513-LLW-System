@@ -671,7 +671,24 @@ function renderDayForm(dayGroup, members, maxPts, allTeachers) {
         </div>`;
     }
 
-    body.innerHTML = headerHtml + `
+    const isNight = (curShift === 'night');
+    const filterBar = `
+        <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+            <div class="input-group input-group-sm" style="max-width:220px">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" id="teacherSearch" class="form-control" placeholder="ค้นหาชื่อครู..."
+                    oninput="filterTeacherOpts()">
+            </div>
+            <div class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" id="maleOnlyChk"
+                    ${isNight ? 'checked' : ''} onchange="filterTeacherOpts()">
+                <label class="form-check-label small fw-bold text-primary" for="maleOnlyChk">
+                    <i class="fas fa-mars me-1"></i>เฉพาะผู้ชาย (นาย)
+                </label>
+            </div>
+        </div>`;
+
+    body.innerHTML = headerHtml + filterBar + `
         <div class="table-responsive">
             <table class="table table-sm table-hover mb-2">
                 <thead class="table-light">
@@ -691,6 +708,21 @@ function renderDayForm(dayGroup, members, maxPts, allTeachers) {
         </div>` : ''}`;
 
     refreshUnassigned();
+    filterTeacherOpts(); // apply filter ทันทีตอนเปิด modal
+}
+
+// ─── กรองตัวเลือกครูใน dropdown ─────────────────────────────
+function filterTeacherOpts() {
+    const q        = (document.getElementById('teacherSearch')?.value || '').trim().toLowerCase();
+    const maleOnly = document.getElementById('maleOnlyChk')?.checked ?? false;
+
+    document.querySelectorAll('#assignBody select[data-field="teacher_id"] option').forEach(opt => {
+        if (!opt.value) { opt.hidden = false; return; } // blank option always visible
+        const txt  = opt.textContent.trim();
+        const male = txt.startsWith('นาย');
+        const match = (!maleOnly || male) && (!q || txt.toLowerCase().includes(q));
+        opt.hidden = !match;
+    });
 }
 
 // ─── อัปเดต badge ครูที่ยังไม่ได้จัด ────────────────────────
