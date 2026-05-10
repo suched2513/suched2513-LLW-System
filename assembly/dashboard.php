@@ -555,10 +555,24 @@ async function saveAllAttendance() {
     Swal.close();
 
     if (res.status === 'success') {
-        Swal.fire('สำเร็จ!', res.message, 'success');
+        await Swal.fire({ icon:'success', title:'บันทึกสำเร็จ!', text: res.message,
+                          timer:2000, showConfirmButton:false });
+        resetAttForm();
     } else {
         Swal.fire('ผิดพลาด', res.message, 'error');
     }
+}
+
+function resetAttForm() {
+    document.getElementById('att-student-table').innerHTML = `
+        <tr><td colspan="10" class="px-4 py-12 text-center text-slate-400">
+            <i class="bi bi-check2-all text-4xl block mb-2 opacity-30"></i>
+            <p class="font-bold">บันทึกเรียบร้อยแล้ว</p>
+            <p class="text-xs mt-1">เลือกห้องเรียนและวันที่ แล้วกด "โหลดรายชื่อ" เพื่อเช็คชื่อห้องต่อไป</p>
+        </td></tr>`;
+    document.getElementById('att-actions').classList.add('hidden');
+    document.getElementById('att-classroom').value = '';
+    document.getElementById('att-date').value = '';
 }
 
 // ─── CHECKOUT ───
