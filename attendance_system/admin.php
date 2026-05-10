@@ -11,6 +11,26 @@ $action = $_POST['action'] ?? '';
 
 if ($action) csrf_verify();
 
+// ── AJAX: toggle is_elective (ต้อง early-return ก่อน HTML ──
+if ($action === 'toggle_elective') {
+    header('Content-Type: application/json; charset=utf-8');
+    $sid = (int)($_POST['subject_id'] ?? 0);
+    if (!$sid) { echo json_encode(['ok' => false, 'msg' => 'invalid id']); exit; }
+    try {
+        $cur = $pdo->prepare("SELECT is_elective FROM att_subjects WHERE id=? LIMIT 1");
+        $cur->execute([$sid]);
+        $row = $cur->fetch();
+        if (!$row) { echo json_encode(['ok' => false, 'msg' => 'not found']); exit; }
+        $newVal = $row['is_elective'] ? 0 : 1;
+        $pdo->prepare("UPDATE att_subjects SET is_elective=? WHERE id=?")->execute([$newVal, $sid]);
+        echo json_encode(['ok' => true, 'is_elective' => $newVal]);
+    } catch (\Throwable $e) {
+        error_log('[toggle_elective] ' . $e->getMessage());
+        echo json_encode(['ok' => false, 'msg' => 'db error']);
+    }
+    exit;
+}
+
 // --- CRUD: TEACHERS ---
 if ($action === 'add_teacher') {
     $uid = (int)($_POST['user_id'] ?? 0);
@@ -476,10 +496,17 @@ require_once '../components/layout_start.php';
                             <td class="px-6 py-4 text-center">
                                 <?php if (!$migration_ready): ?>
                                 <span class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-600 font-bold text-xs"><i class="bi bi-database-exclamation"></i> รอ migration</span>
-                                <?php elseif (!empty($s['is_elective'])): ?>
-                                <span class="px-2.5 py-1 rounded-lg bg-violet-100 text-violet-700 font-black text-xs"><i class="bi bi-star-fill"></i> วิชาเลือก</span>
                                 <?php else: ?>
-                                <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 font-bold text-xs">บังคับ</span>
+                                <button type="button"
+                                    onclick="toggleElective(<?= $s['id'] ?>, this)"
+                                    data-elective="<?= !empty($s['is_elective']) ? '1' : '0' ?>"
+                                    class="elective-btn px-2.5 py-1 rounded-lg font-bold text-xs transition-all hover:scale-105 active:scale-95 <?= !empty($s['is_elective']) ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-500' ?>">
+                                    <?php if (!empty($s['is_elective'])): ?>
+                                        <i class="bi bi-star-fill me-1"></i>วิชาเลือก
+                                    <?php else: ?>
+                                        <i class="bi bi-lock-fill me-1"></i>บังคับ
+                                    <?php endif; ?>
+                                </button>
                                 <?php endif; ?>
                             </td>
                             <td class="px-6 py-4 text-right">
@@ -682,6 +709,29 @@ function deleteTeacher(id, name) {
             document.body.appendChild(f); f.submit();
         }
     });
+}
+
+async function toggleElective(id, btn) {
+    btn.disabled = true;
+    const fd = new FormData();
+    fd.append('action', 'toggle_elective');
+    fd.append('subject_id', id);
+    fd.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value ?? '');
+    try {
+        const res  = await fetch('', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.msg || 'ผิดพลาด');
+        const isElective = data.is_elective === 1;
+        btn.dataset.elective = isElective ? '1' : '0';
+        btn.className = 'elective-btn px-2.5 py-1 rounded-lg font-bold text-xs transition-all hover:scale-105 active:scale-95 '
+            + (isElective ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-500');
+        btn.innerHTML = isElective
+            ? '<i class="bi bi-star-fill me-1"></i>วิชาเลือก'
+            : '<i class="bi bi-lock-fill me-1"></i>บังคับ';
+    } catch(e) {
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: e.message, confirmButtonColor: '#2563eb' });
+    }
+    btn.disabled = false;
 }
 
 function deleteSubject(id, name) {
