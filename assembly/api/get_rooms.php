@@ -28,11 +28,12 @@ try {
         ");
         $stmt->execute([$userId]);
     } else {
-        // Admin เห็นทุกห้องที่มีนักเรียนในปีปัจจุบัน (2569)
+        // Admin เห็นเฉพาะห้องปกติ (ม.X/Y) ไม่รวมห้องวิชาเลือก
         $stmt = $pdo->query("
-            SELECT DISTINCT classroom 
-            FROM att_students 
-            WHERE academic_year = 2569 
+            SELECT DISTINCT classroom
+            FROM att_students
+            WHERE academic_year = 2569
+              AND classroom REGEXP '^ม\\\\.[0-9]+/[0-9]+'
             ORDER BY classroom
         ");
     }
