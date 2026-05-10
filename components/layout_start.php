@@ -169,7 +169,7 @@ $hdrIcon = $headerIcons[$activeSystem] ?? 'fas fa-cog';
 <div class="app-content" style="padding:0;background:#f1f5f9;">
 
     <!-- Page Header Banner -->
-    <div style="<?= $bgStyle ?>;padding:1.5rem 1.75rem 4rem;position:relative;overflow:hidden;">
+    <div style="background:<?= $bgStyle ?>;padding:1.5rem 1.75rem 4rem;position:relative;overflow:hidden;">
         <!-- Decorative circles -->
         <div style="position:absolute;top:-50px;right:-50px;width:200px;height:200px;
                     border-radius:50%;background:rgba(255,255,255,0.07);pointer-events:none;"></div>
