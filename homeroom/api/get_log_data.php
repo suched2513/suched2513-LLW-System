@@ -34,8 +34,14 @@ try {
         }
     }
 
-    // 1. ดึงรายชื่อนักเรียน (ใช้ assembly_students ตามระบบเช็คชื่อเข้าแถว)
-    $stmt = $pdo->prepare("SELECT student_id, name FROM assembly_students WHERE classroom = ? ORDER BY student_id");
+    // 1. ดึงรายชื่อนักเรียนจาก Central Table (att_students)
+    $stmt = $pdo->prepare("
+        SELECT student_id, name FROM att_students
+        WHERE classroom = ?
+          AND student_id REGEXP '^[0-9]+$'
+          AND student_id NOT IN (SELECT subject_code FROM att_subjects)
+        ORDER BY student_id
+    ");
     $stmt->execute([$classroom]);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
