@@ -69,10 +69,18 @@
             transition: all 0.15s ease !important;
         }
 
-        /* Sub-menu active ให้ indent ตรงกับ left bar */
+        /* Sub-menu active — สีเงิน/ขาว แทน gradient น้ำเงิน */
         .nav-treeview > .nav-item > .nav-link.active {
-            box-shadow: inset 4px 0 0 rgba(255,255,255,0.75),
-                        0 2px 8px rgba(13,110,253,0.25) !important;
+            background: rgba(255,255,255,0.14) !important;
+            box-shadow: inset 4px 0 0 rgba(255,255,255,0.70) !important;
+        }
+
+        /* Sub-menu non-active — ข้อความสีเงิน */
+        .nav-treeview > .nav-item > .nav-link:not(.active) {
+            color: rgba(255,255,255,0.60) !important;
+        }
+        .nav-treeview > .nav-item > .nav-link:not(.active):hover {
+            color: #fff !important;
         }
 
         /* Smooth transition ทุก nav-link */
