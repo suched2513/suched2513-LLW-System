@@ -144,12 +144,15 @@ $subMenus = [
 
 ?>
 
-<aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+<aside class="app-sidebar shadow">
     <!-- Sidebar Brand -->
     <div class="sidebar-brand">
-        <a href="<?= $base_path ?>/index.php" class="brand-link">
-            <span class="brand-text font-weight-light">
-                <?= ($activeSystem === 'budget') ? 'SBMS <strong>2569</strong>' : 'LLW <strong>Platinum</strong>' ?>
+        <a href="<?= $base_path ?>/index.php" class="brand-link d-flex align-items-center gap-2 px-3 py-3">
+            <div style="width:34px;height:34px;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 10px rgba(59,130,246,0.45);">
+                <i class="fas fa-graduation-cap text-white" style="font-size:0.95rem;"></i>
+            </div>
+            <span class="brand-text">
+                <?= ($activeSystem === 'budget') ? 'SBMS <strong>2569</strong>' : 'LLW <strong>System</strong>' ?>
             </span>
         </a>
     </div>
@@ -499,18 +502,23 @@ $subMenus = [
     </div>
     
     <!-- Sidebar Footer -->
-    <div class="sidebar-footer border-top p-3 text-center">
-        <div class="d-flex align-items-center mb-2 px-2">
-            <div class="bg-primary rounded-circle p-2 text-white me-2" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-                <?= mb_substr($userName, 0, 1) ?>
+    <div class="sidebar-footer p-3">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:1rem;flex-shrink:0;">
+                <?= mb_substr($userName, 0, 1, 'UTF-8') ?>
             </div>
-            <div class="text-start overflow-hidden">
-                <div class="text-xs text-white-50 text-uppercase" style="font-size: 0.65rem;"><?= $roleName ?></div>
-                <div class="text-sm text-truncate" style="max-width: 140px;"><?= htmlspecialchars($userName) ?></div>
+            <div style="overflow:hidden;flex:1;">
+                <div style="font-size:0.78rem;font-weight:700;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">
+                    <?= htmlspecialchars($userName) ?>
+                </div>
+                <div style="font-size:0.64rem;color:rgba(148,163,184,0.65);"><?= $roleName ?></div>
             </div>
         </div>
-        <a href="<?= $base_path ?>/logout.php" class="btn btn-danger btn-sm w-100">
-            <i class="fas fa-power-off me-2"></i>ออกจากระบบ
+        <a href="<?= $base_path ?>/logout.php"
+           style="display:block;text-align:center;background:rgba(239,68,68,0.13);color:#fca5a5;border:1px solid rgba(239,68,68,0.22);border-radius:10px;padding:0.45rem;font-size:0.78rem;font-weight:600;text-decoration:none;transition:all 0.15s;"
+           onmouseover="this.style.background='rgba(239,68,68,0.25)';this.style.color='#fff'"
+           onmouseout="this.style.background='rgba(239,68,68,0.13)';this.style.color='#fca5a5'">
+            <i class="fas fa-power-off me-1"></i>ออกจากระบบ
         </a>
     </div>
 </aside>
