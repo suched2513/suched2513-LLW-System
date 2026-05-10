@@ -118,10 +118,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     continue;
                 }
 
-                $code       = trim($row[0] ?? '');
-                $name       = trim($row[1] ?? '');
-                $cls        = trim($row[2] ?? '');
-                $rawTeacher = trim($row[3] ?? '');
+                $code        = trim($row[0] ?? '');
+                $name        = trim($row[1] ?? '');
+                $cls         = trim($row[2] ?? '');
+                $rawTeacher  = trim($row[3] ?? '');
+                $rawElective = strtolower(trim($row[4] ?? ''));
+                $isElective  = in_array($rawElective, ['1','yes','true','elective','วิชาเลือก']) ? 1 : 0;
 
                 if (!$code) { $skipped[] = ['row' => $lineNum, 'reason' => 'รหัสวิชาว่าง']; continue; }
                 if (!$name) { $skipped[] = ['row' => $lineNum, 'reason' => 'ชื่อวิชาว่าง'];  continue; }
@@ -147,6 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'teacher_display' => $teacherDisplay,
                     'is_existing'     => $isExist,
                     'teacher_found'   => ($rawTeacher === '' || $tid !== null),
+                    'is_elective'     => $isElective,
                 ];
             }
             if (empty($preview)) {
@@ -167,32 +170,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tidFallback = $tidNullable ? null : 0; // ใช้ค่า default ที่ปลอดภัย
 
             $stmtChk       = $pdo->prepare("SELECT id FROM att_subjects WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?) LIMIT 1");
-            $stmtUpdFull   = $pdo->prepare("UPDATE att_subjects SET subject_name=?, teacher_id=? WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?)");
-            $stmtUpdName   = $pdo->prepare("UPDATE att_subjects SET subject_name=? WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?)");
-            $stmtIns       = $pdo->prepare("INSERT INTO att_subjects (subject_code, subject_name, classroom, teacher_id) VALUES (?, ?, ?, ?)");
+            $stmtUpdFull   = $pdo->prepare("UPDATE att_subjects SET subject_name=?, teacher_id=?, is_elective=? WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?)");
+            $stmtUpdName   = $pdo->prepare("UPDATE att_subjects SET subject_name=?, is_elective=? WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?)");
+            $stmtIns       = $pdo->prepare("INSERT INTO att_subjects (subject_code, subject_name, classroom, teacher_id, is_elective) VALUES (?, ?, ?, ?, ?)");
 
             $errors = [];
             foreach ($data as $r) {
-                $code = trim($r['subject_code'] ?? '');
-                $name = trim($r['subject_name'] ?? '');
-                $cls  = trim($r['classroom']    ?? '');
-                $tid  = isset($r['teacher_id']) && $r['teacher_id'] > 0 ? (int)$r['teacher_id'] : null;
+                $code       = trim($r['subject_code'] ?? '');
+                $name       = trim($r['subject_name'] ?? '');
+                $cls        = trim($r['classroom']    ?? '');
+                $tid        = isset($r['teacher_id']) && $r['teacher_id'] > 0 ? (int)$r['teacher_id'] : null;
+                $isElective = isset($r['is_elective']) ? (int)$r['is_elective'] : 0;
                 if (!$code || !$name) continue;
 
                 try {
                     $stmtChk->execute([$code, $cls]);
                     $existId = $stmtChk->fetchColumn();
                     if ($existId) {
-                        // อัปเดต: ถ้ามีครูให้ update teacher_id ด้วย ถ้าไม่มีก็ update แค่ชื่อ
                         if ($tid !== null) {
-                            $stmtUpdFull->execute([$name, $tid, $code, $cls]);
+                            $stmtUpdFull->execute([$name, $tid, $isElective, $code, $cls]);
                         } else {
-                            $stmtUpdName->execute([$name, $code, $cls]);
+                            $stmtUpdName->execute([$name, $isElective, $code, $cls]);
                         }
                     } else {
-                        // Insert ใหม่: teacher_id ใช้ค่าจาก CSV หรือ fallback
                         $insertTid = $tid !== null ? $tid : $tidFallback;
-                        $stmtIns->execute([$code, $name, $cls, $insertTid]);
+                        $stmtIns->execute([$code, $name, $cls, $insertTid, $isElective]);
                     }
                     $importCount++;
                 } catch (Exception $e) {
@@ -318,6 +320,7 @@ require_once __DIR__ . '/components/layout_start.php';
                                 <th class="px-5 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ชื่อวิชา</th>
                                 <th class="px-5 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ห้อง</th>
                                 <th class="px-5 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ครูผู้สอน</th>
+                                <th class="px-5 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest">ประเภท</th>
                                 <th class="px-5 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest">สถานะ</th>
                             </tr>
                         </thead>
@@ -336,6 +339,13 @@ require_once __DIR__ . '/components/layout_start.php';
                                     <span class="text-rose-500 font-bold text-xs"><i class="bi bi-person-x-fill me-1"></i><?= htmlspecialchars($p['teacher_raw']) ?> (ไม่พบ)</span>
                                 <?php else: ?>
                                     <span class="text-slate-400 text-xs">—</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="px-5 py-3 text-center">
+                                <?php if (!empty($p['is_elective'])): ?>
+                                    <span class="px-2 py-0.5 rounded-lg bg-violet-100 text-violet-700 text-xs font-black">วิชาเลือก</span>
+                                <?php else: ?>
+                                    <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 text-xs font-bold">บังคับ</span>
                                 <?php endif; ?>
                             </td>
                             <td class="px-5 py-3 text-center">
@@ -395,10 +405,10 @@ require_once __DIR__ . '/components/layout_start.php';
                     </div>
                     <!-- Download Template -->
                     <?php
-                    $csvTemplate = "\xEF\xBB\xBF" . "subject_code,subject_name,classroom,teacher_username\r\n";
-                    $csvTemplate .= "ว21101,วิทยาศาสตร์,ม.1/1,\r\n";
-                    $csvTemplate .= "ท21101,ภาษาไทย,ม.1/2,\r\n";
-                    $csvTemplate .= "ค21101,คณิตศาสตร์,ม.1/3,\r\n";
+                    $csvTemplate = "\xEF\xBB\xBF" . "subject_code,subject_name,classroom,teacher_username,is_elective\r\n";
+                    $csvTemplate .= "ว21101,วิทยาศาสตร์,ม.1/1,,0\r\n";
+                    $csvTemplate .= "ท21101,ภาษาไทย,ม.1/2,,0\r\n";
+                    $csvTemplate .= "ว30223,ยากับชีวิตประจำวัน,ม.6(ว.ส),,1\r\n";
                     $csvB64 = base64_encode($csvTemplate);
                     ?>
                     <a href="data:text/csv;charset=utf-8;base64,<?= $csvB64 ?>"
