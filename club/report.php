@@ -58,6 +58,23 @@ $stmtUnreg = $pdo->prepare("
 $stmtUnreg->execute([$semester, $year]);
 $unreg = $stmtUnreg->fetchAll(PDO::FETCH_ASSOC);
 
+// จำนวนนักเรียนต่อห้อง (นับเฉพาะห้องจริง ม.X/Y)
+$stmtByClass = $pdo->prepare("
+    SELECT s.classroom,
+           COUNT(DISTINCT s.student_id) AS total,
+           COUNT(DISTINCT cr.id) AS registered
+    FROM att_students s
+    LEFT JOIN club_registrations cr ON cr.student_id = s.student_id
+                                    AND cr.semester = ? AND cr.year = ?
+    WHERE s.student_id REGEXP '^[0-9]+$'
+      AND s.classroom REGEXP '^ม\\.[1-6]/'
+      AND s.student_id NOT IN (SELECT subject_code FROM att_subjects)
+    GROUP BY s.classroom
+    ORDER BY s.classroom
+");
+$stmtByClass->execute([$semester, $year]);
+$byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
+
 $pageTitle    = 'รายงานชุมนุม';
 $pageSubtitle = "ภาคเรียน $semester / $year";
 $activeSystem = 'club';
@@ -109,8 +126,9 @@ require_once __DIR__ . '/../components/layout_start.php';
 
     <!-- Tabs -->
     <ul class="nav nav-tabs border-0 mb-3">
-        <li class="nav-item"><a href="#tab-clubs"  class="nav-link active" data-bs-toggle="tab">รายชุมนุม</a></li>
-        <li class="nav-item"><a href="#tab-unreg"  class="nav-link"        data-bs-toggle="tab">ยังไม่ลงทะเบียน (<?= count($unreg) ?>)</a></li>
+        <li class="nav-item"><a href="#tab-clubs"   class="nav-link active" data-bs-toggle="tab">รายชุมนุม</a></li>
+        <li class="nav-item"><a href="#tab-unreg"   class="nav-link"        data-bs-toggle="tab">ยังไม่ลงทะเบียน (<?= count($unreg) ?>)</a></li>
+        <li class="nav-item"><a href="#tab-byclass" class="nav-link"        data-bs-toggle="tab">แยกตามห้อง</a></li>
     </ul>
 
     <div class="tab-content">
@@ -181,6 +199,50 @@ require_once __DIR__ . '/../components/layout_start.php';
                         </table>
                     </div>
                     <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- By Classroom -->
+        <div class="tab-pane fade" id="tab-byclass">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="fw-bold text-uppercase small text-muted px-3 py-3">ห้องเรียน</th>
+                                    <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">นักเรียนทั้งหมด</th>
+                                    <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">ลงทะเบียนแล้ว</th>
+                                    <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">ยังไม่ลง</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            <?php
+                            $grandTotal = 0; $grandReg = 0;
+                            foreach ($byClass as $row):
+                                $unreg_count = $row['total'] - $row['registered'];
+                                $grandTotal += $row['total'];
+                                $grandReg   += $row['registered'];
+                            ?>
+                            <tr>
+                                <td class="px-3 py-2 fw-bold small"><?= htmlspecialchars($row['classroom'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td class="px-3 py-2 text-center small"><?= $row['total'] ?></td>
+                                <td class="px-3 py-2 text-center"><span class="badge bg-success rounded-pill"><?= $row['registered'] ?></span></td>
+                                <td class="px-3 py-2 text-center"><span class="badge <?= $unreg_count > 0 ? 'bg-danger' : 'bg-secondary' ?> rounded-pill"><?= $unreg_count ?></span></td>
+                            </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td class="px-3 py-2 fw-black small">รวม</td>
+                                    <td class="px-3 py-2 text-center fw-black"><?= $grandTotal ?></td>
+                                    <td class="px-3 py-2 text-center fw-black"><?= $grandReg ?></td>
+                                    <td class="px-3 py-2 text-center fw-black"><?= $grandTotal - $grandReg ?></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
