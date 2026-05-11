@@ -5,7 +5,8 @@ require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) {
     header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
-if ($_SESSION['llw_role'] !== 'super_admin') {
+$userRole = $_SESSION['llw_role'];
+if (!in_array($userRole, ['super_admin', 'att_teacher'])) {
     header('Location: ' . $base_path . '/login.php'); exit();
 }
 
@@ -13,11 +14,30 @@ $pdo = getPdo();
 $id  = (int)($_GET['id'] ?? 0);
 $club = null;
 
+// Resolve current teacher record for att_teacher role
+$myTeacherId   = 0;
+$myTeacherName = '';
+if ($userRole === 'att_teacher') {
+    $myTeacherId = isset($_SESSION['teacher_id']) ? (int)$_SESSION['teacher_id'] : 0;
+    if ($myTeacherId > 0) {
+        $tq = $pdo->prepare("SELECT name FROM att_teachers WHERE id = ?");
+        $tq->execute([$myTeacherId]);
+        $myTeacherName = $tq->fetchColumn() ?: '';
+    }
+}
+
 if ($id > 0) {
     $stmt = $pdo->prepare("SELECT * FROM club_groups WHERE id = ?");
     $stmt->execute([$id]);
     $club = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$club) { header('Location: /club/index.php'); exit(); }
+    // att_teacher can only edit clubs where they are one of the advisors
+    if ($userRole === 'att_teacher') {
+        $advisorIds = array_filter([(int)($club['teacher_id'] ?? 0), (int)($club['teacher_id_2'] ?? 0), (int)($club['teacher_id_3'] ?? 0)]);
+        if (!in_array($myTeacherId, $advisorIds, true)) {
+            header('Location: /club/index.php'); exit();
+        }
+    }
 }
 
 $teachers = $pdo->query("SELECT id, name FROM att_teachers ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
@@ -54,8 +74,13 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <label class="form-label fw-bold small text-uppercase text-muted">วัตถุประสงค์</label>
                 <textarea id="f_objectives" class="form-control rounded-3" rows="2"><?= htmlspecialchars($club['objectives'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
             </div>
-            <div class="col-md-6">
-                <label class="form-label fw-bold small text-uppercase text-muted">ครูที่ปรึกษา</label>
+            <!-- Teacher 1 -->
+            <div class="col-md-4">
+                <label class="form-label fw-bold small text-uppercase text-muted">ครูที่ปรึกษาคนที่ 1 <span class="text-danger">*</span></label>
+                <?php if ($userRole === 'att_teacher'): ?>
+                <input type="hidden" id="f_teacher_id" value="<?= $myTeacherId ?>">
+                <input type="text" class="form-control rounded-3 bg-light" value="<?= htmlspecialchars($myTeacherName, ENT_QUOTES, 'UTF-8') ?>" readonly>
+                <?php else: ?>
                 <select id="f_teacher_id" class="form-select rounded-3">
                     <option value="">-- เลือกครู --</option>
                     <?php foreach ($teachers as $t): ?>
@@ -64,8 +89,33 @@ require_once __DIR__ . '/../components/layout_start.php';
                     </option>
                     <?php endforeach; ?>
                 </select>
+                <?php endif; ?>
             </div>
-            <div class="col-md-6">
+            <!-- Teacher 2 -->
+            <div class="col-md-4">
+                <label class="form-label fw-bold small text-uppercase text-muted">ครูที่ปรึกษาคนที่ 2</label>
+                <select id="f_teacher_id_2" class="form-select rounded-3">
+                    <option value="">-- ไม่มี --</option>
+                    <?php foreach ($teachers as $t): ?>
+                    <option value="<?= $t['id'] ?>" <?= ($club['teacher_id_2'] ?? '') == $t['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8') ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <!-- Teacher 3 -->
+            <div class="col-md-4">
+                <label class="form-label fw-bold small text-uppercase text-muted">ครูที่ปรึกษาคนที่ 3</label>
+                <select id="f_teacher_id_3" class="form-select rounded-3">
+                    <option value="">-- ไม่มี --</option>
+                    <?php foreach ($teachers as $t): ?>
+                    <option value="<?= $t['id'] ?>" <?= ($club['teacher_id_3'] ?? '') == $t['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8') ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-4">
                 <label class="form-label fw-bold small text-uppercase text-muted">ห้องประชุม</label>
                 <input type="text" id="f_room" class="form-control rounded-3"
                        value="<?= htmlspecialchars($club['room'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="เช่น ห้องคอมพิวเตอร์ 1">
@@ -74,6 +124,11 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <label class="form-label fw-bold small text-uppercase text-muted">ความจุ (คน)</label>
                 <input type="number" id="f_max_capacity" class="form-control rounded-3" min="1"
                        value="<?= htmlspecialchars($club['max_capacity'] ?? 30, ENT_QUOTES, 'UTF-8') ?>">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold small text-uppercase text-muted">เกณฑ์ผ่าน (%)</label>
+                <input type="number" id="f_pass_threshold" class="form-control rounded-3" min="0" max="100"
+                       value="<?= htmlspecialchars($club['pass_threshold'] ?? 80, ENT_QUOTES, 'UTF-8') ?>">
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold small text-uppercase text-muted">ภาคเรียน</label>
@@ -87,12 +142,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <input type="number" id="f_year" class="form-control rounded-3"
                        value="<?= htmlspecialchars($club['year'] ?? $defYear, ENT_QUOTES, 'UTF-8') ?>">
             </div>
-            <div class="col-md-6">
-                <label class="form-label fw-bold small text-uppercase text-muted">เกณฑ์ผ่าน (%)</label>
-                <input type="number" id="f_pass_threshold" class="form-control rounded-3" min="0" max="100"
-                       value="<?= htmlspecialchars($club['pass_threshold'] ?? 80, ENT_QUOTES, 'UTF-8') ?>">
-            </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="form-label fw-bold small text-uppercase text-muted">สถานะ</label>
                 <select id="f_status" class="form-select rounded-3">
                     <option value="draft"    <?= ($club['status'] ?? 'draft') === 'draft'    ? 'selected' : '' ?>>ร่าง</option>
@@ -128,6 +178,8 @@ async function saveClub() {
         description:    document.getElementById('f_description').value.trim(),
         objectives:     document.getElementById('f_objectives').value.trim(),
         teacher_id:     document.getElementById('f_teacher_id').value,
+        teacher_id_2:   document.getElementById('f_teacher_id_2').value,
+        teacher_id_3:   document.getElementById('f_teacher_id_3').value,
         room:           document.getElementById('f_room').value.trim(),
         max_capacity:   parseInt(document.getElementById('f_max_capacity').value) || 30,
         semester:       parseInt(document.getElementById('f_semester').value),
