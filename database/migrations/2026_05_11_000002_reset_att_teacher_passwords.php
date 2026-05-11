@@ -22,34 +22,35 @@ return [
             $username = trim($t['username']);
 
             if ($t['llw_user_id'] > 0) {
-                // มีบัญชีอยู่แล้ว — reset password + activate
+                // มีบัญชีอยู่แล้ว — reset เฉพาะ role=att_teacher เท่านั้น ห้ามแตะ super_admin/wfh_admin
                 $pdo->prepare("
                     UPDATE llw_users
                     SET password = ?, status = 'active', force_password_change = 0
-                    WHERE user_id = ?
+                    WHERE user_id = ? AND role = 'att_teacher'
                 ")->execute([$newPassword, $t['llw_user_id']]);
                 $updated++;
             } else {
-                // ยังไม่มีบัญชี — สร้างใหม่
+                // ยังไม่มีบัญชี — สร้างใหม่ (att_teacher เท่านั้น)
                 $nameParts = explode(' ', trim($t['name']), 2);
                 $firstname = $nameParts[0] ?? $t['name'];
                 $lastname  = $nameParts[1] ?? '';
 
-                // ตรวจว่า username ซ้ำไหม
-                $exists = $pdo->prepare("SELECT user_id FROM llw_users WHERE username = ?");
+                $exists = $pdo->prepare("SELECT user_id, role FROM llw_users WHERE username = ?");
                 $exists->execute([$username]);
                 $row = $exists->fetch();
 
                 if ($row) {
-                    // username ซ้ำ — reset password + activate + link
-                    $pdo->prepare("
-                        UPDATE llw_users
-                        SET password = ?, status = 'active', force_password_change = 0, role = 'att_teacher'
-                        WHERE user_id = ?
-                    ")->execute([$newPassword, $row['user_id']]);
+                    // มี username แล้ว — reset เฉพาะถ้าเป็น att_teacher
+                    if ($row['role'] === 'att_teacher') {
+                        $pdo->prepare("
+                            UPDATE llw_users
+                            SET password = ?, status = 'active', force_password_change = 0
+                            WHERE user_id = ?
+                        ")->execute([$newPassword, $row['user_id']]);
+                        $updated++;
+                    }
                     $pdo->prepare("UPDATE att_teachers SET llw_user_id = ? WHERE id = ?")
                         ->execute([$row['user_id'], $t['id']]);
-                    $updated++;
                 } else {
                     $pdo->prepare("
                         INSERT INTO llw_users (username, password, firstname, lastname, role, status, force_password_change)
