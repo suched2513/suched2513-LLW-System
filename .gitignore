@@ -32,6 +32,7 @@ assets/images/user_photos/
 
 # Claude Code
 .claude/
+.mcp.json
 
 # Dangerous / Debug / Temp files — ห้าม commit เด็ดขาด
 debug_*.php

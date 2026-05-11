@@ -19,17 +19,14 @@ $semester = (int)($cfg['semester'] ?? 1);
 $year     = (int)($cfg['year'] ?? (date('Y') + 543));
 
 $stmt = $pdo->prepare("
-    SELECT s.student_id, MIN(s.name) AS name,
-           MAX(CASE WHEN cr.id IS NOT NULL THEN 1 ELSE 0 END) AS is_registered,
-           MIN(cg.name) AS club_name
+    SELECT s.student_id, s.name,
+           CASE WHEN cr.id IS NOT NULL THEN 1 ELSE 0 END AS is_registered,
+           cg.name AS club_name
     FROM att_students s
     LEFT JOIN club_registrations cr ON cr.student_id = s.student_id
                                     AND cr.semester = ? AND cr.year = ?
     LEFT JOIN club_groups cg ON cg.id = cr.club_id
-    WHERE s.student_id REGEXP '^[0-9]+$'
-      AND s.classroom = ?
-      AND s.student_id NOT IN (SELECT subject_code FROM att_subjects)
-    GROUP BY s.student_id
+    WHERE s.classroom = ?
     ORDER BY s.student_id
 ");
 $stmt->execute([$semester, $year, $classroom]);

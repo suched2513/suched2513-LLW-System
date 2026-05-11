@@ -44,16 +44,13 @@ $clubs = $stmtClubs->fetchAll(PDO::FETCH_ASSOC);
 
 // Unregistered students — filter to real students only (numeric ID, not subject codes)
 $stmtUnreg = $pdo->prepare("
-    SELECT s.student_id, MIN(s.name) AS name, MIN(s.classroom) AS classroom
+    SELECT s.student_id, s.name, s.classroom
     FROM att_students s
-    WHERE s.student_id REGEXP '^[0-9]+$'
-      AND s.classroom REGEXP '^ม\\.[1-6]/'
-      AND s.student_id NOT IN (SELECT subject_code FROM att_subjects)
+    WHERE s.classroom REGEXP '^ม\\.[1-6]/'
       AND s.student_id NOT IN (
           SELECT student_id FROM club_registrations WHERE semester = ? AND year = ?
       )
-    GROUP BY s.student_id
-    ORDER BY classroom, name
+    ORDER BY s.classroom, s.name
 ");
 $stmtUnreg->execute([$semester, $year]);
 $unreg = $stmtUnreg->fetchAll(PDO::FETCH_ASSOC);
@@ -61,14 +58,12 @@ $unreg = $stmtUnreg->fetchAll(PDO::FETCH_ASSOC);
 // จำนวนนักเรียนต่อห้อง (นับเฉพาะห้องจริง ม.X/Y)
 $stmtByClass = $pdo->prepare("
     SELECT s.classroom,
-           COUNT(DISTINCT s.student_id) AS total,
-           COUNT(DISTINCT cr.id) AS registered
+           COUNT(s.student_id) AS total,
+           COUNT(cr.id) AS registered
     FROM att_students s
     LEFT JOIN club_registrations cr ON cr.student_id = s.student_id
                                     AND cr.semester = ? AND cr.year = ?
-    WHERE s.student_id REGEXP '^[0-9]+$'
-      AND s.classroom REGEXP '^ม\\.[1-6]/'
-      AND s.student_id NOT IN (SELECT subject_code FROM att_subjects)
+    WHERE s.classroom REGEXP '^ม\\.[1-6]/'
     GROUP BY s.classroom
     ORDER BY s.classroom
 ");
