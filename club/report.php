@@ -215,6 +215,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">นักเรียนทั้งหมด</th>
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">ลงทะเบียนแล้ว</th>
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">ยังไม่ลง</th>
+                                    <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">รายชื่อ</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -230,6 +231,9 @@ require_once __DIR__ . '/../components/layout_start.php';
                                 <td class="px-3 py-2 text-center small"><?= $row['total'] ?></td>
                                 <td class="px-3 py-2 text-center"><span class="badge bg-success rounded-pill"><?= $row['registered'] ?></span></td>
                                 <td class="px-3 py-2 text-center"><span class="badge <?= $unreg_count > 0 ? 'bg-danger' : 'bg-secondary' ?> rounded-pill"><?= $unreg_count ?></span></td>
+                                <td class="px-3 py-2 text-center">
+                                    <a href="/club/class_students.php?classroom=<?= urlencode($row['classroom']) ?>" class="btn btn-outline-secondary btn-sm rounded-2"><i class="fas fa-search"></i></a>
+                                </td>
                             </tr>
                             <?php endforeach; ?>
                             </tbody>
@@ -239,6 +243,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                                     <td class="px-3 py-2 text-center fw-black"><?= $grandTotal ?></td>
                                     <td class="px-3 py-2 text-center fw-black"><?= $grandReg ?></td>
                                     <td class="px-3 py-2 text-center fw-black"><?= $grandTotal - $grandReg ?></td>
+                                    <td></td>
                                 </tr>
                             </tfoot>
                         </table>
