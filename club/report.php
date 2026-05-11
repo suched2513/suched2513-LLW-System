@@ -18,30 +18,43 @@ $cfg = $pdo->query("SELECT * FROM club_settings WHERE is_active = 1 LIMIT 1")->f
 $semester = (int)($cfg['semester'] ?? 1);
 $year     = (int)($cfg['year'] ?? (date('Y') + 543));
 
-// Clubs (filtered by teacher if att_teacher)
-$clubWhere = $userRole === 'att_teacher' ? "AND cg.teacher_id = $teacherId" : '';
-$clubs = $pdo->query("
+// Clubs (filtered by teacher if att_teacher — checks all 3 advisor slots)
+$clubParams = [$semester, $year, $semester, $year, $semester, $year];
+$clubWhere  = '';
+if ($userRole === 'att_teacher' && $teacherId > 0) {
+    $clubWhere = 'AND (cg.teacher_id = ? OR cg.teacher_id_2 = ? OR cg.teacher_id_3 = ?)';
+    $clubParams[] = $teacherId;
+    $clubParams[] = $teacherId;
+    $clubParams[] = $teacherId;
+}
+$stmtClubs = $pdo->prepare("
     SELECT cg.id, cg.name, cg.max_capacity, cg.pass_threshold, t.name AS teacher_name,
            COUNT(DISTINCT cr.id) AS reg_count,
            COUNT(DISTINCT CASE WHEN cr2.result='pass' THEN cr2.id END) AS pass_count,
            COUNT(DISTINCT CASE WHEN cr2.result='fail' THEN cr2.id END) AS fail_count
     FROM club_groups cg
     LEFT JOIN att_teachers t ON t.id = cg.teacher_id
-    LEFT JOIN club_registrations cr ON cr.club_id = cg.id AND cr.semester = $semester AND cr.year = $year
-    LEFT JOIN club_results cr2 ON cr2.club_id = cg.id AND cr2.semester = $semester AND cr2.year = $year
-    WHERE cg.semester = $semester AND cg.year = $year $clubWhere
+    LEFT JOIN club_registrations cr ON cr.club_id = cg.id AND cr.semester = ? AND cr.year = ?
+    LEFT JOIN club_results cr2 ON cr2.club_id = cg.id AND cr2.semester = ? AND cr2.year = ?
+    WHERE cg.semester = ? AND cg.year = ? $clubWhere
     GROUP BY cg.id ORDER BY cg.name
-")->fetchAll(PDO::FETCH_ASSOC);
+");
+$stmtClubs->execute($clubParams);
+$clubs = $stmtClubs->fetchAll(PDO::FETCH_ASSOC);
 
-// Unregistered students
-$unreg = $pdo->query("
+// Unregistered students — filter to real students only (numeric ID, not subject codes)
+$stmtUnreg = $pdo->prepare("
     SELECT s.student_id, s.name, s.classroom
     FROM att_students s
-    WHERE s.student_id NOT IN (
-        SELECT student_id FROM club_registrations WHERE semester = $semester AND year = $year
-    )
+    WHERE s.student_id REGEXP '^[0-9]+$'
+      AND s.student_id NOT IN (SELECT subject_code FROM att_subjects)
+      AND s.student_id NOT IN (
+          SELECT student_id FROM club_registrations WHERE semester = ? AND year = ?
+      )
     ORDER BY s.classroom, s.name
-")->fetchAll(PDO::FETCH_ASSOC);
+");
+$stmtUnreg->execute([$semester, $year]);
+$unreg = $stmtUnreg->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle    = 'รายงานชุมนุม';
 $pageSubtitle = "ภาคเรียน $semester / $year";
