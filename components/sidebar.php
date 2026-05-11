@@ -65,7 +65,7 @@ $subMenus = [
     'club' => [
         ['icon' => 'fas fa-users',          'label' => 'รายชื่อชุมนุม',   'url' => $base_path . '/club/index.php'],
         ['icon' => 'fas fa-calendar-alt',   'label' => 'รายงาน',          'url' => $base_path . '/club/report.php'],
-        ['icon' => 'fas fa-plus-circle',    'label' => 'สร้างชุมนุม',     'url' => $base_path . '/club/manage.php',   'roles' => ['super_admin']],
+        ['icon' => 'fas fa-plus-circle',    'label' => 'สร้างชุมนุม',     'url' => $base_path . '/club/manage.php',   'roles' => ['super_admin', 'att_teacher']],
         ['icon' => 'fas fa-cog',            'label' => 'ตั้งค่า',          'url' => $base_path . '/club/settings.php', 'roles' => ['super_admin']],
     ],
     'attendance' => [
