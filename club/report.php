@@ -44,14 +44,15 @@ $clubs = $stmtClubs->fetchAll(PDO::FETCH_ASSOC);
 
 // Unregistered students — filter to real students only (numeric ID, not subject codes)
 $stmtUnreg = $pdo->prepare("
-    SELECT s.student_id, s.name, s.classroom
+    SELECT s.student_id, MIN(s.name) AS name, MIN(s.classroom) AS classroom
     FROM att_students s
     WHERE s.student_id REGEXP '^[0-9]+$'
       AND s.student_id NOT IN (SELECT subject_code FROM att_subjects)
       AND s.student_id NOT IN (
           SELECT student_id FROM club_registrations WHERE semester = ? AND year = ?
       )
-    ORDER BY s.classroom, s.name
+    GROUP BY s.student_id
+    ORDER BY classroom, name
 ");
 $stmtUnreg->execute([$semester, $year]);
 $unreg = $stmtUnreg->fetchAll(PDO::FETCH_ASSOC);
