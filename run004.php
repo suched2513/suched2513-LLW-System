@@ -11,14 +11,24 @@ $file = __DIR__ . '/database/migrations/2026_05_11_000004_remove_seed04_sample_s
 
 echo '<pre style="font-family:monospace;font-size:14px;padding:20px">';
 echo "Running: 2026_05_11_000004_remove_seed04_sample_students\n\n";
+flush(); ob_flush();
 
 try {
-    $migration = require $file;
-    $migration['up']($pdo);
-    echo "\n✅ Migration สำเร็จ\n";
-} catch (Exception $e) {
-    echo "\n❌ Error: " . $e->getMessage() . "\n";
+    if (!file_exists($file)) {
+        echo "ERROR: migration file not found\n";
+    } else {
+        $migration = require $file;
+        if (!is_array($migration) || !isset($migration['up'])) {
+            echo "ERROR: invalid migration format\n";
+        } else {
+            $migration['up']($pdo);
+            echo "\nMigration SUCCESS\n";
+        }
+    }
+} catch (Throwable $e) {
+    echo "\nERROR: " . $e->getMessage() . "\n";
+    echo "Line: " . $e->getLine() . "\n";
 }
 
 echo '</pre>';
-echo '<p style="color:red;font-weight:bold">⚠️ ลบไฟล์นี้ออกทันทีหลังใช้งาน</p>';
+echo '<p style="color:red;font-weight:bold">DELETE THIS FILE NOW</p>';
