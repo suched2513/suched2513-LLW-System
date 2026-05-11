@@ -47,6 +47,7 @@ $stmtUnreg = $pdo->prepare("
     SELECT s.student_id, MIN(s.name) AS name, MIN(s.classroom) AS classroom
     FROM att_students s
     WHERE s.student_id REGEXP '^[0-9]+$'
+      AND s.classroom REGEXP '^ม\\.[1-6]/'
       AND s.student_id NOT IN (SELECT subject_code FROM att_subjects)
       AND s.student_id NOT IN (
           SELECT student_id FROM club_registrations WHERE semester = ? AND year = ?
