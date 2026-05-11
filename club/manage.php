@@ -40,7 +40,13 @@ if ($id > 0) {
     }
 }
 
-$teachers = $pdo->query("SELECT id, name FROM att_teachers ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$stmtT = $pdo->query("
+    SELECT at.id, at.name
+    FROM att_teachers at
+    JOIN llw_users lu ON lu.user_id = at.llw_user_id AND lu.role = 'att_teacher' AND lu.status = 'active'
+    ORDER BY at.name
+");
+$teachers = $stmtT->fetchAll(PDO::FETCH_ASSOC);
 $cfg      = $pdo->query("SELECT * FROM club_settings WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 $defSem   = $cfg['semester'] ?? 1;
 $defYear  = $cfg['year']     ?? (date('Y') + 543);
