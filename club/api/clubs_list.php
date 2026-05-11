@@ -32,16 +32,20 @@ try {
     if ($year > 0)     { $where[] = 'cg.year = ?';     $params[] = $year; }
     if ($status !== '') { $where[] = 'cg.status = ?';  $params[] = $status; }
 
-    // att_teacher sees only own clubs
+    // att_teacher sees only clubs where they are one of the 3 advisors
     if ($_SESSION['llw_role'] === 'att_teacher' && isset($_SESSION['teacher_id'])) {
-        $where[] = 'cg.teacher_id = ?';
-        $params[] = (int)$_SESSION['teacher_id'];
+        $tid = (int)$_SESSION['teacher_id'];
+        $where[] = '(cg.teacher_id = ? OR cg.teacher_id_2 = ? OR cg.teacher_id_3 = ?)';
+        $params[] = $tid;
+        $params[] = $tid;
+        $params[] = $tid;
     }
 
     $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
     $sql = "SELECT cg.id, cg.name, cg.description, cg.objectives,
-                   cg.teacher_id, COALESCE(t.name,'') AS teacher_name,
+                   cg.teacher_id, cg.teacher_id_2, cg.teacher_id_3,
+                   COALESCE(t.name,'') AS teacher_name,
                    cg.room, cg.max_capacity, cg.semester, cg.year,
                    cg.status, cg.pass_threshold, cg.created_at,
                    (SELECT COUNT(*) FROM club_registrations cr

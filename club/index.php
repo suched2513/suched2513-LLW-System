@@ -60,7 +60,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-white border-0 d-flex align-items-center justify-content-between py-3">
             <h6 class="mb-0 fw-bold"><i class="fas fa-users me-2" style="color:#7c3aed"></i>รายชื่อชุมนุม</h6>
-            <?php if ($userRole === 'super_admin'): ?>
+            <?php if (in_array($userRole, ['super_admin', 'att_teacher'])): ?>
             <a href="/club/manage.php" class="btn btn-sm rounded-3 text-white" style="background:#7c3aed">
                 <i class="fas fa-plus me-1"></i>สร้างชุมนุม
             </a>
@@ -120,6 +120,12 @@ async function loadClubs() {
             if (userRole === 'super_admin') {
                 btns += `<a href="/club/manage.php?id=${c.id}" class="btn btn-outline-warning btn-sm rounded-2 me-1" title="แก้ไข"><i class="fas fa-edit"></i></a>
                          <button onclick="deleteClub(${c.id},'${escHtml(c.name)}')" class="btn btn-outline-danger btn-sm rounded-2" title="ลบ"><i class="fas fa-trash"></i></button>`;
+            } else if (userRole === 'att_teacher') {
+                const myId = parseInt(teacherId) || 0;
+                const advisors = [parseInt(c.teacher_id)||0, parseInt(c.teacher_id_2)||0, parseInt(c.teacher_id_3)||0];
+                if (myId > 0 && advisors.includes(myId)) {
+                    btns += `<a href="/club/manage.php?id=${c.id}" class="btn btn-outline-warning btn-sm rounded-2 me-1" title="แก้ไข"><i class="fas fa-edit"></i></a>`;
+                }
             }
 
             const tr = document.createElement('tr');
