@@ -187,6 +187,27 @@ $activeSystem = 'bus';
 require_once __DIR__ . '/../../components/layout_start.php';
 ?>
 
+<style>
+    /* LLW Indestructible Modal System */
+    .modal.llw-indestructible {
+        z-index: 20000 !important;
+        pointer-events: none !important;
+        background: none !important;
+    }
+    .modal.llw-indestructible .modal-dialog {
+        pointer-events: auto !important;
+        z-index: 20001 !important;
+        margin-top: 10vh;
+    }
+    .modal.llw-indestructible .modal-content {
+        box-shadow: 0 0 0 1000vw rgba(0,0,0,0.5) !important;
+        border: none !important;
+        border-radius: 1.5rem !important;
+    }
+    .modal-backdrop { display: none !important; }
+    body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
+</style>
+
 <?php if ($msg): ?>
 <div class="alert alert-success alert-dismissible fade show shadow-sm border-0">
     <i class="bi bi-check-circle-fill me-2"></i><?= htmlspecialchars($msg) ?>
@@ -470,7 +491,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
 <?php endif; ?>
 
 <!-- ── Pay Modal ─────────────────────────────────────────────────────────── -->
-<div class="modal fade" id="payModal" tabindex="-1">
+<div class="modal fade llw-indestructible" id="payModal" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-success text-white border-0">
@@ -512,7 +533,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
 </div>
 
 <!-- ── History Modal ──────────────────────────────────────────────────────── -->
-<div class="modal fade" id="historyModal" tabindex="-1">
+<div class="modal fade llw-indestructible" id="historyModal" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow">
             <div class="modal-header border-0">
@@ -527,7 +548,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
 </div>
 
 <!-- ── Approve Slip Modal ─────────────────────────────────────────────────── -->
-<div class="modal fade" id="approveModal" tabindex="-1">
+<div class="modal fade llw-indestructible" id="approveModal" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-success text-white border-0">
@@ -552,7 +573,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
 </div>
 
 <!-- ── Reject Slip Modal ──────────────────────────────────────────────────── -->
-<div class="modal fade" id="rejectModal" tabindex="-1">
+<div class="modal fade llw-indestructible" id="rejectModal" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-danger text-white border-0">
@@ -656,6 +677,18 @@ function rejectSlip(id, name) {
     document.getElementById('rejectStudentName').textContent = name;
     new bootstrap.Modal(document.getElementById('rejectModal')).show();
 }
+
+// ── DOM Stabilization ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    // Force move modals to body root to bypass AdminLTE stacking issues
+    ['payModal', 'historyModal', 'approveModal', 'rejectModal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            document.body.appendChild(el);
+            console.log('[LLW] Modal ' + id + ' stabilized and moved to body root.');
+        }
+    });
+});
 </script>
 
 <?php require_once __DIR__ . '/../../components/layout_end.php'; ?>
