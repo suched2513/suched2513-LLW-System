@@ -38,10 +38,15 @@ try {
         exit;
     }
 
-    // Verify teacher ownership
+    // Verify teacher ownership (check all 3 slots)
     if ($_SESSION['llw_role'] === 'att_teacher') {
         $teacherId = (int)($_SESSION['teacher_id'] ?? 0);
-        if ((int)$club['teacher_id'] !== $teacherId) {
+        $stmt = $pdo->prepare("SELECT teacher_id, teacher_id_2, teacher_id_3 FROM club_groups WHERE id = ?");
+        $stmt->execute([$club_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $advisorIds = array_filter([(int)($row['teacher_id'] ?? 0), (int)($row['teacher_id_2'] ?? 0), (int)($row['teacher_id_3'] ?? 0)]);
+        
+        if (!in_array($teacherId, $advisorIds, true)) {
             http_response_code(403);
             echo json_encode(['status' => 'error', 'message' => 'คุณไม่ใช่ครูที่ปรึกษาของชุมนุมนี้']);
             exit;

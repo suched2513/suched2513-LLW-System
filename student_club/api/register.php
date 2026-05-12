@@ -62,8 +62,14 @@ try {
         exit;
     }
 
-    // Get club info + check capacity
-    $club = $pdo->prepare("SELECT cg.*, COUNT(cr.id) AS registered FROM club_groups cg LEFT JOIN club_registrations cr ON cr.club_id = cg.id AND cr.semester = ? AND cr.year = ? WHERE cg.id = ? AND cg.status = 'open' LIMIT 1");
+    // Get club info + check capacity (Lock for Update to prevent race conditions)
+    $club = $pdo->prepare("
+        SELECT cg.*, 
+               (SELECT COUNT(*) FROM club_registrations cr WHERE cr.club_id = cg.id AND cr.semester = ? AND cr.year = ?) AS registered 
+        FROM club_groups cg 
+        WHERE cg.id = ? AND cg.status = 'open' 
+        FOR UPDATE
+    ");
     $club->execute([$semester, $year, $club_id]);
     $clubRow = $club->fetch(PDO::FETCH_ASSOC);
 
