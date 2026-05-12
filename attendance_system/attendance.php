@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'functions.php';
 require_once '../includes/telegram_bot.php';
 checkLogin();
@@ -329,10 +329,10 @@ require_once '../components/layout_start.php';
 </div>
 
 <script>
-    // คาบ → เวลาเริ่ม (คาบ 1 = 08:40, คาบละ 50 นาที)
+    // คาบ → เวลาเริ่ม (คาบ 1-4, พักเที่ยง, คาบ 5-8 เริ่ม 13:00)
     const periodTimes = {
         1: '08:40', 2: '09:30', 3: '10:20', 4: '11:10',
-        5: '12:00', 6: '12:50', 7: '13:40', 8: '14:30'
+        5: '13:00', 6: '13:50', 7: '14:40', 8: '15:30'
     };
 
     function updateStartTime(period) {
