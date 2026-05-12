@@ -370,82 +370,120 @@ Swal.fire({
 </form>
 
 <style>
-.bg-blue-50 { background-color: #eff6ff; }
+.bg-blue-50 { background-color: #f0f7ff; }
 .text-blue-600 { color: #2563eb; }
 .border-blue-100 { border-color: #dbeafe; }
-.hover\:bg-white:hover { background-color: white; }
+.hover-bg-white:hover { background-color: white !important; }
 .transition-all { transition: all 0.2s ease-in-out; }
 .rounded-4 { border-radius: 1rem !important; }
 .rounded-3 { border-radius: 0.75rem !important; }
 
-/* Fix Bootstrap Modal Backdrop issue */
-.modal-backdrop {
-    z-index: 1040 !important;
-}
-.modal {
-    z-index: 1055 !important;
+/* Modal Fixes */
+.modal { z-index: 1060 !important; }
+.modal-backdrop { z-index: 1050 !important; }
+.modal-dialog { margin-top: 1.75rem; }
+@media (min-width: 576px) {
+    .modal-dialog { margin-top: 3.5rem; }
 }
 </style>
 
 <script>
-function openEditGroup(g) {
-    document.getElementById('editGroupId').value   = g.id;
-    document.getElementById('editGroupName').value = g.name;
-    document.getElementById('editGroupColor').value= g.color;
-    document.getElementById('editGroupDesc').value = g.description || '';
-    document.getElementById('editGroupType').value = g.group_type || 'day';
-    
-    const modalEl = document.getElementById('editModal');
-    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    modal.show();
-}
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("LLW Duty Groups: JS Initializing...");
 
-function deleteGroup(id, name) {
-    Swal.fire({
-        icon:'warning', 
-        title:'ลบกลุ่ม?',
-        text: 'ยืนยันลบกลุ่ม "' + name + '"? ข้อมูลสมาชิกในกลุ่มนี้จะถูกยกเลิก',
-        showCancelButton:true, 
-        confirmButtonColor:'#ef4444',
-        confirmButtonText:'ลบ', 
-        cancelButtonText:'ยกเลิก',
-        reverseButtons: true
-    }).then(r => {
-        if (r.isConfirmed) {
-            document.getElementById('deleteGroupId').value = id;
-            document.getElementById('deleteForm').submit();
+    // Helper to get or create Bootstrap Modal
+    function getModal(id) {
+        const el = document.getElementById(id);
+        if (!el) return null;
+        if (window.bootstrap && bootstrap.Modal) {
+            return bootstrap.Modal.getOrCreateInstance(el);
         }
-    });
-}
+        console.error("Bootstrap Modal not found on window");
+        return null;
+    }
 
-function openMemberModal(groupId, groupName, currentMemberIds) {
-    document.getElementById('memberGroupId').value = groupId;
-    document.getElementById('memberGroupName').textContent = groupName;
-    
-    // reset checkboxes
-    const checks = document.querySelectorAll('.member-check');
-    const memberIdsSet = new Set(currentMemberIds.map(Number));
-    
-    checks.forEach(c => {
-        c.checked = memberIdsSet.has(Number(c.value));
-    });
-    
-    document.getElementById('memberSearch').value = '';
-    document.querySelectorAll('.member-item').forEach(el => el.style.display = '');
-    document.getElementById('selectAllMembers').checked = false;
-    
-    const modalEl = document.getElementById('memberModal');
-    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    modal.show();
-}
+    // --- Create Group Modal Logic ---
+    // (Already handled by data-bs-toggle, but we can add validation if needed)
 
-function filterMembers() {
-    const q = document.getElementById('memberSearch').value.toLowerCase();
-    document.querySelectorAll('.member-item').forEach(el => {
-        const name = el.getAttribute('data-name');
-        el.style.display = name.includes(q) ? '' : 'none';
-    });
-}
+    // --- Edit Group Logic ---
+    window.openEditGroup = function(g) {
+        console.log("Opening Edit Modal for:", g.id);
+        document.getElementById('editGroupId').value   = g.id;
+        document.getElementById('editGroupName').value = g.name;
+        document.getElementById('editGroupColor').value= g.color;
+        document.getElementById('editGroupDesc').value = g.description || '';
+        document.getElementById('editGroupType').value = g.group_type || 'day';
+        
+        const modal = getModal('editModal');
+        if (modal) modal.show();
+    };
+
+    // --- Member Modal Logic ---
+    window.openMemberModal = function(groupId, groupName, currentMemberIds) {
+        console.log("Opening Member Modal for:", groupId);
+        document.getElementById('memberGroupId').value = groupId;
+        document.getElementById('memberGroupName').textContent = groupName;
+        
+        const checks = document.querySelectorAll('.member-check');
+        const memberIdsSet = new Set(Array.isArray(currentMemberIds) ? currentMemberIds.map(Number) : []);
+        
+        checks.forEach(c => {
+            c.checked = memberIdsSet.has(Number(c.value));
+        });
+        
+        document.getElementById('memberSearch').value = '';
+        document.querySelectorAll('.member-item').forEach(el => el.style.display = '');
+        document.getElementById('selectAllMembers').checked = false;
+        
+        const modal = getModal('memberModal');
+        if (modal) modal.show();
+    };
+
+    // --- Delete Logic ---
+    window.deleteGroup = function(id, name) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'ยืนยันการลบ?',
+            text: `ต้องการลบกลุ่ม "${name}" ใช่หรือไม่?`,
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'ลบข้อมูล',
+            cancelButtonText: 'ยกเลิก',
+            reverseButtons: true
+        }).then(result => {
+            if (result.isConfirmed) {
+                document.getElementById('deleteGroupId').value = id;
+                document.getElementById('deleteForm').submit();
+            }
+        });
+    };
+
+    // --- Member Filter ---
+    window.filterMembers = function() {
+        const q = document.getElementById('memberSearch').value.toLowerCase().trim();
+        const items = document.querySelectorAll('.member-item');
+        items.forEach(el => {
+            const name = el.getAttribute('data-name') || '';
+            el.style.display = name.includes(q) ? '' : 'none';
+        });
+    };
+
+    // --- Handle Select All ---
+    const selectAll = document.getElementById('selectAllMembers');
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            const isChecked = this.checked;
+            document.querySelectorAll('.member-item').forEach(el => {
+                if (el.style.display !== 'none') {
+                    const cb = el.querySelector('.member-check');
+                    if (cb) cb.checked = isChecked;
+                }
+            });
+        });
+    }
+
+    console.log("LLW Duty Groups: JS Ready.");
+});
 </script>
 
 <?php require_once __DIR__ . '/../../components/layout_end.php'; ?>
