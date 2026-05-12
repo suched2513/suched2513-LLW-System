@@ -14,10 +14,12 @@ $activeSemester = $settRow['semester'] ?? '-';
 $activeYear = $settRow['year'] ?? '-';
 
 $sql = "SELECT cg.name, cg.room, cg.max_capacity, 
-               COALESCE(t.name,'-') AS teacher_name,
+               t1.name AS teacher_name, t2.name AS teacher_name_2, t3.name AS teacher_name_3,
                (SELECT COUNT(*) FROM club_registrations cr WHERE cr.club_id = cg.id AND cr.semester = cg.semester AND cr.year = cg.year) AS registered_count
         FROM club_groups cg
-        LEFT JOIN att_teachers t ON t.id = cg.teacher_id
+        LEFT JOIN att_teachers t1 ON t1.id = cg.teacher_id
+        LEFT JOIN att_teachers t2 ON t2.id = cg.teacher_id_2
+        LEFT JOIN att_teachers t3 ON t3.id = cg.teacher_id_3
         WHERE cg.status != 'archived' AND cg.semester = ? AND cg.year = ?
         ORDER BY cg.name ASC";
 $stmt = $pdo->prepare($sql);
@@ -92,7 +94,12 @@ foreach ($clubs as $c) {
                 <tr>
                     <td class="text-center"><?= $idx + 1 ?></td>
                     <td><?= htmlspecialchars($c['name']) ?></td>
-                    <td><?= htmlspecialchars($c['teacher_name']) ?></td>
+                    <td>
+                        <?php
+                        $advisors = array_filter([$c['teacher_name'], $c['teacher_name_2'], $c['teacher_name_3']]);
+                        echo implode('<br>', array_map(fn($t) => htmlspecialchars($t, ENT_QUOTES, 'UTF-8'), $advisors)) ?: '-';
+                        ?>
+                    </td>
                     <td class="text-center"><?= htmlspecialchars($c['room'] ?: '-') ?></td>
                     <td class="text-center"><?= $c['registered_count'] ?> / <?= $c['max_capacity'] ?></td>
                 </tr>
