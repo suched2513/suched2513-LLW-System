@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * manage_users.php — จัดการผู้ใช้งานระบบ LLW (llw_users)
  * เข้าถึงได้: super_admin เท่านั้น
@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lastname  = trim($_POST['lastname']);
         $role      = $_POST['role'];
 
-        $allowed_roles = ['super_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance','finance_head','procurement_head','deputy_director','director'];
+        $allowed_roles = ['super_admin','club_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance','finance_head','procurement_head','deputy_director','director'];
         if (!in_array($role, $allowed_roles)) {
             $msg = 'Role ไม่ถูกต้อง'; $msgType = 'error';
         } else {
@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $firstname = trim($_POST['firstname'] ?? '');
         $lastname  = trim($_POST['lastname'] ?? '');
         $role      = $_POST['role'] ?? '';
-        $allowed_roles = ['super_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance','finance_head','procurement_head','deputy_director','director'];
+        $allowed_roles = ['super_admin','club_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance','finance_head','procurement_head','deputy_director','director'];
         if ($uid <= 0 || empty($firstname) || !in_array($role, $allowed_roles)) {
             $msg = 'ข้อมูลไม่ถูกต้อง'; $msgType = 'error';
         } else {
@@ -147,6 +147,7 @@ $pendingChange = count(array_filter($users, fn($u) => !empty($u['force_password_
 
 $roleLabel = [
     'super_admin' => ['label' => 'Super Admin', 'color' => 'bg-purple-100 text-purple-700'],
+    'club_admin'  => ['label' => 'Club Admin',  'color' => 'bg-fuchsia-100 text-fuchsia-700'],
     'wfh_admin'   => ['label' => 'WFH Admin',   'color' => 'bg-blue-100 text-blue-700'],
     'wfh_staff'   => ['label' => 'WFH Staff',   'color' => 'bg-emerald-100 text-emerald-700'],
     'cb_admin'    => ['label' => 'CB Admin',     'color' => 'bg-cyan-100 text-cyan-700'],
@@ -423,6 +424,7 @@ $roleLabel = [
                     <option value="cb_admin">CB Admin — จัดการ Chromebook</option>
                     <option value="bus_admin">Bus Admin — จัดการระบบรถรับส่ง</option>
                     <option value="bus_finance">Bus Finance — การเงินรถรับส่ง</option>
+                    <option value="club_admin">Club Admin — แอดมินจัดการชุมนุม</option>
                     <option value="super_admin">Super Admin — สิทธิ์สูงสุด</option>
                 </select>
             </div>
@@ -575,6 +577,7 @@ $roleLabel = [
                     <option value="cb_admin">CB Admin — จัดการ Chromebook</option>
                     <option value="bus_admin">Bus Admin — จัดการระบบรถรับส่ง</option>
                     <option value="bus_finance">Bus Finance — การเงินรถรับส่ง</option>
+                    <option value="club_admin">Club Admin — แอดมินจัดการชุมนุม</option>
                     <option value="super_admin">Super Admin — สิทธิ์สูงสุด</option>
                 </select>
             </div>

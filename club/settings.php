@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) {
     header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
-if ($_SESSION['llw_role'] !== 'super_admin') {
+if (!in_array($_SESSION['llw_role'], ['super_admin', 'club_admin'])) {
     header('Location: ' . $base_path . '/login.php'); exit();
 }
 
