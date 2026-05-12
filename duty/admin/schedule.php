@@ -623,6 +623,9 @@ function renderDayForm(dayGroup, members, maxPts, allTeachers) {
                 </td>
             </tr>`;
         } else {
+            // ถ้าไม่ใช่ประธาน และไม่มีสมาชิกกลุ่ม -> ให้ใช้รายชื่อทั้งหมด (optList เป็น allTeachers)
+            const finalOptList = (optList && optList.length) ? optList : (allTeachers.length ? allTeachers : allTeachersData);
+            
             rows += `
             <tr class="point-row" data-point="${i}">
                 <td class="align-middle" style="width:160px">
@@ -634,10 +637,10 @@ function renderDayForm(dayGroup, members, maxPts, allTeachers) {
                 </td>
                 <td class="align-middle">
                     <select class="form-select form-select-sm mb-1" data-field="teacher_id" onchange="refreshUnassigned()">
-                        ${buildOpts(optList, t1 ? t1.id : '')}
+                        ${buildOpts(finalOptList, t1 ? t1.id : '')}
                     </select>
                     <select class="form-select form-select-sm" data-field="teacher_id" onchange="refreshUnassigned()">
-                        ${buildOpts(optList, t2 ? t2.id : '')}
+                        ${buildOpts(finalOptList, t2 ? t2.id : '')}
                     </select>
                 </td>
                 <td class="align-middle" style="width:80px">
@@ -647,16 +650,17 @@ function renderDayForm(dayGroup, members, maxPts, allTeachers) {
         }
     }
 
-    const gn  = dayGroup?.group_name  || 'ไม่ได้ระบุกลุ่ม';
+    const gn  = dayGroup?.group_name  || 'ยังไม่ได้ระบุกลุ่ม';
     const cnt = members.filter(m => !m.schedule_id || m.point_no != CHAIRMAN_INDEX).length; // นับเฉพาะในกลุ่ม ไม่นับประธานนอกกลุ่ม
 
     let headerHtml = `
         <div class="d-flex align-items-center gap-2 mb-3">
-            <span class="badge rounded-pill px-3 py-2" style="background:${gc};font-size:13px">
+            <span class="badge rounded-pill px-3 py-2 ${dayGroup ? '' : 'bg-danger'}" style="background:${gc};font-size:13px">
                 ${gn}
             </span>
             <span class="text-muted small">${cnt} คนในกลุ่ม — เลือกครูลงแต่ละจุด (2 คน/จุด)</span>
-        </div>`;
+        </div>
+        ${!dayGroup && !isChairmanMode ? `<div class="alert alert-warning py-2 mb-3 small"><i class="fas fa-exclamation-triangle me-1"></i> <strong>ยังไม่ได้ระบุกลุ่มเวรประจำวันนี้:</strong> ระบบกำลังแสดงรายชื่อครูทั้งหมดให้เลือกแทน</div>` : ''}`;
 
     if (isChairmanMode) {
         const titleText = (curShift === 'night') ? 'กำหนดครูเวรกลางคืน' : 'กำหนดประธานกิจกรรม';
