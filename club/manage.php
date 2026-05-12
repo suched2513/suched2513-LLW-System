@@ -6,7 +6,7 @@ if (!isset($_SESSION['llw_role'])) {
     header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
 $userRole = $_SESSION['llw_role'];
-if (!in_array($userRole, ['super_admin', 'att_teacher'])) {
+if (!in_array($userRole, ['super_admin', 'club_admin', 'att_teacher'])) {
     header('Location: ' . $base_path . '/login.php'); exit();
 }
 

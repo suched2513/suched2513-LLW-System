@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) {
     header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
-$allowed = ['att_teacher', 'super_admin', 'wfh_admin'];
+$allowed = ['att_teacher', 'super_admin', 'club_admin', 'wfh_admin'];
 if (!in_array($_SESSION['llw_role'], $allowed, true)) {
     header('Location: ' . $base_path . '/login.php'); exit();
 }
@@ -60,11 +60,16 @@ require_once __DIR__ . '/../components/layout_start.php';
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-white border-0 d-flex align-items-center justify-content-between py-3">
             <h6 class="mb-0 fw-bold"><i class="fas fa-users me-2" style="color:#7c3aed"></i>รายชื่อชุมนุม</h6>
-            <?php if (in_array($userRole, ['super_admin', 'att_teacher'])): ?>
-            <a href="/club/manage.php" class="btn btn-sm rounded-3 text-white" style="background:#7c3aed">
-                <i class="fas fa-plus me-1"></i>สร้างชุมนุม
-            </a>
-            <?php endif; ?>
+            <div>
+                <?php if (in_array($userRole, ['super_admin', 'club_admin', 'att_teacher'])): ?>
+                <a href="/club/print_summary.php" target="_blank" class="btn btn-sm btn-outline-secondary rounded-3 me-2">
+                    <i class="fas fa-print me-1"></i>พิมพ์สรุป
+                </a>
+                <a href="/club/manage.php" class="btn btn-sm rounded-3 text-white" style="background:#7c3aed">
+                    <i class="fas fa-plus me-1"></i>สร้างชุมนุม
+                </a>
+                <?php endif; ?>
+            </div>
         </div>
         <div class="card-body p-0">
             <div id="table_loading" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังโหลด...</div>
@@ -117,7 +122,7 @@ async function loadClubs() {
 
             let btns = `<a href="/club/sessions.php?club_id=${c.id}" class="btn btn-outline-primary btn-sm rounded-2 me-1" title="คาบ"><i class="fas fa-calendar-alt"></i></a>
                         <a href="/club/members.php?club_id=${c.id}" class="btn btn-outline-secondary btn-sm rounded-2 me-1" title="สมาชิก"><i class="fas fa-users"></i></a>`;
-            if (userRole === 'super_admin') {
+            if (userRole === 'super_admin' || userRole === 'club_admin') {
                 btns += `<a href="/club/manage.php?id=${c.id}" class="btn btn-outline-warning btn-sm rounded-2 me-1" title="แก้ไข"><i class="fas fa-edit"></i></a>
                          <button onclick="deleteClub(${c.id},'${escHtml(c.name)}')" class="btn btn-outline-danger btn-sm rounded-2" title="ลบ"><i class="fas fa-trash"></i></button>`;
             } else if (userRole === 'att_teacher') {

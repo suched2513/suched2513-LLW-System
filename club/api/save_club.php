@@ -9,7 +9,7 @@ if (!isset($_SESSION['llw_role'])) {
     exit;
 }
 $userRole = $_SESSION['llw_role'];
-if (!in_array($userRole, ['super_admin', 'att_teacher'])) {
+if (!in_array($userRole, ['super_admin', 'club_admin', 'att_teacher'])) {
     http_response_code(403);
     echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์']);
     exit;

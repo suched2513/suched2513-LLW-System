@@ -8,7 +8,7 @@ if (!isset($_SESSION['llw_role'])) {
     echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบ']);
     exit;
 }
-if ($_SESSION['llw_role'] !== 'super_admin') {
+if (!in_array($_SESSION['llw_role'], ['super_admin', 'club_admin'])) {
     http_response_code(403);
     echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์']);
     exit;
