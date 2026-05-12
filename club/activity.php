@@ -18,7 +18,8 @@ $userRole  = $_SESSION['llw_role'];
 $teacherId = (int)($_SESSION['teacher_id'] ?? 0);
 
 $stmt = $pdo->prepare("
-    SELECT cs.*, cg.name AS club_name, cg.teacher_id, cg.id AS club_id
+    SELECT cs.*, cg.name AS club_name, cg.id AS club_id,
+           cg.teacher_id, cg.teacher_id_2, cg.teacher_id_3
     FROM club_sessions cs JOIN club_groups cg ON cg.id = cs.club_id
     WHERE cs.id = ?
 ");
@@ -26,8 +27,11 @@ $stmt->execute([$session_id]);
 $session = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$session) { header('Location: /club/index.php'); exit(); }
 
-if ($userRole === 'att_teacher' && (int)$session['teacher_id'] !== $teacherId) {
-    header('Location: /club/index.php'); exit();
+if ($userRole === 'att_teacher') {
+    $advisorIds = array_filter([(int)$session['teacher_id'], (int)$session['teacher_id_2'], (int)$session['teacher_id_3']]);
+    if (!in_array($teacherId, $advisorIds, true)) {
+        header('Location: /club/index.php'); exit();
+    }
 }
 
 $log = $pdo->prepare("SELECT * FROM club_activity_logs WHERE session_id = ? LIMIT 1");

@@ -18,16 +18,25 @@ $userRole  = $_SESSION['llw_role'];
 $teacherId = (int)($_SESSION['teacher_id'] ?? 0);
 
 $stmt = $pdo->prepare("
-    SELECT cs.*, cg.name AS club_name, cg.teacher_id, cg.id AS club_id
-    FROM club_sessions cs JOIN club_groups cg ON cg.id = cs.club_id
+    SELECT cs.*, cg.name AS club_name, cg.id AS club_id,
+           cg.teacher_id, cg.teacher_id_2, cg.teacher_id_3,
+           t1.name AS teacher_name, t2.name AS teacher_name_2, t3.name AS teacher_name_3
+    FROM club_sessions cs 
+    JOIN club_groups cg ON cg.id = cs.club_id
+    LEFT JOIN att_teachers t1 ON t1.id = cg.teacher_id
+    LEFT JOIN att_teachers t2 ON t2.id = cg.teacher_id_2
+    LEFT JOIN att_teachers t3 ON t3.id = cg.teacher_id_3
     WHERE cs.id = ?
 ");
 $stmt->execute([$session_id]);
 $session = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$session) { header('Location: /club/index.php'); exit(); }
 
-if ($userRole === 'att_teacher' && (int)$session['teacher_id'] !== $teacherId) {
-    header('Location: /club/index.php'); exit();
+if ($userRole === 'att_teacher') {
+    $advisorIds = array_filter([(int)$session['teacher_id'], (int)$session['teacher_id_2'], (int)$session['teacher_id_3']]);
+    if (!in_array($teacherId, $advisorIds, true)) {
+        header('Location: /club/index.php'); exit();
+    }
 }
 
 // Get members
@@ -71,6 +80,9 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <button onclick="saveAttendance()" class="btn btn-sm rounded-3 text-white fw-bold" style="background:#7c3aed">
                     <i class="fas fa-save me-1"></i>บันทึกเช็คชื่อ
                 </button>
+                <a href="/club/print_attendance.php?session_id=<?= $session_id ?>" target="_blank" class="btn btn-outline-dark btn-sm rounded-3">
+                    <i class="fas fa-print me-1"></i>พิมพ์ใบเช็คชื่อ
+                </a>
             </div>
         </div>
     </div>

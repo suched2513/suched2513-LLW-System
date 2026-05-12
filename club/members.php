@@ -17,7 +17,15 @@ $pdo       = getPdo();
 $userRole  = $_SESSION['llw_role'];
 $teacherId = (int)($_SESSION['teacher_id'] ?? 0);
 
-$stmt = $pdo->prepare("SELECT cg.*, t.name AS teacher_name FROM club_groups cg LEFT JOIN att_teachers t ON t.id = cg.teacher_id WHERE cg.id = ?");
+$stmt = $pdo->prepare("
+    SELECT cg.*, 
+           t1.name AS teacher_name, t2.name AS teacher_name_2, t3.name AS teacher_name_3 
+    FROM club_groups cg 
+    LEFT JOIN att_teachers t1 ON t1.id = cg.teacher_id 
+    LEFT JOIN att_teachers t2 ON t2.id = cg.teacher_id_2 
+    LEFT JOIN att_teachers t3 ON t3.id = cg.teacher_id_3 
+    WHERE cg.id = ?
+");
 $stmt->execute([$club_id]);
 $club = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$club) { header('Location: /club/index.php'); exit(); }
@@ -63,7 +71,11 @@ require_once __DIR__ . '/../components/layout_start.php';
             <div>
                 <h5 class="mb-1 fw-black"><?= htmlspecialchars($club['name'], ENT_QUOTES, 'UTF-8') ?></h5>
                 <div class="text-muted small">
-                    <i class="fas fa-chalkboard-teacher me-1"></i><?= htmlspecialchars($club['teacher_name'] ?? '-', ENT_QUOTES, 'UTF-8') ?>
+                    <i class="fas fa-chalkboard-teacher me-1"></i>
+                    <?php
+                    $advisors = array_filter([$club['teacher_name'], $club['teacher_name_2'], $club['teacher_name_3']]);
+                    echo htmlspecialchars(implode(', ', $advisors), ENT_QUOTES, 'UTF-8');
+                    ?>
                     &nbsp;·&nbsp;<i class="fas fa-users me-1"></i><?= count($memberList) ?>/<?= $club['max_capacity'] ?> คน
                     &nbsp;·&nbsp;<i class="fas fa-calendar me-1"></i><?= $totalSess ?> คาบที่จัดแล้ว
                 </div>
@@ -74,6 +86,9 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </a>
                 <a href="/club/results.php?club_id=<?= $club_id ?>" class="btn btn-sm rounded-3 text-white" style="background:#7c3aed">
                     <i class="fas fa-star me-1"></i>ประเมินผล
+                </a>
+                <a href="/club/print_members.php?club_id=<?= $club_id ?>" target="_blank" class="btn btn-outline-dark btn-sm rounded-3">
+                    <i class="fas fa-print me-1"></i>พิมพ์รายชื่อ
                 </a>
             </div>
         </div>

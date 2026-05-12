@@ -17,13 +17,24 @@ $pdo       = getPdo();
 $userRole  = $_SESSION['llw_role'];
 $teacherId = (int)($_SESSION['teacher_id'] ?? 0);
 
-$stmt = $pdo->prepare("SELECT cg.*, t.name AS teacher_name FROM club_groups cg LEFT JOIN att_teachers t ON t.id = cg.teacher_id WHERE cg.id = ?");
+$stmt = $pdo->prepare("
+    SELECT cg.*, 
+           t1.name AS teacher_name, t2.name AS teacher_name_2, t3.name AS teacher_name_3 
+    FROM club_groups cg 
+    LEFT JOIN att_teachers t1 ON t1.id = cg.teacher_id 
+    LEFT JOIN att_teachers t2 ON t2.id = cg.teacher_id_2 
+    LEFT JOIN att_teachers t3 ON t3.id = cg.teacher_id_3 
+    WHERE cg.id = ?
+");
 $stmt->execute([$club_id]);
 $club = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$club) { header('Location: /club/index.php'); exit(); }
 
-if ($userRole === 'att_teacher' && (int)$club['teacher_id'] !== $teacherId) {
-    header('Location: /club/index.php'); exit();
+if ($userRole === 'att_teacher') {
+    $advisorIds = array_filter([(int)$club['teacher_id'], (int)$club['teacher_id_2'], (int)$club['teacher_id_3']]);
+    if (!in_array($teacherId, $advisorIds, true)) {
+        header('Location: /club/index.php'); exit();
+    }
 }
 
 $ts = $pdo->prepare("SELECT COUNT(*) FROM club_sessions WHERE club_id = ? AND status = 'done'");

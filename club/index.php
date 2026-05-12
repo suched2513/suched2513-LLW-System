@@ -134,7 +134,9 @@ async function loadClubs() {
                     <div class="fw-bold small">${escHtml(c.name)}</div>
                     ${c.objectives ? `<div class="text-muted" style="font-size:.75rem;max-width:220px" class="text-truncate">${escHtml(c.objectives.substring(0,60))}...</div>` : ''}
                 </td>
-                <td class="px-3 py-3 small">${escHtml(c.teacher_name || '-')}</td>
+                <td class="px-3 py-3 small">
+                    ${[c.teacher_name, c.teacher_name_2, c.teacher_name_3].filter(t => t).join('<br>')}
+                </td>
                 <td class="px-3 py-3 small">${escHtml(c.room || '-')}</td>
                 <td class="px-3 py-3 text-center">
                     <div class="small fw-bold">${c.registered_count}/${c.max_capacity}</div>

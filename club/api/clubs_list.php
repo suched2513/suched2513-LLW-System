@@ -45,13 +45,17 @@ try {
 
     $sql = "SELECT cg.id, cg.name, cg.description, cg.objectives,
                    cg.teacher_id, cg.teacher_id_2, cg.teacher_id_3,
-                   COALESCE(t.name,'') AS teacher_name,
+                   COALESCE(t1.name,'') AS teacher_name,
+                   COALESCE(t2.name,'') AS teacher_name_2,
+                   COALESCE(t3.name,'') AS teacher_name_3,
                    cg.room, cg.max_capacity, cg.semester, cg.year,
                    cg.status, cg.pass_threshold, cg.created_at,
                    (SELECT COUNT(*) FROM club_registrations cr
                     WHERE cr.club_id = cg.id AND cr.semester = cg.semester AND cr.year = cg.year) AS registered_count
             FROM club_groups cg
-            LEFT JOIN att_teachers t ON t.id = cg.teacher_id
+            LEFT JOIN att_teachers t1 ON t1.id = cg.teacher_id
+            LEFT JOIN att_teachers t2 ON t2.id = cg.teacher_id_2
+            LEFT JOIN att_teachers t3 ON t3.id = cg.teacher_id_3
             $whereSQL
             ORDER BY cg.year DESC, cg.semester DESC, cg.name ASC";
 

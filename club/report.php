@@ -28,12 +28,15 @@ if ($userRole === 'att_teacher' && $teacherId > 0) {
     $clubParams[] = $teacherId;
 }
 $stmtClubs = $pdo->prepare("
-    SELECT cg.id, cg.name, cg.max_capacity, cg.pass_threshold, t.name AS teacher_name,
+    SELECT cg.id, cg.name, cg.max_capacity, cg.pass_threshold, 
+           t1.name AS teacher_name, t2.name AS teacher_name_2, t3.name AS teacher_name_3,
            COUNT(DISTINCT cr.id) AS reg_count,
            COUNT(DISTINCT CASE WHEN cr2.result='pass' THEN cr2.id END) AS pass_count,
            COUNT(DISTINCT CASE WHEN cr2.result='fail' THEN cr2.id END) AS fail_count
     FROM club_groups cg
-    LEFT JOIN att_teachers t ON t.id = cg.teacher_id
+    LEFT JOIN att_teachers t1 ON t1.id = cg.teacher_id
+    LEFT JOIN att_teachers t2 ON t2.id = cg.teacher_id_2
+    LEFT JOIN att_teachers t3 ON t3.id = cg.teacher_id_3
     LEFT JOIN club_registrations cr ON cr.club_id = cg.id AND cr.semester = ? AND cr.year = ?
     LEFT JOIN club_results cr2 ON cr2.club_id = cg.id AND cr2.semester = ? AND cr2.year = ?
     WHERE cg.semester = ? AND cg.year = ? $clubWhere
@@ -76,7 +79,21 @@ $activeSystem = 'club';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
+<style>
+    @media print {
+        .nav-tabs, .sidebar, .topbar, .btn, .no-print { display: none !important; }
+        .card { border: 0 !important; shadow: none !important; }
+        body { background: white !important; }
+        .container-fluid { padding: 0 !important; }
+    }
+</style>
+
 <div class="container-fluid">
+    <div class="d-flex justify-content-end mb-3 no-print">
+        <button onclick="window.print()" class="btn btn-dark rounded-3">
+            <i class="fas fa-print me-1"></i>พิมพ์รายงาน
+        </button>
+    </div>
 
     <!-- Summary KPIs -->
     <?php
@@ -147,7 +164,12 @@ require_once __DIR__ . '/../components/layout_start.php';
                             <?php foreach ($clubs as $c): ?>
                             <tr>
                                 <td class="px-3 py-3 small fw-bold"><?= htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8') ?></td>
-                                <td class="px-3 py-3 small"><?= htmlspecialchars($c['teacher_name'] ?? '-', ENT_QUOTES, 'UTF-8') ?></td>
+                                <td class="px-3 py-3 small">
+                                    <?php
+                                    $advisors = array_filter([$c['teacher_name'], $c['teacher_name_2'], $c['teacher_name_3']]);
+                                    echo implode('<br>', array_map(fn($t) => htmlspecialchars($t, ENT_QUOTES, 'UTF-8'), $advisors));
+                                    ?>
+                                </td>
                                 <td class="px-3 py-3 text-center small"><?= $c['reg_count'] ?>/<?= $c['max_capacity'] ?></td>
                                 <td class="px-3 py-3 text-center"><span class="badge bg-success rounded-pill"><?= $c['pass_count'] ?></span></td>
                                 <td class="px-3 py-3 text-center"><span class="badge bg-danger rounded-pill"><?= $c['fail_count'] ?></span></td>
