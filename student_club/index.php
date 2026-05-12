@@ -34,14 +34,19 @@ if ($semester) {
 // Open clubs with vacancy
 $clubs = [];
 if ($semester) {
+    $statusFilter = isset($_GET['debug']) ? "cg.status != 'archived'" : "cg.status = 'open'";
     $stmt = $pdo->prepare("
-        SELECT cg.*, t.name AS teacher_name,
+        SELECT cg.*, 
+               t1.name AS teacher_name, t2.name AS teacher_name_2, t3.name AS teacher_name_3,
                COUNT(cr.id) AS registered_count
         FROM club_groups cg
-        LEFT JOIN att_teachers t ON t.id = cg.teacher_id
+        LEFT JOIN att_teachers t1 ON t1.id = cg.teacher_id
+        LEFT JOIN att_teachers t2 ON t2.id = cg.teacher_id_2
+        LEFT JOIN att_teachers t3 ON t3.id = cg.teacher_id_3
         LEFT JOIN club_registrations cr ON cr.club_id = cg.id AND cr.semester = ? AND cr.year = ?
-        WHERE cg.status = 'open' AND cg.semester = ? AND cg.year = ?
-        GROUP BY cg.id ORDER BY cg.name
+        WHERE $statusFilter AND cg.semester = ? AND cg.year = ?
+        GROUP BY cg.id, t1.name, t2.name, t3.name 
+        ORDER BY cg.name
     ");
     $stmt->execute([$semester, $year, $semester, $year]);
     $clubs = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -107,6 +112,11 @@ $canChange = $myReg && $cfg && $cfg['allow_change'] && $regOpen;
 <!-- My Club -->
 <?php if ($myReg): ?>
 <div class="bg-violet-50 border-2 border-violet-200 rounded-3xl p-4 fade-up">
+    <?php if (isset($_GET['debug'])): ?>
+    <div class="text-[10px] text-violet-300 mb-2 font-mono">
+        Sem: <?= $semester ?> | Year: <?= $year ?>
+    </div>
+    <?php endif; ?>
     <div class="flex items-start gap-3">
         <div class="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center flex-shrink-0">
             <i class="bi bi-people-fill text-violet-600 text-lg"></i>
@@ -163,7 +173,10 @@ $canChange = $myReg && $cfg && $cfg['allow_change'] && $regOpen;
                     <div>
                         <p class="font-black text-slate-800 text-sm"><?= htmlspecialchars($c['name'], ENT_QUOTES, 'UTF-8') ?></p>
                         <p class="text-slate-500 text-xs mt-0.5">
-                            <i class="bi bi-person me-1"></i><?= htmlspecialchars($c['teacher_name'] ?? '-', ENT_QUOTES, 'UTF-8') ?>
+                            <i class="bi bi-person me-1"></i><?php
+                                            $advisors = array_filter([$c['teacher_name'], $c['teacher_name_2'], $c['teacher_name_3']]);
+                                            echo htmlspecialchars(implode(', ', $advisors), ENT_QUOTES, 'UTF-8') ?: '-';
+                                            ?>
                             <?= $c['room'] ? ' · <i class="bi bi-door-open me-1"></i>'.htmlspecialchars($c['room'],ENT_QUOTES,'UTF-8') : '' ?>
                         </p>
                     </div>
