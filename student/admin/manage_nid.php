@@ -82,6 +82,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $msg = "นำเข้าสำเร็จ {$ok} คน" . ($skip > 0 ? " · ข้าม {$skip} แถว (รหัสไม่พบ/ข้อมูลไม่ถูกต้อง)" : '');
             }
         }
+
+    } elseif ($action === 'sync_from_bus') {
+        // Copy national_id_hash from bus_students → att_students
+        // Only fills NULL records — never overwrites existing data
+        try {
+            $synced = $pdo->exec("
+                UPDATE att_students a
+                JOIN bus_students b
+                    ON  b.student_id = a.student_id
+                     OR b.student_id = LPAD(a.student_id, 5, '0')
+                     OR LPAD(b.student_id, 5, '0') = a.student_id
+                SET a.national_id_hash   = b.national_id_hash,
+                    a.national_id_masked = b.national_id_masked
+                WHERE b.national_id_hash IS NOT NULL
+                  AND a.national_id_hash IS NULL
+            ");
+            $msg = "ซิงค์จากระบบรถสำเร็จ · เพิ่มข้อมูลให้ {$synced} คน · นักเรียนที่มีข้อมูลอยู่แล้วไม่ถูกเปลี่ยน";
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            $msg = 'เกิดข้อผิดพลาด กรุณาลองใหม่'; $msgType = 'error';
+        }
     }
 }
 
@@ -100,8 +121,9 @@ try {
     $where = [];
     $params = [];
     if ($filterClass !== '') { $where[] = 'classroom = ?'; $params[] = $filterClass; }
-    if ($filterStatus === 'set')     { $where[] = 'national_id_hash IS NOT NULL'; }
-    if ($filterStatus === 'missing') { $where[] = 'national_id_hash IS NULL'; }
+    if ($filterStatus === 'set')     { $where[] = "national_id_hash IS NOT NULL AND national_id_masked != '[ชั่วคราว]'"; }
+    if ($filterStatus === 'missing') { $where[] = "(national_id_hash IS NULL OR national_id_masked = '[ชั่วคราว]')"; }
+    if ($filterStatus === 'temp')    { $where[] = "national_id_masked = '[ชั่วคราว]'"; }
     $sql = "SELECT id, student_id, name, classroom, national_id_masked,
                    (national_id_hash IS NOT NULL) as has_nid
             FROM att_students"
@@ -114,10 +136,26 @@ try {
     // Overall counts
     $total   = (int)$pdo->query("SELECT COUNT(*) FROM att_students")->fetchColumn();
     $withNid = (int)$pdo->query("SELECT COUNT(*) FROM att_students WHERE national_id_hash IS NOT NULL")->fetchColumn();
+    $withTemp = (int)$pdo->query("SELECT COUNT(*) FROM att_students WHERE national_id_masked = '[ชั่วคราว]'")->fetchColumn();
 } catch (Exception $e) { error_log($e->getMessage()); }
 
 $missing  = $total - $withNid;
 $pct      = $total > 0 ? round($withNid / $total * 100) : 0;
+
+// Count records in bus_students that can be synced (have NID but att_students doesn't)
+$busReadyToSync = 0;
+try {
+    $busReadyToSync = (int)$pdo->query("
+        SELECT COUNT(DISTINCT a.id)
+        FROM att_students a
+        JOIN bus_students b
+            ON  b.student_id = a.student_id
+             OR b.student_id = LPAD(a.student_id, 5, '0')
+             OR LPAD(b.student_id, 5, '0') = a.student_id
+        WHERE b.national_id_hash IS NOT NULL
+          AND a.national_id_hash IS NULL
+    ")->fetchColumn();
+} catch (Exception $e) { error_log($e->getMessage()); }
 
 $pageTitle    = 'จัดการเลขบัตรประชาชนนักเรียน';
 $pageSubtitle = 'สำหรับระบบพอร์ทัลนักเรียน';
@@ -150,21 +188,47 @@ require_once __DIR__ . '/../../components/layout_start.php';
                 <div class="progress mb-2" style="height:12px;border-radius:99px">
                     <div class="progress-bar bg-primary" style="width:<?= $pct ?>%;border-radius:99px"></div>
                 </div>
-                <div class="d-flex gap-4 text-sm">
-                    <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i><?= $withNid ?> คน — พร้อมใช้งาน</span>
+                <div class="d-flex flex-wrap gap-3 text-sm">
+                    <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i><?= $withNid - $withTemp ?> คน — เลขบัตรจริง</span>
+                    <?php if ($withTemp > 0): ?>
+                    <span class="text-warning fw-bold"><i class="bi bi-exclamation-circle-fill me-1"></i><?= $withTemp ?> คน — รหัสชั่วคราว (0000000000000)</span>
+                    <?php endif; ?>
+                    <?php if ($missing > 0): ?>
                     <span class="text-danger fw-bold"><i class="bi bi-x-circle-fill me-1"></i><?= $missing ?> คน — ยังไม่มีข้อมูล</span>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm h-100 bg-primary text-white">
+    <div class="col-md-4 d-flex flex-column gap-3">
+        <div class="card border-0 shadow-sm bg-primary text-white">
             <div class="card-body d-flex flex-column justify-content-center">
                 <p class="small fw-bold opacity-75 mb-1">Import ทีเดียว (CSV)</p>
                 <p class="small mb-3 opacity-75">รูปแบบ: <code class="text-warning">รหัสนักเรียน,เลขบัตร13หลัก</code></p>
                 <button class="btn btn-light btn-sm fw-bold" onclick="document.getElementById('modal-csv').classList.remove('hidden')">
                     <i class="bi bi-upload me-1"></i>นำเข้า CSV
                 </button>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm <?= $busReadyToSync > 0 ? 'bg-success' : 'bg-secondary' ?> text-white">
+            <div class="card-body d-flex flex-column justify-content-center">
+                <p class="small fw-bold opacity-75 mb-1">ซิงค์จากระบบรถ (bus_students)</p>
+                <?php if ($busReadyToSync > 0): ?>
+                    <p class="small mb-3 opacity-75">พร้อมซิงค์ <strong class="text-white"><?= $busReadyToSync ?> คน</strong> · ไม่แก้ไขข้อมูลเดิม</p>
+                    <form method="POST" onsubmit="return confirm('ซิงค์เลขบัตรประชาชนจากระบบรถ?\n\nจะเติมเฉพาะนักเรียนที่ยังไม่มีข้อมูล (<?= $busReadyToSync ?> คน)\nข้อมูลที่มีอยู่แล้วจะไม่ถูกเปลี่ยน')">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="sync_from_bus">
+                        <button type="submit" class="btn btn-light btn-sm fw-bold">
+                            <i class="bi bi-arrow-repeat me-1"></i>ซิงค์ <?= $busReadyToSync ?> คน
+                        </button>
+                    </form>
+                <?php else: ?>
+                    <p class="small mb-0 opacity-75">
+                        <?= $missing > 0
+                            ? 'bus_students ไม่มีข้อมูลเลขบัตรที่จะซิงค์ → ใช้ Import CSV แทน'
+                            : 'ซิงค์ครบแล้ว ✓' ?>
+                    </p>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -182,16 +246,22 @@ require_once __DIR__ . '/../../components/layout_start.php';
                 </option>
                 <?php endforeach; ?>
             </select>
-            <div class="btn-group btn-group-sm">
+            <div class="btn-group btn-group-sm flex-wrap">
                 <a href="?class=<?= urlencode($filterClass) ?>&status=all"
                    class="btn <?= $filterStatus === 'all' ? 'btn-primary' : 'btn-outline-secondary' ?> fw-bold">ทั้งหมด</a>
-                <a href="?class=<?= urlencode($filterClass) ?>&status=missing"
-                   class="btn <?= $filterStatus === 'missing' ? 'btn-danger' : 'btn-outline-secondary' ?> fw-bold">
-                    ยังไม่มีข้อมูล <?= $filterStatus === 'all' ? "($missing)" : '' ?>
-                </a>
                 <a href="?class=<?= urlencode($filterClass) ?>&status=set"
                    class="btn <?= $filterStatus === 'set' ? 'btn-success' : 'btn-outline-secondary' ?> fw-bold">
-                    พร้อมแล้ว
+                    เลขบัตรจริง
+                </a>
+                <?php if ($withTemp > 0): ?>
+                <a href="?class=<?= urlencode($filterClass) ?>&status=temp"
+                   class="btn <?= $filterStatus === 'temp' ? 'btn-warning' : 'btn-outline-secondary' ?> fw-bold">
+                    รหัสชั่วคราว (<?= $withTemp ?>)
+                </a>
+                <?php endif; ?>
+                <a href="?class=<?= urlencode($filterClass) ?>&status=missing"
+                   class="btn <?= $filterStatus === 'missing' ? 'btn-danger' : 'btn-outline-secondary' ?> fw-bold">
+                    ต้องอัพเดท <?= $filterStatus === 'all' ? '(' . ($missing + $withTemp) . ')' : '' ?>
                 </a>
             </div>
             <span class="text-muted small ms-auto">แสดง <?= count($students) ?> รายการ</span>
