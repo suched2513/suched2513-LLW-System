@@ -381,10 +381,20 @@ Swal.fire({
 .rounded-3 { border-radius: 0.75rem !important; }
 .no-caret::after { display: none; }
 
-/* Critical Modal Fix: Force top layer and reset backdrop */
-.modal { z-index: 9999 !important; }
-.modal-backdrop { z-index: 9998 !important; }
+/* Extreme Modal Fix: Force top layer and ensure backdrop NEVER blocks clicks */
+.modal { z-index: 20000 !important; pointer-events: none !important; }
+.modal-dialog { pointer-events: auto !important; }
+.modal-content { pointer-events: auto !important; box-shadow: 0 0 0 1000px rgba(0,0,0,0.5); border: none !important; }
+.modal-backdrop { display: none !important; } 
 .modal-open { overflow: hidden !important; padding-right: 0 !important; }
+
+/* Visual feedback */
+.btn:active { transform: scale(0.98); opacity: 0.8; }
+.hover-bg-white:hover { background-color: white !important; }
+.transition-all { transition: all 0.2s ease-in-out; }
+.rounded-4 { border-radius: 1rem !important; }
+.rounded-3 { border-radius: 0.75rem !important; }
+.no-caret::after { display: none; }
 </style>
 
 <script>

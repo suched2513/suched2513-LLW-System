@@ -392,14 +392,15 @@ require_once __DIR__ . '/../../components/layout_start.php';
 .group-empty { display:inline-flex; align-items:center; gap:4px; color:#adb5bd; font-size:11px; padding:4px 10px; border:1.5px dashed #dee2e6; border-radius:20px; transition:all .15s; background:transparent; }
 .group-btn:hover .group-empty { color:#2563eb; border-color:#2563eb; background:#f0f5ff; }
 
-/* Critical Modal Fix: Force top layer and reset backdrop */
-.modal { z-index: 9999 !important; pointer-events: auto !important; }
-.modal-backdrop { z-index: 9998 !important; }
-.modal-content { pointer-events: auto !important; }
+/* Extreme Modal Fix: Force top layer and ensure backdrop NEVER blocks clicks */
+.modal { z-index: 20000 !important; pointer-events: none !important; }
+.modal-dialog { pointer-events: auto !important; }
+.modal-content { pointer-events: auto !important; box-shadow: 0 0 0 1000px rgba(0,0,0,0.5); border: none !important; }
+.modal-backdrop { display: none !important; } /* We use modal-content shadow instead of backdrop to be 100% sure */
 .modal-open { overflow: hidden !important; padding-right: 0 !important; }
-.modal-open .modal-backdrop { opacity: 0.5 !important; }
 
-/* Select list hover effect */
+/* Visual feedback for clicks */
+.btn:active, .duty-cell:active { transform: scale(0.98); opacity: 0.8; }
 .hover-bg-white:hover { background-color: white !important; }
 </style>
 
@@ -536,18 +537,26 @@ window.llwSchedule = (function() {
             if (!allGroupsData.length) {
                 body.innerHTML = `<div class="alert alert-warning py-3 rounded-4"><i class="fas fa-exclamation-triangle me-2"></i>ยังไม่มีกลุ่มเวร — <a href="groups.php" class="alert-link">ไปสร้างกลุ่มก่อน</a></div>`;
             } else {
-                body.innerHTML = '<div class="d-grid gap-3">' +
-                    allGroupsData.map(g => `
-                        <button class="btn btn-lg text-white text-start fw-bold d-flex align-items-center gap-3 rounded-4 border-0 shadow-sm transition-all hover-scale"
+                let html = '<div class="d-grid gap-3">';
+                allGroupsData.forEach(g => {
+                    html += `
+                        <button class="btn btn-lg text-white text-start fw-bold d-flex align-items-center gap-3 rounded-4 border-0 shadow-sm transition-all hover-scale gp-select-btn"
                                 style="background:${g.color}; padding: 1.25rem 1.5rem;"
-                                onclick="llwSchedule.assignGroup('${date}','${g.id}')">
+                                data-date="${date}" data-id="${g.id}">
                             <i class="fas fa-users fs-4"></i> 
                             <div>
                                 <div class="fs-6">${esc(g.name)}</div>
                                 <div class="small fw-normal opacity-75">${g.group_type === 'chairman' ? 'ประธาน' : (g.group_type === 'night' ? 'เวรกลางคืน' : 'เวรกลางวัน')}</div>
                             </div>
-                        </button>`).join('') +
-                    '</div>';
+                        </button>`;
+                });
+                html += '</div>';
+                body.innerHTML = html;
+                
+                // Attach event delegation for the new buttons
+                body.querySelectorAll('.gp-select-btn').forEach(btn => {
+                    btn.onclick = () => this.assignGroup(btn.dataset.date, btn.dataset.id);
+                });
             }
             this.getModal('groupPickerModal')?.show();
         },
