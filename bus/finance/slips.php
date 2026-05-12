@@ -120,6 +120,27 @@ $activeSystem = 'bus';
 require_once __DIR__ . '/../../components/layout_start.php';
 ?>
 
+<style>
+    /* LLW Indestructible Modal System */
+    .modal.llw-indestructible {
+        z-index: 20000 !important;
+        pointer-events: none !important;
+        background: none !important;
+    }
+    .modal.llw-indestructible .modal-dialog {
+        pointer-events: auto !important;
+        z-index: 20001 !important;
+        margin-top: 10vh;
+    }
+    .modal.llw-indestructible .modal-content {
+        box-shadow: 0 0 0 1000vw rgba(0,0,0,0.5) !important;
+        border: none !important;
+        border-radius: 1.5rem !important;
+    }
+    .modal-backdrop { display: none !important; }
+    body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
+</style>
+
 <?php if ($msg): ?>
 <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm">
     <i class="bi bi-check-circle-fill me-2"></i><?= htmlspecialchars($msg) ?>
@@ -280,7 +301,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
 <?php endif; ?>
 
 <!-- ── Approve Modal ──────────────────────────────────────────────────────── -->
-<div class="modal fade" id="approveModal" tabindex="-1">
+<div class="modal fade llw-indestructible" id="approveModal" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-success text-white border-0">
@@ -309,7 +330,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
 </div>
 
 <!-- ── Reject Modal ───────────────────────────────────────────────────────── -->
-<div class="modal fade" id="rejectModal" tabindex="-1">
+<div class="modal fade llw-indestructible" id="rejectModal" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-danger text-white border-0">
@@ -346,6 +367,18 @@ function openReject(id, name) {
     document.getElementById('rejectStudentName').textContent = name;
     new bootstrap.Modal(document.getElementById('rejectModal')).show();
 }
+
+// ── DOM Stabilization ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    // Force move modals to body root to bypass AdminLTE stacking issues
+    ['approveModal', 'rejectModal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            document.body.appendChild(el);
+            console.log('[LLW] Modal ' + id + ' stabilized.');
+        }
+    });
+});
 </script>
 
 <?php require_once __DIR__ . '/../../components/layout_end.php'; ?>

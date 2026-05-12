@@ -91,6 +91,27 @@ $activeSystem = 'bus';
 require_once __DIR__ . '/../../components/layout_start.php';
 ?>
 
+<style>
+    /* LLW Indestructible Modal System */
+    .modal.llw-indestructible {
+        z-index: 20000 !important;
+        pointer-events: none !important;
+        background: none !important;
+    }
+    .modal.llw-indestructible .modal-dialog {
+        pointer-events: auto !important;
+        z-index: 20001 !important;
+        margin-top: 10vh;
+    }
+    .modal.llw-indestructible .modal-content {
+        box-shadow: 0 0 0 1000vw rgba(0,0,0,0.5) !important;
+        border: none !important;
+        border-radius: 1.5rem !important;
+    }
+    .modal-backdrop { display: none !important; }
+    body.modal-open { overflow: hidden !important; padding-right: 0 !important; }
+</style>
+
 <?php if ($msg): ?>
 <div class="alert alert-success alert-dismissible fade show"><i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($msg) ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 <?php endif; ?>
@@ -175,7 +196,7 @@ require_once __DIR__ . '/../../components/layout_start.php';
 </div>
 
 <!-- Action Modal -->
-<div class="modal fade" id="actionModal" tabindex="-1">
+<div class="modal fade llw-indestructible" id="actionModal" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="false">
   <div class="modal-dialog">
     <div class="modal-content border-0 shadow">
       <form method="POST">
@@ -219,6 +240,16 @@ function openAction(id, action, name) {
     }
     new bootstrap.Modal(document.getElementById('actionModal')).show();
 }
+
+// ── DOM Stabilization ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    // Force move modal to body root to bypass AdminLTE stacking issues
+    const el = document.getElementById('actionModal');
+    if (el) {
+        document.body.appendChild(el);
+        console.log('[LLW] Modal actionModal stabilized.');
+    }
+});
 </script>
 
 <?php require_once __DIR__ . '/../../components/layout_end.php'; ?>
