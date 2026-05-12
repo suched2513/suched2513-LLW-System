@@ -95,7 +95,19 @@ $teachers = $pdo->query("SELECT id, prefix, full_name FROM duty_teachers WHERE s
 $memberMap = [];
 if ($groups) {
     $gids = implode(',', array_column($groups,'id'));
-    <?php if ($msg): 
+    $rows = $pdo->query("SELECT m.group_id, dt.id, dt.prefix, dt.full_name FROM duty_group_members m JOIN duty_teachers dt ON dt.id=m.teacher_id WHERE m.group_id IN ($gids) ORDER BY dt.full_name");
+    foreach ($rows->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $memberMap[$r['group_id']][] = $r;
+    }
+}
+
+$pageTitle    = 'กลุ่มเวร';
+$pageSubtitle = 'จัดการกลุ่มครูเวรและสมาชิก';
+$activeSystem = 'duty';
+require_once __DIR__ . '/../../components/layout_start.php';
+?>
+
+<?php if ($msg): 
     $isErr = (strpos($msg, 'error:') === 0); 
     $msgTxt = substr($msg, strpos($msg, ':') + 1);
 ?>
