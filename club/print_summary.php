@@ -13,7 +13,7 @@ $settRow = $pdo->query("SELECT semester, year FROM club_settings WHERE is_active
 $activeSemester = $settRow['semester'] ?? '-';
 $activeYear = $settRow['year'] ?? '-';
 
-$sql = "SELECT cg.name, cg.room, cg.max_capacity, 
+$sql = "SELECT cg.name, cg.room, cg.max_capacity, cg.semester, cg.year,
                t1.name AS teacher_name, t2.name AS teacher_name_2, t3.name AS teacher_name_3,
                (SELECT COUNT(*) FROM club_registrations cr WHERE cr.club_id = cg.id AND cr.semester = cg.semester AND cr.year = cg.year) AS registered_count
         FROM club_groups cg
