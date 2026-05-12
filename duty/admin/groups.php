@@ -155,12 +155,12 @@ Swal.fire({
 <?php else: ?>
 
 <!-- Groups Grid -->
-<div class="row g-4">
+<div class="row g-4" id="groupsGrid">
 <?php foreach ($groups as $g):
     $members = $memberMap[$g['id']] ?? [];
     $memberIds = array_column($members, 'id');
 ?>
-<div class="col-md-6 col-xl-4">
+<div class="col-md-6 col-xl-4 group-card" data-group-id="<?= $g['id'] ?>">
     <div class="card border-0 shadow-sm h-100 rounded-4 overflow-hidden animate__animated animate__fadeIn" 
          style="border-top: 5px solid <?= htmlspecialchars($g['color']) ?> !important;">
         <div class="card-body p-4">
@@ -180,15 +180,23 @@ Swal.fire({
                     </div>
                 </div>
                 <div class="dropdown">
-                    <button class="btn btn-sm btn-light rounded-circle shadow-sm" data-bs-toggle="dropdown" style="width:32px;height:32px;">
+                    <button class="btn btn-sm btn-light rounded-circle shadow-sm dropdown-toggle no-caret" data-bs-toggle="dropdown" style="width:32px;height:32px;">
                         <i class="fas fa-ellipsis-v"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3">
-                        <li><a class="dropdown-item py-2" href="#" onclick='openEditGroup(<?= json_encode($g,JSON_UNESCAPED_UNICODE) ?>)'>
-                            <i class="fas fa-edit me-2 text-primary"></i>แก้ไขกลุ่ม</a></li>
+                        <li>
+                            <button class="dropdown-item py-2 btn-edit-group" 
+                                    data-group='<?= htmlspecialchars(json_encode($g), ENT_QUOTES, 'UTF-8') ?>'>
+                                <i class="fas fa-edit me-2 text-primary"></i>แก้ไขกลุ่ม
+                            </button>
+                        </li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item py-2 text-danger" href="#" onclick='deleteGroup(<?= $g['id'] ?>, "<?= htmlspecialchars($g['name'],ENT_QUOTES) ?>")'>
-                            <i class="fas fa-trash me-2"></i>ลบกลุ่ม</a></li>
+                        <li>
+                            <button class="dropdown-item py-2 text-danger btn-delete-group" 
+                                    data-id="<?= $g['id'] ?>" data-name="<?= htmlspecialchars($g['name'], ENT_QUOTES) ?>">
+                                <i class="fas fa-trash me-2"></i>ลบกลุ่ม
+                            </button>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -209,8 +217,10 @@ Swal.fire({
             </div>
 
             <!-- Actions -->
-            <button class="btn btn-primary btn-sm w-100 rounded-pill py-2 shadow-sm"
-                    onclick='openMemberModal(<?= $g['id'] ?>, "<?= htmlspecialchars($g['name'],ENT_QUOTES) ?>", <?= json_encode($memberIds) ?>)'>
+            <button class="btn btn-primary btn-sm w-100 rounded-pill py-2 shadow-sm btn-manage-members"
+                    data-id="<?= $g['id'] ?>" 
+                    data-name="<?= htmlspecialchars($g['name'], ENT_QUOTES) ?>"
+                    data-members='<?= json_encode($memberIds) ?>'>
                 <i class="fas fa-users-cog me-1"></i> จัดการสมาชิก
             </button>
         </div>
@@ -220,17 +230,17 @@ Swal.fire({
 </div>
 <?php endif; ?>
 
-<!-- ═══ Modal Area (Moved to bottom for better z-index context) ═══ -->
-<div id="modalContainer">
+<!-- ═══ Modal Area ═══ -->
+<div id="dutyModalContainer">
 
     <!-- Modal: สร้างกลุ่ม -->
-    <div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <form method="POST" class="modal-content border-0 shadow-lg rounded-4">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="create_group">
                 <div class="modal-header border-bottom-0 pt-4 px-4">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-plus-circle me-2 text-primary"></i>สร้างกลุ่มเวรใหม่</h5>
+                    <h5 class="modal-title fw-bold" id="createModalLabel"><i class="fas fa-plus-circle me-2 text-primary"></i>สร้างกลุ่มเวรใหม่</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
@@ -250,17 +260,14 @@ Swal.fire({
                         <label class="form-label fw-bold">สีประจำกลุ่ม</label>
                         <div class="d-flex gap-3 align-items-center">
                             <input type="color" name="color" class="form-control form-control-color border-0" value="#3B82F6" style="width:60px;height:45px">
-                            <div class="d-flex gap-2 flex-wrap" id="colorPresets">
+                            <div class="d-flex gap-2 flex-wrap">
                                 <?php foreach(['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#EC4899','#6B7280'] as $c): ?>
-                                <div class="rounded-circle shadow-sm border border-2 border-white" style="width:30px;height:30px;background:<?=$c?>;cursor:pointer;"
-                                     onclick="document.querySelector('#createModal [name=color]').value='<?=$c?>'"></div>
+                                <div class="rounded-circle shadow-sm border border-2 border-white color-preset" 
+                                     style="width:30px;height:30px;background:<?=$c?>;cursor:pointer;"
+                                     data-color="<?=$c?>"></div>
                                 <?php endforeach; ?>
                             </div>
                         </div>
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label fw-bold">คำอธิบาย (ไม่บังคับ)</label>
-                        <input type="text" name="description" class="form-control rounded-3" placeholder="เช่น เวรสัปดาห์คี่">
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pb-4 px-4">
@@ -272,14 +279,14 @@ Swal.fire({
     </div>
 
     <!-- Modal: แก้ไขกลุ่ม -->
-    <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <form method="POST" class="modal-content border-0 shadow-lg rounded-4">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="edit_group">
                 <input type="hidden" name="id" id="editGroupId">
                 <div class="modal-header border-bottom-0 pt-4 px-4">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2 text-primary"></i>แก้ไขกลุ่ม</h5>
+                    <h5 class="modal-title fw-bold" id="editModalLabel"><i class="fas fa-edit me-2 text-primary"></i>แก้ไขกลุ่ม</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
@@ -299,10 +306,6 @@ Swal.fire({
                         <label class="form-label fw-bold">สีประจำกลุ่ม</label>
                         <input type="color" name="color" id="editGroupColor" class="form-control form-control-color border-0" style="width:60px;height:45px">
                     </div>
-                    <div class="mb-0">
-                        <label class="form-label fw-bold">คำอธิบาย</label>
-                        <input type="text" name="description" id="editGroupDesc" class="form-control rounded-3">
-                    </div>
                 </div>
                 <div class="modal-footer border-top-0 pb-4 px-4">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">ยกเลิก</button>
@@ -313,33 +316,32 @@ Swal.fire({
     </div>
 
     <!-- Modal: จัดการสมาชิก -->
-    <div class="modal fade" id="memberModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="memberModal" tabindex="-1" aria-labelledby="memberModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <form method="POST" class="modal-content border-0 shadow-lg rounded-4">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="save_members">
                 <input type="hidden" name="group_id" id="memberGroupId">
                 <div class="modal-header border-bottom-0 pt-4 px-4">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-users-cog me-2 text-primary"></i>สมาชิกกลุ่ม: <span id="memberGroupName" class="text-primary"></span></h5>
+                    <h5 class="modal-title fw-bold" id="memberModalLabel"><i class="fas fa-users-cog me-2 text-primary"></i>สมาชิกกลุ่ม: <span id="memberGroupName" class="text-primary"></span></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0 rounded-start-3"><i class="fas fa-search text-muted"></i></span>
-                            <input type="text" id="memberSearch" class="form-control border-start-0 rounded-end-3" placeholder="ค้นหาชื่อครู..." oninput="filterMembers()">
+                            <input type="text" id="memberSearch" class="form-control border-start-0 rounded-end-3" placeholder="ค้นหาชื่อครู..." oninput="llwDuty.filterMembers()">
                         </div>
                     </div>
                     <div class="form-check mb-3 ms-2">
-                        <input type="checkbox" class="form-check-input" id="selectAllMembers"
-                               onchange="document.querySelectorAll('.member-check').forEach(c=>c.checked=this.checked)">
+                        <input type="checkbox" class="form-check-input" id="selectAllMembers">
                         <label class="form-check-label fw-bold text-slate-700" for="selectAllMembers">เลือกทั้งหมดในรายชื่อ</label>
                     </div>
                     <div style="max-height:400px;overflow-y:auto;" class="border rounded-3 p-2 bg-slate-50">
                         <div class="row g-1">
                             <?php foreach ($teachers as $t): ?>
                             <div class="col-md-6 member-item" data-name="<?= htmlspecialchars(mb_strtolower($t['full_name'])) ?>">
-                                <div class="form-check p-2 hover:bg-white rounded-2 transition-all">
+                                <div class="form-check p-2 hover-bg-white rounded-2 transition-all">
                                     <input type="checkbox" class="form-check-input member-check ms-0 me-2"
                                            name="teacher_ids[]" value="<?= $t['id'] ?>"
                                            id="mt_<?= $t['id'] ?>">
@@ -377,113 +379,163 @@ Swal.fire({
 .transition-all { transition: all 0.2s ease-in-out; }
 .rounded-4 { border-radius: 1rem !important; }
 .rounded-3 { border-radius: 0.75rem !important; }
+.no-caret::after { display: none; }
 
-/* Modal Fixes */
-.modal { z-index: 1060 !important; }
-.modal-backdrop { z-index: 1050 !important; }
-.modal-dialog { margin-top: 1.75rem; }
-@media (min-width: 576px) {
-    .modal-dialog { margin-top: 3.5rem; }
-}
+/* Critical Modal Fix: Force top layer and reset backdrop */
+.modal { z-index: 9999 !important; }
+.modal-backdrop { z-index: 9998 !important; }
+.modal-open { overflow: hidden !important; padding-right: 0 !important; }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log("LLW Duty Groups: JS Initializing...");
+window.llwDuty = (function() {
+    console.log("LLW Duty Module: Loading...");
 
-    // Helper to get or create Bootstrap Modal
-    function getModal(id) {
-        const el = document.getElementById(id);
-        if (!el) return null;
-        if (window.bootstrap && bootstrap.Modal) {
-            return bootstrap.Modal.getOrCreateInstance(el);
-        }
-        console.error("Bootstrap Modal not found on window");
-        return null;
-    }
-
-    // --- Create Group Modal Logic ---
-    // (Already handled by data-bs-toggle, but we can add validation if needed)
-
-    // --- Edit Group Logic ---
-    window.openEditGroup = function(g) {
-        console.log("Opening Edit Modal for:", g.id);
-        document.getElementById('editGroupId').value   = g.id;
-        document.getElementById('editGroupName').value = g.name;
-        document.getElementById('editGroupColor').value= g.color;
-        document.getElementById('editGroupDesc').value = g.description || '';
-        document.getElementById('editGroupType').value = g.group_type || 'day';
-        
-        const modal = getModal('editModal');
-        if (modal) modal.show();
-    };
-
-    // --- Member Modal Logic ---
-    window.openMemberModal = function(groupId, groupName, currentMemberIds) {
-        console.log("Opening Member Modal for:", groupId);
-        document.getElementById('memberGroupId').value = groupId;
-        document.getElementById('memberGroupName').textContent = groupName;
-        
-        const checks = document.querySelectorAll('.member-check');
-        const memberIdsSet = new Set(Array.isArray(currentMemberIds) ? currentMemberIds.map(Number) : []);
-        
-        checks.forEach(c => {
-            c.checked = memberIdsSet.has(Number(c.value));
-        });
-        
-        document.getElementById('memberSearch').value = '';
-        document.querySelectorAll('.member-item').forEach(el => el.style.display = '');
-        document.getElementById('selectAllMembers').checked = false;
-        
-        const modal = getModal('memberModal');
-        if (modal) modal.show();
-    };
-
-    // --- Delete Logic ---
-    window.deleteGroup = function(id, name) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'ยืนยันการลบ?',
-            text: `ต้องการลบกลุ่ม "${name}" ใช่หรือไม่?`,
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            confirmButtonText: 'ลบข้อมูล',
-            cancelButtonText: 'ยกเลิก',
-            reverseButtons: true
-        }).then(result => {
-            if (result.isConfirmed) {
-                document.getElementById('deleteGroupId').value = id;
-                document.getElementById('deleteForm').submit();
+    return {
+        init: function() {
+            console.log("LLW Duty Module: Initializing...");
+            
+            // 1. Move Modal Container to document body to bypass layout stacking issues
+            const container = document.getElementById('dutyModalContainer');
+            if (container) {
+                document.body.appendChild(container);
+                console.log("LLW Duty Module: Modals moved to body root.");
             }
-        });
-    };
 
-    // --- Member Filter ---
-    window.filterMembers = function() {
-        const q = document.getElementById('memberSearch').value.toLowerCase().trim();
-        const items = document.querySelectorAll('.member-item');
-        items.forEach(el => {
-            const name = el.getAttribute('data-name') || '';
-            el.style.display = name.includes(q) ? '' : 'none';
-        });
-    };
+            // 2. Attach Global Event Handlers
+            this.attachEvents();
+            
+            console.log("LLW Duty Module: System Ready.");
+        },
 
-    // --- Handle Select All ---
-    const selectAll = document.getElementById('selectAllMembers');
-    if (selectAll) {
-        selectAll.addEventListener('change', function() {
-            const isChecked = this.checked;
-            document.querySelectorAll('.member-item').forEach(el => {
-                if (el.style.display !== 'none') {
-                    const cb = el.querySelector('.member-check');
-                    if (cb) cb.checked = isChecked;
+        attachEvents: function() {
+            const self = this;
+
+            // Handle "Create Group" Color Presets
+            document.querySelectorAll('.color-preset').forEach(el => {
+                el.onclick = function() {
+                    const color = this.getAttribute('data-color');
+                    const input = document.querySelector('#createModal [name=color]');
+                    if (input) input.value = color;
+                };
+            });
+
+            // Handle "Manage Members" Buttons
+            document.querySelectorAll('.btn-manage-members').forEach(btn => {
+                btn.onclick = function() {
+                    const id = this.getAttribute('data-id');
+                    const name = this.getAttribute('data-name');
+                    const memberIds = JSON.parse(this.getAttribute('data-members') || '[]');
+                    self.openMemberModal(id, name, memberIds);
+                };
+            });
+
+            // Handle "Edit Group" Buttons
+            document.querySelectorAll('.btn-edit-group').forEach(btn => {
+                btn.onclick = function() {
+                    const g = JSON.parse(this.getAttribute('data-group'));
+                    self.openEditModal(g);
+                };
+            });
+
+            // Handle "Delete Group" Buttons
+            document.querySelectorAll('.btn-delete-group').forEach(btn => {
+                btn.onclick = function() {
+                    const id = this.getAttribute('data-id');
+                    const name = this.getAttribute('data-name');
+                    self.deleteGroup(id, name);
+                };
+            });
+
+            // Select All logic
+            const selectAll = document.getElementById('selectAllMembers');
+            if (selectAll) {
+                selectAll.onchange = function() {
+                    const isChecked = this.checked;
+                    document.querySelectorAll('.member-item').forEach(el => {
+                        if (el.style.display !== 'none') {
+                            const cb = el.querySelector('.member-check');
+                            if (cb) cb.checked = isChecked;
+                        }
+                    });
+                };
+            }
+        },
+
+        getModalInstance: function(id) {
+            const el = document.getElementById(id);
+            if (!el) return null;
+            if (window.bootstrap && bootstrap.Modal) {
+                return bootstrap.Modal.getOrCreateInstance(el);
+            }
+            return null;
+        },
+
+        openEditModal: function(g) {
+            document.getElementById('editGroupId').value   = g.id;
+            document.getElementById('editGroupName').value = g.name;
+            document.getElementById('editGroupColor').value= g.color;
+            document.getElementById('editGroupType').value = g.group_type || 'day';
+            
+            const modal = this.getModalInstance('editModal');
+            if (modal) modal.show();
+            else console.error("Bootstrap Modal fail: editModal");
+        },
+
+        openMemberModal: function(id, name, memberIds) {
+            document.getElementById('memberGroupId').value = id;
+            document.getElementById('memberGroupName').textContent = name;
+            
+            const checks = document.querySelectorAll('.member-check');
+            const idsSet = new Set(memberIds.map(Number));
+            
+            checks.forEach(c => {
+                c.checked = idsSet.has(Number(c.value));
+            });
+            
+            document.getElementById('memberSearch').value = '';
+            document.querySelectorAll('.member-item').forEach(el => el.style.display = '');
+            document.getElementById('selectAllMembers').checked = false;
+            
+            const modal = this.getModalInstance('memberModal');
+            if (modal) modal.show();
+            else console.error("Bootstrap Modal fail: memberModal");
+        },
+
+        deleteGroup: function(id, name) {
+            Swal.fire({
+                icon:'warning', 
+                title:'ลบกลุ่ม?',
+                text: `ยืนยันลบกลุ่ม "${name}"? ข้อมูลสมาชิกจะถูกยกเลิก`,
+                showCancelButton:true, 
+                confirmButtonColor:'#ef4444',
+                confirmButtonText:'ลบข้อมูล', 
+                cancelButtonText:'ยกเลิก',
+                reverseButtons: true
+            }).then(r => {
+                if (r.isConfirmed) {
+                    document.getElementById('deleteGroupId').value = id;
+                    document.getElementById('deleteForm').submit();
                 }
             });
-        });
-    }
+        },
 
-    console.log("LLW Duty Groups: JS Ready.");
-});
+        filterMembers: function() {
+            const q = document.getElementById('memberSearch').value.toLowerCase().trim();
+            document.querySelectorAll('.member-item').forEach(el => {
+                const name = el.getAttribute('data-name') || '';
+                el.style.display = name.includes(q) ? '' : 'none';
+            });
+        }
+    };
+})();
+
+// Start everything when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => llwDuty.init());
+} else {
+    llwDuty.init();
+}
 </script>
 
 <?php require_once __DIR__ . '/../../components/layout_end.php'; ?>
