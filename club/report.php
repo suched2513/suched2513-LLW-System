@@ -89,9 +89,12 @@ require_once __DIR__ . '/../components/layout_start.php';
 </style>
 
 <div class="container-fluid">
-    <div class="d-flex justify-content-end mb-3 no-print">
-        <button onclick="window.print()" class="btn btn-dark rounded-3">
-            <i class="fas fa-print me-1"></i>พิมพ์รายงาน
+    <div class="d-flex justify-content-end gap-2 mb-3 no-print">
+        <a href="/club/print_summary.php" target="_blank" class="btn btn-primary rounded-3 shadow-sm">
+            <i class="fas fa-file-alt me-1"></i>รายงานสรุปภาพรวม (รายงาน ผอ.)
+        </a>
+        <button onclick="window.print()" class="btn btn-dark rounded-3 shadow-sm">
+            <i class="fas fa-print me-1"></i>พิมพ์หน้านี้
         </button>
     </div>
 
@@ -249,7 +252,10 @@ require_once __DIR__ . '/../components/layout_start.php';
                                 <td class="px-3 py-2 text-center"><span class="badge bg-success rounded-pill"><?= $row['registered'] ?></span></td>
                                 <td class="px-3 py-2 text-center"><span class="badge <?= $unreg_count > 0 ? 'bg-danger' : 'bg-secondary' ?> rounded-pill"><?= $unreg_count ?></span></td>
                                 <td class="px-3 py-2 text-center">
-                                    <a href="/club/class_students.php?classroom=<?= urlencode($row['classroom']) ?>" class="btn btn-outline-secondary btn-sm rounded-2"><i class="fas fa-search"></i></a>
+                                    <div class="btn-group">
+                                        <a href="/club/class_students.php?classroom=<?= urlencode($row['classroom']) ?>" class="btn btn-outline-secondary btn-sm rounded-2 me-1" title="ดูรายชื่อ"><i class="fas fa-search"></i></a>
+                                        <a href="/club/print_classroom.php?classroom=<?= urlencode($row['classroom']) ?>" target="_blank" class="btn btn-outline-dark btn-sm rounded-2" title="พิมพ์รายงานห้อง"><i class="fas fa-print"></i></a>
+                                    </div>
                                 </td>
                             </tr>
                             <?php endforeach; ?>

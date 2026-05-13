@@ -31,54 +31,67 @@ $totalMembers = 0;
 foreach ($clubs as $c) {
     $totalMembers += (int)$c['registered_count'];
 }
+
+// Summary By Class
+$stmtByClass = $pdo->prepare("
+    SELECT s.classroom,
+           COUNT(s.student_id) AS total,
+           COUNT(cr.id) AS registered
+    FROM att_students s
+    LEFT JOIN club_registrations cr ON cr.student_id = s.student_id
+                                    AND cr.semester = ? AND cr.year = ?
+    WHERE s.classroom REGEXP '^ม\\.[1-6]/'
+    GROUP BY s.classroom
+    ORDER BY s.classroom
+");
+$stmtByClass->execute([$activeSemester, $activeYear]);
+$byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <title>สรุปข้อมูลชุมนุม</title>
-    <!-- Use Sarabun font -->
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Sarabun', sans-serif; margin: 40px; font-size: 14pt; }
-        h2 { text-align: center; margin-bottom: 5px; }
-        .subtitle { text-align: center; margin-bottom: 20px; }
+        body { font-family: 'Sarabun', sans-serif; margin: 40px; font-size: 11pt; line-height: 1.4; }
+        h2 { text-align: center; margin-bottom: 5px; font-size: 16pt; }
+        h3 { margin-top: 30px; margin-bottom: 10px; font-size: 14pt; border-left: 5px solid #333; padding-left: 10px; }
+        .subtitle { text-align: center; margin-bottom: 20px; font-size: 13pt; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #000; padding: 8px; }
-        th { background-color: #f9f9f9; }
+        th, td { border: 1px solid #000; padding: 6px 8px; }
+        th { background-color: #f2f2f2; font-weight: 600; }
         .text-center { text-align: center; }
         .footer { margin-top: 60px; display: flex; justify-content: space-around; page-break-inside: avoid; }
         .signature-box { text-align: center; line-height: 1.8; }
         @media print {
             .no-print { display: none; }
             body { margin: 0; }
+            @page { size: A4; margin: 1cm; }
         }
     </style>
 </head>
 <body>
     <div class="no-print" style="margin-bottom: 20px; text-align: right;">
-        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background: #7c3aed; color: white; border: none; border-radius: 5px;">
-            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-right: 5px;">
-                <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
-                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
-            </svg>
+        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background: #7c3aed; color: white; border: none; border-radius: 5px; font-family: inherit;">
             พิมพ์เอกสาร
         </button>
     </div>
 
-    <h2>รายงานสรุปข้อมูลชุมนุม</h2>
+    <h2>รายงานสรุปข้อมูลกิจกรรมชุมนุม</h2>
     <div class="subtitle">ภาคเรียนที่ <?= htmlspecialchars($activeSemester) ?> ปีการศึกษา <?= htmlspecialchars($activeYear) ?></div>
     
-    <div style="margin-bottom: 10px;">
-        <strong>จำนวนชุมนุมทั้งหมด:</strong> <?= $totalClubs ?> ชุมนุม &nbsp;&nbsp;|&nbsp;&nbsp; 
-        <strong>จำนวนสมาชิกรวม:</strong> <?= $totalMembers ?> คน
+    <div style="margin-bottom: 10px; font-weight: bold; font-size: 12pt;">
+        จำนวนชุมนุมทั้งหมด: <?= $totalClubs ?> ชุมนุม &nbsp;&nbsp;|&nbsp;&nbsp; 
+        จำนวนสมาชิกรวม: <?= $totalMembers ?> คน
     </div>
 
+    <h3>1. รายละเอียดข้อมูลรายชุมนุม</h3>
     <table>
         <thead>
             <tr>
-                <th width="8%">ลำดับ</th>
-                <th width="32%">ชื่อชุมนุม</th>
+                <th width="7%">ที่</th>
+                <th width="33%">ชื่อชุมนุม</th>
                 <th width="30%">ครูผู้สอน / ที่ปรึกษา</th>
                 <th width="15%">ห้องเรียน</th>
                 <th width="15%">สมาชิก (คน)</th>
@@ -97,7 +110,7 @@ foreach ($clubs as $c) {
                     <td>
                         <?php
                         $advisors = array_filter([$c['teacher_name'], $c['teacher_name_2'], $c['teacher_name_3']]);
-                        echo implode('<br>', array_map(fn($t) => htmlspecialchars($t, ENT_QUOTES, 'UTF-8'), $advisors)) ?: '-';
+                        echo implode(', ', array_map(fn($t) => htmlspecialchars($t, ENT_QUOTES, 'UTF-8'), $advisors)) ?: '-';
                         ?>
                     </td>
                     <td class="text-center"><?= htmlspecialchars($c['room'] ?: '-') ?></td>
@@ -106,6 +119,44 @@ foreach ($clubs as $c) {
                 <?php endforeach; ?>
             <?php endif; ?>
         </tbody>
+    </table>
+
+    <div style="page-break-before: auto;"></div>
+
+    <h3>2. สรุปการลงทะเบียนแยกตามห้องเรียน</h3>
+    <table style="width: 70%; margin-left: auto; margin-right: auto;">
+        <thead>
+            <tr>
+                <th class="text-center">ห้องเรียน</th>
+                <th class="text-center">นักเรียนทั้งหมด</th>
+                <th class="text-center">ลงทะเบียนแล้ว</th>
+                <th class="text-center">ยังไม่ลงทะเบียน</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php 
+            $gTotal = 0; $gReg = 0;
+            foreach ($byClass as $row): 
+                $unreg = $row['total'] - $row['registered'];
+                $gTotal += $row['total'];
+                $gReg += $row['registered'];
+            ?>
+            <tr>
+                <td class="text-center"><?= htmlspecialchars($row['classroom']) ?></td>
+                <td class="text-center"><?= $row['total'] ?></td>
+                <td class="text-center"><?= $row['registered'] ?></td>
+                <td class="text-center" style="<?= $unreg > 0 ? 'color: red;' : '' ?>"><?= $unreg ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+        <tfoot>
+            <tr style="font-weight: bold; background: #f9f9f9;">
+                <td class="text-center">รวมทั้งหมด</td>
+                <td class="text-center"><?= $gTotal ?></td>
+                <td class="text-center"><?= $gReg ?></td>
+                <td class="text-center"><?= $gTotal - $gReg ?></td>
+            </tr>
+        </tfoot>
     </table>
 
     <div class="footer">
