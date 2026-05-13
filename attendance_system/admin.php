@@ -835,20 +835,22 @@ function selectByMajor(select, major) {
         Swal.fire({
             icon: 'success',
             title: 'เลือกสายการเรียนสำเร็จ',
-            text: 'ระบบได้เลือกนักเรียนสาย ' + majorClean + ' จำนวน ' + count + ' คนให้แล้วครับ',
-            timer: 2000,
-            showConfirmButton: false,
-            toast: true,
-            position: 'top-end'
+            text: 'ระบบได้เลือกนักเรียนสาย ' + major + ' จำนวน ' + count + ' คนให้แล้วครับ',
+            timer: 2000, showConfirmButton: false, toast: true, position: 'top-end'
         });
     } else {
+        // DEBUG: Get sample majors found in the page
+        let samples = [];
+        allCheckboxes.forEach((cb, idx) => {
+            let m = cb.getAttribute('data-major');
+            if (m && idx < 5) samples.push("'" + m + "'");
+        });
+        
         Swal.fire({
             icon: 'warning',
-            title: 'ไม่พบรายชื่อ',
-            text: 'ไม่พบนักเรียนสาย ' + majorClean + ' ในห้องที่แสดงอยู่ครับ',
-            toast: true,
-            position: 'top-end',
-            timer: 3000
+            title: 'ไม่พบรายชื่อในหน้านี้',
+            html: 'เป้าหมายที่หา: <b>' + major + '</b><br><br>ตัวอย่างสายที่ระบบเห็นในหน้านี้:<br>' + (samples.length > 0 ? samples.join(', ') : 'ไม่มีข้อมูลสายเลย'),
+            confirmButtonText: 'รับทราบ'
         });
     }
 }
