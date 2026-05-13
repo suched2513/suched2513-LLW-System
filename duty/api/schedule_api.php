@@ -204,9 +204,21 @@ try {
 
             // รับ assignments เป็น JSON string
             $assignments = json_decode($_POST['assignments'] ?? '[]', true) ?: [];
+            
+            // รับ target_points (จุดที่ต้องการอัปเดต) ถ้าไม่ส่งมาจะลบทั้งหมดของวันนั้น
+            $targetPoints = json_decode($_POST['target_points'] ?? '[]', true) ?: [];
 
             $pdo->beginTransaction();
-            $pdo->prepare("DELETE FROM duty_schedule WHERE duty_date=? AND shift=?")->execute([$date,$shift]);
+            
+            if (!empty($targetPoints)) {
+                // ลบเฉพาะจุดที่ระบุ
+                $placeholders = implode(',', array_fill(0, count($targetPoints), '?'));
+                $stmtDel = $pdo->prepare("DELETE FROM duty_schedule WHERE duty_date=? AND shift=? AND point_no IN ($placeholders)");
+                $stmtDel->execute(array_merge([$date, $shift], $targetPoints));
+            } else {
+                // ลบทั้งหมดของวัน (พฤติกรรมเดิม)
+                $pdo->prepare("DELETE FROM duty_schedule WHERE duty_date=? AND shift=?")->execute([$date,$shift]);
+            }
 
             $stmt = $pdo->prepare("
                 INSERT INTO duty_schedule (duty_date, shift, point_no, role, teacher_id, group_id)

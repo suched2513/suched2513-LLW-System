@@ -810,8 +810,11 @@ window.llwSchedule = (function() {
 
         saveDay: function() {
             const assignments = [];
+            const targetPoints = [];
             document.querySelectorAll('.point-row').forEach(row => {
                 const ptNo = parseInt(row.dataset.point);
+                if (!targetPoints.includes(ptNo)) targetPoints.push(ptNo);
+                
                 const role = row.querySelector('[data-field="role"]').value.trim();
                 row.querySelectorAll('[data-field="teacher_id"]').forEach(sel => {
                     if (sel.value) assignments.push({teacher_id: sel.value, point_no: ptNo, role: role});
@@ -824,6 +827,7 @@ window.llwSchedule = (function() {
             fd.append('duty_date', curDate);
             fd.append('shift', curShift);
             fd.append('assignments', JSON.stringify(assignments));
+            fd.append('target_points', JSON.stringify(targetPoints));
 
             const btn = document.querySelector('#assignModal .btn-primary');
             const originalText = btn.innerHTML;
@@ -850,9 +854,19 @@ window.llwSchedule = (function() {
         },
 
         clearDay: function() {
+            const targetPoints = [];
+            document.querySelectorAll('.point-row').forEach(row => {
+                const ptNo = parseInt(row.dataset.point);
+                if (!targetPoints.includes(ptNo)) targetPoints.push(ptNo);
+            });
+
+            const isChairman = targetPoints.includes(CHAIRMAN_INDEX);
+            const titleMsg = isChairman ? 'ล้างตำแหน่งประธาน?' : 'ล้างเวรจุดที่ 1-5?';
+            const textMsg  = isChairman ? 'ข้อมูลตำแหน่งประธานวันนี้จะถูกลบ' : 'ข้อมูลการจัดเวรทั้งหมดของจุดที่ 1-5 ในวันนี้จะถูกลบทิ้ง';
+
             Swal.fire({
-                icon:'warning', title:'ล้างเวรทั้งวัน?',
-                text:'ข้อมูลการจัดเวรทั้งหมดของวันนี้จะถูกลบทิ้ง',
+                icon:'warning', title: titleMsg,
+                text: textMsg,
                 showCancelButton:true, confirmButtonColor:'#ef4444',
                 confirmButtonText:'ล้างเลย', cancelButtonText:'ยกเลิก', reverseButtons:true
             }).then(r => {
@@ -863,6 +877,7 @@ window.llwSchedule = (function() {
                 fd.append('duty_date', curDate);
                 fd.append('shift', curShift);
                 fd.append('assignments', '[]');
+                fd.append('target_points', JSON.stringify(targetPoints));
                 fetch(apiUrl, {method:'POST', body:fd})
                     .then(r => r.json())
                     .then(d => { if (d.status === 'success') location.reload(); });
