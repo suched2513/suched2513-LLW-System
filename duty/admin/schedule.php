@@ -57,6 +57,27 @@ try {
     if ((int)$chk->fetchColumn() === 0) {
         $pdo->exec("ALTER TABLE duty_schedule ADD COLUMN group_id INT NULL");
     }
+
+    // ── Sync point names and swap order 2 <-> 3 ──
+    $checkSync = $pdo->query("SELECT COUNT(*) FROM duty_schedule WHERE role LIKE '1. %' LIMIT 1")->fetchColumn();
+    if (!$checkSync) {
+        // Swap point_no 2 and 3 for day shift to keep teachers with their original tasks
+        $pdo->exec("UPDATE duty_schedule SET point_no = 99 WHERE point_no = 2 AND shift = 'day'");
+        $pdo->exec("UPDATE duty_schedule SET point_no = 2 WHERE point_no = 3 AND shift = 'day'");
+        $pdo->exec("UPDATE duty_schedule SET point_no = 3 WHERE point_no = 99 AND shift = 'day'");
+        
+        $syncNames = [
+            1 => '1. รับนักเรียนจุดที่ 1',
+            2 => '2. หน้าเสาธง',
+            3 => '3. รับนักเรียนจุดที่ 2',
+            4 => '4. ปล่อยกลับบ้าน',
+            5 => '5. ตรวจรอบโรงเรียน',
+            6 => '6. ประธานกิจกรรมหน้าเสาธง'
+        ];
+        foreach ($syncNames as $no => $name) {
+            $pdo->prepare("UPDATE duty_schedule SET role = ? WHERE point_no = ? AND shift = 'day'")->execute([$name, $no]);
+        }
+    }
 } catch (Exception $e) { /* ignore */ }
 
 // ── View Mode & Params ──
@@ -96,12 +117,12 @@ if ($shiftParam === 'night') {
     $pointNames = ['เวรตรวจความเรียบร้อยกลางคืน'];
 } else {
     $pointNames = [
-        'รับนักเรียนจุดที่ 1',
-        'รับนักเรียนจุดที่ 2',
-        'หน้าเสาธง',
-        'ปล่อยกลับบ้าน',
-        'ตรวจรอบโรงเรียน',
-        'ประธานกิจกรรมหน้าเสาธง'
+        '1. รับนักเรียนจุดที่ 1',
+        '2. หน้าเสาธง',
+        '3. รับนักเรียนจุดที่ 2',
+        '4. ปล่อยกลับบ้าน',
+        '5. ตรวจรอบโรงเรียน',
+        '6. ประธานกิจกรรมหน้าเสาธง'
     ];
 }
 $maxPts = count($pointNames);
