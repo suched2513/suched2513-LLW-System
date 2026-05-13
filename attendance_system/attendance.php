@@ -143,11 +143,29 @@ require_once '../components/layout_start.php';
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">รายวิชา</label>
                 <select name="subject_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition-all" required>
                     <option value="">-- เลือกรายวิชา --</option>
-                    <?php foreach($subjects as $subj): ?>
-                        <option value="<?= $subj['id'] ?>" <?= $selected_subject_id == $subj['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($subj['subject_code'] . ' - ' . $subj['subject_name'] . ' (' . $subj['classroom'] . ')') ?>
-                        </option>
-                    <?php endforeach; ?>
+                    <?php
+                    $regular = array_filter($subjects, fn($s) => empty($s['is_elective']));
+                    $elective = array_filter($subjects, fn($s) => !empty($s['is_elective']));
+                    
+                    if (!empty($regular)): ?>
+                    <optgroup label="📚 วิชาพื้นฐาน (ตามห้อง)">
+                        <?php foreach($regular as $subj): ?>
+                            <option value="<?= $subj['id'] ?>" <?= $selected_subject_id == $subj['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($subj['subject_code'] . ' - ' . $subj['subject_name'] . ' (' . $subj['classroom'] . ')') ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </optgroup>
+                    <?php endif; ?>
+
+                    <?php if (!empty($elective)): ?>
+                    <optgroup label="✨ วิชาเพิ่มเติม/วิชาเลือก (ตามสาย)">
+                        <?php foreach($elective as $subj): ?>
+                            <option value="<?= $subj['id'] ?>" <?= $selected_subject_id == $subj['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($subj['subject_code'] . ' - ' . $subj['subject_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </optgroup>
+                    <?php endif; ?>
                 </select>
             </div>
             <div class="flex gap-2">
