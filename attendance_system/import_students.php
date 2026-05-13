@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'functions.php';
 checkLogin();
 
@@ -118,11 +118,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($is_first) { $is_first = false; continue; }
                 if (count($row) < 2) continue;
 
-                $sid = trim($row[0] ?? '');
+                $sid  = trim($row[0] ?? '');
                 if (preg_match('/^\d+$/', $sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
                 $name = trim($row[1] ?? '');
                 $cls  = trim($row[2] ?? $_POST['classroom_fixed'] ?? '');
                 $nid  = preg_replace('/\D/', '', trim($row[3] ?? ''));
+                $mj   = trim($row[4] ?? ''); // Major from 5th column
+                
                 $nid_valid  = strlen($nid) === 13;
                 $nid_masked = $nid_valid ? makeNidMasked($nid) : null;
 
@@ -131,6 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'student_id'      => $sid,
                         'name'            => $name,
                         'classroom'       => $cls,
+                        'major'           => $mj,
                         'row'             => $idx + 1,
                         'national_id'     => $nid_valid ? $nid : null,
                         'national_id_masked' => $nid_masked,
@@ -146,9 +149,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         set_time_limit(300);
         $data = json_decode($_POST['json_data'], true);
         if ($data) {
-            $stmt = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, academic_year, national_id_hash, national_id_masked)
-                VALUES (:sid, :name, :cls, 2569, :nid_hash, :nid_masked)
-                ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), academic_year=2569,
+            $stmt = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, major, academic_year, national_id_hash, national_id_masked)
+                VALUES (:sid, :name, :cls, :mj, 2569, :nid_hash, :nid_masked)
+                ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), major=VALUES(major), academic_year=2569,
                 national_id_hash=IF(VALUES(national_id_hash) IS NOT NULL, VALUES(national_id_hash), national_id_hash),
                 national_id_masked=IF(VALUES(national_id_masked) IS NOT NULL, VALUES(national_id_masked), national_id_masked)");
             $pdo->beginTransaction();
@@ -162,6 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':sid'        => $p['student_id'],
                         ':name'       => $p['name'],
                         ':cls'        => $p['classroom'],
+                        ':mj'         => $p['major'] ?? null,
                         ':nid_hash'   => $nid_hash,
                         ':nid_masked' => $p['national_id_masked'] ?? null,
                     ]);
@@ -318,7 +322,8 @@ require_once __DIR__ . '/components/layout_start.php';
                                 <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ลำดับ</th>
                                 <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">รหัส</th>
                                 <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ชื่อ-นามสกุล</th>
-                                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ห้อง</th>
+                                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ห้องเรียน</th>
+                                <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">สายการเรียน</th>
                                 <th class="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">เลขบัตร (รหัสผ่าน)</th>
                             </tr>
                         </thead>
@@ -332,6 +337,9 @@ require_once __DIR__ . '/components/layout_start.php';
                                     <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-black border border-emerald-100">
                                         <?= htmlspecialchars($p['classroom']) ?>
                                     </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="text-xs font-bold text-violet-500 uppercase"><?= htmlspecialchars($p['major'] ?? '-') ?></span>
                                 </td>
                                 <td class="px-6 py-4">
                                     <?php if ($p['nid_valid']): ?>

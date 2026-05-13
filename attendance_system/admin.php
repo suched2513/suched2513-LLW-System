@@ -204,12 +204,16 @@ try {
     $show_all = isset($_GET['show_all']) && $_GET['show_all'] == 1;
     $status_filter = $show_all ? "" : " AND status='active'";
 
+    $filter_major = $_GET['major'] ?? '';
+    $status_filter = $show_all ? "" : " AND status='active'";
+    $major_filter = $filter_major === 'none' ? " AND (major IS NULL OR major = '')" : ($filter_major ? " AND major = " . $pdo->quote($filter_major) : "");
+
     if ($filter_cls) {
-        $sq = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) $status_filter ORDER BY student_id");
+        $sq = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) $status_filter $major_filter ORDER BY student_id");
         $sq->execute([$filter_cls]);
         $all_students = $sq->fetchAll();
     } else {
-        $all_students = $pdo->query("SELECT * FROM att_students WHERE student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) $status_filter ORDER BY classroom, student_id LIMIT 100")->fetchAll();
+        $all_students = $pdo->query("SELECT * FROM att_students WHERE student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) $status_filter $major_filter ORDER BY classroom, student_id LIMIT 1000")->fetchAll();
     }
 } catch (Exception $e) {
     $msg = "ระบบยังไม่พร้อมใช้งาน: กรุณารัน Migration ตาราง Attendance (" . $e->getMessage() . ")";
@@ -401,6 +405,18 @@ require_once '../components/layout_start.php';
                         <select name="show_all" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none">
                             <option value="0" <?= !$show_all ? 'selected' : '' ?>>เฉพาะที่ยังอยู่ (Active)</option>
                             <option value="1" <?= $show_all ? 'selected' : '' ?>>ทั้งหมด (รวมที่ย้าย/ออก)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">สายการเรียน:</label>
+                        <select name="major" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none">
+                            <option value="">-- ทุกสาย --</option>
+                            <option value="none" <?= $filter_major === 'none' ? 'selected' : '' ?>>ยังไม่มีสาย</option>
+                            <?php 
+                            $majors_list = $pdo->query("SELECT DISTINCT major FROM att_students WHERE major IS NOT NULL AND major != '' ORDER BY major")->fetchAll(PDO::FETCH_COLUMN);
+                            foreach ($majors_list as $ml): ?>
+                            <option value="<?= htmlspecialchars($ml) ?>" <?= $filter_major === $ml ? 'selected' : '' ?>><?= htmlspecialchars($ml) ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="flex items-center gap-2">
