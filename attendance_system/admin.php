@@ -172,12 +172,17 @@ $all_students = [];
 $filter_cls = $_GET['cls'] ?? '';
 
 try {
-    // ── Auto-migrate: Student Status ──
+    // ── Auto-migrate: Student Status & Major ──
     $chkStatus = $pdo->query("SHOW COLUMNS FROM att_students LIKE 'status'")->fetch();
     if (!$chkStatus) {
         $pdo->exec("ALTER TABLE att_students ADD COLUMN status ENUM('active', 'moved', 'resigned', 'suspended') DEFAULT 'active' AFTER classroom");
         $pdo->exec("ALTER TABLE att_students ADD COLUMN status_note VARCHAR(255) NULL AFTER status");
         $pdo->exec("CREATE INDEX idx_student_status ON att_students(status)");
+    }
+    
+    $chkMajor = $pdo->query("SHOW COLUMNS FROM att_students LIKE 'major'")->fetch();
+    if (!$chkMajor) {
+        $pdo->exec("ALTER TABLE att_students ADD COLUMN major VARCHAR(100) NULL AFTER classroom");
     }
 
     $teachers   = $pdo->query("SELECT t.*, lu.username, lu.status as user_status, lu.last_login, COUNT(DISTINCT s.id) as s_count FROM att_teachers t LEFT JOIN llw_users lu ON lu.user_id = t.llw_user_id LEFT JOIN att_subjects s ON s.teacher_id = t.id GROUP BY t.id ORDER BY t.name")->fetchAll();
@@ -415,7 +420,7 @@ require_once '../components/layout_start.php';
                         <tr>
                             <th class="px-6 py-4 text-left">รหัส</th>
                             <th class="px-6 py-4 text-left">ชื่อ-สกุล</th>
-                            <th class="px-6 py-4 text-center">ห้อง</th>
+                            <th class="px-6 py-4 text-center">ห้อง/สายการเรียน</th>
                             <th class="px-6 py-4 text-center">สถานะ</th>
                             <th class="px-6 py-4 text-right"></th>
                         </tr>
@@ -637,13 +642,27 @@ require_once '../components/layout_start.php';
                     <h3 class="font-black text-slate-800 mt-1"><?= htmlspecialchars($es['subject_name']) ?></h3>
                     <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">ลงทะเบียนแล้ว <?= count($enrolled_ids) ?> คน จากทั้งหมด <?= $total_students ?> คน</p>
                 </div>
-                <div class="flex items-center gap-2 flex-wrap">
-                    <a href="export_elective.php?subject_id=<?= $es['id'] ?>" target="_blank"
-                       class="inline-flex items-center gap-1.5 text-sm font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl transition border border-emerald-100">
-                        <i class="bi bi-file-earmark-spreadsheet-fill"></i> Export CSV
-                    </a>
-                    <span class="text-xs font-bold text-violet-500"><i class="bi bi-info-circle"></i> เลือกได้ทุกห้อง</span>
-                </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <a href="export_elective.php?subject_id=<?= $es['id'] ?>" target="_blank"
+                           class="inline-flex items-center gap-1.5 text-sm font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl transition border border-emerald-100">
+                            <i class="bi bi-file-earmark-spreadsheet-fill"></i> Export CSV
+                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-violet dropdown-toggle rounded-xl font-bold" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-magic me-1"></i> เลือกตามสายการเรียน
+                            </button>
+                            <ul class="dropdown-menu shadow-xl border-0 rounded-2xl p-2">
+                                <?php 
+                                $all_majors = [];
+                                foreach ($all_rows as $ar) { if($ar['major']) $all_majors[] = $ar['major']; }
+                                $all_majors = array_unique($all_majors);
+                                sort($all_majors);
+                                foreach ($all_majors as $m): ?>
+                                <li><a class="dropdown-item rounded-xl text-xs font-bold py-2" href="javascript:;" onclick="selectByMajor(this, '<?= addslashes($m) ?>')"><?= htmlspecialchars($m) ?></a></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    </div>
             </div>
             <form method="POST" class="p-6">
                 <?= csrf_field() ?>
@@ -677,12 +696,13 @@ require_once '../components/layout_start.php';
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                         <?php foreach ($cls_students as $std): ?>
-                        <label class="flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all <?= in_array($std['id'], $enrolled_ids) ? 'bg-violet-50 border-violet-300' : 'bg-slate-50 border-slate-200 hover:border-violet-200' ?>">
+                        <label class="flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all <?= in_array($std['id'], $enrolled_ids) ? 'bg-violet-50 border-violet-300' : 'bg-slate-50 border-slate-200 hover:border-violet-200' ?>" 
+                               data-major="<?= htmlspecialchars($std['major'] ?? '') ?>">
                             <input type="checkbox" name="enrolled_students[]" value="<?= $std['id'] ?>"
                                    class="accent-violet-600 w-4 h-4 flex-shrink-0" <?= in_array($std['id'], $enrolled_ids) ? 'checked' : '' ?>>
                             <div class="min-w-0">
                                 <p class="font-bold text-xs text-slate-700 truncate"><?= htmlspecialchars($std['name']) ?></p>
-                                <p class="font-mono text-xs text-blue-500"><?= htmlspecialchars($std['student_id']) ?></p>
+                                <p class="font-mono text-[10px] text-blue-500"><?= htmlspecialchars($std['student_id']) ?><?= $std['major'] ? ' | '.$std['major'] : '' ?></p>
                             </div>
                         </label>
                         <?php endforeach; ?>
@@ -770,11 +790,33 @@ function selectGroup(btn) {
     const allChecked = [...checks].every(c => c.checked);
     checks.forEach(c => {
         c.checked = !allChecked;
-        c.closest('label').className = c.closest('label').className
-            .replace(/bg-\S+|border-\S+/g, '')
-            .trim() + (c.checked ? ' bg-violet-50 border-violet-300' : ' bg-slate-50 border-slate-200');
+        updateLabelStyle(c);
     });
     btn.textContent = allChecked ? 'เลือกทั้งห้อง' : 'ยกเลิกทั้งห้อง';
+}
+
+function selectByMajor(el, major) {
+    const form = el.closest('form');
+    const labels = form.querySelectorAll(`label[data-major="${major}"]`);
+    labels.forEach(label => {
+        const cb = label.querySelector('input[type="checkbox"]');
+        if (cb) {
+            cb.checked = true;
+            updateLabelStyle(cb);
+        }
+    });
+    Swal.fire({ icon:'success', title:'เลือกตามสายสำเร็จ', text:`เลือกนักเรียนสาย "${major}" ให้แล้วครับ`, timer:1500, showConfirmButton:false, toast:true, position:'top-end' });
+}
+
+function updateLabelStyle(cb) {
+    const label = cb.closest('label');
+    if (cb.checked) {
+        label.classList.add('bg-violet-50', 'border-violet-300');
+        label.classList.remove('bg-slate-50', 'border-slate-200');
+    } else {
+        label.classList.remove('bg-violet-50', 'border-violet-300');
+        label.classList.add('bg-slate-50', 'border-slate-200');
+    }
 }
 
 function deleteTeacher(id, name) {
