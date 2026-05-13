@@ -161,6 +161,7 @@ function getStudentsByClassroom($classroom, $pdo) {
     $stmt = $pdo->prepare("
         SELECT * FROM att_students
         WHERE classroom = :classroom
+          AND status = 'active'
           AND student_id REGEXP '^[0-9]+$'
           AND student_id NOT IN (SELECT subject_code FROM att_subjects)
         ORDER BY student_id ASC
@@ -186,16 +187,19 @@ function getStudentsBySubject($subject_id, $pdo) {
             SELECT s.* FROM att_students s
             JOIN att_subject_students ss ON ss.student_id = s.id
             WHERE ss.subject_id = ?
+              AND s.status = 'active'
             ORDER BY s.student_id ASC
         ");
         $stmt->execute([$subject_id]);
     } else {
         // วิชาบังคับ: ดึงทั้งห้อง
-        // กรอง 2 ชั้น: (1) รหัสนักเรียนต้องเป็นตัวเลขล้วน (04742 ฯลฯ)
+        // กรอง 3 ชั้น: (1) รหัสนักเรียนต้องเป็นตัวเลขล้วน (04742 ฯลฯ)
         //              (2) ห้ามซ้ำกับ subject_code ในตารางวิชา
+        //              (3) ต้องมีสถานะเป็น 'active' เท่านั้น
         $stmt = $pdo->prepare("
             SELECT s.* FROM att_students s
             WHERE s.classroom = ?
+              AND s.status = 'active'
               AND s.student_id REGEXP '^[0-9]+$'
               AND s.student_id NOT IN (SELECT subject_code FROM att_subjects)
             ORDER BY s.student_id ASC

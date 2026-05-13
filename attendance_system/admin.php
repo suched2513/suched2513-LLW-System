@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'functions.php';
 checkAdmin();
 
@@ -115,10 +115,12 @@ if ($action === 'add_student') {
         $msg = 'แก้ไขนักเรียนสำเร็จ';
     }
 } elseif ($action === 'delete_student') {
-    $eid = (int)$_POST['student_db_id'];
+    $eid    = (int)$_POST['student_db_id'];
+    $status = $_POST['status'] ?? 'moved';
+    $note   = trim($_POST['status_note'] ?? '');
     if ($eid) {
-        $pdo->prepare("DELETE FROM att_students WHERE id=?")->execute([$eid]);
-        $msg = 'ลบนักเรียนสำเร็จ';
+        $pdo->prepare("UPDATE att_students SET status=?, status_note=? WHERE id=?")->execute([$status, $note, $eid]);
+        $msg = 'ปรับสถานะนักเรียนเรียบร้อย';
     }
 }
 
@@ -170,6 +172,14 @@ $all_students = [];
 $filter_cls = $_GET['cls'] ?? '';
 
 try {
+    // ── Auto-migrate: Student Status ──
+    $chkStatus = $pdo->query("SHOW COLUMNS FROM att_students LIKE 'status'")->fetch();
+    if (!$chkStatus) {
+        $pdo->exec("ALTER TABLE att_students ADD COLUMN status ENUM('active', 'moved', 'resigned', 'suspended') DEFAULT 'active' AFTER classroom");
+        $pdo->exec("ALTER TABLE att_students ADD COLUMN status_note VARCHAR(255) NULL AFTER status");
+        $pdo->exec("CREATE INDEX idx_student_status ON att_students(status)");
+    }
+
     $teachers   = $pdo->query("SELECT t.*, lu.username, lu.status as user_status, lu.last_login, COUNT(DISTINCT s.id) as s_count FROM att_teachers t LEFT JOIN llw_users lu ON lu.user_id = t.llw_user_id LEFT JOIN att_subjects s ON s.teacher_id = t.id GROUP BY t.id ORDER BY t.name")->fetchAll();
     
     // Available users for linking (only those not already in att_teachers)
@@ -185,13 +195,16 @@ try {
 
     if (!$filter_cls) $filter_cls = $classrooms[0] ?? '';
 
-    // Students (filter by classroom if selected)
+    // Students (filter by classroom and show only active by default)
+    $show_all = isset($_GET['show_all']) && $_GET['show_all'] == 1;
+    $status_filter = $show_all ? "" : " AND status='active'";
+
     if ($filter_cls) {
-        $sq = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) ORDER BY student_id");
+        $sq = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) $status_filter ORDER BY student_id");
         $sq->execute([$filter_cls]);
         $all_students = $sq->fetchAll();
     } else {
-        $all_students = $pdo->query("SELECT * FROM att_students WHERE student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) ORDER BY classroom, student_id LIMIT 100")->fetchAll();
+        $all_students = $pdo->query("SELECT * FROM att_students WHERE student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) $status_filter ORDER BY classroom, student_id LIMIT 100")->fetchAll();
     }
 } catch (Exception $e) {
     $msg = "ระบบยังไม่พร้อมใช้งาน: กรุณารัน Migration ตาราง Attendance (" . $e->getMessage() . ")";
@@ -377,13 +390,23 @@ require_once '../components/layout_start.php';
                     <h3 class="font-bold text-slate-800">รายชื่อนักเรียน (<?= count($all_students) ?>)</h3>
                 </div>
                 <!-- Classroom filter -->
-                <form method="GET" class="flex items-center gap-2">
-                    <select name="cls" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-emerald-400 outline-none">
-                        <option value="">-- ทุกห้อง --</option>
-                        <?php foreach ($classrooms as $cls): ?>
-                        <option value="<?= htmlspecialchars($cls) ?>" <?= $filter_cls === $cls ? 'selected' : '' ?>><?= htmlspecialchars($cls) ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                <form method="GET" class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">กรองสถานะ:</label>
+                        <select name="show_all" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none">
+                            <option value="0" <?= !$show_all ? 'selected' : '' ?>>เฉพาะที่ยังอยู่ (Active)</option>
+                            <option value="1" <?= $show_all ? 'selected' : '' ?>>ทั้งหมด (รวมที่ย้าย/ออก)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">ห้อง:</label>
+                        <select name="cls" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none">
+                            <option value="">-- ทุกห้อง --</option>
+                            <?php foreach ($classrooms as $cls): ?>
+                            <option value="<?= htmlspecialchars($cls) ?>" <?= $filter_cls === $cls ? 'selected' : '' ?>><?= htmlspecialchars($cls) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </form>
             </div>
             <div class="overflow-x-auto">
@@ -393,6 +416,7 @@ require_once '../components/layout_start.php';
                             <th class="px-6 py-4 text-left">รหัส</th>
                             <th class="px-6 py-4 text-left">ชื่อ-สกุล</th>
                             <th class="px-6 py-4 text-center">ห้อง</th>
+                            <th class="px-6 py-4 text-center">สถานะ</th>
                             <th class="px-6 py-4 text-right"></th>
                         </tr>
                     </thead>
@@ -402,13 +426,23 @@ require_once '../components/layout_start.php';
                             <td class="px-6 py-3.5 font-mono font-bold text-blue-600 text-xs"><?= htmlspecialchars($std['student_id']) ?></td>
                             <td class="px-6 py-3.5 font-bold text-slate-700"><?= htmlspecialchars($std['name']) ?></td>
                             <td class="px-6 py-3.5 text-center">
-                                <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-xs"><?= $std['classroom'] ?></span>
+                                <?php
+                                $status = $std['status'] ?? 'active';
+                                $badgeClass = 'bg-emerald-50 text-emerald-600';
+                                $statusTh = 'ปกติ';
+                                if ($status === 'moved') { $badgeClass = 'bg-amber-50 text-amber-600'; $statusTh = 'ย้าย'; }
+                                elseif ($status === 'resigned') { $badgeClass = 'bg-rose-50 text-rose-600'; $statusTh = 'ออก'; }
+                                elseif ($status === 'suspended') { $badgeClass = 'bg-slate-100 text-slate-500'; $statusTh = 'พักการเรียน'; }
+                                ?>
+                                <span class="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase <?= $badgeClass ?>" title="<?= htmlspecialchars($std['status_note'] ?? '') ?>">
+                                    <?= $statusTh ?>
+                                </span>
                             </td>
                             <td class="px-6 py-3.5 text-right flex gap-1 justify-end">
                                 <button onclick="editStudent(<?= $std['id'] ?>, '<?= addslashes($std['student_id']) ?>', '<?= addslashes($std['name']) ?>', '<?= addslashes($std['classroom']) ?>')"
                                         class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition" title="แก้ไข"><i class="bi bi-pencil-fill"></i></button>
-                                <button onclick="deleteStudent(<?= $std['id'] ?>, '<?= addslashes($std['name']) ?>')"
-                                        class="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition" title="ลบ"><i class="bi bi-trash3-fill"></i></button>
+                                <button onclick="archiveStudent(<?= $std['id'] ?>, '<?= addslashes($std['name']) ?>')"
+                                        class="p-2 text-amber-500 hover:bg-amber-50 rounded-xl transition" title="จำหน่ายออก/ปรับสถานะ"><i class="bi bi-person-x-fill"></i></button>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -792,14 +826,44 @@ function deleteSubject(id, name) {
     });
 }
 
-function deleteStudent(id, name) {
+function archiveStudent(id, name) {
     Swal.fire({
-        title: 'ลบนักเรียน?', text: `ต้องการลบ "${name}" หรือไม่?`, icon: 'warning',
-        showCancelButton: true, confirmButtonColor: '#e11d48', confirmButtonText: 'ยืนยันลบ', cancelButtonText: 'ยกเลิก'
+        title: 'จำหน่ายออก / ปรับสถานะ',
+        html: `
+        <div class="text-left mt-3">
+            <p class="text-sm text-slate-500 mb-4">ปรับสถานะของนักเรียน <strong>${name}</strong> เพื่อให้ไม่ปรากฏในใบเช็คชื่อปัจจุบัน แต่ยังเก็บข้อมูลไว้ในรายงานย้อนหลัง</p>
+            <div class="mb-3">
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-wider">เลือกสถานะใหม่</label>
+                <select id="archive_status" class="swal2-input mt-1" style="width:100%;margin:0;">
+                    <option value="moved">ย้ายสถานศึกษา (Moved)</option>
+                    <option value="resigned">ลาออก (Resigned)</option>
+                    <option value="suspended">พักการเรียน (Suspended)</option>
+                    <option value="active">ปกติ (Active)</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-wider">หมายเหตุ / เหตุผล</label>
+                <input id="archive_note" class="swal2-input mt-1" style="width:100%;margin:0;" placeholder="เช่น ย้ายไปโรงเรียน... / ลาออกเนื่องจาก...">
+            </div>
+        </div>`,
+        confirmButtonText: 'ยืนยันการปรับสถานะ',
+        confirmButtonColor: '#d97706',
+        showCancelButton: true,
+        cancelButtonText: 'ยกเลิก',
+        preConfirm: () => {
+            return {
+                status: document.getElementById('archive_status').value,
+                note: document.getElementById('archive_note').value.trim()
+            }
+        }
     }).then(r => {
         if (r.isConfirmed) {
             const f = document.createElement('form'); f.method = 'POST';
-            f.innerHTML = `<input name="action" value="delete_student"><input name="student_db_id" value="${id}">`;
+            f.innerHTML = `
+                <input name="action" value="delete_student">
+                <input name="student_db_id" value="${id}">
+                <input name="status" value="${r.value.status}">
+                <input name="status_note" value="${r.value.note}">`;
             document.body.appendChild(f); f.submit();
         }
     });

@@ -45,7 +45,7 @@ $members = $pdo->prepare("
     FROM club_registrations cr
     JOIN att_students s ON s.student_id = cr.student_id
     LEFT JOIN club_attendance ca ON ca.session_id = ? AND ca.student_id = s.student_id
-    WHERE cr.club_id = ?
+    WHERE cr.club_id = ? AND s.status = 'active'
     ORDER BY s.classroom, s.name
 ");
 $members->execute([$session_id, $session['club_id']]);

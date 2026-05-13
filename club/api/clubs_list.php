@@ -51,7 +51,8 @@ try {
                    cg.room, cg.max_capacity, cg.semester, cg.year,
                    cg.status, cg.pass_threshold, cg.created_at,
                    (SELECT COUNT(*) FROM club_registrations cr
-                    WHERE cr.club_id = cg.id AND cr.semester = cg.semester AND cr.year = cg.year) AS registered_count
+                    JOIN att_students s ON s.student_id = cr.student_id
+                    WHERE cr.club_id = cg.id AND cr.semester = cg.semester AND cr.year = cg.year AND s.status = 'active') AS registered_count
             FROM club_groups cg
             LEFT JOIN att_teachers t1 ON t1.id = cg.teacher_id
             LEFT JOIN att_teachers t2 ON t2.id = cg.teacher_id_2
