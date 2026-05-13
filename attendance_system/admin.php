@@ -663,20 +663,18 @@ require_once '../components/layout_start.php';
                            class="inline-flex items-center gap-1.5 text-sm font-black text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl transition border border-emerald-100">
                             <i class="bi bi-file-earmark-spreadsheet-fill"></i> Export CSV
                         </a>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-violet dropdown-toggle rounded-xl font-bold" type="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-magic me-1"></i> เลือกตามสายการเรียน
-                            </button>
-                            <ul class="dropdown-menu shadow-xl border-0 rounded-2xl p-2">
+                        <div class="flex items-center gap-1 bg-white border border-violet-200 rounded-xl px-2 py-1 shadow-sm">
+                            <select onchange="if(this.value) selectByMajor(this, this.value); this.value='';" class="bg-transparent text-xs font-bold text-violet-600 outline-none cursor-pointer p-1">
+                                <option value="">🪄 เลือกตามสาย...</option>
                                 <?php 
                                 $all_majors = [];
                                 foreach ($all_rows as $ar) { if($ar['major']) $all_majors[] = $ar['major']; }
                                 $all_majors = array_unique($all_majors);
                                 sort($all_majors);
                                 foreach ($all_majors as $m): ?>
-                                <li><a class="dropdown-item rounded-xl text-xs font-bold py-2" href="javascript:;" onclick="selectByMajor(this, '<?= addslashes($m) ?>')"><?= htmlspecialchars($m) ?></a></li>
+                                <option value="<?= htmlspecialchars($m) ?>"><?= htmlspecialchars($m) ?></option>
                                 <?php endforeach; ?>
-                            </ul>
+                            </select>
                         </div>
                     </div>
             </div>
