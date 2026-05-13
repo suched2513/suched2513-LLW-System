@@ -124,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $cls  = trim($row[2] ?? $_POST['classroom_fixed'] ?? '');
                 $nid  = preg_replace('/\D/', '', trim($row[3] ?? ''));
                 $mj   = trim($row[4] ?? ''); // Major from 5th column
+                $mj   = preg_replace('/\s+/', ' ', $mj); // Normalize spaces to single space
                 
                 $nid_valid  = strlen($nid) === 13;
                 $nid_masked = $nid_valid ? makeNidMasked($nid) : null;
