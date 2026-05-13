@@ -413,13 +413,6 @@ require_once __DIR__ . '/../../components/layout_start.php';
 .group-empty { display:inline-flex; align-items:center; gap:4px; color:#adb5bd; font-size:11px; padding:4px 10px; border:1.5px dashed #dee2e6; border-radius:20px; transition:all .15s; background:transparent; }
 .group-btn:hover .group-empty { color:#2563eb; border-color:#2563eb; background:#f0f5ff; }
 
-/* Extreme Modal Fix: Force top layer and ensure backdrop NEVER blocks clicks */
-.modal { z-index: 20000 !important; pointer-events: none !important; }
-.modal-dialog { pointer-events: auto !important; }
-.modal-content { pointer-events: auto !important; box-shadow: 0 0 0 1000px rgba(0,0,0,0.5); border: none !important; }
-.modal-backdrop { display: none !important; } /* We use modal-content shadow instead of backdrop to be 100% sure */
-.modal-open { overflow: hidden !important; padding-right: 0 !important; }
-
 /* Visual feedback for clicks */
 .btn:active, .duty-cell:active { transform: scale(0.98); opacity: 0.8; }
 .hover-bg-white:hover { background-color: white !important; }
@@ -521,20 +514,6 @@ window.llwSchedule = (function() {
     return {
         init: function() {
             console.log("LLW Duty Schedule: Initializing...");
-            // Move Modal Container to document body to bypass layout stacking issues
-            const container = document.getElementById('scheduleModalContainer');
-            if (container && container.parentElement !== document.body) {
-                document.body.appendChild(container);
-                console.log("LLW Duty Schedule: Modals moved to body root successfully.");
-            }
-            // Add global listener to fix potential bootstrap backdrop issues
-            document.addEventListener('hidden.bs.modal', function () {
-                if (document.querySelectorAll('.modal.show').length === 0) {
-                    document.body.classList.remove('modal-open');
-                    const backdrops = document.querySelectorAll('.modal-backdrop');
-                    backdrops.forEach(b => b.remove());
-                }
-            });
         },
 
         getModal: function(id) {

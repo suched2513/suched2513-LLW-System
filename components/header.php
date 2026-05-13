@@ -171,11 +171,56 @@
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
+        /* ══════════════════════════════════════════════════
+           MODAL - Global High-Layer Fix
+        ══════════════════════════════════════════════════ */
+        .modal { z-index: 20000 !important; }
+        .modal-backdrop { z-index: 19999 !important; }
+        .modal-content { 
+            border: none !important; 
+            border-radius: 1.5rem !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+        }
+        .modal-open { overflow: hidden !important; padding-right: 0 !important; }
+
         @media print {
             .no-print { display: none !important; }
             body { background: white !important; color: black !important; }
         }
     </style>
+    
+    <script>
+        /**
+         * Global Modal Handler — Ensure all modals are moved to body root 
+         * to bypass stacking context issues in complex layouts.
+         */
+        (function() {
+            function relocateModals() {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    if (modal.parentElement !== document.body && !modal.closest('.modal-content')) {
+                        document.body.appendChild(modal);
+                    }
+                });
+            }
+
+            // Run on load and watch for new modals
+            document.addEventListener('DOMContentLoaded', relocateModals);
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach(m => {
+                    if (m.addedNodes.length) relocateModals();
+                });
+            });
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+
+            // Fix for multiple backdrops / stuck scroll
+            document.addEventListener('hidden.bs.modal', function () {
+                if (document.querySelectorAll('.modal.show').length === 0) {
+                    document.body.classList.remove('modal-open');
+                    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                }
+            });
+        })();
+    </script>
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
     <div class="app-wrapper">
