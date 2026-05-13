@@ -149,7 +149,9 @@ if ($action === 'add_subject') {
     if ($sid) {
         try {
             $pdo->beginTransaction();
-            $pdo->prepare("DELETE FROM att_subject_students WHERE subject_id=?")->execute([$sid]);
+            // REMOVED: $pdo->prepare("DELETE FROM att_subject_students WHERE subject_id=?")->execute([$sid]);
+            // This allows incremental saves without losing other grades/students
+            
             if (!empty($enrolled)) {
                 $ins = $pdo->prepare("INSERT IGNORE INTO att_subject_students (subject_id, student_id) VALUES (?,?)");
                 foreach ($enrolled as $std_id) {
@@ -157,7 +159,7 @@ if ($action === 'add_subject') {
                 }
             }
             $pdo->commit();
-            $msg = 'บันทึกการลงทะเบียนวิชาเลือกสำเร็จ';
+            $msg = 'บันทึกการลงทะเบียน (สะสมรายชื่อ) สำเร็จ';
         } catch (Exception $e) {
             $pdo->rollBack(); $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
         }
@@ -809,17 +811,44 @@ function selectGroup(btn) {
     btn.textContent = allChecked ? 'เลือกทั้งห้อง' : 'ยกเลิกทั้งห้อง';
 }
 
-function selectByMajor(el, major) {
-    const form = el.closest('form');
-    const labels = form.querySelectorAll(`label[data-major="${major}"]`);
-    labels.forEach(label => {
-        const cb = label.querySelector('input[type="checkbox"]');
-        if (cb) {
+function selectByMajor(select, major) {
+    if (!major) return;
+    const card = select.closest('.subject-card');
+    // Remove all whitespace for comparison
+    const majorClean = major.replace(/\s+/g, '');
+    
+    const allCheckboxes = card.querySelectorAll('input[type="checkbox"][data-major]');
+    let count = 0;
+    
+    allCheckboxes.forEach(cb => {
+        const stdMajor = cb.getAttribute('data-major').replace(/\s+/g, '');
+        if (stdMajor === majorClean) {
             cb.checked = true;
             updateLabelStyle(cb);
+            count++;
         }
     });
-    Swal.fire({ icon:'success', title:'เลือกตามสายสำเร็จ', text:`เลือกนักเรียนสาย "${major}" ให้แล้วครับ`, timer:1500, showConfirmButton:false, toast:true, position:'top-end' });
+
+    if (count > 0) {
+        Swal.fire({
+            icon: 'success',
+            title: 'เลือกสายการเรียนสำเร็จ',
+            text: 'ระบบได้เลือกนักเรียนสาย ' + majorClean + ' จำนวน ' + count + ' คนให้แล้วครับ',
+            timer: 2000,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
+    } else {
+        Swal.fire({
+            icon: 'warning',
+            title: 'ไม่พบรายชื่อ',
+            text: 'ไม่พบนักเรียนสาย ' + majorClean + ' ในห้องที่แสดงอยู่ครับ',
+            toast: true,
+            position: 'top-end',
+            timer: 3000
+        });
+    }
 }
 
 function updateLabelStyle(cb) {
