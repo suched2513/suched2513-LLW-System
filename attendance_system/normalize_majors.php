@@ -20,14 +20,16 @@ try {
     $upd = $pdo->prepare("UPDATE att_students SET major = ? WHERE id = ?");
     foreach ($to_fix as $row) {
         $clean = $row['major'];
-        // Remove spaces around hyphens
-        $clean = preg_replace('/\s*-\s*/', '-', $clean);
-        // Remove spaces around slashes
-        $clean = preg_replace('/\s*\/\s*/', '/', $clean);
-        // Collapse multiple spaces
-        $clean = preg_replace('/\s+/', ' ', $clean);
+        // Replace spaces with hyphens
+        $clean = preg_replace('/\s+/', '-', $clean);
+        // Replace multiple hyphens with a single one
+        $clean = preg_replace('/-+/', '-', $clean);
+        // Special case: Add hyphen between 'อังกฤษ' and 'จีน' if it's missing
+        if (strpos($clean, 'อังกฤษจีน') !== false) {
+            $clean = str_replace('อังกฤษจีน', 'อังกฤษ-จีน', $clean);
+        }
         // Trim again just in case
-        $clean = trim($clean);
+        $clean = trim($clean, '-');
         
         if ($clean !== $row['major']) {
             if ($upd->execute([$clean, $row['id']])) {
