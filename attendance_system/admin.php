@@ -712,9 +712,9 @@ require_once '../components/layout_start.php';
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                         <?php foreach ($cls_students as $std): ?>
-                        <label class="flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all <?= in_array($std['id'], $enrolled_ids) ? 'bg-violet-50 border-violet-300' : 'bg-slate-50 border-slate-200 hover:border-violet-200' ?>" 
-                               data-major="<?= htmlspecialchars($std['major'] ?? '') ?>">
+                        <label class="flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all <?= in_array($std['id'], $enrolled_ids) ? 'bg-violet-50 border-violet-300' : 'bg-slate-50 border-slate-200 hover:border-violet-200' ?>">
                             <input type="checkbox" name="enrolled_students[]" value="<?= $std['id'] ?>"
+                                   data-major="<?= htmlspecialchars($std['major'] ?? '') ?>"
                                    class="accent-violet-600 w-4 h-4 flex-shrink-0" <?= in_array($std['id'], $enrolled_ids) ? 'checked' : '' ?>>
                             <div class="min-w-0">
                                 <p class="font-bold text-xs text-slate-700 truncate"><?= htmlspecialchars($std['name']) ?></p>
