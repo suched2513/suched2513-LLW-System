@@ -814,15 +814,17 @@ function selectGroup(btn) {
 function selectByMajor(select, major) {
     if (!major) return;
     const card = select.closest('.subject-card');
-    // Remove all whitespace for comparison
-    const majorClean = major.replace(/\s+/g, '');
     
+    // Function to normalize string: remove ALL spaces and symbols (keep only letters and numbers)
+    const normalize = (str) => str.replace(/[^\u0E00-\u0E7Fa-zA-Z0-9]/g, '').trim();
+    
+    const target = normalize(major);
     const allCheckboxes = card.querySelectorAll('input[type="checkbox"][data-major]');
     let count = 0;
     
     allCheckboxes.forEach(cb => {
-        const stdMajor = cb.getAttribute('data-major').replace(/\s+/g, '');
-        if (stdMajor === majorClean) {
+        const current = normalize(cb.getAttribute('data-major') || '');
+        if (current === target && target !== '') {
             cb.checked = true;
             updateLabelStyle(cb);
             count++;
