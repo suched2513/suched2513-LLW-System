@@ -11,16 +11,27 @@ try {
     // 1. Trim leading/trailing spaces
     $pdo->exec("UPDATE att_students SET major = TRIM(major) WHERE major IS NOT NULL");
     
-    // 2. Reduce multiple spaces into a single space using PHP (since MySQL version might not support REGEXP_REPLACE)
-    $stmt = $pdo->query("SELECT id, major FROM att_students WHERE major LIKE '%  %'");
+    // 2. Normalize hyphens and slashes (Remove spaces around them)
+    $stmt = $pdo->query("SELECT id, major FROM att_students WHERE major LIKE '%-%' OR major LIKE '%/%' OR major LIKE '%  %'");
     $to_fix = $stmt->fetchAll();
     
     $count = 0;
     $upd = $pdo->prepare("UPDATE att_students SET major = ? WHERE id = ?");
     foreach ($to_fix as $row) {
-        $clean = preg_replace('/\s+/', ' ', $row['major']);
-        if ($upd->execute([$clean, $row['id']])) {
-            $count++;
+        $clean = $row['major'];
+        // Remove spaces around hyphens
+        $clean = preg_replace('/\s*-\s*/', '-', $clean);
+        // Remove spaces around slashes
+        $clean = preg_replace('/\s*\/\s*/', '/', $clean);
+        // Collapse multiple spaces
+        $clean = preg_replace('/\s+/', ' ', $clean);
+        // Trim again just in case
+        $clean = trim($clean);
+        
+        if ($clean !== $row['major']) {
+            if ($upd->execute([$clean, $row['id']])) {
+                $count++;
+            }
         }
     }
 
