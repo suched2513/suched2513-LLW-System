@@ -8,8 +8,9 @@ if ($_SESSION['llw_role'] !== 'super_admin') {
 }
 
 try {
-    // 1. Trim leading/trailing spaces
+    // 1. Trim leading/trailing spaces and set status to active if empty
     $pdo->exec("UPDATE att_students SET major = TRIM(major) WHERE major IS NOT NULL");
+    $pdo->exec("UPDATE att_students SET status = 'active' WHERE status IS NULL OR status = ''");
     
     // 2. Normalize hyphens and slashes (Remove spaces around them)
     $stmt = $pdo->query("SELECT id, major FROM att_students WHERE major LIKE '%-%' OR major LIKE '%/%' OR major LIKE '%  %'");
