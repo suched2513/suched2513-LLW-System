@@ -63,6 +63,35 @@ $year          = isset($input['year']) ? (int)$input['year'] : (int)date('Y');
 $status        = $input['status'] ?? 'draft';
 $pass_threshold = isset($input['pass_threshold']) ? (int)$input['pass_threshold'] : 80;
 
+// ─── TEACHER RESTRICTIONS ───
+if ($userRole === 'att_teacher') {
+    // 1. Block creation
+    if ($id === 0) {
+        http_response_code(403);
+        echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์สร้างชุมนุมใหม่']);
+        exit;
+    }
+    
+    // 2. Lock protected fields by fetching current values
+    try {
+        $pdo = getPdo();
+        $stmt = $pdo->prepare("SELECT * FROM club_groups WHERE id = ?");
+        $stmt->execute([$id]);
+        $curr = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($curr) {
+            $name           = $curr['name'];
+            $room           = $curr['room'];
+            $max_capacity   = $curr['max_capacity'];
+            $semester       = $curr['semester'];
+            $year           = $curr['year'];
+            $status         = $curr['status'];
+            $pass_threshold = $curr['pass_threshold'];
+            $teacher_id_2   = $curr['teacher_id_2'];
+            $teacher_id_3   = $curr['teacher_id_3'];
+        }
+    } catch (Exception $e) { /* Fallback to input if error */ }
+}
+
 if ($name === '') {
     echo json_encode(['status' => 'error', 'message' => 'กรุณากรอกชื่อชุมนุม']);
     exit;

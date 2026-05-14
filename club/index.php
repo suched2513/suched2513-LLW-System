@@ -65,6 +65,8 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <a href="/club/print_summary.php" target="_blank" class="btn btn-sm btn-outline-secondary rounded-3 me-2">
                     <i class="fas fa-print me-1"></i>พิมพ์สรุป
                 </a>
+                <?php endif; ?>
+                <?php if (in_array($userRole, ['super_admin', 'club_admin'])): ?>
                 <a href="/club/manage.php" class="btn btn-sm rounded-3 text-white" style="background:#7c3aed">
                     <i class="fas fa-plus me-1"></i>สร้างชุมนุม
                 </a>

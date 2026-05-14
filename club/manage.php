@@ -14,6 +14,10 @@ $pdo = getPdo();
 $id  = (int)($_GET['id'] ?? 0);
 $club = null;
 
+if ($id === 0 && $userRole === 'att_teacher') {
+    header('Location: /club/index.php'); exit();
+}
+
 // Resolve current teacher record for att_teacher role
 $myTeacherId   = 0;
 $myTeacherName = '';
@@ -69,8 +73,9 @@ require_once __DIR__ . '/../components/layout_start.php';
         <div class="row g-3">
             <div class="col-12">
                 <label class="form-label fw-bold small text-uppercase text-muted">ชื่อชุมนุม <span class="text-danger">*</span></label>
-                <input type="text" id="f_name" class="form-control rounded-3"
-                       value="<?= htmlspecialchars($club['name'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="เช่น ชุมนุมคอมพิวเตอร์">
+                <input type="text" id="f_name" class="form-control rounded-3 <?= $userRole === 'att_teacher' ? 'bg-light' : '' ?>"
+                       value="<?= htmlspecialchars($club['name'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="เช่น ชุมนุมคอมพิวเตอร์"
+                       <?= $userRole === 'att_teacher' ? 'readonly' : '' ?>>
             </div>
             <div class="col-12">
                 <label class="form-label fw-bold small text-uppercase text-muted">คำอธิบาย</label>
@@ -100,7 +105,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             <!-- Teacher 2 -->
             <div class="col-md-4">
                 <label class="form-label fw-bold small text-uppercase text-muted">ครูที่ปรึกษาคนที่ 2</label>
-                <select id="f_teacher_id_2" class="form-select rounded-3">
+                <select id="f_teacher_id_2" class="form-select rounded-3" <?= $userRole === 'att_teacher' ? 'disabled' : '' ?>>
                     <option value="">-- ไม่มี --</option>
                     <?php foreach ($teachers as $t): ?>
                     <option value="<?= $t['id'] ?>" <?= ($club['teacher_id_2'] ?? '') == $t['id'] ? 'selected' : '' ?>>
@@ -112,7 +117,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             <!-- Teacher 3 -->
             <div class="col-md-4">
                 <label class="form-label fw-bold small text-uppercase text-muted">ครูที่ปรึกษาคนที่ 3</label>
-                <select id="f_teacher_id_3" class="form-select rounded-3">
+                <select id="f_teacher_id_3" class="form-select rounded-3" <?= $userRole === 'att_teacher' ? 'disabled' : '' ?>>
                     <option value="">-- ไม่มี --</option>
                     <?php foreach ($teachers as $t): ?>
                     <option value="<?= $t['id'] ?>" <?= ($club['teacher_id_3'] ?? '') == $t['id'] ? 'selected' : '' ?>>
@@ -123,34 +128,38 @@ require_once __DIR__ . '/../components/layout_start.php';
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold small text-uppercase text-muted">ห้องประชุม</label>
-                <input type="text" id="f_room" class="form-control rounded-3"
-                       value="<?= htmlspecialchars($club['room'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="เช่น ห้องคอมพิวเตอร์ 1">
+                <input type="text" id="f_room" class="form-control rounded-3 <?= $userRole === 'att_teacher' ? 'bg-light' : '' ?>"
+                       value="<?= htmlspecialchars($club['room'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="เช่น ห้องคอมพิวเตอร์ 1"
+                       <?= $userRole === 'att_teacher' ? 'readonly' : '' ?>>
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold small text-uppercase text-muted">ความจุ (คน)</label>
-                <input type="number" id="f_max_capacity" class="form-control rounded-3" min="1"
-                       value="<?= htmlspecialchars($club['max_capacity'] ?? 30, ENT_QUOTES, 'UTF-8') ?>">
+                <input type="number" id="f_max_capacity" class="form-control rounded-3 <?= $userRole === 'att_teacher' ? 'bg-light' : '' ?>" min="1"
+                       value="<?= htmlspecialchars($club['max_capacity'] ?? 30, ENT_QUOTES, 'UTF-8') ?>"
+                       <?= $userRole === 'att_teacher' ? 'readonly' : '' ?>>
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold small text-uppercase text-muted">เกณฑ์ผ่าน (%)</label>
-                <input type="number" id="f_pass_threshold" class="form-control rounded-3" min="0" max="100"
-                       value="<?= htmlspecialchars($club['pass_threshold'] ?? 80, ENT_QUOTES, 'UTF-8') ?>">
+                <input type="number" id="f_pass_threshold" class="form-control rounded-3 <?= $userRole === 'att_teacher' ? 'bg-light' : '' ?>" min="0" max="100"
+                       value="<?= htmlspecialchars($club['pass_threshold'] ?? 80, ENT_QUOTES, 'UTF-8') ?>"
+                       <?= $userRole === 'att_teacher' ? 'readonly' : '' ?>>
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold small text-uppercase text-muted">ภาคเรียน</label>
-                <select id="f_semester" class="form-select rounded-3">
+                <select id="f_semester" class="form-select rounded-3" <?= $userRole === 'att_teacher' ? 'disabled' : '' ?>>
                     <option value="1" <?= ($club['semester'] ?? $defSem) == 1 ? 'selected' : '' ?>>1</option>
                     <option value="2" <?= ($club['semester'] ?? $defSem) == 2 ? 'selected' : '' ?>>2</option>
                 </select>
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold small text-uppercase text-muted">ปีการศึกษา</label>
-                <input type="number" id="f_year" class="form-control rounded-3"
-                       value="<?= htmlspecialchars($club['year'] ?? $defYear, ENT_QUOTES, 'UTF-8') ?>">
+                <input type="number" id="f_year" class="form-control rounded-3 <?= $userRole === 'att_teacher' ? 'bg-light' : '' ?>"
+                       value="<?= htmlspecialchars($club['year'] ?? $defYear, ENT_QUOTES, 'UTF-8') ?>"
+                       <?= $userRole === 'att_teacher' ? 'readonly' : '' ?>>
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold small text-uppercase text-muted">สถานะ</label>
-                <select id="f_status" class="form-select rounded-3">
+                <select id="f_status" class="form-select rounded-3" <?= $userRole === 'att_teacher' ? 'disabled' : '' ?>>
                     <option value="draft"    <?= ($club['status'] ?? 'draft') === 'draft'    ? 'selected' : '' ?>>ร่าง</option>
                     <option value="open"     <?= ($club['status'] ?? '') === 'open'     ? 'selected' : '' ?>>เปิดรับสมัคร</option>
                     <option value="closed"   <?= ($club['status'] ?? '') === 'closed'   ? 'selected' : '' ?>>ปิดรับ</option>
