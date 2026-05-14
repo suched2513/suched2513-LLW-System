@@ -87,6 +87,9 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <a href="/club/results.php?club_id=<?= $club_id ?>" class="btn btn-sm rounded-3 text-white" style="background:#7c3aed">
                     <i class="fas fa-star me-1"></i>ประเมินผล
                 </a>
+                <a href="/club/print_book.php?club_id=<?= $club_id ?>" target="_blank" class="btn btn-primary btn-sm rounded-3">
+                    <i class="fas fa-file-pdf me-1"></i>พิมพ์เล่มรายงาน
+                </a>
                 <a href="/club/print_members.php?club_id=<?= $club_id ?>" target="_blank" class="btn btn-outline-dark btn-sm rounded-3">
                     <i class="fas fa-print me-1"></i>พิมพ์รายชื่อ
                 </a>
