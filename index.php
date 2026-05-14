@@ -115,12 +115,13 @@ $thaiDate   = 'วัน'.$thaiDays[(int)date('w')].' '.date('j').' '.$thaiMonth
 // ── Modules ──────────────────────────────────────────────────────────────────
 // roles: null = ทุก role ที่ login แล้ว, array = เฉพาะ role ที่ระบุ, isPublic = ไม่ต้อง login
 // ครูทั่วไป + ครูที่มีหน้าที่พิเศษ (ทุกคนต้องใช้ระบบครูได้)
-$_T = ['att_teacher','super_admin','wfh_admin','finance_head','procurement_head','deputy_director','director'];
-$_A = ['super_admin','wfh_admin'];                        // กลุ่ม admin
+$_T = ['att_teacher','super_admin','club_admin','wfh_admin','finance_head','procurement_head','deputy_director','director'];
+$_A = ['super_admin','wfh_admin','club_admin'];                        // กลุ่ม admin
 $_B = ['bus_admin','bus_finance','super_admin'];           // กลุ่มรถ
 $modules = [
     ['url'=>'assembly/dashboard.php',           'roles'=>$_T, 'icon'=>'bi-people-fill',            'bgIcon'=>'bi-people',               'title'=>'เช็คชื่อเข้าแถว',    'short'=>'เข้าแถว',    'desc'=>'บันทึกการเข้าแถวประจำวัน ตรวจเครื่องแต่งกาย พร้อมแจ้งเตือน Telegram',                 'color'=>'amber',  'gradient'=>'from-amber-500 to-orange-500',   'delay'=>0],
     ['url'=>'attendance_system/dashboard.php',  'roles'=>$_T, 'icon'=>'bi-person-check-fill',      'bgIcon'=>'bi-person-check',         'title'=>'เช็คชื่อในคาบเรียน', 'short'=>'เช็คชื่อ',   'desc'=>'บันทึกเวลาเรียนรายวิชา ขาด ลา มา สาย แบบ Real-time',                                 'color'=>'blue',   'gradient'=>'from-blue-500 to-cyan-500',      'delay'=>0.1],
+    ['url'=>'club/index.php',                   'roles'=>$_T, 'icon'=>'bi-suit-club-fill',         'bgIcon'=>'bi-suit-club',            'title'=>'ระบบกิจกรรมชุมนุม',  'short'=>'ชุมนุม',    'desc'=>'จัดการการลงทะเบียนสมาชิก เช็คชื่อร่วมกิจกรรม และประเมินผลการเรียน',               'color'=>'indigo', 'gradient'=>'from-indigo-600 to-blue-600',    'delay'=>0.15],
     ['url'=>'chromebook/index.php',             'roles'=>['cb_admin','super_admin','wfh_admin'], 'icon'=>'bi-laptop', 'bgIcon'=>'bi-laptop', 'title'=>'จัดการ Chromebook', 'short'=>'Chromebook', 'desc'=>'ระบบยืม-คืนอุปกรณ์ดิจิทัล ตรวจสอบสถานะและคลังพัสดุ',                                'color'=>'indigo', 'gradient'=>'from-indigo-500 to-purple-500',  'delay'=>0.2],
     ['url'=>'index_wfh.php',                   'roles'=>null,'icon'=>'bi-person-badge-fill',       'bgIcon'=>'bi-geo-alt',              'title'=>'ลงเวลาบุคลากร',      'short'=>'ลงเวลา',    'desc'=>'ระบบลงเวลาเข้า-ออกงานด้วย GPS ยืนยันตัวตนผ่านพิกัดโรงเรียน',                       'color'=>'emerald','gradient'=>'from-emerald-500 to-teal-500',   'delay'=>0.3],
     ['url'=>'leave_system.php',                'roles'=>null,'icon'=>'bi-door-open-fill',          'bgIcon'=>'bi-door-open',            'title'=>'ขออนุญาตออกนอก',     'short'=>'ออกนอก',    'desc'=>'ระบบยื่นคำขอลาออนไลน์ พร้อมแจ้งเตือนผู้บริหารผ่าน Telegram',                       'color'=>'rose',   'gradient'=>'from-rose-500 to-pink-500',      'delay'=>0.4],
