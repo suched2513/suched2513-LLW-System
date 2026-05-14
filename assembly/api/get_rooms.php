@@ -26,16 +26,12 @@ try {
         $teacherId = $tq->fetchColumn() ?: 0;
         
         $stmt = $pdo->prepare("
-            SELECT DISTINCT classroom 
-            FROM (
-                SELECT classroom FROM llw_class_advisors WHERE user_id = :userId
-                UNION
-                SELECT classroom FROM att_subjects WHERE teacher_id = :teacherId
-            ) AS combined_rooms
-            WHERE classroom REGEXP '^ม\\\\.[0-9]+/[0-9]+'
+            SELECT DISTINCT classroom
+            FROM llw_class_advisors
+            WHERE user_id = ?
             ORDER BY classroom
         ");
-        $stmt->execute(['userId' => $userId, 'teacherId' => $teacherId]);
+        $stmt->execute([$userId]);
     } else {
         // Admin เห็นเฉพาะห้องปกติ (ม.X/Y) ไม่รวมห้องวิชาเลือก
         $stmt = $pdo->query("

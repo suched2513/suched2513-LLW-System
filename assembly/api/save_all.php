@@ -25,22 +25,14 @@ if (empty($classroom) || empty($records)) {
     exit;
 }
 
-// ตรวจสิทธิ์ att_teacher → อนุญาตให้เช็คชื่อเฉพาะห้องที่ตนเป็นที่ปรึกษาหรือสอน
+// ตรวจสิทธิ์ att_teacher → อนุญาตให้เช็คชื่อเฉพาะห้องที่ตนเป็นที่ปรึกษา
 if ($_SESSION['llw_role'] === 'att_teacher') {
     try {
         $pdo    = getPdo();
         $userId = $_SESSION['user_id'] ?? 0;
         
-        $tq = $pdo->prepare("SELECT id FROM att_teachers WHERE llw_user_id = ? LIMIT 1");
-        $tq->execute([$userId]);
-        $teacherId = $tq->fetchColumn() ?: 0;
-        
-        $check = $pdo->prepare("
-            SELECT 1 FROM llw_class_advisors WHERE classroom = :classroom AND user_id = :userId
-            UNION
-            SELECT 1 FROM att_subjects WHERE classroom = :classroom AND teacher_id = :teacherId
-        ");
-        $check->execute(['classroom' => $classroom, 'userId' => $userId, 'teacherId' => $teacherId]);
+        $check = $pdo->prepare("SELECT 1 FROM llw_class_advisors WHERE classroom = ? AND user_id = ?");
+        $check->execute([$classroom, $userId]);
         if (!$check->fetch()) {
             http_response_code(403);
             echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์เข้าถึงห้องนี้']);
