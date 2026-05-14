@@ -191,7 +191,7 @@ foreach ($resultsRaw as $r) {
     <div class="page">
         <div class="cover">
             <div>
-                <img src="/assets/img/logo.png" alt="School Logo" class="school-logo" onerror="this.src='https://llw.krusuched.com/assets/img/logo.png'">
+                <img src="https://suched2513.github.io/image/%E0%B8%95%E0%B8%A3%E0%B8%B2%E0%B8%A5%E0%B8%B0%E0%B8%A5%E0%B8%A1%E0%B8%A7%E0%B8%B4%E0%B8%9767.png" alt="School Logo" class="school-logo">
                 <h1>รายงานผลการดำเนินงานชุมนุม</h1>
                 <div class="cover-title"><?= htmlspecialchars($club['name']) ?></div>
                 <div class="cover-subtitle">ภาคเรียนที่ <?= $semester ?> ปีการศึกษา <?= $year ?></div>
