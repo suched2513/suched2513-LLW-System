@@ -29,8 +29,18 @@ try {
     if ($_SESSION['llw_role'] === 'att_teacher') {
         $userId = $_SESSION['user_id'] ?? 0;
         
-        $check = $pdo->prepare("SELECT 1 FROM llw_class_advisors WHERE classroom = ? AND user_id = ?");
-        $check->execute([$classroom, $userId]);
+        // ดึง teacherId เพื่อใช้เช็คใน att_subjects
+        $tq = $pdo->prepare("SELECT id FROM att_teachers WHERE llw_user_id = ? LIMIT 1");
+        $tq->execute([$userId]);
+        $teacherId = $tq->fetchColumn() ?: 0;
+
+        $check = $pdo->prepare("
+            SELECT 1 FROM llw_class_advisors WHERE classroom = ? AND user_id = ?
+            UNION
+            SELECT 1 FROM att_subjects WHERE classroom = ? AND teacher_id = ?
+            LIMIT 1
+        ");
+        $check->execute([$classroom, $userId, $classroom, $teacherId]);
         if (!$check->fetch()) {
             http_response_code(403);
             echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์เข้าถึงห้องนี้']);

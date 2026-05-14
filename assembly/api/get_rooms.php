@@ -26,12 +26,12 @@ try {
         $teacherId = $tq->fetchColumn() ?: 0;
         
         $stmt = $pdo->prepare("
-            SELECT DISTINCT classroom
-            FROM llw_class_advisors
-            WHERE user_id = ?
+            SELECT classroom FROM llw_class_advisors WHERE user_id = ?
+            UNION
+            SELECT classroom FROM att_subjects WHERE teacher_id = ?
             ORDER BY classroom
         ");
-        $stmt->execute([$userId]);
+        $stmt->execute([$userId, $teacherId]);
     } else {
         // Admin เห็นเฉพาะห้องปกติ (ม.X/Y) ไม่รวมห้องวิชาเลือก
         $stmt = $pdo->query("
