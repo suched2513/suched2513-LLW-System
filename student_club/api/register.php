@@ -11,12 +11,16 @@ if (!isset($_SESSION['is_student']) || $_SESSION['is_student'] !== true) {
 
 $input   = json_decode(file_get_contents('php://input'), true);
 $club_id = isset($input['club_id']) ? (int)$input['club_id'] : 0;
-$sid     = $_SESSION['student_code'] ?? '';
+$sid     = trim($_SESSION['student_code'] ?? '');
 
 if ($club_id <= 0 || $sid === '') {
     http_response_code(400);
     echo json_encode(['status' => 'error', 'message' => 'ข้อมูลไม่ถูกต้อง']);
     exit;
+}
+
+if (preg_match('/^\d+$/', $sid)) {
+    $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
 }
 
 try {
@@ -101,5 +105,5 @@ try {
     if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
     error_log('[club register] ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
+    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()]);
 }

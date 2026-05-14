@@ -7,7 +7,10 @@ if (!isset($_SESSION['is_student']) || $_SESSION['is_student'] !== true) {
     exit();
 }
 
-$student_code  = $_SESSION['student_code'] ?? '';
+$student_code  = trim($_SESSION['student_code'] ?? '');
+if (preg_match('/^\d+$/', $student_code)) {
+    $student_code = str_pad($student_code, 5, '0', STR_PAD_LEFT);
+}
 $student_name  = $_SESSION['student_name'] ?? '';
 $student_class = $_SESSION['student_class'] ?? '';
 
