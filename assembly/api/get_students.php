@@ -25,17 +25,17 @@ if ($classroom === '') {
 try {
     $pdo = getPdo();
 
-    // ตรวจสิทธิ์ att_teacher → ต้องเป็นห้องตัวเอง (Central Table: llw_class_advisors)
-    if ($_SESSION['llw_role'] === 'att_teacher') {
-        $userId = $_SESSION['user_id'] ?? 0;
-        $check  = $pdo->prepare("SELECT id FROM llw_class_advisors WHERE classroom = ? AND user_id = ?");
-        $check->execute([$classroom, $userId]);
-        if (!$check->fetch()) {
-            http_response_code(403);
-            echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์เข้าถึงห้องนี้']);
-            exit;
-        }
-    }
+    // ตรวจสิทธิ์ att_teacher → อนุญาตให้ครูผู้สอนและครูที่ปรึกษาเช็คชื่อได้ทุกห้อง
+    // if ($_SESSION['llw_role'] === 'att_teacher') {
+    //     $userId = $_SESSION['user_id'] ?? 0;
+    //     $check  = $pdo->prepare("SELECT id FROM llw_class_advisors WHERE classroom = ? AND user_id = ?");
+    //     $check->execute([$classroom, $userId]);
+    //     if (!$check->fetch()) {
+    //         http_response_code(403);
+    //         echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์เข้าถึงห้องนี้']);
+    //         exit;
+    //     }
+    // }
 
     // ดึงนักเรียนจาก Central Table (att_students) — กรอง subject codes ออก
     $filterSql = "student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)";

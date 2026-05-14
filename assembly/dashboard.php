@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * assembly/dashboard.php — ระบบเช็คชื่อเข้าแถวและแต่งกายนักเรียน
  * Roles: att_teacher, super_admin, wfh_admin
@@ -358,18 +358,24 @@ window.BASE = '<?= rtrim(str_replace("/assembly", "", dirname($_SERVER["SCRIPT_N
 window.api  = async path => {
     try {
         const r = await fetch(window.BASE + path);
-        if(!r.ok) throw new Error('HTTP ' + r.status);
-        return await r.json();
+        const text = await r.text();
+        let data;
+        try { data = JSON.parse(text); } catch(e) {}
+        if(!r.ok) throw new Error((data && data.message) ? data.message : 'HTTP ' + r.status);
+        return data;
     } catch(e) {
         console.error('API Error:', path, e);
         return {status:'error', message: e.message};
     }
 };
-window.post = async (path, data) => {
+window.post = async (path, bodyData) => {
     try {
-        const r = await fetch(window.BASE + path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)});
-        if(!r.ok) throw new Error('HTTP ' + r.status);
-        return await r.json();
+        const r = await fetch(window.BASE + path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(bodyData)});
+        const text = await r.text();
+        let data;
+        try { data = JSON.parse(text); } catch(e) {}
+        if(!r.ok) throw new Error((data && data.message) ? data.message : 'HTTP ' + r.status);
+        return data;
     } catch(e) {
         console.error('POST Error:', path, e);
         return {status:'error', message: e.message};

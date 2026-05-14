@@ -25,24 +25,24 @@ if (empty($classroom) || empty($records)) {
     exit;
 }
 
-// ตรวจสิทธิ์ att_teacher → ต้องเป็นห้องตัวเอง
-if ($_SESSION['llw_role'] === 'att_teacher') {
-    try {
-        $pdo    = getPdo();
-        $userId = $_SESSION['user_id'] ?? 0;
-        $check  = $pdo->prepare("SELECT id FROM assembly_classrooms WHERE classroom = ? AND llw_user_id = ?");
-        $check->execute([$classroom, $userId]);
-        if (!$check->fetch()) {
-            http_response_code(403);
-            echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์เข้าถึงห้องนี้']);
-            exit;
-        }
-    } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
-        exit;
-    }
-}
+// ตรวจสิทธิ์ att_teacher → อนุญาตให้ครูผู้สอนและครูที่ปรึกษาเช็คชื่อได้ทุกห้อง
+// if ($_SESSION['llw_role'] === 'att_teacher') {
+//     try {
+//         $pdo    = getPdo();
+//         $userId = $_SESSION['user_id'] ?? 0;
+//         $check  = $pdo->prepare("SELECT id FROM assembly_classrooms WHERE classroom = ? AND llw_user_id = ?");
+//         $check->execute([$classroom, $userId]);
+//         if (!$check->fetch()) {
+//             http_response_code(403);
+//             echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์เข้าถึงห้องนี้']);
+//             exit;
+//         }
+//     } catch (Exception $e) {
+//         http_response_code(500);
+//         echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
+//         exit;
+//     }
+// }
 
 try {
     $pdo       = getPdo();
