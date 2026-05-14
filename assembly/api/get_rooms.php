@@ -17,14 +17,35 @@ try {
     $pdo  = getPdo();
     $role = $_SESSION['llw_role'];
 
-    // ให้ทุกคนเห็นทุกห้องเรียน เพื่อให้ครูผู้สอนสามารถเช็คชื่อแทนครูที่ปรึกษาได้
-    $stmt = $pdo->query("
-        SELECT DISTINCT classroom
-        FROM att_students
-        WHERE academic_year = 2569
-          AND classroom REGEXP '^ม\\\\.[0-9]+/[0-9]+'
-        ORDER BY classroom
-    ");
+    // ให้เห็นเฉพาะห้องประจำชั้น (llw_class_advisors) และห้องที่สอน (att_subjects)
+    if ($role === 'att_teacher') {
+        $userId = $_SESSION['user_id'] ?? 0;
+        
+        $tq = $pdo->prepare("SELECT id FROM att_teachers WHERE llw_user_id = ? LIMIT 1");
+        $tq->execute([$userId]);
+        $teacherId = $tq->fetchColumn() ?: 0;
+        
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT classroom 
+            FROM (
+                SELECT classroom FROM llw_class_advisors WHERE user_id = :userId
+                UNION
+                SELECT classroom FROM att_subjects WHERE teacher_id = :teacherId
+            ) AS combined_rooms
+            WHERE classroom REGEXP '^ม\\\\.[0-9]+/[0-9]+'
+            ORDER BY classroom
+        ");
+        $stmt->execute(['userId' => $userId, 'teacherId' => $teacherId]);
+    } else {
+        // Admin เห็นเฉพาะห้องปกติ (ม.X/Y) ไม่รวมห้องวิชาเลือก
+        $stmt = $pdo->query("
+            SELECT DISTINCT classroom
+            FROM att_students
+            WHERE academic_year = 2569
+              AND classroom REGEXP '^ม\\\\.[0-9]+/[0-9]+'
+            ORDER BY classroom
+        ");
+    }
 
     $classrooms = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
