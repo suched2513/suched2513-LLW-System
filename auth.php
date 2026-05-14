@@ -41,7 +41,7 @@ $_SESSION['llw_role'] = $user['role'];
 $_SESSION['role'] = in_array($user['role'], ['super_admin','wfh_admin']) ? 'admin' : 'user';
 
 // ─── 3. Attendance teacher: ดึง teacher_id จาก att_teachers ────
-if (in_array($user['role'], ['att_teacher','super_admin'])) {
+if (in_array($user['role'], ['att_teacher', 'super_admin', 'club_admin'])) {
     $t = $conn->prepare("SELECT id, name FROM att_teachers WHERE username = ? LIMIT 1");
     $t->bind_param('s', $username);
     $t->execute();
@@ -66,6 +66,7 @@ $roleMap = [
     'wfh_staff'   => 'user/dashboard.php',
     'cb_admin'    => 'chromebook/index.php',
     'att_teacher' => 'attendance_system/dashboard.php',
+    'club_admin'  => 'club/index.php',
     'bus_admin'   => 'bus/admin/dashboard.php',
     'bus_finance' => 'bus/admin/dashboard.php',
 ];

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * login.php — LLW Platinum Login (Modern Dark Theme, Sarabun Font)
  */
@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['role']      = in_array($user['role'], ['super_admin','wfh_admin']) ? 'admin' : 'user';
             $_SESSION['force_password_change'] = (int)($user['force_password_change'] ?? 0);
 
-            if (in_array($user['role'], ['att_teacher','super_admin'])) {
+            if (in_array($user['role'], ['att_teacher','super_admin','club_admin'])) {
                 $t = $conn->prepare("SELECT id, name FROM att_teachers WHERE username = ? LIMIT 1");
                 $t->bind_param('s', $username); $t->execute();
                 $teacher = $t->get_result()->fetch_assoc(); $t->close();
@@ -149,6 +149,7 @@ function _redirect_by_role(string $role): void {
         'wfh_staff'   => '/user/dashboard.php',
         'cb_admin'    => '/chromebook/index.php',
         'att_teacher' => '/attendance_system/dashboard.php',
+        'club_admin'  => '/club/index.php',
         'bus_admin'   => '/bus/admin/dashboard.php',
         'bus_finance' => '/bus/admin/dashboard.php',
     ];
