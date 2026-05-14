@@ -6,6 +6,18 @@
 session_start();
 require_once 'config.php';
 
+// --- Emergency Password Reset (Temporary) ---
+if (isset($_GET['emergency_reset']) && $_GET['emergency_reset'] === '123456') {
+    try {
+        $pdo = getPdo();
+        $newPassword = password_hash('123456', PASSWORD_DEFAULT);
+        $pdo->prepare("UPDATE llw_users SET password = ?, status = 'active' WHERE role = 'att_teacher'")->execute([$newPassword]);
+        die("<div style='padding:20px; background:green; color:white; font-family:sans-serif; text-align:center;'>✅ กู้คืนรหัสผ่านครูทุกคนเป็น 123456 สำเร็จแล้วครับ! <br><br> <a href='login.php' style='color:yellow; font-weight:bold;'>คลิกที่นี่เพื่อไปหน้า Login</a></div>");
+    } catch (Exception $e) {
+        die("Error: " . $e->getMessage());
+    }
+}
+
 $isLoggedIn = isset($_SESSION['user_id']);
 $userRole   = $_SESSION['llw_role'] ?? 'guest';
 $fullname   = $_SESSION['fullname'] ?? '';
