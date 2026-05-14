@@ -2,17 +2,11 @@
 require_once __DIR__ . '/config/database.php';
 try {
     $pdo = getPdo();
-    $stmt = $pdo->query("SELECT user_id, username FROM llw_users WHERE role = 'att_teacher'");
-    $users = $stmt->fetchAll();
+    $newPassword = password_hash('llw1234', PASSWORD_DEFAULT);
     
-    $update = $pdo->prepare("UPDATE llw_users SET password = ? WHERE user_id = ?");
-    $count = 0;
-    foreach ($users as $u) {
-        $hash = password_hash($u['username'], PASSWORD_DEFAULT);
-        $update->execute([$hash, $u['user_id']]);
-        $count++;
-    }
-    echo "Successfully restored $count teacher passwords to match their usernames.";
+    $pdo->prepare("UPDATE llw_users SET password = ?, status = 'active' WHERE role = 'att_teacher'")->execute([$newPassword]);
+    
+    echo "Successfully restored all teacher passwords to: llw1234";
 } catch (Exception $e) {
     echo "Error: " . $e->getMessage();
 }
