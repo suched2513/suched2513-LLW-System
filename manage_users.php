@@ -33,6 +33,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $hash = password_hash('123456', PASSWORD_BCRYPT);
                 $stmt = $pdo->prepare("INSERT INTO llw_users (username,firstname,lastname,password,role,status,force_password_change) VALUES (?,?,?,?,?,'active',1)");
                 $stmt->execute([$username, $firstname, $lastname, $hash, $role]);
+                $newUserId = $pdo->lastInsertId();
+                
+                // Auto sync to att_teachers
+                $name = trim($firstname . ' ' . $lastname);
+                $ins = $pdo->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, ?, ?)");
+                $ins->execute([$name, $username, $hash, $newUserId]);
+                
                 $msg = "เพิ่มผู้ใช้ {$firstname} {$lastname} สำเร็จแล้ว (รหัสผ่านเริ่มต้น: 123456)";
             } catch (PDOException $e) {
                 if ($e->getCode() == 23000) {
@@ -130,6 +137,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $stmt = $pdo->prepare("UPDATE llw_users SET firstname=?, lastname=?, role=? WHERE user_id=?");
                 $stmt->execute([$firstname, $lastname, $role, $uid]);
+                
+                // Auto update att_teachers
+                $name = trim($firstname . ' ' . $lastname);
+                $upd = $pdo->prepare("UPDATE att_teachers SET name=? WHERE llw_user_id=?");
+                $upd->execute([$name, $uid]);
+                
+                // If not in att_teachers yet, insert them
+                $chk = $pdo->prepare("SELECT id FROM att_teachers WHERE llw_user_id=?");
+                $chk->execute([$uid]);
+                if (!$chk->fetch()) {
+                    $uInfo = $pdo->prepare("SELECT username, password FROM llw_users WHERE user_id=?");
+                    $uInfo->execute([$uid]);
+                    $uRow = $uInfo->fetch();
+                    if ($uRow) {
+                        $ins = $pdo->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, ?, ?)");
+                        $ins->execute([$name, $uRow['username'], $uRow['password'], $uid]);
+                    }
+                }
+                
                 $msg = "อัปเดตข้อมูล {$firstname} {$lastname} เรียบร้อยแล้ว";
             } catch (Exception $e) {
                 error_log($e->getMessage());
