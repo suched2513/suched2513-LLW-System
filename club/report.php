@@ -192,6 +192,14 @@ require_once __DIR__ . '/../components/layout_start.php';
         <!-- Unregistered -->
         <div class="tab-pane fade" id="tab-unreg">
             <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold text-danger">นักเรียนที่ยังไม่ลงทะเบียน (<?= count($unreg) ?> คน)</h6>
+                    <?php if (!empty($unreg)): ?>
+                    <a href="/club/print_unreg.php" target="_blank" class="btn btn-dark btn-sm rounded-3 shadow-sm">
+                        <i class="fas fa-print me-1"></i>พิมพ์รายชื่อ
+                    </a>
+                    <?php endif; ?>
+                </div>
                 <div class="card-body p-0">
                     <?php if (empty($unreg)): ?>
                     <div class="text-center py-5 text-muted"><i class="fas fa-check-circle fa-2x text-success mb-2 d-block"></i>นักเรียนทุกคนลงทะเบียนแล้ว</div>
