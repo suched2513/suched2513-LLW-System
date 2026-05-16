@@ -25,7 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (preg_match('/^\d+$/', $sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
         $nm  = trim($_POST['name'] ?? '');
         $cls = trim($_POST['classroom'] ?? '');
-        $nid = preg_replace('/\D/', '', trim($_POST['national_id'] ?? ''));
+        $nid = trim($_POST['national_id'] ?? '');
+        $nid = preg_replace('/[^a-zA-Z0-9]/', '', $nid); // Allow G and other letters, remove only special chars like -
 
         if (!$sid || !$nm || !$cls || strlen($nid) !== 13) {
             $msg = !$sid || !$nm || !$cls ? 'กรุณากรอกข้อมูลให้ครบถ้วน' : 'เลขบัตรประชาชนต้องมี 13 หลัก';
@@ -50,7 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dbid = (int)($_POST['student_db_id'] ?? 0);
         $nm   = trim($_POST['edit_name'] ?? '');
         $cls  = trim($_POST['edit_classroom'] ?? '');
-        $nid  = preg_replace('/\D/', '', trim($_POST['edit_national_id'] ?? ''));
+        $nid  = trim($_POST['edit_national_id'] ?? '');
+        $nid  = preg_replace('/[^a-zA-Z0-9]/', '', $nid);
 
         if (!$dbid || !$nm || !$cls) {
             $msg = 'กรุณากรอกข้อมูลให้ครบ'; $msgType = 'error';
@@ -122,7 +124,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (preg_match('/^\d+$/', $sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
                 $name = trim($row[1] ?? '');
                 $cls  = trim($row[2] ?? $_POST['classroom_fixed'] ?? '');
-                $nid  = preg_replace('/\D/', '', trim($row[3] ?? ''));
+                $nid  = trim($row[3] ?? '');
+                $nid  = preg_replace('/[^a-zA-Z0-9]/', '', $nid);
                 $mj   = trim($row[4] ?? ''); // Major from 5th column
                 $mj   = preg_replace('/\s+/', ' ', $mj); // Normalize spaces to single space
                 
