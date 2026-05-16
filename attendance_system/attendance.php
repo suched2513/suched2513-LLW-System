@@ -112,7 +112,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
 require_once '../components/layout_start.php';
 ?>
 
+<!-- Tom Select (For Searchable Dropdown) -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.default.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
 <style>
+    /* Tom Select Custom Styles */
+    .ts-control {
+        border-radius: 0.75rem !important;
+        background-color: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 0.625rem 1rem !important;
+        font-size: 0.875rem !important;
+        box-shadow: none !important;
+    }
+    .ts-control.focus {
+        box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.5) !important;
+        border-color: #60a5fa !important;
+    }
+    .ts-dropdown {
+        border-radius: 0.75rem !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+        font-size: 0.875rem !important;
+        z-index: 50 !important;
+    }
+    .ts-dropdown .optgroup-header {
+        font-weight: 800;
+        color: #475569;
+        background-color: #f1f5f9;
+        font-size: 0.75rem;
+    }
     .row-มา { background-color: rgba(236, 253, 245, 0.5); }
     .row-ขาด { background-color: rgba(254, 242, 242, 0.8); }
     .row-ลา { background-color: rgba(255, 251, 235, 0.8); }
@@ -141,8 +171,8 @@ require_once '../components/layout_start.php';
             </div>
             <div class="lg:col-span-2">
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">รายวิชา</label>
-                <select name="subject_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition-all" required>
-                    <option value="">-- เลือกรายวิชา --</option>
+                <select id="subject-select" name="subject_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition-all" required>
+                    <option value="">-- ค้นหารายวิชา --</option>
                     <?php
                     $regular = array_filter($subjects, fn($s) => empty($s['is_elective']));
                     $elective = array_filter($subjects, fn($s) => !empty($s['is_elective']));
@@ -447,7 +477,16 @@ require_once '../components/layout_start.php';
         return false;
     }
 
-    document.addEventListener('DOMContentLoaded', updateCounts);
+    document.addEventListener('DOMContentLoaded', () => {
+        updateCounts();
+        if(document.getElementById('subject-select')){
+            new TomSelect('#subject-select', {
+                create: false,
+                sortField: false,
+                placeholder: '-- ค้นหารายวิชา... --'
+            });
+        }
+    });
 </script>
 
 <?php 
