@@ -6,7 +6,8 @@ if (!isset($_SESSION['llw_role'])) {
     header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
 $userRole = $_SESSION['llw_role'];
-if (!in_array($userRole, ['super_admin', 'club_admin', 'att_teacher'])) {
+$allowedRoles = ['super_admin', 'club_admin', 'att_teacher', 'wfh_admin', 'wfh_staff', 'finance_head', 'procurement_head', 'deputy_director', 'director'];
+if (!in_array($userRole, $allowedRoles, true)) {
     header('Location: ' . $base_path . '/login.php'); exit();
 }
 
@@ -47,7 +48,9 @@ if ($id > 0) {
 $stmtT = $pdo->query("
     SELECT at.id, at.name
     FROM att_teachers at
-    JOIN llw_users lu ON lu.user_id = at.llw_user_id AND lu.role = 'att_teacher' AND lu.status = 'active'
+    JOIN llw_users lu ON lu.user_id = at.llw_user_id
+    WHERE lu.status = 'active'
+      AND lu.role IN ('att_teacher', 'club_admin', 'super_admin', 'wfh_admin', 'wfh_staff', 'finance_head', 'procurement_head', 'deputy_director', 'director')
     ORDER BY at.name
 ");
 $teachers = $stmtT->fetchAll(PDO::FETCH_ASSOC);
