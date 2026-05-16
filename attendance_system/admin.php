@@ -335,8 +335,26 @@ require_once '../components/layout_start.php';
                                 </div>
                             </td>
                             <td class="px-6 py-4 font-mono text-xs text-blue-600"><?= $t['username'] ?></td>
-                            <td class="px-6 py-4 text-center">
-                                <span class="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-xs"><?= $t['s_count'] ?> วิชา</span>
+                            <td class="px-6 py-4 text-left align-top max-w-xs">
+                                <span class="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-xs inline-block mb-1.5"><?= $t['s_count'] ?> วิชา</span>
+                                <?php if ($t['s_count'] > 0): ?>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <?php 
+                                    $t_subjs = array_filter($subjects, fn($s) => $s['teacher_id'] == $t['id']);
+                                    foreach($t_subjs as $ts): 
+                                        $is_elec = !empty($ts['is_elective']) ? '<i class="bi bi-star-fill text-amber-400 ms-1 text-[8px]"></i>' : '';
+                                    ?>
+                                        <span class="px-2 py-1 bg-slate-50 text-slate-600 border border-slate-200 rounded-md text-[10px] font-bold leading-tight" title="<?= htmlspecialchars($ts['subject_name']) ?>">
+                                            <span class="text-blue-600"><?= htmlspecialchars($ts['subject_code']) ?></span> 
+                                            <span class="text-slate-400 mx-0.5">|</span> 
+                                            <?= htmlspecialchars($ts['classroom']) ?>
+                                            <?= $is_elec ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                </div>
+                                <?php else: ?>
+                                <div class="text-[10px] text-slate-400 mt-1">ยังไม่มีวิชาสอน</div>
+                                <?php endif; ?>
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <span class="px-2 py-0.5 rounded-lg text-xs font-bold <?= $t['user_status']==='active' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600' ?>">
