@@ -824,7 +824,10 @@ function selectByMajor(select, major) {
     
     allCheckboxes.forEach(cb => {
         const current = normalize(cb.getAttribute('data-major') || '');
-        if (current === target && target !== '') {
+        const group = cb.closest('.cls-group');
+        
+        // เช็คว่าระดับชั้นถูกแสดงอยู่ (ไม่โดนซ่อนจากการกรอง)
+        if (current === target && target !== '' && (!group || group.style.display !== 'none')) {
             cb.checked = true;
             updateLabelStyle(cb);
             count++;
