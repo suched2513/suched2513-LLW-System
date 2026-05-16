@@ -8,7 +8,8 @@ if (!isset($_SESSION['llw_role'])) {
     echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบ']);
     exit;
 }
-if (!in_array($_SESSION['llw_role'], ['super_admin', 'club_admin', 'att_teacher'])) {
+$allowedRoles = ['super_admin', 'club_admin', 'att_teacher', 'wfh_admin', 'wfh_staff', 'finance_head', 'procurement_head', 'deputy_director', 'director', 'cb_admin', 'bus_admin', 'bus_finance'];
+if (!in_array($_SESSION['llw_role'], $allowedRoles, true)) {
     http_response_code(403);
     echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์']);
     exit;
