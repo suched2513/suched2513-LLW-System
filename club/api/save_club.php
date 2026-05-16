@@ -8,7 +8,7 @@ if (!isset($_SESSION['llw_role'])) {
     echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบ']);
     exit;
 }
-$allowedRoles = ['super_admin', 'club_admin', 'att_teacher', 'wfh_admin', 'wfh_staff', 'finance_head', 'procurement_head', 'deputy_director', 'director'];
+$allowedRoles = ['super_admin', 'club_admin', 'att_teacher', 'wfh_admin', 'wfh_staff', 'finance_head', 'procurement_head', 'deputy_director', 'director', 'cb_admin', 'bus_admin', 'bus_finance'];
 if (!in_array($userRole, $allowedRoles, true)) {
     http_response_code(403);
     echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์']);
@@ -65,12 +65,7 @@ $pass_threshold = isset($input['pass_threshold']) ? (int)$input['pass_threshold'
 
 // ─── TEACHER RESTRICTIONS ───
 if ($userRole === 'att_teacher') {
-    // 1. Block creation
-    if ($id === 0) {
-        http_response_code(403);
-        echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์สร้างชุมนุมใหม่']);
-        exit;
-    }
+    // Teachers can now create clubs
     
     // 2. Lock protected fields by fetching current values
     try {

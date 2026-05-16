@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) {
     header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
-$allowed = ['att_teacher', 'super_admin', 'club_admin', 'wfh_admin', 'wfh_staff', 'finance_head', 'procurement_head', 'deputy_director', 'director'];
+$allowed = ['att_teacher', 'super_admin', 'club_admin', 'wfh_admin', 'wfh_staff', 'finance_head', 'procurement_head', 'deputy_director', 'director', 'cb_admin', 'bus_admin', 'bus_finance'];
 if (!in_array($_SESSION['llw_role'], $allowed, true)) {
     header('Location: ' . $base_path . '/login.php'); exit();
 }

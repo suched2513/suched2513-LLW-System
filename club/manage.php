@@ -6,7 +6,7 @@ if (!isset($_SESSION['llw_role'])) {
     header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
 $userRole = $_SESSION['llw_role'];
-$allowedRoles = ['super_admin', 'club_admin', 'att_teacher', 'wfh_admin', 'wfh_staff', 'finance_head', 'procurement_head', 'deputy_director', 'director'];
+$allowedRoles = ['super_admin', 'club_admin', 'att_teacher', 'wfh_admin', 'wfh_staff', 'finance_head', 'procurement_head', 'deputy_director', 'director', 'cb_admin', 'bus_admin', 'bus_finance'];
 if (!in_array($userRole, $allowedRoles, true)) {
     header('Location: ' . $base_path . '/login.php'); exit();
 }
@@ -15,9 +15,7 @@ $pdo = getPdo();
 $id  = (int)($_GET['id'] ?? 0);
 $club = null;
 
-if ($id === 0 && $userRole === 'att_teacher') {
-    header('Location: /club/index.php'); exit();
-}
+// att_teacher can now create clubs
 
 // Resolve current teacher record for att_teacher role
 $myTeacherId   = 0;
@@ -50,7 +48,7 @@ $stmtT = $pdo->query("
     FROM att_teachers at
     JOIN llw_users lu ON lu.user_id = at.llw_user_id
     WHERE lu.status = 'active'
-      AND lu.role IN ('att_teacher', 'club_admin', 'super_admin', 'wfh_admin', 'wfh_staff', 'finance_head', 'procurement_head', 'deputy_director', 'director')
+      AND lu.role IN ('att_teacher', 'club_admin', 'super_admin', 'wfh_admin', 'wfh_staff', 'finance_head', 'procurement_head', 'deputy_director', 'director', 'cb_admin', 'bus_admin', 'bus_finance')
     ORDER BY at.name
 ");
 $teachers = $stmtT->fetchAll(PDO::FETCH_ASSOC);
