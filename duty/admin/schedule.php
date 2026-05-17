@@ -9,6 +9,13 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
     header('Location: /login.php'); exit();
 }
 
+if (isset($_GET['trigger_notification']) && $_SESSION['llw_role'] === 'super_admin') {
+    define('DUTY_CRON_INTERNAL', true);
+    require_once __DIR__ . '/../cron/notify_duty.php';
+    echo "<script>alert('ส่งแจ้งเตือนเข้า Telegram ทันทีเรียบร้อยแล้ว!'); window.location.href='schedule.php';</script>";
+    exit();
+}
+
 $pdo = getPdo();
 
 // ── Auto-migrate: ตรวจ duty_day_groups โดยตรง ──
@@ -212,6 +219,11 @@ require_once __DIR__ . '/../../components/layout_start.php';
             <a href="?view=month&shift=<?= $shiftParam ?>&date=<?= $dateParam ?>" 
                class="btn <?= $viewParam==='month' ? 'btn-primary' : 'btn-outline-primary' ?>">เดือน</a>
         </div>
+        <?php if ($_SESSION['llw_role'] === 'super_admin'): ?>
+        <a href="?trigger_notification=1" onclick="return confirm('ยืนยันส่งแจ้งเตือนตารางเวรของวันนี้เข้า Telegram ทันที?');" class="btn btn-warning btn-sm rounded-pill px-3 me-2 shadow-sm fw-bold">
+            <i class="fas fa-bell me-1"></i>ทดสอบแจ้งเตือน
+        </a>
+        <?php endif; ?>
         <a href="teachers.php" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
             <i class="fas fa-users me-1"></i>จัดการครูเวร
         </a>
