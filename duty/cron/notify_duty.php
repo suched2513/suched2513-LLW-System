@@ -141,6 +141,10 @@ if (!empty($tomorrowDuty['day']) || !empty($tomorrowDuty['night'])) {
     }
 }
 
+$msg .= "\n━━━━━━━━━━━━━━━\n";
+$msg .= "📸 <b>ลิงก์ส่งรายงานเวร:</b>\n";
+$msg .= "👉 https://llw.krusuched.com/duty/\n";
+
 // ── ส่ง ──────────────────────────────────────────────────────────────────
 $res = Telegram::sendMessage($msg, $chatId);
 $ok  = $res['ok'] ?? false;
