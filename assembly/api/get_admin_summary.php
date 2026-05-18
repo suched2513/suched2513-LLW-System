@@ -46,7 +46,7 @@ try {
     $stmt = $pdo->prepare("
         SELECT
             a.classroom,
-            c.teacher_name,
+            COALESCE(NULLIF(CONCAT(u.firstname, ' ', u.lastname), ' '), c.teacher_name) AS teacher_name,
             COUNT(*) AS total_checks,
             SUM(a.status = 'ม') AS present_count,
             SUM(a.nail  = 'ถูก') AS nail_ok,
@@ -58,8 +58,9 @@ try {
             SUM(CASE WHEN a.note IS NOT NULL AND a.note != '' THEN 1 ELSE 0 END) AS note_count
         FROM assembly_attendance a
         LEFT JOIN assembly_classrooms c ON c.classroom = a.classroom
+        LEFT JOIN llw_users u ON u.user_id = c.llw_user_id
         WHERE $whereStr
-        GROUP BY a.classroom, c.teacher_name
+        GROUP BY a.classroom, u.firstname, u.lastname, c.teacher_name
         ORDER BY a.classroom
     ");
     $stmt->execute($params);

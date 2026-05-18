@@ -108,7 +108,12 @@ $totalRooms    = $pdo->query("SELECT COUNT(*) FROM assembly_classrooms")->fetchC
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-black text-slate-700"><?= htmlspecialchars($c['classroom'], ENT_QUOTES, 'UTF-8') ?></p>
-                    <p class="text-xs text-slate-400 truncate"><?= htmlspecialchars($c['teacher_name'] ?? 'ยังไม่ระบุครู', ENT_QUOTES, 'UTF-8') ?></p>
+                    <?php
+                        $displayName = (!empty($c['firstname']) || !empty($c['lastname']))
+                            ? trim($c['firstname'] . ' ' . $c['lastname'])
+                            : ($c['teacher_name'] ?? '');
+                    ?>
+                    <p class="text-xs text-slate-400 truncate"><?= htmlspecialchars($displayName ?: 'ยังไม่ระบุครู', ENT_QUOTES, 'UTF-8') ?></p>
                 </div>
                 <select class="bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-medium focus:ring-2 focus:ring-blue-400 outline-none"
                         onchange="assignTeacher('<?= htmlspecialchars($c['classroom'], ENT_QUOTES, 'UTF-8') ?>', this.value)">

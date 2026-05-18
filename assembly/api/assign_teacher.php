@@ -30,12 +30,21 @@ if ($classroom === '') {
 
 try {
     $pdo = getPdo();
+
+    $teacherName = null;
+    if ($userId) {
+        $nameRow = $pdo->prepare("SELECT CONCAT(firstname, ' ', lastname) AS name FROM llw_users WHERE user_id = ? LIMIT 1");
+        $nameRow->execute([$userId]);
+        $row = $nameRow->fetch();
+        $teacherName = $row ? trim($row['name']) : null;
+    }
+
     $stmt = $pdo->prepare("
-        INSERT INTO assembly_classrooms (classroom, llw_user_id)
-        VALUES (:classroom, :user_id)
-        ON DUPLICATE KEY UPDATE llw_user_id = VALUES(llw_user_id)
+        INSERT INTO assembly_classrooms (classroom, llw_user_id, teacher_name)
+        VALUES (:classroom, :user_id, :teacher_name)
+        ON DUPLICATE KEY UPDATE llw_user_id = VALUES(llw_user_id), teacher_name = COALESCE(VALUES(teacher_name), teacher_name)
     ");
-    $stmt->execute([':classroom' => $classroom, ':user_id' => $userId]);
+    $stmt->execute([':classroom' => $classroom, ':user_id' => $userId, ':teacher_name' => $teacherName]);
     echo json_encode(['status' => 'success']);
 } catch (Exception $e) {
     error_log('[Assembly] assign_teacher: ' . $e->getMessage());

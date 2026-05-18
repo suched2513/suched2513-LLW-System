@@ -25,8 +25,10 @@ try {
 
     // ดึงทุกห้อง
     $roomStmt = $pdo->query("
-        SELECT c.classroom, c.teacher_name
+        SELECT c.classroom,
+               COALESCE(NULLIF(CONCAT(u.firstname, ' ', u.lastname), ' '), c.teacher_name) AS teacher_name
         FROM assembly_classrooms c
+        LEFT JOIN llw_users u ON u.user_id = c.llw_user_id
         ORDER BY c.classroom
     ");
     $rooms = $roomStmt->fetchAll();
