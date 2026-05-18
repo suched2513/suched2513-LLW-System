@@ -138,6 +138,18 @@ if ($action === 'add_subject') {
         }
         $msg = "เพิ่มวิชาสำเร็จ" . ($is_elective ? ' (วิชาเลือก — กรุณา run migration ก่อน)' : '');
     }
+} elseif ($action === 'edit_subject') {
+    $sid  = (int)$_POST['subject_id'];
+    $tid  = (int)$_POST['teacher_id'];
+    $code = trim($_POST['subject_code'] ?? '');
+    $name = trim($_POST['subject_name'] ?? '');
+    $cls  = trim($_POST['classroom'] ?? '');
+    if ($sid && $tid && $code && $name && $cls) {
+        $pdo->prepare("UPDATE att_subjects SET teacher_id=?, subject_code=?, subject_name=?, classroom=? WHERE id=?")->execute([$tid, $code, $name, $cls, $sid]);
+        $msg = "แก้ไขวิชา '$code' สำเร็จ";
+    } else {
+        $msg = 'ข้อมูลไม่ครบ'; $msgType = 'error';
+    }
 } elseif ($action === 'delete_subject') {
     $sid = (int)$_POST['subject_id'];
     if ($sid) { $pdo->prepare("DELETE FROM att_subjects WHERE id=?")->execute([$sid]); $msg = 'ลบวิชาสำเร็จ'; }
@@ -584,7 +596,9 @@ require_once '../components/layout_start.php';
                                 </button>
                                 <?php endif; ?>
                             </td>
-                            <td class="px-6 py-4 text-right">
+                            <td class="px-6 py-4 text-right text-nowrap">
+                                <button onclick="editSubject(<?= $s['id'] ?>, '<?= addslashes($s['subject_code']) ?>', '<?= addslashes($s['subject_name']) ?>', '<?= addslashes($s['classroom']) ?>', <?= (int)$s['teacher_id'] ?>)"
+                                        class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition me-1" title="แก้ไข"><i class="bi bi-pencil-fill"></i></button>
                                 <button onclick="deleteSubject(<?= $s['id'] ?>, '<?= addslashes($s['subject_name']) ?>')" class="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition"><i class="bi bi-trash3"></i></button>
                             </td>
                         </tr>
@@ -757,6 +771,15 @@ require_once '../components/layout_start.php';
 
 
 <script>
+function submitForm(fields) {
+    const f = document.createElement('form'); f.method = 'POST';
+    const csrf = document.querySelector('input[name="csrf_token"]')?.value ?? '';
+    let html = `<input name="csrf_token" value="${csrf}">`;
+    for (const [k, v] of Object.entries(fields)) html += `<input name="${k}" value="${String(v).replace(/"/g,'&quot;')}">`;
+    f.innerHTML = html;
+    document.body.appendChild(f); f.submit();
+}
+
 function showTab(tab) {
     ['teachers','students','subjects','enrollment'].forEach(t => {
         const pane = document.getElementById('pane-'+t);
@@ -892,11 +915,7 @@ function deleteTeacher(id, name) {
         title: 'ลบข้อมูลครู?', text: `ต้องการลบครู "${name}" หรือไม่? วิชาที่เกี่ยวข้องจะถูกลบด้วย`, icon: 'warning',
         showCancelButton: true, confirmButtonColor: '#e11d48', confirmButtonText: 'ยืนยันลบข้อมูล', cancelButtonText: 'ยกเลิก'
     }).then(r => {
-        if(r.isConfirmed){
-            const f = document.createElement('form'); f.method='POST';
-            f.innerHTML = `<input name="action" value="delete_teacher"><input name="teacher_id" value="${id}">`;
-            document.body.appendChild(f); f.submit();
-        }
+        if(r.isConfirmed){ submitForm({ action: 'delete_teacher', teacher_id: id }); }
     });
 }
 
@@ -923,16 +942,64 @@ async function toggleElective(id, btn) {
     btn.disabled = false;
 }
 
+function editSubject(id, code, name, classroom, teacherId) {
+    const teacherOptions = <?= json_encode(array_map(fn($t) => ['id' => $t['id'], 'name' => $t['name']], $teachers)) ?>;
+    const opts = teacherOptions.map(t =>
+        `<option value="${t.id}" ${t.id == teacherId ? 'selected' : ''}>${t.name.replace(/"/g,'&quot;')}</option>`
+    ).join('');
+    Swal.fire({
+        title: 'แก้ไขวิชา',
+        html: `
+        <div class="text-left space-y-3 mt-2">
+            <div>
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">ครูผู้สอน</label>
+                <select id="es_teacher" class="swal2-select mt-1" style="width:100%;display:block">${opts}</select>
+            </div>
+            <div class="flex gap-2">
+                <div style="flex:1">
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">รหัสวิชา</label>
+                    <input id="es_code" class="swal2-input mt-1" value="${code}">
+                </div>
+                <div style="flex:1">
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">ห้องเรียน</label>
+                    <input id="es_classroom" class="swal2-input mt-1" value="${classroom}">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">ชื่อวิชา</label>
+                <input id="es_name" class="swal2-input mt-1" value="${name}">
+            </div>
+        </div>`,
+        confirmButtonText: 'บันทึก',
+        confirmButtonColor: '#2563eb',
+        showCancelButton: true,
+        cancelButtonText: 'ยกเลิก',
+        focusConfirm: false,
+        preConfirm: () => {
+            const tid = document.getElementById('es_teacher').value;
+            const c   = document.getElementById('es_code').value.trim();
+            const n   = document.getElementById('es_name').value.trim();
+            const cls = document.getElementById('es_classroom').value.trim();
+            if (!tid || !c || !n || !cls) { Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบ'); return false; }
+            return { tid, c, n, cls };
+        }
+    }).then(r => {
+        if (r.isConfirmed) {
+            submitForm({
+                action: 'edit_subject', subject_id: id,
+                teacher_id: r.value.tid, subject_code: r.value.c,
+                subject_name: r.value.n, classroom: r.value.cls
+            });
+        }
+    });
+}
+
 function deleteSubject(id, name) {
     Swal.fire({
         title: 'ลบวิชา?', text: `ต้องการลบวิชา "${name}" หรือไม่?`, icon: 'warning',
         showCancelButton: true, confirmButtonColor: '#e11d48', confirmButtonText: 'ยืนยันลบ', cancelButtonText: 'ยกเลิก'
     }).then(r => {
-        if(r.isConfirmed){
-            const f = document.createElement('form'); f.method='POST';
-            f.innerHTML = `<input name="action" value="delete_subject"><input name="subject_id" value="${id}">`;
-            document.body.appendChild(f); f.submit();
-        }
+        if(r.isConfirmed){ submitForm({ action: 'delete_subject', subject_id: id }); }
     });
 }
 
@@ -968,13 +1035,7 @@ function archiveStudent(id, name) {
         }
     }).then(r => {
         if (r.isConfirmed) {
-            const f = document.createElement('form'); f.method = 'POST';
-            f.innerHTML = `
-                <input name="action" value="delete_student">
-                <input name="student_db_id" value="${id}">
-                <input name="status" value="${r.value.status}">
-                <input name="status_note" value="${r.value.note}">`;
-            document.body.appendChild(f); f.submit();
+            submitForm({ action: 'delete_student', student_db_id: id, status: r.value.status, status_note: r.value.note });
         }
     });
 }
@@ -1014,14 +1075,7 @@ function editStudent(id, sidCode, name, classroom) {
         }
     }).then(r => {
         if (r.isConfirmed) {
-            const f = document.createElement('form'); f.method = 'POST';
-            f.innerHTML = `
-                <input name="action" value="edit_student">
-                <input name="edit_id" value="${id}">
-                <input name="student_id_code" value="${r.value.sid}">
-                <input name="student_name" value="${r.value.nm}">
-                <input name="student_classroom" value="${r.value.cls}">`;
-            document.body.appendChild(f); f.submit();
+            submitForm({ action: 'edit_student', edit_id: id, student_id_code: r.value.sid, student_name: r.value.nm, student_classroom: r.value.cls });
         }
     });
 }
