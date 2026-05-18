@@ -46,7 +46,10 @@ try {
     $stmt = $pdo->prepare("
         SELECT
             a.classroom,
-            COALESCE(NULLIF(CONCAT(u.firstname, ' ', u.lastname), ' '), c.teacher_name) AS teacher_name,
+            (SELECT GROUP_CONCAT(CONCAT(u2.firstname, ' ', u2.lastname) ORDER BY ca2.id SEPARATOR ' / ')
+             FROM llw_class_advisors ca2
+             JOIN llw_users u2 ON u2.user_id = ca2.user_id
+             WHERE ca2.classroom = a.classroom) AS teacher_name,
             COUNT(*) AS total_checks,
             SUM(a.status = 'ม') AS present_count,
             SUM(a.nail  = 'ถูก') AS nail_ok,
@@ -57,10 +60,8 @@ try {
             SUM(a.shoes = 'ถูก') AS shoes_ok,
             SUM(CASE WHEN a.note IS NOT NULL AND a.note != '' THEN 1 ELSE 0 END) AS note_count
         FROM assembly_attendance a
-        LEFT JOIN assembly_classrooms c ON c.classroom = a.classroom
-        LEFT JOIN llw_users u ON u.user_id = c.llw_user_id
         WHERE $whereStr
-        GROUP BY a.classroom, u.firstname, u.lastname, c.teacher_name
+        GROUP BY a.classroom
         ORDER BY a.classroom
     ");
     $stmt->execute($params);

@@ -23,12 +23,14 @@ $date = trim($_GET['date'] ?? date('Y-m-d'));
 try {
     $pdo = getPdo();
 
-    // ดึงทุกห้อง
+    // ดึงทุกห้อง พร้อมชื่อครูที่ปรึกษาจาก llw_class_advisors
     $roomStmt = $pdo->query("
         SELECT c.classroom,
-               COALESCE(NULLIF(CONCAT(u.firstname, ' ', u.lastname), ' '), c.teacher_name) AS teacher_name
+               GROUP_CONCAT(CONCAT(u.firstname, ' ', u.lastname) ORDER BY ca.id SEPARATOR ' / ') AS teacher_name
         FROM assembly_classrooms c
-        LEFT JOIN llw_users u ON u.user_id = c.llw_user_id
+        LEFT JOIN llw_class_advisors ca ON ca.classroom = c.classroom
+        LEFT JOIN llw_users u ON u.user_id = ca.user_id
+        GROUP BY c.classroom
         ORDER BY c.classroom
     ");
     $rooms = $roomStmt->fetchAll();
