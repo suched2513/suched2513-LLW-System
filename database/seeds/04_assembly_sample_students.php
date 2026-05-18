@@ -79,11 +79,11 @@ return function (PDO $pdo) {
         ['60205', 'นายเมธาสิทธิ์ ทรงธรรม',     'ม.6/2', 'นายอรรถพล นิยมดี'],
     ];
 
-    // ─── Upsert ห้องเรียน ───
+    // ─── Upsert ห้องเรียน (ไม่ทับ teacher_name ที่มีอยู่แล้ว) ───
     $stmtRoom = $pdo->prepare("
         INSERT INTO assembly_classrooms (classroom, teacher_name)
         VALUES (:classroom, :teacher_name)
-        ON DUPLICATE KEY UPDATE teacher_name = VALUES(teacher_name)
+        ON DUPLICATE KEY UPDATE classroom = VALUES(classroom)
     ");
 
     // ─── Upsert นักเรียน ───
