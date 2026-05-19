@@ -14,6 +14,37 @@ $pdo = getPdo();
 $msg = '';
 $msgType = 'success';
 
+// ─── Role Catalog ─── (label, description, color class, group)
+$ROLE_CATALOG = [
+    'super_admin'      => ['label' => 'Super Admin',       'desc' => 'สิทธิ์สูงสุดทุกระบบ',         'color' => 'bg-purple-100 text-purple-700 border-purple-200',     'group' => 'admin'],
+    'director'         => ['label' => 'Director',          'desc' => 'ผู้อำนวยการ — ลงนามขั้นสุดท้าย',   'color' => 'bg-violet-100 text-violet-700 border-violet-200',     'group' => 'exec'],
+    'deputy_director'  => ['label' => 'Deputy Director',   'desc' => 'รองผู้อำนวยการ',                 'color' => 'bg-indigo-100 text-indigo-700 border-indigo-200',     'group' => 'exec'],
+    'wfh_admin'        => ['label' => 'WFH Admin',         'desc' => 'ตรวจสอบใบลา / WFH',              'color' => 'bg-blue-100 text-blue-700 border-blue-200',           'group' => 'admin'],
+    'finance_head'     => ['label' => 'Finance Head',      'desc' => 'หัวหน้าการเงิน — ลงนาม',          'color' => 'bg-emerald-100 text-emerald-700 border-emerald-200', 'group' => 'finance'],
+    'procurement_head' => ['label' => 'Procurement Head',  'desc' => 'หัวหน้าพัสดุ — ลงนาม',             'color' => 'bg-teal-100 text-teal-700 border-teal-200',           'group' => 'finance'],
+    'cb_admin'         => ['label' => 'CB Admin',          'desc' => 'จัดการ Chromebook',                'color' => 'bg-cyan-100 text-cyan-700 border-cyan-200',           'group' => 'module'],
+    'bus_admin'        => ['label' => 'Bus Admin',         'desc' => 'จัดการระบบรถรับส่ง',                'color' => 'bg-orange-100 text-orange-700 border-orange-200',     'group' => 'module'],
+    'bus_finance'      => ['label' => 'Bus Finance',       'desc' => 'การเงินรถรับส่ง',                  'color' => 'bg-amber-100 text-amber-700 border-amber-200',        'group' => 'module'],
+    'club_admin'       => ['label' => 'Club Admin',        'desc' => 'แอดมินจัดการชุมนุม',                'color' => 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200', 'group' => 'module'],
+    'att_teacher'      => ['label' => 'ครูผู้สอน',          'desc' => 'ระบบครูทั่วไป (เช็คชื่อ)',           'color' => 'bg-rose-100 text-rose-700 border-rose-200',           'group' => 'staff'],
+    'wfh_staff'        => ['label' => 'WFH Staff',         'desc' => 'บุคลากรทั่วไป (ลงเวลา)',            'color' => 'bg-slate-100 text-slate-700 border-slate-200',        'group' => 'staff'],
+];
+$ALLOWED_ROLES = array_keys($ROLE_CATALOG);
+
+// บันทึก role-set ของผู้ใช้ลง pivot (เปลี่ยน roles ทั้งชุดและ set primary)
+$syncUserRoles = function (int $uid, array $roles, string $primary) use ($pdo): void {
+    $roles = array_values(array_unique(array_filter($roles)));
+    if (!in_array($primary, $roles, true)) {
+        $primary = $roles[0] ?? '';
+    }
+    $del = $pdo->prepare("DELETE FROM llw_user_roles WHERE user_id = ?");
+    $del->execute([$uid]);
+    $ins = $pdo->prepare("INSERT INTO llw_user_roles (user_id, role, is_primary) VALUES (?, ?, ?)");
+    foreach ($roles as $r) {
+        $ins->execute([$uid, $r, $r === $primary ? 1 : 0]);
+    }
+};
+
 // ─── POST Actions ────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -23,25 +54,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $username  = trim($_POST['username']);
         $firstname = trim($_POST['firstname']);
         $lastname  = trim($_POST['lastname']);
-        $role      = $_POST['role'];
+        $roles     = array_values(array_intersect((array)($_POST['roles'] ?? []), $ALLOWED_ROLES));
+        $primary   = $_POST['primary_role'] ?? '';
 
-        $allowed_roles = ['super_admin','club_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance','finance_head','procurement_head','deputy_director','director'];
-        if (!in_array($role, $allowed_roles)) {
-            $msg = 'Role ไม่ถูกต้อง'; $msgType = 'error';
-        } else {
+        if (empty($roles)) {
+            $msg = 'กรุณาเลือกอย่างน้อย 1 สิทธิ์การใช้งาน'; $msgType = 'error';
+        } elseif (!in_array($primary, $roles, true)) {
+            $primary = $roles[0];
+        }
+
+        if ($msgType !== 'error') {
             try {
+                $pdo->beginTransaction();
                 $hash = password_hash('123456', PASSWORD_BCRYPT);
                 $stmt = $pdo->prepare("INSERT INTO llw_users (username,firstname,lastname,password,role,status,force_password_change) VALUES (?,?,?,?,?,'active',1)");
-                $stmt->execute([$username, $firstname, $lastname, $hash, $role]);
-                $newUserId = $pdo->lastInsertId();
-                
-                // Auto sync to att_teachers
+                $stmt->execute([$username, $firstname, $lastname, $hash, $primary]);
+                $newUserId = (int)$pdo->lastInsertId();
+
+                $syncUserRoles($newUserId, $roles, $primary);
+
+                // Auto sync to att_teachers (ทุกคนสามารถเป็นครูได้)
                 $name = trim($firstname . ' ' . $lastname);
                 $ins = $pdo->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, ?, ?)");
                 $ins->execute([$name, $username, $hash, $newUserId]);
-                
-                $msg = "เพิ่มผู้ใช้ {$firstname} {$lastname} สำเร็จแล้ว (รหัสผ่านเริ่มต้น: 123456)";
+
+                $pdo->commit();
+                $msg = "เพิ่มผู้ใช้ {$firstname} {$lastname} สำเร็จแล้ว (รหัสผ่านเริ่มต้น: 123456) — กำหนด " . count($roles) . " สิทธิ์";
             } catch (PDOException $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
                 if ($e->getCode() == 23000) {
                     $msg = 'Username นี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น'; $msgType = 'error';
                 } else {
@@ -107,10 +147,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = 'ไม่มีสิทธิ์'; $msgType = 'error';
         } else {
             $myId = (int)$_SESSION['user_id'];
-            $stmt = $pdo->prepare("UPDATE llw_users SET role = 'att_teacher' WHERE role != 'super_admin' AND user_id != ?");
-            $stmt->execute([$myId]);
-            $affected = $stmt->rowCount();
-            $msg = "Reset สำเร็จ — อัปเดต {$affected} บัญชีเป็น att_teacher (ยกเว้น super_admin)";
+            try {
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare("UPDATE llw_users SET role = 'att_teacher' WHERE role != 'super_admin' AND user_id != ?");
+                $stmt->execute([$myId]);
+                $affected = $stmt->rowCount();
+                // sync pivot: ลบทุก role ของผู้ใช้ที่ถูก reset แล้วใส่ att_teacher
+                $pdo->prepare("DELETE lur FROM llw_user_roles lur INNER JOIN llw_users u ON u.user_id = lur.user_id WHERE u.role != 'super_admin' AND u.user_id != ?")->execute([$myId]);
+                $pdo->prepare("INSERT IGNORE INTO llw_user_roles (user_id, role, is_primary) SELECT user_id, 'att_teacher', 1 FROM llw_users WHERE role = 'att_teacher' AND user_id != ?")->execute([$myId]);
+                $pdo->commit();
+                $msg = "Reset สำเร็จ — อัปเดต {$affected} บัญชีเป็น att_teacher (ยกเว้น super_admin)";
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                error_log($e->getMessage());
+                $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+            }
         }
     }
 
@@ -129,14 +180,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $uid       = (int)$_POST['user_id'];
         $firstname = trim($_POST['firstname'] ?? '');
         $lastname  = trim($_POST['lastname'] ?? '');
-        $role      = $_POST['role'] ?? '';
-        $allowed_roles = ['super_admin','club_admin','wfh_admin','wfh_staff','cb_admin','att_teacher','bus_admin','bus_finance','finance_head','procurement_head','deputy_director','director'];
-        if ($uid <= 0 || empty($firstname) || !in_array($role, $allowed_roles)) {
+        $roles     = array_values(array_intersect((array)($_POST['roles'] ?? []), $ALLOWED_ROLES));
+        $primary   = $_POST['primary_role'] ?? '';
+
+        if ($uid <= 0 || empty($firstname)) {
             $msg = 'ข้อมูลไม่ถูกต้อง'; $msgType = 'error';
+        } elseif (empty($roles)) {
+            $msg = 'กรุณาเลือกอย่างน้อย 1 สิทธิ์การใช้งาน'; $msgType = 'error';
         } else {
+            if (!in_array($primary, $roles, true)) $primary = $roles[0];
             try {
+                $pdo->beginTransaction();
                 $stmt = $pdo->prepare("UPDATE llw_users SET firstname=?, lastname=?, role=? WHERE user_id=?");
-                $stmt->execute([$firstname, $lastname, $role, $uid]);
+                $stmt->execute([$firstname, $lastname, $primary, $uid]);
+
+                $syncUserRoles($uid, $roles, $primary);
+                $pdo->commit();
                 
                 // Auto update att_teachers
                 $name = trim($firstname . ' ' . $lastname);
@@ -165,22 +224,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ─── Fetch Users ────────────────────────────────────────────────
-$users = $pdo->query("SELECT * FROM llw_users ORDER BY role, firstname")->fetchAll(PDO::FETCH_ASSOC);
+// ─── Fetch Users + roles (1:M) ─────────────────────────────────
+$users = $pdo->query("
+    SELECT u.*,
+        COALESCE(
+            (SELECT GROUP_CONCAT(role ORDER BY is_primary DESC, role ASC SEPARATOR ',')
+             FROM llw_user_roles WHERE user_id = u.user_id),
+            u.role
+        ) AS all_roles
+    FROM llw_users u
+    ORDER BY u.role, u.firstname
+")->fetchAll(PDO::FETCH_ASSOC);
+
+foreach ($users as &$u) {
+    $u['roles_list'] = $u['all_roles'] ? explode(',', $u['all_roles']) : [$u['role']];
+}
+unset($u);
+
 $totalUsers    = count($users);
 $activeUsers   = count(array_filter($users, fn($u) => $u['status'] === 'active'));
 $pendingChange = count(array_filter($users, fn($u) => !empty($u['force_password_change'])));
-
-$roleLabel = [
-    'super_admin' => ['label' => 'Super Admin', 'color' => 'bg-purple-100 text-purple-700'],
-    'club_admin'  => ['label' => 'Club Admin',  'color' => 'bg-fuchsia-100 text-fuchsia-700'],
-    'wfh_admin'   => ['label' => 'WFH Admin',   'color' => 'bg-blue-100 text-blue-700'],
-    'wfh_staff'   => ['label' => 'WFH Staff',   'color' => 'bg-emerald-100 text-emerald-700'],
-    'cb_admin'    => ['label' => 'CB Admin',     'color' => 'bg-cyan-100 text-cyan-700'],
-    'att_teacher' => ['label' => 'ครูผู้สอน',   'color' => 'bg-rose-100 text-rose-700'],
-    'bus_admin'   => ['label' => 'Bus Admin',    'color' => 'bg-orange-100 text-orange-700'],
-    'bus_finance' => ['label' => 'Bus Finance',  'color' => 'bg-amber-100 text-amber-700'],
-];
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -311,8 +374,8 @@ $roleLabel = [
                 </thead>
                 <tbody class="divide-y divide-slate-50">
                 <?php foreach ($users as $i => $u):
-                    $r = $roleLabel[$u['role']] ?? ['label' => $u['role'], 'color' => 'bg-slate-100 text-slate-600'];
                     $isMe = ((int)$u['user_id'] === (int)$_SESSION['user_id']);
+                    $primaryRole = $u['role'];
                 ?>
                 <tr class="hover:bg-slate-50/50 transition-all group">
                     <td class="px-6 py-5 text-xs font-bold text-slate-400"><?= $i + 1 ?></td>
@@ -328,9 +391,17 @@ $roleLabel = [
                         </div>
                     </td>
                     <td class="px-6 py-5">
-                        <span class="px-3 py-1 rounded-full text-xs font-black <?= $r['color'] ?>">
-                            <?= $r['label'] ?>
-                        </span>
+                        <div class="flex flex-wrap gap-1.5 max-w-xs">
+                            <?php foreach ($u['roles_list'] as $rk):
+                                $rm = $ROLE_CATALOG[$rk] ?? ['label' => $rk, 'color' => 'bg-slate-100 text-slate-600 border-slate-200'];
+                                $isPrimary = ($rk === $primaryRole);
+                            ?>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black border <?= $rm['color'] ?>" title="<?= htmlspecialchars($rm['desc'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                                <?php if ($isPrimary): ?><i class="bi bi-star-fill text-amber-500 text-[9px]"></i><?php endif; ?>
+                                <?= htmlspecialchars($rm['label'], ENT_QUOTES, 'UTF-8') ?>
+                            </span>
+                            <?php endforeach; ?>
+                        </div>
                     </td>
                     <td class="px-6 py-5">
                         <?php if ($u['status'] === 'active'): ?>
@@ -354,7 +425,7 @@ $roleLabel = [
                     <td class="px-6 py-5 text-center">
                         <div class="flex items-center justify-center gap-2">
                             <!-- Edit Role / Name -->
-                            <button onclick="openEdit(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['firstname'], ENT_QUOTES) ?>', '<?= htmlspecialchars($u['lastname'], ENT_QUOTES) ?>', '<?= $u['role'] ?>')"
+                            <button onclick='openEdit(<?= (int)$u['user_id'] ?>, <?= json_encode($u['firstname'], JSON_HEX_APOS|JSON_HEX_QUOT) ?>, <?= json_encode($u['lastname'], JSON_HEX_APOS|JSON_HEX_QUOT) ?>, <?= json_encode($u['roles_list']) ?>, <?= json_encode($u['role']) ?>)'
                                 class="w-8 h-8 bg-indigo-50 text-indigo-500 rounded-xl flex items-center justify-center hover:bg-indigo-500 hover:text-white transition-all" title="แก้ไขชื่อ / Role">
                                 <i class="bi bi-pencil-fill text-xs"></i>
                             </button>
@@ -438,21 +509,27 @@ $roleLabel = [
                 <input type="text" name="username" required autocomplete="off" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="ตัวอักษรภาษาอังกฤษ ไม่มีช่องว่าง">
             </div>
             <div>
-                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Role</label>
-                <select name="role" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                    <option value="wfh_staff">WFH Staff — บุคลากรทั่วไป (ลงเวลา)</option>
-                    <option value="att_teacher">ครูผู้สอน — ระบบครูทั่วไป</option>
-                    <option value="wfh_admin">WFH Admin — ครู + ตรวจสอบใบลา/WFH</option>
-                    <option value="finance_head">Finance Head — ครู + ลงนามการเงิน</option>
-                    <option value="procurement_head">Procurement Head — ครู + ลงนามจัดซื้อ</option>
-                    <option value="deputy_director">Deputy Director — ครู + รองผู้อำนวยการ</option>
-                    <option value="director">Director — ครู + ผู้อำนวยการ</option>
-                    <option value="cb_admin">CB Admin — จัดการ Chromebook</option>
-                    <option value="bus_admin">Bus Admin — จัดการระบบรถรับส่ง</option>
-                    <option value="bus_finance">Bus Finance — การเงินรถรับส่ง</option>
-                    <option value="club_admin">Club Admin — แอดมินจัดการชุมนุม</option>
-                    <option value="super_admin">Super Admin — สิทธิ์สูงสุด</option>
-                </select>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">สิทธิ์การใช้งาน <span class="text-rose-500">*</span></label>
+                    <span class="text-[10px] text-slate-400 font-medium">เลือกได้หลายรายการ · <i class="bi bi-star-fill text-amber-500"></i> = สิทธิ์หลัก</span>
+                </div>
+                <div data-role-grid="add" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto p-1">
+                    <?php foreach ($ROLE_CATALOG as $rk => $rm): ?>
+                    <label class="role-card relative cursor-pointer flex items-start gap-2.5 p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40 transition-all">
+                        <input type="checkbox" name="roles[]" value="<?= $rk ?>" class="role-cb mt-0.5 accent-blue-600 w-4 h-4 flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-black text-sm text-slate-700"><?= htmlspecialchars($rm['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <button type="button" class="primary-btn opacity-0 pointer-events-none text-[10px] font-bold text-slate-400 hover:text-amber-500 transition-all">
+                                    <i class="bi bi-star"></i>
+                                </button>
+                            </div>
+                            <p class="text-[10.5px] text-slate-400 font-medium mt-0.5 leading-tight"><?= htmlspecialchars($rm['desc'], ENT_QUOTES, 'UTF-8') ?></p>
+                        </div>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+                <input type="hidden" name="primary_role" value="">
             </div>
             <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
                 <i class="bi bi-info-circle-fill text-amber-500 flex-shrink-0 mt-0.5"></i>
@@ -590,26 +667,31 @@ $roleLabel = [
                 </div>
             </div>
             <div>
-                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Role / สิทธิ์การใช้งาน</label>
-                <select name="role" id="edit-role" required
-                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all">
-                    <option value="wfh_staff">WFH Staff — บุคลากรทั่วไป (ลงเวลา)</option>
-                    <option value="att_teacher">ครูผู้สอน — ระบบครูทั่วไป</option>
-                    <option value="wfh_admin">WFH Admin — ครู + ตรวจสอบใบลา/WFH</option>
-                    <option value="finance_head">Finance Head — ครู + ลงนามการเงิน</option>
-                    <option value="procurement_head">Procurement Head — ครู + ลงนามจัดซื้อ</option>
-                    <option value="deputy_director">Deputy Director — ครู + รองผู้อำนวยการ</option>
-                    <option value="director">Director — ครู + ผู้อำนวยการ</option>
-                    <option value="cb_admin">CB Admin — จัดการ Chromebook</option>
-                    <option value="bus_admin">Bus Admin — จัดการระบบรถรับส่ง</option>
-                    <option value="bus_finance">Bus Finance — การเงินรถรับส่ง</option>
-                    <option value="club_admin">Club Admin — แอดมินจัดการชุมนุม</option>
-                    <option value="super_admin">Super Admin — สิทธิ์สูงสุด</option>
-                </select>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">สิทธิ์การใช้งาน <span class="text-rose-500">*</span></label>
+                    <span class="text-[10px] text-slate-400 font-medium">เลือกหลายได้ · <i class="bi bi-star-fill text-amber-500"></i> = หลัก</span>
+                </div>
+                <div data-role-grid="edit" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto p-1">
+                    <?php foreach ($ROLE_CATALOG as $rk => $rm): ?>
+                    <label class="role-card relative cursor-pointer flex items-start gap-2.5 p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/40 transition-all">
+                        <input type="checkbox" name="roles[]" value="<?= $rk ?>" class="role-cb mt-0.5 accent-indigo-600 w-4 h-4 flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-black text-sm text-slate-700"><?= htmlspecialchars($rm['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <button type="button" class="primary-btn opacity-0 pointer-events-none text-[10px] font-bold text-slate-400 hover:text-amber-500 transition-all">
+                                    <i class="bi bi-star"></i>
+                                </button>
+                            </div>
+                            <p class="text-[10.5px] text-slate-400 font-medium mt-0.5 leading-tight"><?= htmlspecialchars($rm['desc'], ENT_QUOTES, 'UTF-8') ?></p>
+                        </div>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+                <input type="hidden" name="primary_role" id="edit-primary-role" value="">
             </div>
             <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 text-xs text-indigo-600">
                 <i class="bi bi-info-circle-fill me-1"></i>
-                การเปลี่ยน Role มีผลทันทีในครั้ง Login ถัดไป
+                สิทธิ์หลัก (<i class="bi bi-star-fill text-amber-500"></i>) ใช้กำหนดหน้า dashboard เริ่มต้น — มีผลทันทีในการ Login ครั้งถัดไป
             </div>
             <div class="flex gap-3 pt-1">
                 <button type="button" onclick="document.getElementById('modal-edit').classList.add('hidden')"
@@ -694,14 +776,95 @@ function confirmResetAllRoles() {
     });
 }
 
-function openEdit(uid, firstname, lastname, role) {
+function openEdit(uid, firstname, lastname, roles, primary) {
     document.getElementById('edit-uid').value = uid;
     document.getElementById('edit-firstname').value = firstname;
     document.getElementById('edit-lastname').value = lastname;
-    document.getElementById('edit-role').value = role;
-    document.getElementById('edit-username-display').textContent = firstname + ' ' + lastname;
+    document.getElementById('edit-username-display').textContent = (firstname || '') + ' ' + (lastname || '');
+
+    const grid = document.querySelector('[data-role-grid="edit"]');
+    grid.querySelectorAll('.role-cb').forEach(cb => {
+        cb.checked = roles.includes(cb.value);
+    });
+    document.getElementById('edit-primary-role').value = primary || roles[0] || '';
+    refreshRoleGrid(grid);
     document.getElementById('modal-edit').classList.remove('hidden');
 }
+
+// ─── Multi-role grid: ทำให้ checkbox + primary star ทำงานร่วมกัน ───
+function refreshRoleGrid(grid) {
+    if (!grid) return;
+    const form = grid.closest('form');
+    const primaryInput = form.querySelector('input[name="primary_role"]');
+    const checked = Array.from(grid.querySelectorAll('.role-cb')).filter(c => c.checked).map(c => c.value);
+
+    // ถ้า primary ไม่อยู่ใน checked — set primary เป็นตัวแรก
+    if (!checked.includes(primaryInput.value)) {
+        primaryInput.value = checked[0] || '';
+    }
+
+    grid.querySelectorAll('.role-card').forEach(card => {
+        const cb = card.querySelector('.role-cb');
+        const btn = card.querySelector('.primary-btn');
+        const icon = btn.querySelector('i');
+        const isPrimary = (cb.value === primaryInput.value);
+
+        if (cb.checked) {
+            card.classList.add('!border-blue-500','!bg-blue-50');
+            btn.classList.remove('opacity-0','pointer-events-none');
+        } else {
+            card.classList.remove('!border-blue-500','!bg-blue-50','!border-amber-400','!bg-amber-50');
+            btn.classList.add('opacity-0','pointer-events-none');
+        }
+        if (cb.checked && isPrimary) {
+            card.classList.remove('!border-blue-500','!bg-blue-50');
+            card.classList.add('!border-amber-400','!bg-amber-50');
+            icon.className = 'bi bi-star-fill text-amber-500';
+            btn.classList.add('text-amber-500');
+            btn.classList.remove('text-slate-400');
+        } else {
+            icon.className = 'bi bi-star';
+            btn.classList.remove('text-amber-500');
+            btn.classList.add('text-slate-400');
+        }
+    });
+}
+
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.primary-btn');
+    if (btn) {
+        e.preventDefault();
+        const grid = btn.closest('[data-role-grid]');
+        const card = btn.closest('.role-card');
+        const cb = card.querySelector('.role-cb');
+        if (!cb.checked) { cb.checked = true; }
+        grid.closest('form').querySelector('input[name="primary_role"]').value = cb.value;
+        refreshRoleGrid(grid);
+        return;
+    }
+    const cb = e.target.closest('.role-cb');
+    if (cb) {
+        setTimeout(() => refreshRoleGrid(cb.closest('[data-role-grid]')), 0);
+    }
+});
+
+// validate ฟอร์มก่อน submit
+document.querySelectorAll('form').forEach(f => {
+    f.addEventListener('submit', (e) => {
+        const grid = f.querySelector('[data-role-grid]');
+        if (!grid) return;
+        const checked = grid.querySelectorAll('.role-cb:checked');
+        if (checked.length === 0) {
+            e.preventDefault();
+            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกสิทธิ์', text: 'ต้องเลือกอย่างน้อย 1 สิทธิ์การใช้งาน', confirmButtonColor: '#2563eb' });
+            return;
+        }
+        const primaryInput = f.querySelector('input[name="primary_role"]');
+        if (!primaryInput.value || !Array.from(checked).some(c => c.value === primaryInput.value)) {
+            primaryInput.value = checked[0].value;
+        }
+    });
+});
 
 function openReset(uid, name) {
     document.getElementById('reset-uid').value = uid;

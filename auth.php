@@ -37,8 +37,24 @@ $_SESSION['username'] = $user['username'];
 $_SESSION['fullname'] = trim($user['firstname'] . ' ' . $user['lastname']);
 $_SESSION['llw_role'] = $user['role'];
 
+// Multi-role: ดึง role ทั้งหมดของผู้ใช้ (1:M) ใส่ใน session
+// llw_role = primary role (จาก llw_users.role) — เก็บไว้เพื่อ backward-compat
+// llw_roles = array ของทุก role สำหรับ fine-grained access check (llw_has_any_role)
+$rolesAll = [$user['role']];
+try {
+    $rs = $conn->prepare("SELECT role FROM llw_user_roles WHERE user_id = ?");
+    $rs->bind_param('i', $user['user_id']);
+    $rs->execute();
+    $rsResult = $rs->get_result();
+    $tmp = [];
+    while ($row = $rsResult->fetch_assoc()) $tmp[] = $row['role'];
+    $rs->close();
+    if (!empty($tmp)) $rolesAll = array_values(array_unique($tmp));
+} catch (Throwable $e) { /* ตารางอาจยังไม่ถูก migrate — fallback ที่ role เดียว */ }
+$_SESSION['llw_roles'] = $rolesAll;
+
 // backward-compat: WFH admin pages ตรวจ role === 'admin'
-$_SESSION['role'] = in_array($user['role'], ['super_admin','wfh_admin']) ? 'admin' : 'user';
+$_SESSION['role'] = !empty(array_intersect($rolesAll, ['super_admin','wfh_admin'])) ? 'admin' : 'user';
 
 // ─── 3. Attendance teacher: ดึง teacher_id จาก att_teachers ────
 if (in_array($user['role'], ['att_teacher', 'super_admin', 'club_admin'])) {
