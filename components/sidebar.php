@@ -25,6 +25,7 @@ elseif (strpos($full_url, '/edocument/') !== false)        $activeSystem = 'edoc
 elseif (strpos($full_url, '/student_leave/') !== false)   $activeSystem = 'student_leave';
 elseif (strpos($full_url, '/duty/') !== false)            $activeSystem = 'duty';
 elseif (strpos($full_url, '/club/') !== false || strpos($full_url, '/student_club/') !== false) $activeSystem = 'club';
+elseif (strpos($full_url, '/homework/') !== false)        $activeSystem = 'homework';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
 
 /**
@@ -132,6 +133,10 @@ $subMenus = [
         ['icon' => 'fas fa-file-signature',       'label' => 'คำสั่ง',            'url' => $base_path . '/edocument/orders.php'],
         ['icon' => 'fas fa-sticky-note',          'label' => 'บันทึกข้อความ',     'url' => $base_path . '/edocument/memos.php'],
     ],
+    'homework' => [
+        ['icon' => 'fas fa-tachometer-alt', 'label' => 'ภาพรวมงาน',   'url' => $base_path . '/homework/dashboard.php'],
+        ['icon' => 'fas fa-plus-circle',    'label' => 'สั่งงานใหม่',  'url' => $base_path . '/homework/create.php'],
+    ],
     'duty' => [
         ['icon' => 'fas fa-camera',              'label' => 'ส่งรายงานเวร (ครู)', 'url' => $base_path . '/duty/index.php',          'roles' => ['att_teacher','super_admin','wfh_admin']],
         ['icon' => 'fas fa-chart-line',          'label' => 'รายงานเวรประจำวัน', 'url' => $base_path . '/duty/admin/reports.php',  'roles' => ['att_teacher','super_admin','wfh_admin']],
@@ -200,6 +205,22 @@ $subMenus = [
                 </li>
                 <?php endif; ?>
                 <?php if ($userRole === 'super_admin'): ?>
+                <li class="nav-item <?= $activeSystem === 'homework' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'homework' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-book-open" style="color:#6366f1"></i>
+                        <p style="color:<?= $activeSystem === 'homework' ? '#fff' : '#a5b4fc' ?>">ระบบการบ้าน <i class="nav-arrow fas fa-angle-left"></i></p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <?php foreach ($subMenus['homework'] as $sub): ?>
+                        <li class="nav-item">
+                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
+                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
+                                <p><?= $sub['label'] ?></p>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </li>
                 <li class="nav-item">
                     <a href="<?= $base_path ?>/manage_advisors.php" class="nav-link <?= $current_page === 'manage_advisors.php' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-user-cog"></i>
