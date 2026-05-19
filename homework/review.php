@@ -122,6 +122,29 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <?php elseif (!$hasSubmit): ?>
                     <p class="text-xs text-slate-400 mt-1">ยังไม่ได้ส่งงาน</p>
                     <?php endif; ?>
+
+                    <?php
+                    $attachedFiles = [];
+                    if ($hasSubmit && !empty($sub['file_path'])) {
+                        $decoded = json_decode($sub['file_path'], true);
+                        if (is_array($decoded)) $attachedFiles = $decoded;
+                    }
+                    ?>
+                    <?php if (!empty($attachedFiles)): ?>
+                    <div class="flex flex-wrap gap-1.5 mt-2">
+                        <?php foreach ($attachedFiles as $fp):
+                            $ext = strtolower(pathinfo($fp, PATHINFO_EXTENSION));
+                            $icon = in_array($ext, ['jpg','jpeg','png','gif','webp']) ? 'bi-image' : (($ext === 'pdf') ? 'bi-file-earmark-pdf' : 'bi-file-earmark-word');
+                            $iconColor = in_array($ext, ['jpg','jpeg','png','gif','webp']) ? 'text-emerald-500' : (($ext === 'pdf') ? 'text-rose-500' : 'text-blue-500');
+                        ?>
+                        <a href="<?= $base_path ?>/<?= htmlspecialchars($fp, ENT_QUOTES, 'UTF-8') ?>" target="_blank"
+                           class="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm">
+                            <i class="bi <?= $icon ?> <?= $iconColor ?>"></i>
+                            <?= htmlspecialchars(basename($fp), ENT_QUOTES, 'UTF-8') ?>
+                        </a>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Score panel -->

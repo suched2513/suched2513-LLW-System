@@ -7,7 +7,6 @@ if ($_SESSION['llw_role'] !== 'super_admin') { header('Location: ' . $base_path 
 
 $pdo = getPdo();
 
-// Classroom list from att_students
 $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE status='active' AND classroom != '' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
 $pageTitle    = 'สั่งงานใหม่';
@@ -37,11 +36,20 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
 
         <div class="grid grid-cols-2 gap-4">
+            <!-- Subject select + manage -->
             <div>
                 <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">วิชา</label>
-                <input type="text" id="subject"
-                       class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                       placeholder="เช่น คณิตศาสตร์">
+                <div class="flex gap-2">
+                    <select id="subject"
+                            class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                        <option value="">-- ไม่ระบุ --</option>
+                    </select>
+                    <button type="button" onclick="openManageSubjects()"
+                            class="w-10 h-[46px] bg-slate-100 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-2xl text-slate-500 hover:text-indigo-600 transition-all flex items-center justify-center"
+                            title="จัดการรายวิชา">
+                        <i class="bi bi-pencil-square text-sm"></i>
+                    </button>
+                </div>
             </div>
             <div>
                 <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-1.5">คะแนนเต็ม</label>
@@ -90,6 +98,112 @@ require_once __DIR__ . '/../components/layout_start.php';
 </div>
 
 <script>
+// Load subjects into select on page load
+async function loadSubjects(selectedName) {
+    const res = await fetch('<?= $base_path ?>/homework/api/manage_subjects.php?action=list').then(r => r.json());
+    const sel = document.getElementById('subject');
+    const prev = selectedName !== undefined ? selectedName : sel.value;
+    sel.innerHTML = '<option value="">-- ไม่ระบุ --</option>';
+    (res.data || []).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.name;
+        opt.textContent = s.name;
+        if (s.name === prev) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+loadSubjects();
+
+// Manage subjects modal
+async function openManageSubjects() {
+    const res = await fetch('<?= $base_path ?>/homework/api/manage_subjects.php?action=list').then(r => r.json());
+    const subjects = res.data || [];
+
+    const listHtml = subjects.length
+        ? subjects.map(s => `
+            <div class="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2 mb-1" id="srow_${s.id}">
+                <span class="text-sm font-bold text-slate-700">${escHtml(s.name)}</span>
+                <button onclick="deleteSubject(${s.id},'${escHtml(s.name)}')"
+                        class="text-rose-400 hover:text-rose-600 text-xs font-bold transition-colors">
+                    <i class="bi bi-trash3"></i> ลบ
+                </button>
+            </div>`).join('')
+        : '<p class="text-slate-400 text-sm text-center py-2">ยังไม่มีวิชา</p>';
+
+    Swal.fire({
+        title: '<span class="text-base font-black">จัดการรายวิชา</span>',
+        html: `
+            <div class="text-left mb-3" id="subjectListContainer">${listHtml}</div>
+            <div class="flex gap-2">
+                <input type="text" id="newSubjectName" placeholder="ชื่อวิชาใหม่..."
+                       class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 outline-none"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();addSubject();}">
+                <button onclick="addSubject()"
+                        class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors">
+                    เพิ่ม
+                </button>
+            </div>`,
+        showConfirmButton: true,
+        confirmButtonText: 'เสร็จสิ้น',
+        confirmButtonColor: '#4f46e5',
+        showCloseButton: true,
+        willClose: () => loadSubjects()
+    });
+}
+
+function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+window.addSubject = async function() {
+    const input = document.getElementById('newSubjectName');
+    const name  = input.value.trim();
+    if (!name) return;
+
+    const res = await fetch('<?= $base_path ?>/homework/api/manage_subjects.php?action=add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+    }).then(r => r.json());
+
+    if (res.status === 'success') {
+        input.value = '';
+        const container = document.getElementById('subjectListContainer');
+        const existsEmpty = container.querySelector('p');
+        if (existsEmpty) existsEmpty.remove();
+        container.insertAdjacentHTML('beforeend', `
+            <div class="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2 mb-1" id="srow_${res.id}">
+                <span class="text-sm font-bold text-slate-700">${escHtml(res.name)}</span>
+                <button onclick="deleteSubject(${res.id},'${escHtml(res.name)}')"
+                        class="text-rose-400 hover:text-rose-600 text-xs font-bold transition-colors">
+                    <i class="bi bi-trash3"></i> ลบ
+                </button>
+            </div>`);
+    } else {
+        Swal.showValidationMessage(res.message);
+    }
+};
+
+window.deleteSubject = async function(id, name) {
+    const conf = await Swal.fire({
+        title: `ลบ "${name}"?`,
+        text: 'งานที่ใช้วิชานี้ไม่ได้รับผลกระทบ',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'ลบ',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#ef4444'
+    });
+    if (!conf.isConfirmed) return;
+
+    await fetch('<?= $base_path ?>/homework/api/manage_subjects.php?action=delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+    });
+    document.getElementById('srow_' + id)?.remove();
+};
+
 document.getElementById('createForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -101,11 +215,11 @@ document.getElementById('createForm').addEventListener('submit', async function(
 
     const payload = {
         title:       document.getElementById('title').value.trim(),
-        subject:     document.getElementById('subject').value.trim(),
+        subject:     document.getElementById('subject').value,
         max_score:   parseInt(document.getElementById('max_score').value),
         due_date:    document.getElementById('due_date').value,
         description: document.getElementById('description').value.trim(),
-        classrooms:  classrooms,
+        classrooms,
     };
 
     Swal.fire({ title: 'กำลังบันทึก...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });

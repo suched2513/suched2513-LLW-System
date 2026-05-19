@@ -9,11 +9,17 @@ $code     = $_SESSION['student_code'];
 $name     = $_SESSION['student_name'];
 $class    = $_SESSION['student_class'];
 
-// Assignments for this classroom
+// Assignments for this classroom (include file_path)
 $assignments = $pdo->prepare("
     SELECT a.*,
-           s.id AS sub_id, s.status AS sub_status, s.content AS sub_content,
-           s.score, s.teacher_comment, s.submitted_at, s.reviewed_at
+           s.id              AS sub_id,
+           s.status          AS sub_status,
+           s.content         AS sub_content,
+           s.file_path       AS sub_file_path,
+           s.score,
+           s.teacher_comment,
+           s.submitted_at,
+           s.reviewed_at
     FROM hw_assignments a
     LEFT JOIN hw_submissions s ON s.assignment_id = a.id AND s.student_uid = ?
     WHERE a.status = 'published' AND FIND_IN_SET(?, REPLACE(a.classroom, ', ', ','))
@@ -34,7 +40,11 @@ $now = time();
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<style>body{font-family:'Prompt',sans-serif;}</style>
+<style>
+body { font-family: 'Prompt', sans-serif; }
+.drop-zone { transition: border-color 0.2s, background-color 0.2s; }
+.drop-zone.drag-over { border-color: #6366f1; background-color: #eef2ff; }
+</style>
 </head>
 <body class="min-h-screen bg-slate-50" style="padding-top:env(safe-area-inset-top)">
 
@@ -52,9 +62,9 @@ $now = time();
     <!-- KPI -->
     <div class="grid grid-cols-3 gap-3">
         <?php
-        $total    = count($assignments);
+        $total     = count($assignments);
         $submitted = count(array_filter($assignments, fn($a) => $a['sub_id']));
-        $graded   = count(array_filter($assignments, fn($a) => $a['score'] !== null));
+        $graded    = count(array_filter($assignments, fn($a) => $a['score'] !== null));
         ?>
         <div class="bg-white/15 rounded-2xl p-3 text-center border border-white/20">
             <p class="text-xl font-black"><?= $total ?></p>
@@ -85,12 +95,20 @@ $now = time();
         $isReviewed = $hasSubmit && $a['score'] !== null;
         $isLate     = $hasSubmit && $a['sub_status'] === 'late';
 
-        if ($isReviewed) { $cardColor = 'border-emerald-200 bg-emerald-50/50'; $badgeColor = 'bg-emerald-100 text-emerald-700'; $badge = 'ตรวจแล้ว'; }
-        elseif ($hasSubmit) { $cardColor = 'border-amber-200 bg-amber-50/50'; $badgeColor = 'bg-amber-100 text-amber-700'; $badge = $isLate ? 'ส่งช้า' : 'รอตรวจ'; }
-        elseif ($isOverdue) { $cardColor = 'border-rose-200 bg-rose-50/50'; $badgeColor = 'bg-rose-100 text-rose-600'; $badge = 'เลยกำหนด'; }
-        else { $cardColor = 'border-slate-200 bg-white'; $badgeColor = 'bg-indigo-100 text-indigo-700'; $badge = 'รอส่ง'; }
+        // Decode submitted files
+        $subFiles = [];
+        if (!empty($a['sub_file_path'])) {
+            $decoded = json_decode($a['sub_file_path'], true);
+            if (is_array($decoded)) $subFiles = $decoded;
+        }
+
+        if ($isReviewed)      { $cardColor = 'border-emerald-200 bg-emerald-50/50'; $badgeColor = 'bg-emerald-100 text-emerald-700'; $badge = 'ตรวจแล้ว'; }
+        elseif ($hasSubmit)   { $cardColor = 'border-amber-200 bg-amber-50/50';     $badgeColor = 'bg-amber-100 text-amber-700';     $badge = $isLate ? 'ส่งช้า' : 'รอตรวจ'; }
+        elseif ($isOverdue)   { $cardColor = 'border-rose-200 bg-rose-50/50';       $badgeColor = 'bg-rose-100 text-rose-600';       $badge = 'เลยกำหนด'; }
+        else                  { $cardColor = 'border-slate-200 bg-white';            $badgeColor = 'bg-indigo-100 text-indigo-700';   $badge = 'รอส่ง'; }
     ?>
     <div class="rounded-2xl border <?= $cardColor ?> p-5 shadow-sm">
+        <!-- Title + badge -->
         <div class="flex items-start justify-between gap-3 mb-3">
             <div class="flex-1 min-w-0">
                 <p class="font-black text-slate-800 text-sm leading-tight"><?= htmlspecialchars($a['title'], ENT_QUOTES, 'UTF-8') ?></p>
@@ -123,11 +141,28 @@ $now = time();
         </div>
         <?php endif; ?>
 
-        <?php if ($hasSubmit && $a['sub_content']): ?>
+        <?php if ($hasSubmit && ($a['sub_content'] || !empty($subFiles))): ?>
         <!-- Submitted content -->
         <div class="bg-white/70 rounded-xl p-3 border border-slate-100 mb-3">
-            <p class="text-xs font-black text-slate-400 mb-1">งานที่ส่ง:</p>
-            <p class="text-xs text-slate-600 whitespace-pre-wrap"><?= htmlspecialchars($a['sub_content'], ENT_QUOTES, 'UTF-8') ?></p>
+            <p class="text-xs font-black text-slate-400 mb-1.5">งานที่ส่ง:</p>
+            <?php if ($a['sub_content']): ?>
+            <p class="text-xs text-slate-600 whitespace-pre-wrap mb-2"><?= htmlspecialchars($a['sub_content'], ENT_QUOTES, 'UTF-8') ?></p>
+            <?php endif; ?>
+            <?php if (!empty($subFiles)): ?>
+            <div class="flex flex-wrap gap-1.5">
+                <?php foreach ($subFiles as $fp):
+                    $ext = strtolower(pathinfo($fp, PATHINFO_EXTENSION));
+                    $icon = in_array($ext, ['jpg','jpeg','png','gif','webp']) ? 'bi-image' : (($ext === 'pdf') ? 'bi-file-earmark-pdf' : 'bi-file-earmark-word');
+                    $color = in_array($ext, ['jpg','jpeg','png','gif','webp']) ? 'text-emerald-500' : (($ext === 'pdf') ? 'text-rose-500' : 'text-blue-500');
+                ?>
+                <a href="/<?= htmlspecialchars($fp, ENT_QUOTES, 'UTF-8') ?>" target="_blank"
+                   class="flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition-all">
+                    <i class="bi <?= $icon ?> <?= $color ?>"></i>
+                    <?= htmlspecialchars(basename($fp), ENT_QUOTES, 'UTF-8') ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
 
@@ -137,7 +172,23 @@ $now = time();
             <?php if (!$isOverdue || $hasSubmit): ?>
             <textarea id="content-<?= $a['id'] ?>" rows="3"
                       class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-400 outline-none resize-none transition-all mb-2"
-                      placeholder="พิมพ์คำตอบหรืองานของคุณที่นี่..."><?= $hasSubmit ? htmlspecialchars($a['sub_content'], ENT_QUOTES, 'UTF-8') : '' ?></textarea>
+                      placeholder="พิมพ์คำตอบหรืองานของคุณที่นี่..."><?= $hasSubmit ? htmlspecialchars($a['sub_content'] ?? '', ENT_QUOTES, 'UTF-8') : '' ?></textarea>
+
+            <!-- File upload zone -->
+            <div class="drop-zone border-2 border-dashed border-slate-200 rounded-xl p-3 text-center bg-white mb-2 cursor-pointer"
+                 onclick="document.getElementById('files-<?= $a['id'] ?>').click()"
+                 ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                 ondragleave="this.classList.remove('drag-over')"
+                 ondrop="handleDrop(event, <?= $a['id'] ?>)">
+                <input type="file" id="files-<?= $a['id'] ?>" class="hidden" multiple
+                       accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx"
+                       onchange="previewFiles(<?= $a['id'] ?>)">
+                <p class="text-xs text-slate-400">
+                    <i class="bi bi-paperclip mr-1"></i>แนบไฟล์ (ไม่เกิน 3 ไฟล์ · รูปภาพ / PDF / Word)
+                </p>
+                <div id="file-preview-<?= $a['id'] ?>" class="mt-1.5 space-y-0.5"></div>
+            </div>
+
             <button onclick="submitWork(<?= $a['id'] ?>)"
                     class="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-200/50 active:scale-95 transition-transform flex items-center justify-center gap-2">
                 <i class="bi bi-send-fill"></i> <?= $hasSubmit ? 'ส่งงานใหม่อีกครั้ง' : 'ส่งงาน' ?>
@@ -155,35 +206,79 @@ $now = time();
 </div>
 
 <script>
+function previewFiles(id) {
+    const input   = document.getElementById('files-' + id);
+    const preview = document.getElementById('file-preview-' + id);
+    renderPreview(preview, input.files);
+}
+
+function handleDrop(event, id) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('drag-over');
+    const input = document.getElementById('files-' + id);
+    const dt    = new DataTransfer();
+    [...event.dataTransfer.files].slice(0, 3).forEach(f => dt.items.add(f));
+    input.files = dt.files;
+    previewFiles(id);
+}
+
+function renderPreview(container, files) {
+    container.innerHTML = '';
+    const iconMap = { jpg:'bi-image', jpeg:'bi-image', png:'bi-image', gif:'bi-image', webp:'bi-image', pdf:'bi-file-earmark-pdf', doc:'bi-file-earmark-word', docx:'bi-file-earmark-word' };
+    [...files].forEach(f => {
+        const ext  = f.name.split('.').pop().toLowerCase();
+        const icon = iconMap[ext] || 'bi-file-earmark';
+        container.innerHTML += `<p class="text-xs text-indigo-600 font-bold truncate text-left px-1"><i class="bi ${icon} mr-1"></i>${f.name}</p>`;
+    });
+}
+
 async function submitWork(id) {
-    const content = document.getElementById('content-' + id).value.trim();
-    if (!content) { Swal.fire({ icon:'warning', title:'กรุณากรอกเนื้อหางาน', confirmButtonColor:'#4f46e5' }); return; }
+    const content   = document.getElementById('content-' + id).value.trim();
+    const fileInput = document.getElementById('files-' + id);
+    const files     = fileInput ? fileInput.files : [];
+
+    if (!content && files.length === 0) {
+        Swal.fire({ icon: 'warning', title: 'กรุณากรอกเนื้อหาหรือแนบไฟล์', confirmButtonColor: '#4f46e5' });
+        return;
+    }
 
     const confirm = await Swal.fire({
-        icon:'question', title:'ยืนยันส่งงาน?', text:'หลังส่งแล้วสามารถแก้ไขได้จนกว่าครูจะตรวจ',
-        showCancelButton:true, confirmButtonText:'ส่งงาน', cancelButtonText:'ยกเลิก', confirmButtonColor:'#4f46e5'
+        icon: 'question', title: 'ยืนยันส่งงาน?',
+        text: 'หลังส่งแล้วสามารถแก้ไขได้จนกว่าครูจะตรวจ',
+        showCancelButton: true,
+        confirmButtonText: 'ส่งงาน', cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#4f46e5'
     });
     if (!confirm.isConfirmed) return;
 
-    Swal.fire({ title:'กำลังส่งงาน...', allowOutsideClick:false, didOpen:()=>Swal.showLoading() });
+    Swal.fire({ title: 'กำลังส่งงาน...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    const res = await fetch('/homework/api/save_submission.php', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ assignment_id: id, content })
-    }).then(r=>r.json());
+    const formData = new FormData();
+    formData.append('assignment_id', id);
+    formData.append('content', content);
+    if (files.length > 0) {
+        [...files].forEach(f => formData.append('files[]', f));
+    }
+
+    let res;
+    try {
+        res = await fetch('/homework/api/save_submission.php', { method: 'POST', body: formData }).then(r => r.json());
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'เชื่อมต่อไม่ได้', confirmButtonColor: '#4f46e5' });
+        return;
+    }
 
     Swal.close();
 
     if (res.status === 'success') {
         await Swal.fire({
-            icon:'success',
+            icon: 'success',
             title: res.late ? 'ส่งงานแล้ว (สายเกินกำหนด)' : 'ส่งงานเรียบร้อย!',
-            confirmButtonColor:'#4f46e5'
+            confirmButtonColor: '#4f46e5'
         });
         location.reload();
     } else {
-        Swal.fire({ icon:'error', title:'ผิดพลาด', text:res.message, confirmButtonColor:'#4f46e5' });
+        Swal.fire({ icon: 'error', title: 'ผิดพลาด', text: res.message, confirmButtonColor: '#4f46e5' });
     }
 }
 </script>

@@ -136,6 +136,7 @@ $subMenus = [
     'homework' => [
         ['icon' => 'fas fa-tachometer-alt', 'label' => 'ภาพรวมงาน',   'url' => $base_path . '/homework/dashboard.php'],
         ['icon' => 'fas fa-plus-circle',    'label' => 'สั่งงานใหม่',  'url' => $base_path . '/homework/create.php'],
+        ['icon' => 'fas fa-tasks',          'label' => 'คิวตรวจงาน',   'url' => $base_path . '/homework/queue.php'],
     ],
     'duty' => [
         ['icon' => 'fas fa-camera',              'label' => 'ส่งรายงานเวร (ครู)', 'url' => $base_path . '/duty/index.php',          'roles' => ['att_teacher','super_admin','wfh_admin']],
