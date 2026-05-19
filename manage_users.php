@@ -33,6 +33,12 @@ $ALLOWED_ROLES = array_keys($ROLE_CATALOG);
 
 // บันทึก role-set ของผู้ใช้ลง pivot (เปลี่ยน roles ทั้งชุดและ set primary)
 $syncUserRoles = function (int $uid, array $roles, string $primary) use ($pdo): void {
+    // ข้ามการ sync หากตาราง pivot ยังไม่ถูก migrate (legacy mode)
+    try {
+        $chk = $pdo->query("SHOW TABLES LIKE 'llw_user_roles'")->fetchColumn();
+        if (!$chk) return;
+    } catch (Throwable $e) { return; }
+
     $roles = array_values(array_unique(array_filter($roles)));
     if (!in_array($primary, $roles, true)) {
         $primary = $roles[0] ?? '';
@@ -225,19 +231,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ─── Fetch Users + roles (1:M) ─────────────────────────────────
-$users = $pdo->query("
-    SELECT u.*,
-        COALESCE(
-            (SELECT GROUP_CONCAT(role ORDER BY is_primary DESC, role ASC SEPARATOR ',')
-             FROM llw_user_roles WHERE user_id = u.user_id),
-            u.role
-        ) AS all_roles
-    FROM llw_users u
-    ORDER BY u.role, u.firstname
-")->fetchAll(PDO::FETCH_ASSOC);
+// ตรวจว่าตาราง pivot ถูก migrate แล้วหรือยัง — ถ้ายัง fallback ที่ llw_users.role
+$hasPivot = false;
+try {
+    $chk = $pdo->query("SHOW TABLES LIKE 'llw_user_roles'")->fetchColumn();
+    $hasPivot = (bool)$chk;
+} catch (Throwable $e) { $hasPivot = false; }
+
+if ($hasPivot) {
+    $users = $pdo->query("
+        SELECT u.*,
+            COALESCE(
+                (SELECT GROUP_CONCAT(role ORDER BY is_primary DESC, role ASC SEPARATOR ',')
+                 FROM llw_user_roles WHERE user_id = u.user_id),
+                u.role
+            ) AS all_roles
+        FROM llw_users u
+        ORDER BY u.role, u.firstname
+    ")->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $users = $pdo->query("SELECT u.*, u.role AS all_roles FROM llw_users u ORDER BY u.role, u.firstname")->fetchAll(PDO::FETCH_ASSOC);
+}
 
 foreach ($users as &$u) {
-    $u['roles_list'] = $u['all_roles'] ? explode(',', $u['all_roles']) : [$u['role']];
+    $u['roles_list'] = !empty($u['all_roles']) ? explode(',', $u['all_roles']) : [$u['role']];
 }
 unset($u);
 

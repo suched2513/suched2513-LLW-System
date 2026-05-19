@@ -12,14 +12,21 @@
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-cache');
 
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config.php';
 
-/*
+// ── Guard: เฉพาะ super_admin ที่ login แล้วเท่านั้น ──────────────
 session_start();
 if (!isset($_SESSION['llw_role']) || $_SESSION['llw_role'] !== 'super_admin') {
-    die('<div style="color:red; font-family:sans-serif; padding:2rem;">❌ <b>Access Denied:</b> เฉพาะผู้ดูแลระบบสูงสุดเท่านั้นที่สามารถรันการตั้งค่านี้ได้</div>');
+    http_response_code(403);
+    die('<div style="font-family:Prompt,sans-serif;padding:2rem;background:#0f172a;color:#f87171;min-height:100vh">
+        <h2>❌ Access Denied</h2>
+        <p>เฉพาะ Super Admin เท่านั้น — กรุณา <a href="/login.php" style="color:#38bdf8">เข้าสู่ระบบ</a> ก่อน</p>
+    </div>');
 }
-*/
+
+// ── 2-step confirm: GET = dry-run แสดงสถานะ, POST + CSRF = run จริง ──
+$doRun = ($_SERVER['REQUEST_METHOD'] === 'POST');
+if ($doRun) { csrf_verify(); }
 
 echo '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
 <title>Migration Runner - LLW</title>
@@ -84,6 +91,14 @@ try {
 
     if (empty($pending)) {
         echo '<div class="card ok">✅ Nothing to migrate — all up to date!</div>';
+    } elseif (!$doRun) {
+        // GET → แสดงปุ่มยืนยัน ไม่ run จริง
+        echo '<div class="card"><h3 style="color:#fbbf24;font-weight:900;margin-bottom:1rem">⏳ พบ ' . count($pending) . ' migration ที่ยังไม่ได้ run</h3>';
+        echo '<form method="POST" style="margin-top:1rem">';
+        echo csrf_field();
+        echo '<button type="submit" style="background:#38bdf8;color:#0f172a;font-weight:900;padding:.8rem 1.5rem;border:0;border-radius:.75rem;cursor:pointer;font-family:inherit;font-size:1rem">🚀 ยืนยัน Run Migrations</button>';
+        echo ' <a href="/" style="color:#94a3b8;margin-left:1rem">ยกเลิก</a>';
+        echo '</form></div>';
     } else {
         echo '<div class="card"><h3 style="color:#38bdf8;font-weight:900;margin-bottom:1rem">Running ' . count($pending) . ' pending migration(s)...</h3>';
 
