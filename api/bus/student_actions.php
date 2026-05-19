@@ -88,7 +88,7 @@ try {
         echo json_encode(['status' => 'success', 'data' => $data]);
 
     } elseif ($action === 'request_cancel') {
-        $citizenId = preg_replace('/\D/', '', $input['citizen_id'] ?? '');
+        $citizenId = preg_replace('/[^a-zA-Z0-9]/', '', $input['citizen_id'] ?? '');
         $reason    = trim($input['reason'] ?? '');
 
         if (strlen($citizenId) !== 13) {

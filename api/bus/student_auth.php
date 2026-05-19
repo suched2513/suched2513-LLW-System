@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../config/database.php';
 
 $input = json_decode(file_get_contents('php://input'), true);
 $sid       = trim($input['sid'] ?? '');
-$citizenId = preg_replace('/\D/', '', $input['citizen_id'] ?? '');
+$citizenId = preg_replace('/[^a-zA-Z0-9]/', '', $input['citizen_id'] ?? '');
 
 if (!$sid || strlen($citizenId) !== 13) {
     echo json_encode(['status' => 'error', 'message' => 'กรุณากรอกรหัสนักเรียนและเลขบัตรประชาชน 13 หลัก']);

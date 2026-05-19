@@ -13,7 +13,7 @@ csrf_verify();
 $pdo      = getPdo();
 $busId    = (int)$_SESSION['bus_student_id'];
 $semester = busGetSemester();
-$nid      = preg_replace('/\D/', '', $_POST['national_id'] ?? '');
+$nid      = preg_replace('/[^a-zA-Z0-9]/', '', $_POST['national_id'] ?? '');
 $reason   = trim($_POST['reason'] ?? '');
 
 if (strlen($nid) !== 13) {

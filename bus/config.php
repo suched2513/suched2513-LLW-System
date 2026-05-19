@@ -20,7 +20,7 @@ function busSemesterLabel(string $sem): string {
 }
 
 function busMaskNid(string $nid): string {
-    $d = preg_replace('/\D/', '', $nid);
+    $d = preg_replace('/[^a-zA-Z0-9]/', '', $nid);
     if (strlen($d) !== 13) return 'x-xxxx-xxxxx-xx-x';
     return $d[0] . '-' . substr($d, 1, 4) . '-xxxxx-xx-' . $d[12];
 }

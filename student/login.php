@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
 
     $sid = trim($_POST['student_id'] ?? '');
-    $nid = preg_replace('/\D/', '', trim($_POST['national_id'] ?? ''));
+    $nid = preg_replace('/[^a-zA-Z0-9]/', '', trim($_POST['national_id'] ?? ''));
 
     // Normalize: purely numeric → pad to 5 digits (e.g. 4853 → 04853)
     if ($sid !== '' && ctype_digit($sid)) {

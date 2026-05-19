@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'save_nid') {
         $sid = (int)($_POST['student_db_id'] ?? 0);
-        $nid = preg_replace('/\D/', '', trim($_POST['national_id'] ?? ''));
+        $nid = preg_replace('/[^a-zA-Z0-9]/', '', trim($_POST['national_id'] ?? ''));
 
         if ($sid <= 0) {
             $msg = 'ไม่พบข้อมูลนักเรียน'; $msgType = 'error';
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (count($cols) < 2) { $skip++; continue; }
 
                     $rawSid = trim($cols[0]);
-                    $nid    = preg_replace('/\D/', '', trim($cols[1]));
+                    $nid    = preg_replace('/[^a-zA-Z0-9]/', '', trim($cols[1]));
                     // Normalize student_id: pad numeric to 5 digits
                     if (ctype_digit($rawSid)) $rawSid = str_pad($rawSid, 5, '0', STR_PAD_LEFT);
 
