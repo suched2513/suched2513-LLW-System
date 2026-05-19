@@ -110,20 +110,37 @@ try {
             echo "<div style='margin-bottom:1rem'>";
             echo "<div style='font-size:.85rem;color:#94a3b8;margin-bottom:.5rem'>→ <strong>$name</strong></div>";
 
+            // เคลียร์ transaction ค้าง (ถ้า migration ก่อนหน้าทิ้งไว้)
+            try { if ($pdo->inTransaction()) $pdo->rollBack(); } catch (Throwable $e) {}
+
             try {
                 $migration = require $file;
-                if (!is_array($migration) || !isset($migration['up'])) {
-                    throw new RuntimeException("Invalid migration format — must return ['up' => fn, 'down' => fn]");
+
+                // รองรับ 2 format:
+                //   1) ['up' => fn, 'down' => fn]           (array)
+                //   2) new class { public function up()...} (object)
+                $upFn = null;
+                if (is_array($migration) && isset($migration['up']) && is_callable($migration['up'])) {
+                    $upFn = $migration['up'];
+                } elseif (is_object($migration) && method_exists($migration, 'up')) {
+                    $upFn = [$migration, 'up'];
+                } else {
+                    throw new RuntimeException("Invalid migration format — must return ['up' => fn, 'down' => fn] or class with up()/down()");
                 }
-                $pdo->beginTransaction();
-                $migration['up']($pdo);
+
+                // ไม่ wrap outer transaction — DDL (CREATE/ALTER/DROP) auto-commits ใน MySQL
+                // ทำให้ outer commit/rollback หลุดสภาพ → migration ถัดไปพังต่อเนื่อง
+                $upFn($pdo);
+
+                // เคลียร์ transaction ที่ migration อาจเปิดทิ้งไว้
+                if ($pdo->inTransaction()) $pdo->commit();
+
                 $stmt = $pdo->prepare("INSERT INTO _migrations (migration, batch) VALUES (?, ?)");
                 $stmt->execute([$name, $batch]);
-                $pdo->commit();
                 echo "<span class='ok'>✅ Migrated successfully</span>";
                 $success++;
-            } catch (Exception $e) {
-                if ($pdo->inTransaction()) $pdo->rollBack();
+            } catch (Throwable $e) {
+                try { if ($pdo->inTransaction()) $pdo->rollBack(); } catch (Throwable $ex) {}
                 echo "<span class='err'>❌ Failed: " . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . "</span>";
                 $fail++;
             }
