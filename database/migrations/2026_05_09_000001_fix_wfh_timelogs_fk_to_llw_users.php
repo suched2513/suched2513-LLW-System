@@ -19,6 +19,12 @@ return [
         ")->fetchAll();
 
         if (empty($fks)) {
+            // ลบ orphan records ที่ user_id ไม่มีใน llw_users ก่อนเพิ่ม FK
+            $pdo->exec("
+                DELETE FROM wfh_timelogs
+                WHERE user_id NOT IN (SELECT user_id FROM llw_users)
+            ");
+
             $pdo->exec("
                 ALTER TABLE wfh_timelogs
                 ADD CONSTRAINT fk_wfh_timelog_llw_user
