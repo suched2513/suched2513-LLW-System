@@ -157,13 +157,22 @@ require_once __DIR__ . '/../components/layout_start.php';
         <td class="px-5 py-4 text-center">
           <div class="flex gap-1 justify-center flex-wrap">
             <?php if ($lc): ?><span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-full"><i class="fas fa-link mr-0.5"></i><?=$lc?></span><?php endif; ?>
-            <?php if ($yc): ?><span class="px-2 py-0.5 bg-rose-50 text-rose-500 text-xs font-bold rounded-full"><i class="fab fa-youtube mr-0.5"></i><?=$yc?></span><?php endif; ?>
+            <?php if ($yc): ?>
+            <button onclick="loadPreview(<?=$t['id']?>, <?=$unit_id?>)"
+              class="px-2 py-0.5 bg-rose-50 text-rose-500 text-xs font-bold rounded-full hover:bg-rose-100 transition-all">
+              <i class="fab fa-youtube mr-0.5"></i><?=$yc?> <i class="fas fa-play-circle ml-0.5"></i>
+            </button>
+            <?php endif; ?>
             <?php if ($fc): ?><span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-full"><i class="fas fa-file mr-0.5"></i><?=$fc?></span><?php endif; ?>
             <?php if (!$lc && !$yc && !$fc): ?><span class="text-slate-300 text-xs">—</span><?php endif; ?>
           </div>
         </td>
         <td class="px-5 py-4">
           <div class="flex gap-2 justify-center">
+            <button onclick="loadPreview(<?=$t['id']?>, <?=$unit_id?>)"
+              class="px-3 py-1.5 bg-violet-100 text-violet-700 text-xs font-bold rounded-lg hover:bg-violet-200 transition-all" title="ดูเนื้อหา">
+              <i class="fas fa-eye"></i>
+            </button>
             <button onclick="loadEditTopic(<?=$t['id']?>, <?=$unit_id?>)"
               class="px-3 py-1.5 bg-amber-400 text-white text-xs font-bold rounded-lg hover:bg-amber-500 transition-all">
               <i class="fas fa-edit"></i>
@@ -290,6 +299,59 @@ async function loadEditTopic(tid, unitId) {
 function confirmDel(url, msg) {
   Swal.fire({icon:'warning',title:msg,showCancelButton:true,confirmButtonColor:'#ef4444',cancelButtonText:'ยกเลิก',confirmButtonText:'ลบ'})
     .then(r=>{if(r.isConfirmed)location.href=url;});
+}
+
+async function loadPreview(tid, unitId) {
+  const data = await fetch(`topics.php?unit_id=${unitId}&ajax=topic_data&id=${tid}`).then(r=>r.json());
+  if (!data.topic) return;
+  const t = data.topic;
+
+  let html = '';
+
+  if (t.content) {
+    html += `<div class="bg-slate-50 rounded-xl p-3 mb-4 text-sm text-slate-700 whitespace-pre-wrap text-left">${escText(t.content)}</div>`;
+  }
+
+  if (data.links && data.links.length > 0) {
+    html += `<div class="mb-4 text-left"><p class="text-xs font-black text-blue-600 mb-2"><i class="fas fa-link mr-1"></i>ลิงก์</p><div class="space-y-1">`;
+    data.links.forEach(l => {
+      const label = l.link_label || l.url;
+      html += `<a href="${escAttr(l.url)}" target="_blank" rel="noopener" class="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 text-xs text-blue-700 font-bold hover:bg-blue-100 transition-all"><i class="fas fa-external-link-alt"></i>${escText(label)}</a>`;
+    });
+    html += `</div></div>`;
+  }
+
+  if (data.yt && data.yt.length > 0) {
+    html += `<div class="text-left"><p class="text-xs font-black text-rose-500 mb-2"><i class="fab fa-youtube mr-1"></i>YouTube</p><div class="space-y-3">`;
+    data.yt.forEach(y => {
+      const m = y.url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_\-]{11})/);
+      const vid = m ? m[1] : '';
+      if (vid) {
+        const label = y.video_label ? `<p class="text-xs font-bold text-slate-600 mb-1">${escText(y.video_label)}</p>` : '';
+        html += `<div>${label}<div class="relative rounded-xl overflow-hidden bg-black" style="padding-bottom:56.25%"><iframe class="absolute inset-0 w-full h-full" src="https://www.youtube.com/embed/${vid}?rel=0" frameborder="0" allowfullscreen></iframe></div></div>`;
+      } else {
+        html += `<a href="${escAttr(y.url)}" target="_blank" rel="noopener" class="flex items-center gap-2 bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs text-red-600 font-bold"><i class="fab fa-youtube"></i>${escText(y.video_label||y.url)}</a>`;
+      }
+    });
+    html += `</div></div>`;
+  }
+
+  if (!html) html = '<p class="text-slate-400 text-sm text-center py-4">ไม่มีเนื้อหา</p>';
+
+  Swal.fire({
+    title: `<span class="text-base font-black">${escText(t.topic_name)}</span>`,
+    html: `<div class="overflow-y-auto max-h-[60vh]">${html}</div>`,
+    confirmButtonColor: '#7C3AED',
+    confirmButtonText: 'ปิด',
+    width: '640px',
+  });
+}
+
+function escText(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escAttr(str) {
+  return String(str||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 </script>
 
