@@ -26,6 +26,7 @@ elseif (strpos($full_url, '/student_leave/') !== false)   $activeSystem = 'stude
 elseif (strpos($full_url, '/duty/') !== false)            $activeSystem = 'duty';
 elseif (strpos($full_url, '/club/') !== false || strpos($full_url, '/student_club/') !== false) $activeSystem = 'club';
 elseif (strpos($full_url, '/homework/') !== false)        $activeSystem = 'homework';
+elseif (strpos($full_url, '/lms/') !== false)             $activeSystem = 'lms';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
 
 /**
@@ -138,6 +139,14 @@ $subMenus = [
         ['icon' => 'fas fa-plus-circle',    'label' => 'สั่งงานใหม่',  'url' => $base_path . '/homework/create.php'],
         ['icon' => 'fas fa-tasks',          'label' => 'คิวตรวจงาน',   'url' => $base_path . '/homework/queue.php'],
     ],
+    'lms' => [
+        ['icon' => 'fas fa-tachometer-alt',    'label' => 'Dashboard LMS',     'url' => $base_path . '/lms/dashboard.php'],
+        ['icon' => 'fas fa-book-open',         'label' => 'หน่วยการเรียนรู้',  'url' => $base_path . '/lms/units.php'],
+        ['icon' => 'fas fa-play-circle',       'label' => 'ข้อสอบก่อนเรียน',  'url' => $base_path . '/lms/pre_exam.php'],
+        ['icon' => 'fas fa-flag-checkered',    'label' => 'ข้อสอบหลังเรียน',  'url' => $base_path . '/lms/post_exam.php'],
+        ['icon' => 'fas fa-cog',               'label' => 'ตั้งค่าการสอบ',     'url' => $base_path . '/lms/exam_settings.php'],
+        ['icon' => 'fas fa-chart-line',        'label' => 'ความคืบหน้า',       'url' => $base_path . '/lms/progress.php'],
+    ],
     'duty' => [
         ['icon' => 'fas fa-camera',              'label' => 'ส่งรายงานเวร (ครู)', 'url' => $base_path . '/duty/index.php',          'roles' => ['att_teacher','super_admin','wfh_admin']],
         ['icon' => 'fas fa-chart-line',          'label' => 'รายงานเวรประจำวัน', 'url' => $base_path . '/duty/admin/reports.php',  'roles' => ['att_teacher','super_admin','wfh_admin']],
@@ -213,6 +222,23 @@ $subMenus = [
                     </a>
                     <ul class="nav nav-treeview">
                         <?php foreach ($subMenus['homework'] as $sub): ?>
+                        <li class="nav-item">
+                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
+                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
+                                <p><?= $sub['label'] ?></p>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </li>
+                <!-- LMS -->
+                <li class="nav-item <?= $activeSystem === 'lms' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'lms' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-chalkboard" style="color:#8B5CF6"></i>
+                        <p style="color:<?= $activeSystem === 'lms' ? '#fff' : '#c4b5fd' ?>">ระบบ LMS <i class="nav-arrow fas fa-angle-left"></i></p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <?php foreach ($subMenus['lms'] as $sub): ?>
                         <li class="nav-item">
                             <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
                                 <i class="nav-icon <?= $sub['icon'] ?>"></i>
