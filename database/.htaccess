@@ -1,1 +1,7 @@
+Order deny,allow
 Deny from all
+
+# Allow only migrate.php via browser (PHP handles auth internally)
+<Files "migrate.php">
+    Allow from all
+</Files>
