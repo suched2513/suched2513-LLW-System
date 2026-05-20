@@ -11,7 +11,6 @@ $class= $_SESSION['student_class'];
 $subject_id = (int)($_GET['subject_id'] ?? $_POST['subject_id'] ?? 0);
 if (!$subject_id) { header('Location: /student/lms.php'); exit(); }
 
-// Verify subject + enrollment
 $ss = $pdo->prepare("SELECT s.* FROM lms_subjects s JOIN lms_subject_classrooms sc ON sc.subject_id=s.id WHERE s.id=? AND sc.classroom=? LIMIT 1");
 $ss->execute([$subject_id,$class]); $subject = $ss->fetch();
 if (!$subject) { header('Location: /student/lms.php'); exit(); }
@@ -26,17 +25,17 @@ $already_passed = $pdo->prepare("SELECT id FROM lms_student_post_exam WHERE stud
 $already_passed->execute([$uid,$subject_id]);
 if ($already_passed->fetch()) { header('Location: '.$back_url); exit(); }
 
-// Must have passed pre-exam
-$pre_passed = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
-$pre_passed->execute([$uid,$subject_id]);
-if (!$pre_passed->fetch()) { header('Location: '.$back_url); exit(); }
+// Must have done pre-exam (passed=1 since pre always passes now)
+$pre_done = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
+$pre_done->execute([$uid,$subject_id]);
+if (!$pre_done->fetch()) { header('Location: '.$back_url); exit(); }
 
 // Attempt count
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_post_exam WHERE student_uid=? AND subject_id=?");
 $stmt->execute([$uid,$subject_id]);
 $attempt_count = (int)$stmt->fetchColumn();
 
-// Max attempts reached — reset this subject and redirect
+// Max attempts reached — reset this subject
 if ($attempt_count >= $max_att) {
     try {
         $pdo->beginTransaction();
@@ -45,8 +44,7 @@ if ($attempt_count >= $max_att) {
         $pdo->prepare("DELETE FROM lms_student_exercises WHERE student_uid=? AND subject_id=?")->execute([$uid,$subject_id]);
         $pdo->commit();
     } catch (Exception $e) {
-        $pdo->rollBack();
-        error_log($e->getMessage());
+        $pdo->rollBack(); error_log($e->getMessage());
     }
     header('Location: '.$back_url.'&reset=1'); exit();
 }
@@ -57,19 +55,24 @@ $attempt_no = $attempt_count + 1;
 $result = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $qs = $pdo->prepare("SELECT * FROM lms_post_questions WHERE subject_id=? ORDER BY id");
-    $qs->execute([$subject_id]); $questions = $qs->fetchAll();
-    $total = count($questions);
-    $score = 0; $answers = [];
-    foreach ($questions as $q) {
+    $qs->execute([$subject_id]); $questions_post = $qs->fetchAll();
+    $score = 0; $total_choice = 0; $answers = [];
+    foreach ($questions_post as $q) {
+        $qtype = $q['question_type'] ?? 'choice';
+        if ($qtype === 'text') {
+            $answers[] = ['id'=>$q['id'],'type'=>'text','text'=>trim($_POST['q_'.$q['id']] ?? '')];
+            continue;
+        }
+        $total_choice++;
         $chosen  = (int)($_POST['q_'.$q['id']] ?? 0);
-        $correct = (int)$q['correct_answer'] === $chosen;
+        $correct = ((int)$q['correct_answer'] === $chosen);
         if ($correct) $score++;
-        $answers[] = ['id'=>$q['id'],'chosen'=>$chosen,'correct_answer'=>(int)$q['correct_answer'],'is_correct'=>$correct];
+        $answers[] = ['id'=>$q['id'],'type'=>'choice','chosen'=>$chosen,'correct_answer'=>(int)$q['correct_answer'],'is_correct'=>$correct];
     }
-    $passed = $score >= $post_pass ? 1 : 0;
+    $passed = ($total_choice === 0 || $score >= $post_pass) ? 1 : 0;
     $pdo->prepare("INSERT INTO lms_student_post_exam (student_uid,subject_id,score,total,passed,attempt_no) VALUES (?,?,?,?,?,?)")
-        ->execute([$uid,$subject_id,$score,$total,$passed,$attempt_no]);
-    $result = ['score'=>$score,'total'=>$total,'passed'=>$passed,'answers'=>$answers,'questions'=>$questions,
+        ->execute([$uid,$subject_id,$score,$total_choice,$passed,$attempt_no]);
+    $result = ['score'=>$score,'total'=>$total_choice,'passed'=>$passed,'answers'=>$answers,'questions'=>$questions_post,
                'attempt_no'=>$attempt_no,'max_att'=>$max_att];
 }
 
@@ -77,6 +80,13 @@ $qs = $pdo->prepare("SELECT * FROM lms_post_questions WHERE subject_id=? ORDER B
 $qs->execute([$subject_id]); $questions = $qs->fetchAll();
 $total_q   = count($questions);
 $remaining = $max_att - $attempt_count;
+
+// Pre-generate shuffled choice order per question
+$shuffled_orders = [];
+foreach ($questions as $q) {
+    $order = [1,2,3,4]; shuffle($order);
+    $shuffled_orders[$q['id']] = $order;
+}
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
@@ -122,28 +132,40 @@ body { font-family: 'Prompt', sans-serif; }
 </div>
 <?php elseif ($result): ?>
 <div class="px-4 py-5 max-w-lg mx-auto space-y-4">
-  <?php
-  $exhausted = !$result['passed'] && $result['attempt_no'] >= $result['max_att'];
-  ?>
+  <?php $exhausted = !$result['passed'] && $result['attempt_no'] >= $result['max_att']; ?>
   <div class="rounded-2xl p-6 text-center shadow-sm <?=$result['passed']?'border-2 border-emerald-300 bg-emerald-50':($exhausted?'border-2 border-slate-300 bg-slate-50':'border-2 border-rose-300 bg-rose-50')?>">
     <div class="text-5xl mb-3"><?=$result['passed']?'🎉':($exhausted?'🔄':'😢')?></div>
     <p class="font-black text-xl text-slate-800"><?=$result['passed']?'ผ่านแล้ว!':($exhausted?'ครบจำนวนครั้ง — รีเซ็ต':'ยังไม่ผ่าน')?></p>
+    <?php if ($result['total'] > 0): ?>
     <p class="text-4xl font-black mt-2 <?=$result['passed']?'text-emerald-600':($exhausted?'text-slate-500':'text-rose-500')?>">
       <?=$result['score']?> <span class="text-lg text-slate-400 font-bold">/ <?=$result['total']?></span>
     </p>
     <p class="text-sm text-slate-500 mt-1">เกณฑ์ผ่าน <?=$post_pass?> ข้อ</p>
+    <?php endif; ?>
     <?php if ($exhausted): ?>
     <p class="text-xs text-slate-400 mt-3 bg-white/70 rounded-xl p-2">เมื่อกลับหน้าบทเรียน ระบบจะรีเซ็ตประวัติทั้งหมดเพื่อเริ่มใหม่</p>
     <?php endif; ?>
   </div>
   <p class="text-xs font-black text-slate-400 uppercase tracking-wider px-1">เฉลย</p>
-  <?php foreach ($result['questions'] as $i => $q):
-    $ans = null;
-    foreach ($result['answers'] as $a) { if ($a['id'] == $q['id']) { $ans = $a; break; } }
-    $is_correct = $ans && $ans['is_correct'];
+  <?php
+  $ans_map = [];
+  foreach ($result['answers'] as $a) $ans_map[$a['id']] = $a;
+  foreach ($result['questions'] as $i => $q):
+    $ans = $ans_map[$q['id']] ?? null;
+    $qtype = $q['question_type'] ?? 'choice';
+    $is_correct = ($qtype === 'choice') && $ans && $ans['is_correct'];
   ?>
-  <div class="rounded-2xl border bg-white p-4 shadow-sm <?=$is_correct?'border-emerald-200':'border-rose-200'?>">
-    <p class="text-sm font-bold text-slate-700 mb-3"><?=$i+1?>. <?=htmlspecialchars($q['question_text'],ENT_QUOTES,'UTF-8')?></p>
+  <div class="rounded-2xl border bg-white p-4 shadow-sm <?=$qtype==='text'?'border-violet-200':($is_correct?'border-emerald-200':'border-rose-200')?>">
+    <p class="text-sm font-bold text-slate-700 mb-3"><?=$i+1?>. <?=htmlspecialchars($q['question_text'],ENT_QUOTES,'UTF-8')?>
+      <?php if ($qtype === 'text'): ?>
+      <span class="ml-1 px-1.5 py-0.5 bg-violet-100 text-violet-600 text-[10px] font-black rounded-full">อัตนัย</span>
+      <?php endif; ?>
+    </p>
+    <?php if ($qtype === 'text'): ?>
+    <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm text-slate-600">
+      <?=htmlspecialchars($ans['text'] ?? '—',ENT_QUOTES,'UTF-8')?>
+    </div>
+    <?php else: ?>
     <?php for($n=1;$n<=4;$n++):
       $is_chosen = $ans && $ans['chosen'] == $n;
       $is_right  = $q['correct_answer'] == $n;
@@ -159,6 +181,7 @@ body { font-family: 'Prompt', sans-serif; }
       <?php if ($is_chosen && !$is_right): ?><i class="bi bi-x-circle-fill text-rose-400 ml-auto"></i><?php endif; ?>
     </div>
     <?php endfor; ?>
+    <?php endif; ?>
   </div>
   <?php endforeach; ?>
   <a href="<?=$back_url?>"
@@ -169,24 +192,31 @@ body { font-family: 'Prompt', sans-serif; }
 <?php else: ?>
 <form method="POST" id="examForm" class="px-4 py-5 max-w-lg mx-auto space-y-4 pb-24">
   <input type="hidden" name="subject_id" value="<?=$subject_id?>">
-  <?php foreach ($questions as $i => $q): ?>
+  <?php foreach ($questions as $i => $q): $qtype = $q['question_type'] ?? 'choice'; ?>
   <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <p class="text-sm font-bold text-slate-800 mb-1 leading-snug">
       <span class="text-rose-600 font-black mr-1"><?=$i+1?>.</span>
       <?=htmlspecialchars($q['question_text'],ENT_QUOTES,'UTF-8')?>
+      <?php if ($qtype === 'text'): ?>
+      <span class="ml-1 px-1.5 py-0.5 bg-violet-100 text-violet-600 text-[10px] font-black rounded-full">อัตนัย</span>
+      <?php endif; ?>
     </p>
     <?php if (!empty($q['question_img'])): ?>
     <img src="/uploads/lms/questions/<?=htmlspecialchars($q['question_img'],ENT_QUOTES,'UTF-8')?>" class="rounded-xl w-full max-h-48 object-contain my-3 bg-slate-50">
     <?php endif; ?>
+    <?php if ($qtype === 'text'): ?>
+    <textarea name="q_<?=$q['id']?>" rows="3" class="w-full mt-3 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400 outline-none resize-none" placeholder="พิมพ์คำตอบของคุณ..." data-type="text"></textarea>
+    <?php else: ?>
     <div class="space-y-2 mt-3">
-      <?php for($n=1;$n<=4;$n++): ?>
+      <?php foreach ($shuffled_orders[$q['id']] as $n): ?>
       <label class="choice-label flex items-center gap-3 border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50">
-        <input type="radio" name="q_<?=$q['id']?>" value="<?=$n?>" class="hidden" required>
+        <input type="radio" name="q_<?=$q['id']?>" value="<?=$n?>" class="hidden" data-type="choice">
         <span class="choice-letter w-6 h-6 rounded-full bg-rose-100 text-rose-700 text-xs font-black flex items-center justify-center flex-shrink-0"><?=$n?></span>
         <span class="text-sm text-slate-700"><?=htmlspecialchars($q["choice{$n}"],ENT_QUOTES,'UTF-8')?></span>
       </label>
-      <?php endfor; ?>
+      <?php endforeach; ?>
     </div>
+    <?php endif; ?>
   </div>
   <?php endforeach; ?>
 </form>
@@ -208,7 +238,7 @@ body { font-family: 'Prompt', sans-serif; }
 <script>
 <?php if ($result && $result['passed']): ?>
 window.addEventListener('load', () => {
-  Swal.fire({icon:'success',title:'ผ่านแล้ว!',text:'คะแนน <?=$result['score']?>/<?=$result['total']?> ข้อ — ยินดีด้วย!',confirmButtonColor:'#7C3AED',timer:3000,showConfirmButton:false});
+  Swal.fire({icon:'success',title:'ผ่านแล้ว!',text:'<?php if($result["total"]>0): ?>คะแนน <?=$result['score']?>/<?=$result['total']?> ข้อ — ยินดีด้วย!<?php else: ?>ผ่านอัตโนมัติ<?php endif; ?>',confirmButtonColor:'#7C3AED',timer:3000,showConfirmButton:false});
 });
 <?php elseif ($result && !$result['passed'] && $result['attempt_no'] >= $result['max_att']): ?>
 window.addEventListener('load', () => {
@@ -224,20 +254,24 @@ window.addEventListener('load', () => {
     confirmButtonColor:'#E11D48'});
 });
 <?php else: ?>
-const radios = document.querySelectorAll('input[type=radio]');
-const total  = <?=$total_q?>;
+const total = <?=$total_q?>;
 function countAnswered() {
-  const names = new Set([...radios].map(r => r.name));
   let cnt = 0;
-  names.forEach(n => { if (document.querySelector(`input[name="${n}"]:checked`)) cnt++; });
+  const qIds = new Set();
+  document.querySelectorAll('[data-type="choice"]').forEach(r => qIds.add(r.name));
+  qIds.forEach(n => { if (document.querySelector(`input[name="${n}"]:checked`)) cnt++; });
+  document.querySelectorAll('[data-type="text"]').forEach(ta => { if (ta.value.trim()) cnt++; });
   document.getElementById('answered').textContent = cnt;
   document.getElementById('progressBar').style.width = (cnt/total*100)+'%';
 }
-radios.forEach(r => r.addEventListener('change', countAnswered));
+document.querySelectorAll('[data-type="choice"]').forEach(r => r.addEventListener('change', countAnswered));
+document.querySelectorAll('[data-type="text"]').forEach(ta => ta.addEventListener('input', countAnswered));
 function submitExam() {
-  const names = new Set([...radios].map(r => r.name));
   let cnt = 0;
-  names.forEach(n => { if (document.querySelector(`input[name="${n}"]:checked`)) cnt++; });
+  const qIds = new Set();
+  document.querySelectorAll('[data-type="choice"]').forEach(r => qIds.add(r.name));
+  qIds.forEach(n => { if (document.querySelector(`input[name="${n}"]:checked`)) cnt++; });
+  document.querySelectorAll('[data-type="text"]').forEach(ta => { if (ta.value.trim()) cnt++; });
   if (cnt < total) {
     Swal.fire({icon:'warning',title:'ยังไม่ครบ',text:`กรุณาตอบให้ครบทุกข้อ (ตอบแล้ว ${cnt}/${total} ข้อ)`,confirmButtonColor:'#E11D48'});
     return;

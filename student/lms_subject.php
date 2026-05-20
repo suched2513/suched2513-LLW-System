@@ -116,6 +116,7 @@ window.addEventListener('load',()=>{
       <p class="text-xl font-black"><?=$pre_passed?'✓':'—'?></p>
       <p class="text-xs opacity-80 font-bold">ก่อนเรียน</p>
     </div>
+
     <div class="bg-white/15 rounded-2xl p-3 text-center border border-white/20">
       <p class="text-xl font-black"><?=$post_passed?'✓':'—'?></p>
       <p class="text-xs opacity-80 font-bold">หลังเรียน</p>
@@ -130,12 +131,12 @@ window.addEventListener('load',()=>{
     <div class="flex items-start justify-between gap-3">
       <div>
         <p class="font-black text-slate-800 text-sm">แบบทดสอบก่อนเรียน</p>
-        <p class="text-xs text-slate-400 mt-0.5">ผ่านเกณฑ์ <?=$pre_pass?>/<?=$total_pre?> ข้อ · สอบได้ไม่จำกัดครั้ง</p>
+        <p class="text-xs text-slate-400 mt-0.5">วัดความรู้ก่อนเรียน · ทำครั้งเดียว</p>
       </div>
       <?php if ($pre_passed): ?>
-      <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full flex-shrink-0">ผ่านแล้ว</span>
+      <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full flex-shrink-0">ทำแล้ว</span>
       <?php else: ?>
-      <span class="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-black rounded-full flex-shrink-0">รอสอบ</span>
+      <span class="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-black rounded-full flex-shrink-0">รอทำ</span>
       <?php endif; ?>
     </div>
     <?php if ($pre_passed): ?>
@@ -145,17 +146,14 @@ window.addEventListener('load',()=>{
     </div>
     <?php else: ?>
     <div class="mt-3 p-3 bg-white rounded-xl border border-emerald-100 text-center">
-      <p class="text-xs text-slate-500">คะแนนที่ผ่าน</p>
+      <p class="text-xs text-slate-500">คะแนนที่ทำได้</p>
       <p class="text-lg font-black text-emerald-600"><?=$pre_passed['score']?> / <?=$pre_passed['total']?></p>
     </div>
     <?php endif; ?>
     <?php else: ?>
-    <?php if ($pre_latest): ?>
-    <div class="mt-2 text-xs text-slate-500">ครั้งล่าสุด: <?=$pre_latest['score']?>/<?=$pre_latest['total']?> ข้อ (ครั้งที่ <?=$pre_latest['attempt_no']?>)</div>
-    <?php endif; ?>
     <a href="/student/lms_pre_exam.php?subject_id=<?=$subject_id?>"
        class="mt-3 w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-200/50 active:scale-95 transition-transform">
-      <i class="bi bi-play-circle-fill"></i> <?=$pre_latest?'ทำซ้ำ':'เริ่มสอบก่อนเรียน'?>
+      <i class="bi bi-play-circle-fill"></i> เริ่มทำแบบทดสอบก่อนเรียน
     </a>
     <?php endif; ?>
   </div>
@@ -164,7 +162,7 @@ window.addEventListener('load',()=>{
   <?php if (!$pre_passed): ?>
   <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-center">
     <i class="bi bi-lock-fill text-slate-300 text-3xl mb-2 block"></i>
-    <p class="text-sm font-bold text-slate-400">ต้องผ่านแบบทดสอบก่อนเรียนก่อน</p>
+    <p class="text-sm font-bold text-slate-400">ต้องทำแบบทดสอบก่อนเรียนก่อน</p>
   </div>
   <?php else: ?>
   <?php foreach ($units as $u):

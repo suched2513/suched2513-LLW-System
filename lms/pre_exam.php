@@ -47,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $qtext = trim($_POST['question_text'] ?? '');
+    $qtype = in_array($_POST['question_type'] ?? '', ['choice','text']) ? $_POST['question_type'] : 'choice';
     $c     = [1=>trim($_POST['choice1']??''),2=>trim($_POST['choice2']??''),3=>trim($_POST['choice3']??''),4=>trim($_POST['choice4']??'')];
     $ans   = (int)($_POST['correct_answer'] ?? 1);
     $id    = (int)($_POST['id'] ?? 0);
@@ -61,14 +62,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
-        if (!$qtext || !$c[1] || !$c[2] || !$c[3] || !$c[4]) throw new Exception('กรุณากรอกข้อมูลให้ครบ');
+        if (!$qtext) throw new Exception('กรุณาระบุคำถาม');
+        if ($qtype === 'choice' && (!$c[1] || !$c[2] || !$c[3] || !$c[4])) throw new Exception('กรุณากรอกตัวเลือกให้ครบ 4 ข้อ');
         if ($action === 'add') {
-            $pdo->prepare("INSERT INTO lms_pre_questions (subject_id,question_text,question_img,choice1,choice2,choice3,choice4,correct_answer) VALUES (?,?,?,?,?,?,?,?)")
-                ->execute([$subject_id,$qtext,$qimg,$c[1],$c[2],$c[3],$c[4],$ans]);
+            $pdo->prepare("INSERT INTO lms_pre_questions (subject_id,question_text,question_type,question_img,choice1,choice2,choice3,choice4,correct_answer) VALUES (?,?,?,?,?,?,?,?,?)")
+                ->execute([$subject_id,$qtext,$qtype,$qimg,$c[1],$c[2],$c[3],$c[4],$ans]);
             $msg = 'success:เพิ่มข้อสอบสำเร็จ';
         } elseif ($action === 'edit') {
-            $pdo->prepare("UPDATE lms_pre_questions SET question_text=?,question_img=?,choice1=?,choice2=?,choice3=?,choice4=?,correct_answer=? WHERE id=? AND subject_id=?")
-                ->execute([$qtext,$qimg,$c[1],$c[2],$c[3],$c[4],$ans,$id,$subject_id]);
+            $pdo->prepare("UPDATE lms_pre_questions SET question_text=?,question_type=?,question_img=?,choice1=?,choice2=?,choice3=?,choice4=?,correct_answer=? WHERE id=? AND subject_id=?")
+                ->execute([$qtext,$qtype,$qimg,$c[1],$c[2],$c[3],$c[4],$ans,$id,$subject_id]);
             $msg = 'success:แก้ไขสำเร็จ';
         }
     } catch (Exception $e) { $msg = 'error:'.$e->getMessage(); }
@@ -131,19 +133,21 @@ require_once __DIR__ . '/../components/layout_start.php';
       <tr>
         <th class="px-5 py-3 w-12 text-center">#</th>
         <th class="px-5 py-3 text-left">คำถาม</th>
+        <th class="px-5 py-3 text-center w-24">ประเภท</th>
         <th class="px-5 py-3 text-center w-24">เฉลย</th>
         <th class="px-5 py-3 text-center w-28">จัดการ</th>
       </tr>
     </thead>
     <tbody class="divide-y divide-slate-50">
       <?php if (empty($questions)): ?>
-      <tr><td colspan="4" class="py-16 text-center text-slate-300"><i class="fas fa-clipboard text-4xl mb-3 block opacity-30"></i>ยังไม่มีข้อสอบ</td></tr>
+      <tr><td colspan="5" class="py-16 text-center text-slate-300"><i class="fas fa-clipboard text-4xl mb-3 block opacity-30"></i>ยังไม่มีข้อสอบ</td></tr>
       <?php endif; ?>
-      <?php foreach ($questions as $i => $q): ?>
+      <?php foreach ($questions as $i => $q): $isText = ($q['question_type'] ?? 'choice') === 'text'; ?>
       <tr class="hover:bg-slate-50/50 transition-colors">
         <td class="px-5 py-3 text-center text-slate-400"><?=$i+1?></td>
         <td class="px-5 py-3">
           <div class="font-medium text-slate-700 text-xs"><?=htmlspecialchars(mb_substr($q['question_text'],0,100),ENT_QUOTES,'UTF-8')?></div>
+          <?php if (!$isText): ?>
           <div class="flex flex-wrap gap-1 mt-1">
             <?php for ($n=1;$n<=4;$n++): ?>
             <span class="px-2 py-0.5 <?=$q['correct_answer']==$n?'bg-emerald-100 text-emerald-700 font-black':'bg-slate-100 text-slate-400'?> text-xs rounded-full">
@@ -151,9 +155,23 @@ require_once __DIR__ . '/../components/layout_start.php';
             </span>
             <?php endfor; ?>
           </div>
+          <?php else: ?>
+          <div class="mt-1 text-xs text-slate-400 italic">ตอบอิสระ</div>
+          <?php endif; ?>
         </td>
         <td class="px-5 py-3 text-center">
+          <?php if ($isText): ?>
+          <span class="px-2.5 py-1 bg-violet-50 text-violet-600 text-xs font-black rounded-full">อัตนัย</span>
+          <?php else: ?>
+          <span class="px-2.5 py-1 bg-blue-50 text-blue-600 text-xs font-black rounded-full">ปรนัย</span>
+          <?php endif; ?>
+        </td>
+        <td class="px-5 py-3 text-center">
+          <?php if (!$isText): ?>
           <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-black rounded-full">ข้อ <?=$q['correct_answer']?></span>
+          <?php else: ?>
+          <span class="text-slate-300 text-xs">—</span>
+          <?php endif; ?>
         </td>
         <td class="px-5 py-3">
           <div class="flex gap-2 justify-center">
@@ -184,20 +202,35 @@ require_once __DIR__ . '/../components/layout_start.php';
       <input type="hidden" name="old_qimg" id="eq_qimg">
       <?php endif; ?>
       <div>
+        <label class="block text-xs font-black text-slate-500 mb-2">ประเภทคำถาม</label>
+        <div class="flex gap-4">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="question_type" value="choice" id="<?=$mid?>_type_choice" class="accent-blue-600" onchange="toggleChoices('<?=$mid?>',this.value)" checked>
+            <span class="text-sm font-bold text-blue-700">ปรนัย (มีตัวเลือก)</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="question_type" value="text" id="<?=$mid?>_type_text" class="accent-violet-600" onchange="toggleChoices('<?=$mid?>',this.value)">
+            <span class="text-sm font-bold text-violet-700">อัตนัย (ตอบอิสระ)</span>
+          </label>
+        </div>
+      </div>
+      <div>
         <label class="block text-xs font-black text-slate-500 mb-1">คำถาม <span class="text-rose-500">*</span></label>
         <textarea name="question_text" id="<?=$mid?>_qtext" rows="3" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none resize-none" placeholder="พิมพ์คำถาม..."></textarea>
       </div>
-      <?php for ($n=1;$n<=4;$n++): ?>
-      <div>
-        <label class="block text-xs font-black text-slate-500 mb-1">ตัวเลือกที่ <?=$n?> <span class="text-rose-500">*</span></label>
-        <input type="text" name="choice<?=$n?>" id="<?=$mid?>_c<?=$n?>" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
-      </div>
-      <?php endfor; ?>
-      <div>
-        <label class="block text-xs font-black text-slate-500 mb-1">เฉลย <span class="text-rose-500">*</span></label>
-        <select name="correct_answer" id="<?=$mid?>_ans" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
-          <?php for($n=1;$n<=4;$n++): ?><option value="<?=$n?>">ข้อ <?=$n?></option><?php endfor; ?>
-        </select>
+      <div id="<?=$mid?>_choices_wrap">
+        <?php for ($n=1;$n<=4;$n++): ?>
+        <div class="mb-3">
+          <label class="block text-xs font-black text-slate-500 mb-1">ตัวเลือกที่ <?=$n?> <span class="text-rose-500">*</span></label>
+          <input type="text" name="choice<?=$n?>" id="<?=$mid?>_c<?=$n?>" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
+        </div>
+        <?php endfor; ?>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-1">เฉลย <span class="text-rose-500">*</span></label>
+          <select name="correct_answer" id="<?=$mid?>_ans" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
+            <?php for($n=1;$n<=4;$n++): ?><option value="<?=$n?>">ข้อ <?=$n?></option><?php endfor; ?>
+          </select>
+        </div>
       </div>
       <div class="flex justify-end gap-3 pt-2">
         <button type="button" onclick="closeModal('<?=$mid?>Modal')" class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50 transition-all">ยกเลิก</button>
@@ -229,10 +262,24 @@ require_once __DIR__ . '/../components/layout_start.php';
 <script>
 function openModal(id){const el=document.getElementById(id);el.classList.remove('hidden');el.classList.add('flex');}
 function closeModal(id){const el=document.getElementById(id);el.classList.add('hidden');el.classList.remove('flex');}
+function toggleChoices(prefix,type){
+  const wrap=document.getElementById(prefix+'_choices_wrap');
+  if(type==='text'){
+    wrap.style.display='none';
+    wrap.querySelectorAll('input,select').forEach(el=>el.removeAttribute('required'));
+  } else {
+    wrap.style.display='';
+    wrap.querySelectorAll('input[type=text]').forEach(el=>el.setAttribute('required',''));
+  }
+}
 function openEdit(q){
   document.getElementById('eq_id').value=q.id;
   document.getElementById('eq_qimg').value=q.question_img||'';
   document.getElementById('edit_qtext').value=q.question_text;
+  const qtype=(q.question_type==='text')?'text':'choice';
+  document.getElementById('edit_type_choice').checked=(qtype==='choice');
+  document.getElementById('edit_type_text').checked=(qtype==='text');
+  toggleChoices('edit',qtype);
   for(let n=1;n<=4;n++) document.getElementById('edit_c'+n).value=q['choice'+n]||'';
   document.getElementById('edit_ans').value=q.correct_answer;
   openModal('editModal');
