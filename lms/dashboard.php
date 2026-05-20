@@ -26,7 +26,7 @@ $class_counts = array_column($class_data, 'cnt');
 
 // recent pre-exam
 $recent = $pdo->query("
-    SELECT s.student_name, s.classroom, e.score, e.total, e.passed, e.taken_at
+    SELECT s.name AS student_name, s.classroom, e.score, e.total, e.passed, e.taken_at
     FROM lms_student_pre_exam e
     JOIN att_students s ON s.id = e.student_uid
     ORDER BY e.taken_at DESC LIMIT 8

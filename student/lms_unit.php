@@ -122,13 +122,13 @@ body { font-family: 'Prompt', sans-serif; }
     <button type="button" onclick="toggleTopic(<?=$t['id']?>)"
       class="w-full flex items-center gap-3 px-5 py-4 text-left">
       <span class="w-8 h-8 rounded-xl bg-violet-100 text-violet-600 text-xs font-black flex items-center justify-center flex-shrink-0"><?=$i+1?></span>
-      <span class="flex-1 font-bold text-slate-700 text-sm"><?=htmlspecialchars($t['topic_title'],ENT_QUOTES,'UTF-8')?></span>
+      <span class="flex-1 font-bold text-slate-700 text-sm"><?=htmlspecialchars($t['topic_name'],ENT_QUOTES,'UTF-8')?></span>
       <i class="bi bi-chevron-down text-slate-400 topic-chevron" id="chev_<?=$t['id']?>"></i>
     </button>
     <div class="topic-body" id="tbody_<?=$t['id']?>">
       <div class="px-5 pb-5 space-y-4 border-t border-slate-100 pt-4">
-        <?php if (!empty($t['topic_content'])): ?>
-        <div class="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap"><?=htmlspecialchars($t['topic_content'],ENT_QUOTES,'UTF-8')?></div>
+        <?php if (!empty($t['content'])): ?>
+        <div class="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap"><?=htmlspecialchars($t['content'],ENT_QUOTES,'UTF-8')?></div>
         <?php endif; ?>
 
         <?php
@@ -145,7 +145,7 @@ body { font-family: 'Prompt', sans-serif; }
           <a href="<?=htmlspecialchars($lk['url'],ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
              class="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5 text-sm text-blue-700 font-bold active:opacity-70">
             <i class="bi bi-box-arrow-up-right flex-shrink-0"></i>
-            <span class="truncate"><?=htmlspecialchars($lk['link_title']?:$lk['url'],ENT_QUOTES,'UTF-8')?></span>
+            <span class="truncate"><?=htmlspecialchars($lk['link_label']?:$lk['url'],ENT_QUOTES,'UTF-8')?></span>
           </a>
           <?php endforeach; ?>
           </div>
@@ -162,23 +162,23 @@ body { font-family: 'Prompt', sans-serif; }
         <div class="space-y-3">
           <p class="text-xs font-black text-slate-400"><i class="bi bi-youtube mr-1 text-red-500"></i>วิดีโอ</p>
           <?php foreach ($ytbs as $yt):
-            preg_match('/(?:v=|youtu\.be\/)([A-Za-z0-9_\-]{11})/', $yt['youtube_url'], $m);
+            preg_match('/(?:v=|youtu\.be\/)([A-Za-z0-9_\-]{11})/', $yt['url'], $m);
             $vid = $m[1] ?? '';
           ?>
           <?php if ($vid): ?>
           <div class="rounded-2xl overflow-hidden border border-slate-200 bg-black">
-            <?php if (!empty($yt['yt_title'])): ?>
-            <div class="px-3 py-2 text-xs font-bold text-white bg-black/80 border-b border-white/10"><?=htmlspecialchars($yt['yt_title'],ENT_QUOTES,'UTF-8')?></div>
+            <?php if (!empty($yt['video_label'])): ?>
+            <div class="px-3 py-2 text-xs font-bold text-white bg-black/80 border-b border-white/10"><?=htmlspecialchars($yt['video_label'],ENT_QUOTES,'UTF-8')?></div>
             <?php endif; ?>
             <div class="relative" style="padding-bottom:56.25%">
               <iframe class="absolute inset-0 w-full h-full" src="https://www.youtube.com/embed/<?=$vid?>?rel=0" frameborder="0" allowfullscreen loading="lazy"></iframe>
             </div>
           </div>
           <?php else: ?>
-          <a href="<?=htmlspecialchars($yt['youtube_url'],ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
+          <a href="<?=htmlspecialchars($yt['url'],ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
              class="flex items-center gap-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 text-sm text-red-600 font-bold">
             <i class="bi bi-play-circle-fill"></i>
-            <span class="truncate"><?=htmlspecialchars($yt['yt_title']?:$yt['youtube_url'],ENT_QUOTES,'UTF-8')?></span>
+            <span class="truncate"><?=htmlspecialchars($yt['video_label']?:$yt['url'],ENT_QUOTES,'UTF-8')?></span>
           </a>
           <?php endif; ?>
           <?php endforeach; ?>
@@ -196,10 +196,10 @@ body { font-family: 'Prompt', sans-serif; }
           <p class="text-xs font-black text-slate-400 mb-2"><i class="bi bi-paperclip mr-1"></i>ไฟล์แนบ</p>
           <div class="space-y-2">
           <?php foreach ($files as $f): ?>
-          <a href="/<?=htmlspecialchars($f['file_path'],ENT_QUOTES,'UTF-8')?>" target="_blank" download
+          <a href="/<?=htmlspecialchars($f['filename'],ENT_QUOTES,'UTF-8')?>" target="_blank" download
              class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 font-bold active:opacity-70">
             <i class="bi bi-file-earmark-arrow-down text-violet-500 flex-shrink-0"></i>
-            <span class="truncate"><?=htmlspecialchars($f['file_name']?:basename($f['file_path']),ENT_QUOTES,'UTF-8')?></span>
+            <span class="truncate"><?=htmlspecialchars($f['original_name']?:basename($f['filename']),ENT_QUOTES,'UTF-8')?></span>
           </a>
           <?php endforeach; ?>
           </div>
@@ -226,9 +226,6 @@ body { font-family: 'Prompt', sans-serif; }
       <span class="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-black rounded-full flex-shrink-0">รอส่ง</span>
       <?php endif; ?>
     </div>
-    <?php if (!empty($ex['exercise_description'])): ?>
-    <p class="text-xs text-slate-500 mb-3 leading-relaxed"><?=htmlspecialchars($ex['exercise_description'],ENT_QUOTES,'UTF-8')?></p>
-    <?php endif; ?>
     <?php if ($done): ?>
     <div class="bg-emerald-50 rounded-xl p-3 text-xs text-emerald-700 border border-emerald-100">
       <p class="font-black mb-1">คำตอบของคุณ:</p>

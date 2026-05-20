@@ -140,9 +140,9 @@ require_once __DIR__ . '/../components/layout_start.php';
       <tr><td colspan="4" class="py-16 text-center text-slate-300"><i class="fas fa-file-alt text-4xl mb-3 block opacity-30"></i>ยังไม่มีเรื่องในหน่วยนี้</td></tr>
       <?php endif; ?>
       <?php foreach ($topics as $t):
-        $lc = (int)$pdo->prepare("SELECT COUNT(*) FROM lms_topic_links WHERE topic_id=?")->execute([$t['id']]) ? $pdo->query("SELECT COUNT(*) FROM lms_topic_links WHERE topic_id={$t['id']}")->fetchColumn() : 0;
-        $yc = (int)$pdo->query("SELECT COUNT(*) FROM lms_topic_youtube WHERE topic_id={$t['id']}")->fetchColumn();
-        $fc = (int)$pdo->query("SELECT COUNT(*) FROM lms_topic_files WHERE topic_id={$t['id']}")->fetchColumn();
+        $s1=$pdo->prepare("SELECT COUNT(*) FROM lms_topic_links   WHERE topic_id=?"); $s1->execute([$t['id']]); $lc=(int)$s1->fetchColumn();
+        $s2=$pdo->prepare("SELECT COUNT(*) FROM lms_topic_youtube WHERE topic_id=?"); $s2->execute([$t['id']]); $yc=(int)$s2->fetchColumn();
+        $s3=$pdo->prepare("SELECT COUNT(*) FROM lms_topic_files   WHERE topic_id=?"); $s3->execute([$t['id']]); $fc=(int)$s3->fetchColumn();
       ?>
       <tr class="hover:bg-slate-50/50 transition-colors">
         <td class="px-5 py-4 text-center">

@@ -178,8 +178,8 @@ body { font-family: 'Prompt', sans-serif; }
       <span class="text-rose-600 font-black mr-1"><?=$i+1?>.</span>
       <?=htmlspecialchars($q['question_text'],ENT_QUOTES,'UTF-8')?>
     </p>
-    <?php if (!empty($q['question_image'])): ?>
-    <img src="/<?=htmlspecialchars($q['question_image'],ENT_QUOTES,'UTF-8')?>" class="rounded-xl w-full max-h-48 object-contain my-3 bg-slate-50">
+    <?php if (!empty($q['question_img'])): ?>
+    <img src="/<?=htmlspecialchars($q['question_img'],ENT_QUOTES,'UTF-8')?>" class="rounded-xl w-full max-h-48 object-contain my-3 bg-slate-50">
     <?php endif; ?>
     <div class="space-y-2 mt-3">
       <?php for($n=1;$n<=4;$n++): ?>

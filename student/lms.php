@@ -26,9 +26,6 @@ $pre_latest->execute([$uid]); $pre_latest = $pre_latest->fetch();
 $post_passed = $pdo->prepare("SELECT id,score,total FROM lms_student_post_exam WHERE student_uid=? AND passed=1 LIMIT 1");
 $post_passed->execute([$uid]); $post_passed = $post_passed->fetch();
 
-$post_attempt_count = (int)$pdo->prepare("SELECT COUNT(*) FROM lms_student_post_exam WHERE student_uid=?")->execute([$uid]) ?
-    $pdo->query("SELECT COUNT(*) FROM lms_student_post_exam WHERE student_uid=$uid")->fetchColumn() : 0;
-$post_attempt_count = (int)$pdo->prepare("SELECT COUNT(*) FROM lms_student_post_exam WHERE student_uid=?")->execute([$uid]) | 0;
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_post_exam WHERE student_uid=?"); $stmt->execute([$uid]); $post_attempt_count = (int)$stmt->fetchColumn();
 
 // Units with progress
@@ -41,7 +38,7 @@ foreach ($units as $u) {
         $chk = $pdo->prepare("SELECT id FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1"); $chk->execute([$uid,$ex['id']]);
         if ($chk->fetch()) $submitted++;
     }
-    $topics_count = (int)$pdo->query("SELECT COUNT(*) FROM lms_topics WHERE unit_id={$u['id']}")->fetchColumn();
+    $tc=$pdo->prepare("SELECT COUNT(*) FROM lms_topics WHERE unit_id=?"); $tc->execute([$u['id']]); $topics_count=(int)$tc->fetchColumn();
     $unit_progress[$u['id']] = ['ex_total'=>$ex_total,'submitted'=>$submitted,'topics_count'=>$topics_count];
 }
 ?><!DOCTYPE html>
