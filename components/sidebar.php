@@ -140,12 +140,9 @@ $subMenus = [
         ['icon' => 'fas fa-tasks',          'label' => 'คิวตรวจงาน',   'url' => $base_path . '/homework/queue.php'],
     ],
     'lms' => [
-        ['icon' => 'fas fa-tachometer-alt',    'label' => 'Dashboard LMS',     'url' => $base_path . '/lms/dashboard.php'],
-        ['icon' => 'fas fa-book-open',         'label' => 'หน่วยการเรียนรู้',  'url' => $base_path . '/lms/units.php'],
-        ['icon' => 'fas fa-play-circle',       'label' => 'ข้อสอบก่อนเรียน',  'url' => $base_path . '/lms/pre_exam.php'],
-        ['icon' => 'fas fa-flag-checkered',    'label' => 'ข้อสอบหลังเรียน',  'url' => $base_path . '/lms/post_exam.php'],
-        ['icon' => 'fas fa-cog',               'label' => 'ตั้งค่าการสอบ',     'url' => $base_path . '/lms/exam_settings.php'],
-        ['icon' => 'fas fa-chart-line',        'label' => 'ความคืบหน้า',       'url' => $base_path . '/lms/progress.php'],
+        ['icon' => 'fas fa-tachometer-alt',    'label' => 'Dashboard LMS',  'url' => $base_path . '/lms/dashboard.php'],
+        ['icon' => 'fas fa-layer-group',       'label' => 'วิชาทั้งหมด',    'url' => $base_path . '/lms/subjects.php'],
+        ['icon' => 'fas fa-chart-line',        'label' => 'ความคืบหน้า',    'url' => $base_path . '/lms/progress.php'],
     ],
     'duty' => [
         ['icon' => 'fas fa-camera',              'label' => 'ส่งรายงานเวร (ครู)', 'url' => $base_path . '/duty/index.php',          'roles' => ['att_teacher','super_admin','wfh_admin']],

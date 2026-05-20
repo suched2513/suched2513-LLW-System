@@ -7,23 +7,31 @@ if ($_SESSION['llw_role'] !== 'super_admin') { header('Location: ' . $base_path 
 $pdo = getPdo();
 $msg = '';
 
+$subject_id = (int)($_GET['subject_id'] ?? $_POST['subject_id'] ?? 0);
+if (!$subject_id) { header('Location: subjects.php'); exit(); }
+$ss = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $ss->execute([$subject_id]); $subject = $ss->fetch();
+if (!$subject) { header('Location: subjects.php'); exit(); }
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pre_pass  = max(1, (int)$_POST['pre_pass_score']);
     $post_pass = max(1, (int)$_POST['post_pass_score']);
     $max_att   = max(1, (int)$_POST['post_max_attempts']);
-    $pdo->prepare("UPDATE lms_exam_settings SET pre_pass_score=?, post_pass_score=?, post_max_attempts=? WHERE id=1")
-        ->execute([$pre_pass, $post_pass, $max_att]);
+    $pdo->prepare("UPDATE lms_exam_settings SET pre_pass_score=?, post_pass_score=?, post_max_attempts=? WHERE subject_id=?")
+        ->execute([$pre_pass, $post_pass, $max_att, $subject_id]);
     $msg = 'success:บันทึกการตั้งค่าสำเร็จ';
-    header('Location: exam_settings.php?msg=' . urlencode($msg)); exit();
+    header('Location: exam_settings.php?subject_id='.$subject_id.'&msg='.urlencode($msg)); exit();
 }
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
-$s          = $pdo->query("SELECT * FROM lms_exam_settings LIMIT 1")->fetch();
-$pre_total  = (int)$pdo->query("SELECT COUNT(*) FROM lms_pre_questions")->fetchColumn();
-$post_total = (int)$pdo->query("SELECT COUNT(*) FROM lms_post_questions")->fetchColumn();
+$st = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE subject_id=?");
+$st->execute([$subject_id]);
+$s = $st->fetch();
+
+$stpre = $pdo->prepare("SELECT COUNT(*) FROM lms_pre_questions WHERE subject_id=?"); $stpre->execute([$subject_id]); $pre_total = (int)$stpre->fetchColumn();
+$stpost = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE subject_id=?"); $stpost->execute([$subject_id]); $post_total = (int)$stpost->fetchColumn();
 
 $pageTitle    = 'ตั้งค่าการสอบ';
-$pageSubtitle = 'กำหนดเกณฑ์ผ่านและจำนวนครั้ง';
+$pageSubtitle = htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8');
 $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
@@ -40,15 +48,16 @@ require_once __DIR__ . '/../components/layout_start.php';
     <i class="fas fa-cog text-white"></i>
   </div>
   <div>
+    <a href="<?=$base_path?>/lms/subjects.php" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>วิชาทั้งหมด</a>
     <h2 class="text-lg font-black text-slate-800">ตั้งค่าการสอบ</h2>
-    <p class="text-xs text-slate-400">กำหนดเกณฑ์การผ่านและจำนวนครั้งที่สอบได้</p>
+    <p class="text-xs text-slate-400"><?=htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8')?></p>
   </div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-  <!-- Form -->
   <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-6">
     <form method="POST" class="space-y-5">
+      <input type="hidden" name="subject_id" value="<?=$subject_id?>">
       <h3 class="font-black text-slate-700 text-sm mb-4">กำหนดค่า</h3>
 
       <div class="rounded-xl p-4 bg-blue-50 border border-blue-100">
@@ -93,7 +102,6 @@ require_once __DIR__ . '/../components/layout_start.php';
     </form>
   </div>
 
-  <!-- Summary -->
   <div class="space-y-4">
     <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-5" style="border-left:4px solid #0288D1">
       <div class="text-xs text-slate-400 mb-1">การตั้งค่าปัจจุบัน — ก่อนเรียน</div>

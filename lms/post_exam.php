@@ -7,16 +7,22 @@ if ($_SESSION['llw_role'] !== 'super_admin') { header('Location: ' . $base_path 
 $pdo = getPdo();
 $msg = '';
 
+$subject_id = (int)($_GET['subject_id'] ?? $_POST['subject_id'] ?? 0);
+if (!$subject_id) { header('Location: subjects.php'); exit(); }
+$ss = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $ss->execute([$subject_id]); $subject = $ss->fetch();
+if (!$subject) { header('Location: subjects.php'); exit(); }
+
 if (isset($_GET['export']) || isset($_GET['template'])) {
-    $fn = isset($_GET['export']) ? 'lms_post_exam_' . date('YmdHis') . '.csv' : 'lms_post_exam_template.csv';
+    $fn = isset($_GET['export']) ? 'lms_post_exam_'.$subject_id.'_'.date('YmdHis').'.csv' : 'lms_post_exam_template.csv';
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="' . $fn . '"');
+    header('Content-Disposition: attachment; filename="'.$fn.'"');
     $out = fopen('php://output', 'w');
     fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
     fputcsv($out, ['คำถาม','ตัวเลือก1','ตัวเลือก2','ตัวเลือก3','ตัวเลือก4','เฉลย(1-4)']);
     if (isset($_GET['export'])) {
-        foreach ($pdo->query("SELECT question_text,choice1,choice2,choice3,choice4,correct_answer FROM lms_post_questions ORDER BY id")->fetchAll() as $r)
-            fputcsv($out, $r);
+        $st = $pdo->prepare("SELECT question_text,choice1,choice2,choice3,choice4,correct_answer FROM lms_post_questions WHERE subject_id=? ORDER BY id");
+        $st->execute([$subject_id]);
+        foreach ($st->fetchAll() as $r) fputcsv($out, $r);
     } else {
         fputcsv($out, ['PHP ย่อมาจากอะไร?','Personal Home Page','PHP: Hypertext Preprocessor','Preprocessor Home Page','PHP Home Page','2']);
     }
@@ -31,13 +37,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         fgetcsv($h); $cnt = 0;
         while (($row = fgetcsv($h)) !== false) {
             if (count($row) >= 6 && trim($row[0]) && (int)$row[5] >= 1 && (int)$row[5] <= 4) {
-                $pdo->prepare("INSERT INTO lms_post_questions (question_text,choice1,choice2,choice3,choice4,correct_answer) VALUES (?,?,?,?,?,?)")
-                    ->execute([trim($row[0]),trim($row[1]),trim($row[2]),trim($row[3]),trim($row[4]),(int)$row[5]]);
+                $pdo->prepare("INSERT INTO lms_post_questions (subject_id,question_text,choice1,choice2,choice3,choice4,correct_answer) VALUES (?,?,?,?,?,?,?)")
+                    ->execute([$subject_id,trim($row[0]),trim($row[1]),trim($row[2]),trim($row[3]),trim($row[4]),(int)$row[5]]);
                 $cnt++;
             }
         }
         fclose($h);
-        header('Location: post_exam.php?msg=' . urlencode("success:นำเข้าสำเร็จ $cnt ข้อ")); exit();
+        header('Location: post_exam.php?subject_id='.$subject_id.'&msg='.urlencode("success:นำเข้าสำเร็จ $cnt ข้อ")); exit();
     }
     $qtext = trim($_POST['question_text'] ?? '');
     $c     = [1=>trim($_POST['choice1']??''),2=>trim($_POST['choice2']??''),3=>trim($_POST['choice3']??''),4=>trim($_POST['choice4']??'')];
@@ -46,28 +52,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if (!$qtext || !$c[1] || !$c[2] || !$c[3] || !$c[4]) throw new Exception('กรุณากรอกข้อมูลให้ครบ');
         if ($action === 'add') {
-            $pdo->prepare("INSERT INTO lms_post_questions (question_text,choice1,choice2,choice3,choice4,correct_answer) VALUES (?,?,?,?,?,?)")
-                ->execute([$qtext,$c[1],$c[2],$c[3],$c[4],$ans]);
+            $pdo->prepare("INSERT INTO lms_post_questions (subject_id,question_text,choice1,choice2,choice3,choice4,correct_answer) VALUES (?,?,?,?,?,?,?)")
+                ->execute([$subject_id,$qtext,$c[1],$c[2],$c[3],$c[4],$ans]);
             $msg = 'success:เพิ่มข้อสอบสำเร็จ';
         } elseif ($action === 'edit') {
-            $pdo->prepare("UPDATE lms_post_questions SET question_text=?,choice1=?,choice2=?,choice3=?,choice4=?,correct_answer=? WHERE id=?")
-                ->execute([$qtext,$c[1],$c[2],$c[3],$c[4],$ans,$id]);
+            $pdo->prepare("UPDATE lms_post_questions SET question_text=?,choice1=?,choice2=?,choice3=?,choice4=?,correct_answer=? WHERE id=? AND subject_id=?")
+                ->execute([$qtext,$c[1],$c[2],$c[3],$c[4],$ans,$id,$subject_id]);
             $msg = 'success:แก้ไขสำเร็จ';
         }
     } catch (Exception $e) { $msg = 'error:'.$e->getMessage(); }
-    header('Location: post_exam.php?msg=' . urlencode($msg)); exit();
+    header('Location: post_exam.php?subject_id='.$subject_id.'&msg='.urlencode($msg)); exit();
 }
 if (isset($_GET['action']) && $_GET['action'] === 'delete') {
-    $pdo->prepare("DELETE FROM lms_post_questions WHERE id=?")->execute([(int)$_GET['id']]);
-    header('Location: post_exam.php?msg=' . urlencode('success:ลบสำเร็จ')); exit();
+    $pdo->prepare("DELETE FROM lms_post_questions WHERE id=? AND subject_id=?")->execute([(int)$_GET['id'],$subject_id]);
+    header('Location: post_exam.php?subject_id='.$subject_id.'&msg='.urlencode('success:ลบสำเร็จ')); exit();
 }
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
-$questions = $pdo->query("SELECT * FROM lms_post_questions ORDER BY id")->fetchAll();
+$st = $pdo->prepare("SELECT * FROM lms_post_questions WHERE subject_id=? ORDER BY id");
+$st->execute([$subject_id]);
+$questions = $st->fetchAll();
 $total = count($questions);
 
 $pageTitle    = 'ข้อสอบหลังเรียน';
-$pageSubtitle = "ทั้งหมด {$total} ข้อ";
+$pageSubtitle = htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8');
 $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
@@ -85,18 +93,19 @@ require_once __DIR__ . '/../components/layout_start.php';
       <i class="fas fa-clipboard-check text-white"></i>
     </div>
     <div>
+      <a href="<?=$base_path?>/lms/subjects.php" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>วิชาทั้งหมด</a>
       <h2 class="text-lg font-black text-slate-800">ข้อสอบหลังเรียน</h2>
-      <p class="text-xs text-slate-400"><?=$total?> ข้อ · สอบได้จำกัดครั้งตามที่ตั้งค่าไว้</p>
+      <p class="text-xs text-slate-400"><?=$total?> ข้อ · <?=htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8')?></p>
     </div>
   </div>
   <div class="flex gap-2 flex-wrap">
-    <a href="post_exam.php?template=1" class="px-3 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200 transition-all">
+    <a href="post_exam.php?subject_id=<?=$subject_id?>&template=1" class="px-3 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200 transition-all">
       <i class="fas fa-download mr-1"></i> Template CSV
     </a>
     <button onclick="openModal('importModal')" class="px-3 py-2 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">
       <i class="fas fa-file-import mr-1"></i> Import CSV
     </button>
-    <a href="post_exam.php?export=1" class="px-3 py-2 bg-slate-500 text-white text-xs font-bold rounded-xl hover:bg-slate-600 transition-all">
+    <a href="post_exam.php?subject_id=<?=$subject_id?>&export=1" class="px-3 py-2 bg-slate-500 text-white text-xs font-bold rounded-xl hover:bg-slate-600 transition-all">
       <i class="fas fa-file-export mr-1"></i> Export
     </a>
     <button onclick="openModal('addModal')" class="px-3 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all">
@@ -139,7 +148,7 @@ require_once __DIR__ . '/../components/layout_start.php';
           <div class="flex gap-2 justify-center">
             <button onclick="openEdit(<?=htmlspecialchars(json_encode($q),ENT_QUOTES,'UTF-8')?>)"
               class="px-2.5 py-1.5 bg-amber-400 text-white text-xs font-bold rounded-lg hover:bg-amber-500 transition-all"><i class="fas fa-edit"></i></button>
-            <button onclick="confirmDel('post_exam.php?action=delete&id=<?=$q['id']?>')"
+            <button onclick="confirmDel('post_exam.php?action=delete&id=<?=$q['id']?>&subject_id=<?=$subject_id?>')"
               class="px-2.5 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-all"><i class="fas fa-trash"></i></button>
           </div>
         </td>
@@ -158,6 +167,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     </div>
     <form method="POST" class="p-6 space-y-4">
       <input type="hidden" name="action" value="<?=$mid?>">
+      <input type="hidden" name="subject_id" value="<?=$subject_id?>">
       <?php if ($mid==='edit'): ?><input type="hidden" name="id" id="peq_id"><?php endif; ?>
       <div>
         <label class="block text-xs font-black text-slate-500 mb-1">คำถาม <span class="text-rose-500">*</span></label>
@@ -192,6 +202,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     </div>
     <form method="POST" enctype="multipart/form-data" class="p-6">
       <input type="hidden" name="action" value="import">
+      <input type="hidden" name="subject_id" value="<?=$subject_id?>">
       <input type="file" name="csv_file" accept=".csv" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm mb-4">
       <div class="flex justify-end gap-3">
         <button type="button" onclick="closeModal('importModal')" class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl">ยกเลิก</button>

@@ -9,34 +9,49 @@ $pdo = getPdo();
 // AJAX: student exercise answers
 if (isset($_GET['ajax']) && $_GET['ajax'] === 'answers') {
     header('Content-Type: application/json');
-    $uid = (int)($_GET['student_uid'] ?? 0);
-    $uid2= (int)($_GET['unit_id'] ?? 0);
+    $uid  = (int)($_GET['student_uid'] ?? 0);
+    $uid2 = (int)($_GET['unit_id'] ?? 0);
+    $sid  = (int)($_GET['subject_id'] ?? 0);
     $rows = $pdo->prepare("
         SELECT e.exercise_title, se.answer_text, se.submitted_at
         FROM lms_student_exercises se
         JOIN lms_unit_exercises e ON e.id = se.exercise_id
-        WHERE se.student_uid=? AND se.unit_id=?
+        WHERE se.student_uid=? AND se.unit_id=? AND se.subject_id=?
         ORDER BY se.submitted_at
     ");
-    $rows->execute([$uid,$uid2]);
+    $rows->execute([$uid,$uid2,$sid]);
     echo json_encode($rows->fetchAll()); exit();
 }
 
-$sel_class = $_GET['class'] ?? '';
-$classes   = $pdo->query("
-    SELECT DISTINCT classroom FROM att_students
-    WHERE status='active' AND student_id REGEXP '^[0-9]+$'
-      AND student_id NOT IN (SELECT subject_code FROM att_subjects)
-    ORDER BY classroom
-")->fetchAll(PDO::FETCH_COLUMN);
+$sel_subject = (int)($_GET['subject_id'] ?? 0);
+$sel_class   = $_GET['class'] ?? '';
 
-$settings  = $pdo->query("SELECT * FROM lms_exam_settings LIMIT 1")->fetch();
-$units     = $pdo->query("SELECT * FROM lms_units ORDER BY order_no")->fetchAll();
-$pre_pass  = $settings['pre_pass_score'] ?? 6;
-$post_pass = $settings['post_pass_score'] ?? 6;
+$subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
 
+$subject = null;
+$classes = [];
+$units   = [];
 $students = [];
-if ($sel_class) {
+$settings = null;
+
+if ($sel_subject) {
+    $ss = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $ss->execute([$sel_subject]); $subject = $ss->fetch();
+    if ($subject) {
+        $cs = $pdo->prepare("SELECT classroom FROM lms_subject_classrooms WHERE subject_id=? ORDER BY classroom");
+        $cs->execute([$sel_subject]);
+        $classes = $cs->fetchAll(PDO::FETCH_COLUMN);
+
+        $us = $pdo->prepare("SELECT * FROM lms_units WHERE subject_id=? ORDER BY order_no");
+        $us->execute([$sel_subject]);
+        $units = $us->fetchAll();
+
+        $es = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE subject_id=?");
+        $es->execute([$sel_subject]);
+        $settings = $es->fetch();
+    }
+}
+
+if ($sel_subject && $sel_class) {
     $q = $pdo->prepare("
         SELECT id, student_id, name AS student_name
         FROM att_students
@@ -48,6 +63,9 @@ if ($sel_class) {
     $q->execute([$sel_class]);
     $students = $q->fetchAll();
 }
+
+$pre_pass  = $settings['pre_pass_score'] ?? 6;
+$post_pass = $settings['post_pass_score'] ?? 6;
 
 $pageTitle    = 'ความคืบหน้า';
 $pageSubtitle = 'ผลการเรียนและสถานะนักเรียน';
@@ -61,34 +79,51 @@ require_once __DIR__ . '/../components/layout_start.php';
   </div>
   <div>
     <h2 class="text-lg font-black text-slate-800">ความคืบหน้า</h2>
-    <p class="text-xs text-slate-400">ตรวจสอบผลการเรียนแต่ละชั้น</p>
+    <p class="text-xs text-slate-400">ตรวจสอบผลการเรียนแต่ละวิชา</p>
   </div>
 </div>
 
-<!-- Class selector -->
+<!-- Selectors -->
 <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-5 mb-5">
   <form method="GET" class="flex gap-3 items-center flex-wrap">
-    <label class="text-xs font-black text-slate-500">เลือกชั้นเรียน :</label>
+    <label class="text-xs font-black text-slate-500">วิชา :</label>
+    <select name="subject_id" onchange="this.form.submit()"
+      class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-violet-400 outline-none">
+      <option value="">-- เลือกวิชา --</option>
+      <?php foreach ($subjects as $subj): ?>
+      <option value="<?=$subj['id']?>" <?=$sel_subject===$subj['id']?'selected':''?>>
+        <?=htmlspecialchars($subj['subject_name'],ENT_QUOTES,'UTF-8')?>
+      </option>
+      <?php endforeach; ?>
+    </select>
+    <?php if ($sel_subject && !empty($classes)): ?>
+    <label class="text-xs font-black text-slate-500">ห้อง :</label>
     <select name="class" onchange="this.form.submit()"
       class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-violet-400 outline-none">
-      <option value="">-- เลือกชั้นเรียน --</option>
+      <option value="">-- เลือกห้อง --</option>
       <?php foreach ($classes as $cl): ?>
       <option value="<?=htmlspecialchars($cl,ENT_QUOTES,'UTF-8')?>" <?=$sel_class===$cl?'selected':''?>>
         <?=htmlspecialchars($cl,ENT_QUOTES,'UTF-8')?>
       </option>
       <?php endforeach; ?>
     </select>
+    <?php endif; ?>
   </form>
 </div>
 
-<?php if (!$sel_class): ?>
+<?php if (!$sel_subject): ?>
 <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-16 text-center text-slate-300">
   <i class="fas fa-hand-point-up text-5xl mb-3 block opacity-30"></i>
-  <p>โปรดเลือกชั้นเรียนก่อน</p>
+  <p>โปรดเลือกวิชาก่อน</p>
+</div>
+<?php elseif (!$sel_class): ?>
+<div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-16 text-center text-slate-300">
+  <i class="fas fa-users text-5xl mb-3 block opacity-30"></i>
+  <p>โปรดเลือกห้องเรียน<?=empty($classes)?' (วิชานี้ยังไม่ได้กำหนดห้อง)':''?></p>
 </div>
 <?php elseif (empty($students)): ?>
 <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-16 text-center text-slate-300">
-  <p>ไม่มีนักเรียนในชั้นนี้</p>
+  <p>ไม่มีนักเรียนในห้องนี้</p>
 </div>
 <?php else: ?>
 <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden">
@@ -108,10 +143,10 @@ require_once __DIR__ . '/../components/layout_start.php';
       <tbody class="divide-y divide-slate-50">
         <?php foreach ($students as $i => $s):
           $uid = $s['id'];
-          $pre  = $pdo->prepare("SELECT score,total FROM lms_student_pre_exam WHERE student_uid=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $pre->execute([$uid]); $pre=$pre->fetch();
-          $pre_latest = $pdo->prepare("SELECT score,total,attempt_no FROM lms_student_pre_exam WHERE student_uid=? ORDER BY taken_at DESC LIMIT 1"); $pre_latest->execute([$uid]); $pre_latest=$pre_latest->fetch();
-          $post = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $post->execute([$uid]); $post=$post->fetch();
-          $post_latest = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? ORDER BY taken_at DESC LIMIT 1"); $post_latest->execute([$uid]); $post_latest=$post_latest->fetch();
+          $pre  = $pdo->prepare("SELECT score,total FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $pre->execute([$uid,$sel_subject]); $pre=$pre->fetch();
+          $pre_latest = $pdo->prepare("SELECT score,total FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? ORDER BY taken_at DESC LIMIT 1"); $pre_latest->execute([$uid,$sel_subject]); $pre_latest=$pre_latest->fetch();
+          $post = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND subject_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $post->execute([$uid,$sel_subject]); $post=$post->fetch();
+          $post_latest = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND subject_id=? ORDER BY taken_at DESC LIMIT 1"); $post_latest->execute([$uid,$sel_subject]); $post_latest=$post_latest->fetch();
         ?>
         <tr class="hover:bg-slate-50/50 transition-colors">
           <td class="px-4 py-3 text-center text-slate-400"><?=$i+1?></td>
@@ -128,7 +163,8 @@ require_once __DIR__ . '/../components/layout_start.php';
             $ex_total = count($exs);
             $submitted = 0;
             foreach ($exs as $ex) {
-                $chk = $pdo->prepare("SELECT id FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1"); $chk->execute([$uid,$ex['id']]);
+                $chk = $pdo->prepare("SELECT id FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? AND subject_id=? LIMIT 1");
+                $chk->execute([$uid,$ex['id'],$sel_subject]);
                 if ($chk->fetch()) $submitted++;
             }
           ?>
@@ -183,7 +219,7 @@ async function viewAnswers(unitId, uid, name, unitName) {
   document.getElementById('ansUnit').textContent = unitName;
   document.getElementById('ansContent').innerHTML = '<div class="text-center py-8 text-slate-300">กำลังโหลด...</div>';
   openModal('ansModal');
-  const data = await fetch(`progress.php?ajax=answers&unit_id=${unitId}&student_uid=${uid}`).then(r=>r.json());
+  const data = await fetch(`progress.php?ajax=answers&unit_id=${unitId}&student_uid=${uid}&subject_id=<?=$sel_subject?>`).then(r=>r.json());
   if (!data.length) {
     document.getElementById('ansContent').innerHTML = '<div class="text-center py-8 text-slate-300">ยังไม่มีคำตอบ</div>';
     return;

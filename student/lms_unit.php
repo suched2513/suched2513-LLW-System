@@ -7,18 +7,21 @@ $pdo = getPdo();
 $uid  = (int)$_SESSION['student_uid'];
 $name = $_SESSION['student_name'];
 
-// Must have passed pre-exam
-$pre_passed = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND passed=1 LIMIT 1");
-$pre_passed->execute([$uid]);
-if (!$pre_passed->fetch()) {
-    header('Location: /student/lms.php'); exit();
-}
-
 $unit_id = (int)($_GET['unit_id'] ?? 0);
 $unit    = $pdo->prepare("SELECT * FROM lms_units WHERE id=?");
 $unit->execute([$unit_id]);
 $unit = $unit->fetch();
 if (!$unit) { header('Location: /student/lms.php'); exit(); }
+
+$subject_id = (int)$unit['subject_id'];
+$back_url   = '/student/lms_subject.php?subject_id='.$subject_id;
+
+// Must have passed pre-exam for this subject
+$pre_passed = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
+$pre_passed->execute([$uid,$subject_id]);
+if (!$pre_passed->fetch()) {
+    header('Location: '.$back_url); exit();
+}
 
 // Handle exercise submission
 $ex_msg = '';
@@ -26,19 +29,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exercise_id'])) {
     $ex_id  = (int)$_POST['exercise_id'];
     $answer = trim($_POST['answer_text'] ?? '');
     if ($answer !== '') {
-        // Upsert
         $exists = $pdo->prepare("SELECT id FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
         $exists->execute([$uid, $ex_id]);
         if ($exists->fetch()) {
             $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?, submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
                 ->execute([$answer, $uid, $ex_id]);
         } else {
-            $pdo->prepare("INSERT INTO lms_student_exercises (student_uid, exercise_id, unit_id, answer_text) VALUES (?,?,?,?)")
-                ->execute([$uid, $ex_id, $unit_id, $answer]);
+            $pdo->prepare("INSERT INTO lms_student_exercises (student_uid, exercise_id, unit_id, subject_id, answer_text) VALUES (?,?,?,?,?)")
+                ->execute([$uid, $ex_id, $unit_id, $subject_id, $answer]);
         }
         $ex_msg = 'success';
     }
-    header('Location: /student/lms_unit.php?unit_id=' . $unit_id . '&ex_done=1'); exit();
+    header('Location: /student/lms_unit.php?unit_id='.$unit_id.'&ex_done=1'); exit();
 }
 
 // Load topics
@@ -86,7 +88,7 @@ body { font-family: 'Prompt', sans-serif; }
 <!-- Header -->
 <div class="text-white px-5 pt-5 pb-6 shadow-xl" style="background:linear-gradient(135deg,#7C3AED,#4F46E5)">
   <div class="flex items-center gap-3 mb-4">
-    <a href="/student/lms.php" class="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/25">
+    <a href="<?=$back_url?>" class="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/25">
       <i class="bi bi-arrow-left"></i>
     </a>
     <div class="flex-1 min-w-0">

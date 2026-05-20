@@ -7,6 +7,11 @@ if ($_SESSION['llw_role'] !== 'super_admin') { header('Location: ' . $base_path 
 $pdo = getPdo();
 $msg = '';
 
+$subject_id = (int)($_GET['subject_id'] ?? $_POST['subject_id'] ?? 0);
+if (!$subject_id) { header('Location: subjects.php'); exit(); }
+$subject_stmt = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $subject_stmt->execute([$subject_id]); $subject = $subject_stmt->fetch();
+if (!$subject) { header('Location: subjects.php'); exit(); }
+
 // Handle POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action    = $_POST['action'] ?? '';
@@ -17,8 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if ($action === 'add') {
             if (!$unit_name) throw new Exception('กรุณาระบุชื่อหน่วย');
-            $pdo->prepare("INSERT INTO lms_units (order_no, unit_name) VALUES (?,?)")
-                ->execute([$order_no, $unit_name]);
+            $pdo->prepare("INSERT INTO lms_units (subject_id, order_no, unit_name) VALUES (?,?,?)")
+                ->execute([$subject_id, $order_no, $unit_name]);
             $new_id = $pdo->lastInsertId();
             foreach ($_POST['exercises'] ?? [] as $ex) {
                 $ex = trim($ex);
@@ -52,13 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Exception $e) {
         $msg = 'error:' . $e->getMessage();
     }
-    header('Location: units.php?msg=' . urlencode($msg)); exit();
+    header('Location: units.php?subject_id=' . $subject_id . '&msg=' . urlencode($msg)); exit();
 }
 
 if (isset($_GET['action']) && $_GET['action'] === 'delete') {
     $id = (int)$_GET['id'];
-    $pdo->prepare("DELETE FROM lms_units WHERE id=?")->execute([$id]);
-    header('Location: units.php?msg=' . urlencode('success:ลบหน่วยการเรียนรู้สำเร็จ')); exit();
+    $pdo->prepare("DELETE FROM lms_units WHERE id=? AND subject_id=?")->execute([$id, $subject_id]);
+    header('Location: units.php?subject_id=' . $subject_id . '&msg=' . urlencode('success:ลบหน่วยการเรียนรู้สำเร็จ')); exit();
 }
 if (isset($_GET['ajax']) && $_GET['ajax'] === 'exercises') {
     header('Content-Type: application/json');
@@ -69,15 +74,18 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'exercises') {
 }
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
-$units = $pdo->query("
+$units_stmt = $pdo->prepare("
     SELECT u.*, COUNT(DISTINCT t.id) topic_count
     FROM lms_units u
     LEFT JOIN lms_topics t ON t.unit_id = u.id
+    WHERE u.subject_id=?
     GROUP BY u.id ORDER BY u.order_no
-")->fetchAll();
+");
+$units_stmt->execute([$subject_id]);
+$units = $units_stmt->fetchAll();
 
 $pageTitle    = 'หน่วยการเรียนรู้';
-$pageSubtitle = 'จัดการหน่วยและแบบฝึกหัด';
+$pageSubtitle = htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8');
 $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
@@ -98,8 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
       <i class="fas fa-book-open text-white"></i>
     </div>
     <div>
-      <h2 class="text-lg font-black text-slate-800">หน่วยการเรียนรู้</h2>
-      <p class="text-xs text-slate-400">จัดการหน่วยการเรียนรู้และแบบฝึกหัด</p>
+      <a href="<?=$base_path?>/lms/subjects.php" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>วิชาทั้งหมด</a>
+      <h2 class="text-lg font-black text-slate-800"><?=htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8')?></h2>
+      <p class="text-xs text-slate-400">หน่วยการเรียนรู้และแบบฝึกหัด</p>
     </div>
   </div>
   <button onclick="openModal('addModal')"
@@ -144,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
         <td class="px-5 py-4">
           <div class="flex gap-2 justify-center">
-            <a href="<?=$base_path?>/lms/topics.php?unit_id=<?=$u['id']?>"
+            <a href="<?=$base_path?>/lms/topics.php?unit_id=<?=$u['id']?>&subject_id=<?=$subject_id?>"
                class="px-3 py-1.5 bg-teal-500 text-white text-xs font-bold rounded-lg hover:bg-teal-600 transition-all">
               <i class="fas fa-folder-open"></i> เรื่อง
             </a>
@@ -152,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
               class="px-3 py-1.5 bg-amber-400 text-white text-xs font-bold rounded-lg hover:bg-amber-500 transition-all">
               <i class="fas fa-edit"></i>
             </button>
-            <button onclick="confirmDel('units.php?action=delete&id=<?=$u['id']?>','ลบหน่วยนี้?')"
+            <button onclick="confirmDel('units.php?action=delete&id=<?=$u['id']?>&subject_id=<?=$subject_id?>','ลบหน่วยนี้?')"
               class="px-3 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-all">
               <i class="fas fa-trash"></i>
             </button>
@@ -173,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     <form method="POST" class="p-6 space-y-4">
       <input type="hidden" name="action" value="add">
+      <input type="hidden" name="subject_id" value="<?=$subject_id?>">
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-black text-slate-500 mb-1">ลำดับ</label>
@@ -210,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <form method="POST" class="p-6 space-y-4">
       <input type="hidden" name="action" value="edit">
       <input type="hidden" name="id" id="e_uid">
+      <input type="hidden" name="subject_id" value="<?=$subject_id?>">
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-black text-slate-500 mb-1">ลำดับ</label>
@@ -263,7 +274,7 @@ async function openEditModal(id, order, name) {
   const c = document.getElementById('edit_exs');
   c.innerHTML = '<p class="text-xs text-slate-400 p-2">กำลังโหลด...</p>';
   openModal('editModal');
-  const data = await fetch('units.php?ajax=exercises&unit_id=' + id).then(r => r.json());
+  const data = await fetch('units.php?ajax=exercises&unit_id=' + id + '&subject_id=<?=$subject_id?>').then(r => r.json());
   c.innerHTML = '';
   data.forEach(ex => {
     const d = document.createElement('div'); d.className='flex gap-2';

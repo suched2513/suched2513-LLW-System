@@ -6,43 +6,49 @@ require_once __DIR__ . '/_guard.php';
 $pdo  = getPdo();
 $uid  = (int)$_SESSION['student_uid'];
 $name = $_SESSION['student_name'];
+$class= $_SESSION['student_class'];
 
-$settings  = $pdo->query("SELECT * FROM lms_exam_settings LIMIT 1")->fetch();
+$subject_id = (int)($_GET['subject_id'] ?? $_POST['subject_id'] ?? 0);
+if (!$subject_id) { header('Location: /student/lms.php'); exit(); }
+
+// Verify subject + enrollment
+$ss = $pdo->prepare("SELECT s.* FROM lms_subjects s JOIN lms_subject_classrooms sc ON sc.subject_id=s.id WHERE s.id=? AND sc.classroom=? LIMIT 1");
+$ss->execute([$subject_id,$class]); $subject = $ss->fetch();
+if (!$subject) { header('Location: /student/lms.php'); exit(); }
+
+$es = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE subject_id=?"); $es->execute([$subject_id]); $settings = $es->fetch();
 $post_pass = $settings['post_pass_score'] ?? 6;
 $max_att   = $settings['post_max_attempts'] ?? 3;
+$back_url  = '/student/lms_subject.php?subject_id='.$subject_id;
 
 // Already passed?
-$already_passed = $pdo->prepare("SELECT id FROM lms_student_post_exam WHERE student_uid=? AND passed=1 LIMIT 1");
-$already_passed->execute([$uid]);
-if ($already_passed->fetch()) {
-    header('Location: /student/lms.php'); exit();
-}
+$already_passed = $pdo->prepare("SELECT id FROM lms_student_post_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
+$already_passed->execute([$uid,$subject_id]);
+if ($already_passed->fetch()) { header('Location: '.$back_url); exit(); }
 
 // Must have passed pre-exam
-$pre_passed = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND passed=1 LIMIT 1");
-$pre_passed->execute([$uid]);
-if (!$pre_passed->fetch()) {
-    header('Location: /student/lms.php'); exit();
-}
+$pre_passed = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
+$pre_passed->execute([$uid,$subject_id]);
+if (!$pre_passed->fetch()) { header('Location: '.$back_url); exit(); }
 
 // Attempt count
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_post_exam WHERE student_uid=?");
-$stmt->execute([$uid]);
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_post_exam WHERE student_uid=? AND subject_id=?");
+$stmt->execute([$uid,$subject_id]);
 $attempt_count = (int)$stmt->fetchColumn();
 
-// Max attempts reached — reset everything and redirect
+// Max attempts reached — reset this subject and redirect
 if ($attempt_count >= $max_att) {
     try {
         $pdo->beginTransaction();
-        $pdo->prepare("DELETE FROM lms_student_pre_exam  WHERE student_uid=?")->execute([$uid]);
-        $pdo->prepare("DELETE FROM lms_student_post_exam WHERE student_uid=?")->execute([$uid]);
-        $pdo->prepare("DELETE FROM lms_student_exercises WHERE student_uid=?")->execute([$uid]);
+        $pdo->prepare("DELETE FROM lms_student_pre_exam  WHERE student_uid=? AND subject_id=?")->execute([$uid,$subject_id]);
+        $pdo->prepare("DELETE FROM lms_student_post_exam WHERE student_uid=? AND subject_id=?")->execute([$uid,$subject_id]);
+        $pdo->prepare("DELETE FROM lms_student_exercises WHERE student_uid=? AND subject_id=?")->execute([$uid,$subject_id]);
         $pdo->commit();
     } catch (Exception $e) {
         $pdo->rollBack();
         error_log($e->getMessage());
     }
-    header('Location: /student/lms.php?reset=1'); exit();
+    header('Location: '.$back_url.'&reset=1'); exit();
 }
 
 $attempt_no = $attempt_count + 1;
@@ -50,28 +56,27 @@ $attempt_no = $attempt_count + 1;
 // Handle submit
 $result = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $questions = $pdo->query("SELECT * FROM lms_post_questions ORDER BY id")->fetchAll();
+    $qs = $pdo->prepare("SELECT * FROM lms_post_questions WHERE subject_id=? ORDER BY id");
+    $qs->execute([$subject_id]); $questions = $qs->fetchAll();
     $total = count($questions);
-    $score = 0;
-    $answers = [];
+    $score = 0; $answers = [];
     foreach ($questions as $q) {
-        $chosen  = (int)($_POST['q_' . $q['id']] ?? 0);
+        $chosen  = (int)($_POST['q_'.$q['id']] ?? 0);
         $correct = (int)$q['correct_answer'] === $chosen;
         if ($correct) $score++;
-        $answers[] = ['id' => $q['id'], 'chosen' => $chosen, 'correct_answer' => (int)$q['correct_answer'], 'is_correct' => $correct];
+        $answers[] = ['id'=>$q['id'],'chosen'=>$chosen,'correct_answer'=>(int)$q['correct_answer'],'is_correct'=>$correct];
     }
     $passed = $score >= $post_pass ? 1 : 0;
-    $pdo->prepare("INSERT INTO lms_student_post_exam (student_uid, score, total, passed, attempt_no) VALUES (?,?,?,?,?)")
-        ->execute([$uid, $score, $total, $passed, $attempt_no]);
-
-    // Re-check: if this was the last allowed attempt and still not passed, reset on next visit
-    $result = ['score' => $score, 'total' => $total, 'passed' => $passed, 'answers' => $answers, 'questions' => $questions,
-               'attempt_no' => $attempt_no, 'max_att' => $max_att];
+    $pdo->prepare("INSERT INTO lms_student_post_exam (student_uid,subject_id,score,total,passed,attempt_no) VALUES (?,?,?,?,?,?)")
+        ->execute([$uid,$subject_id,$score,$total,$passed,$attempt_no]);
+    $result = ['score'=>$score,'total'=>$total,'passed'=>$passed,'answers'=>$answers,'questions'=>$questions,
+               'attempt_no'=>$attempt_no,'max_att'=>$max_att];
 }
 
-$questions   = $pdo->query("SELECT * FROM lms_post_questions ORDER BY id")->fetchAll();
-$total_q     = count($questions);
-$remaining   = $max_att - $attempt_count;
+$qs = $pdo->prepare("SELECT * FROM lms_post_questions WHERE subject_id=? ORDER BY id");
+$qs->execute([$subject_id]); $questions = $qs->fetchAll();
+$total_q   = count($questions);
+$remaining = $max_att - $attempt_count;
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
@@ -92,10 +97,9 @@ body { font-family: 'Prompt', sans-serif; }
 </head>
 <body class="min-h-screen bg-slate-50" style="padding-top:env(safe-area-inset-top)">
 
-<!-- Header -->
 <div class="text-white px-5 pt-5 pb-6 shadow-xl" style="background:linear-gradient(135deg,#E11D48,#9F1239)">
   <div class="flex items-center gap-3 mb-1">
-    <a href="/student/lms.php" class="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/25">
+    <a href="<?=$back_url?>" class="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/25">
       <i class="bi bi-arrow-left"></i>
     </a>
     <div>
@@ -117,17 +121,13 @@ body { font-family: 'Prompt', sans-serif; }
   <p class="font-bold">ยังไม่มีข้อสอบ</p>
 </div>
 <?php elseif ($result): ?>
-<!-- Result -->
 <div class="px-4 py-5 max-w-lg mx-auto space-y-4">
   <?php
-  $new_count    = $result['attempt_no'];
-  $exhausted    = !$result['passed'] && $new_count >= $result['max_att'];
+  $exhausted = !$result['passed'] && $result['attempt_no'] >= $result['max_att'];
   ?>
   <div class="rounded-2xl p-6 text-center shadow-sm <?=$result['passed']?'border-2 border-emerald-300 bg-emerald-50':($exhausted?'border-2 border-slate-300 bg-slate-50':'border-2 border-rose-300 bg-rose-50')?>">
     <div class="text-5xl mb-3"><?=$result['passed']?'🎉':($exhausted?'🔄':'😢')?></div>
-    <p class="font-black text-xl text-slate-800">
-      <?=$result['passed']?'ผ่านแล้ว!':($exhausted?'ครบจำนวนครั้ง — รีเซ็ต':'ยังไม่ผ่าน')?>
-    </p>
+    <p class="font-black text-xl text-slate-800"><?=$result['passed']?'ผ่านแล้ว!':($exhausted?'ครบจำนวนครั้ง — รีเซ็ต':'ยังไม่ผ่าน')?></p>
     <p class="text-4xl font-black mt-2 <?=$result['passed']?'text-emerald-600':($exhausted?'text-slate-500':'text-rose-500')?>">
       <?=$result['score']?> <span class="text-lg text-slate-400 font-bold">/ <?=$result['total']?></span>
     </p>
@@ -136,8 +136,6 @@ body { font-family: 'Prompt', sans-serif; }
     <p class="text-xs text-slate-400 mt-3 bg-white/70 rounded-xl p-2">เมื่อกลับหน้าบทเรียน ระบบจะรีเซ็ตประวัติทั้งหมดเพื่อเริ่มใหม่</p>
     <?php endif; ?>
   </div>
-
-  <!-- Answer review -->
   <p class="text-xs font-black text-slate-400 uppercase tracking-wider px-1">เฉลย</p>
   <?php foreach ($result['questions'] as $i => $q):
     $ans = null;
@@ -163,15 +161,14 @@ body { font-family: 'Prompt', sans-serif; }
     <?php endfor; ?>
   </div>
   <?php endforeach; ?>
-
-  <a href="/student/lms.php"
+  <a href="<?=$back_url?>"
      class="flex items-center justify-center gap-2 py-3 <?=$result['passed']?'bg-violet-600 shadow-violet-200/50':'bg-slate-600'?> text-white font-bold text-sm rounded-xl shadow-lg">
     <i class="bi bi-arrow-left"></i> กลับหน้าบทเรียน
   </a>
 </div>
 <?php else: ?>
-<!-- Exam form -->
 <form method="POST" id="examForm" class="px-4 py-5 max-w-lg mx-auto space-y-4 pb-24">
+  <input type="hidden" name="subject_id" value="<?=$subject_id?>">
   <?php foreach ($questions as $i => $q): ?>
   <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <p class="text-sm font-bold text-slate-800 mb-1 leading-snug">
@@ -179,7 +176,7 @@ body { font-family: 'Prompt', sans-serif; }
       <?=htmlspecialchars($q['question_text'],ENT_QUOTES,'UTF-8')?>
     </p>
     <?php if (!empty($q['question_img'])): ?>
-    <img src="/<?=htmlspecialchars($q['question_img'],ENT_QUOTES,'UTF-8')?>" class="rounded-xl w-full max-h-48 object-contain my-3 bg-slate-50">
+    <img src="/uploads/lms/questions/<?=htmlspecialchars($q['question_img'],ENT_QUOTES,'UTF-8')?>" class="rounded-xl w-full max-h-48 object-contain my-3 bg-slate-50">
     <?php endif; ?>
     <div class="space-y-2 mt-3">
       <?php for($n=1;$n<=4;$n++): ?>
@@ -193,7 +190,6 @@ body { font-family: 'Prompt', sans-serif; }
   </div>
   <?php endforeach; ?>
 </form>
-<!-- Submit bar -->
 <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-slate-200 px-4 py-4">
   <div class="max-w-lg mx-auto flex items-center gap-4">
     <div class="flex-1">
@@ -238,7 +234,6 @@ function countAnswered() {
   document.getElementById('progressBar').style.width = (cnt/total*100)+'%';
 }
 radios.forEach(r => r.addEventListener('change', countAnswered));
-
 function submitExam() {
   const names = new Set([...radios].map(r => r.name));
   let cnt = 0;

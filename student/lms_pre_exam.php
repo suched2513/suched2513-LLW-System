@@ -3,46 +3,57 @@ session_start();
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/_guard.php';
 
-$pdo = getPdo();
-$uid = (int)$_SESSION['student_uid'];
+$pdo  = getPdo();
+$uid  = (int)$_SESSION['student_uid'];
 $name = $_SESSION['student_name'];
+$class= $_SESSION['student_class'];
 
-$settings  = $pdo->query("SELECT * FROM lms_exam_settings LIMIT 1")->fetch();
-$pre_pass  = $settings['pre_pass_score'] ?? 6;
+$subject_id = (int)($_GET['subject_id'] ?? $_POST['subject_id'] ?? 0);
+if (!$subject_id) { header('Location: /student/lms.php'); exit(); }
+
+// Verify subject + enrollment
+$ss = $pdo->prepare("SELECT s.* FROM lms_subjects s JOIN lms_subject_classrooms sc ON sc.subject_id=s.id WHERE s.id=? AND sc.classroom=? LIMIT 1");
+$ss->execute([$subject_id,$class]); $subject = $ss->fetch();
+if (!$subject) { header('Location: /student/lms.php'); exit(); }
+
+$es = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE subject_id=?"); $es->execute([$subject_id]); $settings = $es->fetch();
+$pre_pass = $settings['pre_pass_score'] ?? 6;
 
 // Already passed?
-$already_passed = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND passed=1 LIMIT 1");
-$already_passed->execute([$uid]);
+$already_passed = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
+$already_passed->execute([$uid,$subject_id]);
 if ($already_passed->fetch()) {
-    header('Location: /student/lms.php'); exit();
+    header('Location: /student/lms_subject.php?subject_id='.$subject_id); exit();
 }
 
 // Get attempt count
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_pre_exam WHERE student_uid=?");
-$stmt->execute([$uid]);
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=?");
+$stmt->execute([$uid,$subject_id]);
 $attempt_no = (int)$stmt->fetchColumn() + 1;
 
 // Handle submit
 $result = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $questions = $pdo->query("SELECT * FROM lms_pre_questions ORDER BY id")->fetchAll();
+    $qs = $pdo->prepare("SELECT * FROM lms_pre_questions WHERE subject_id=? ORDER BY id");
+    $qs->execute([$subject_id]); $questions = $qs->fetchAll();
     $total = count($questions);
-    $score = 0;
-    $answers = [];
+    $score = 0; $answers = [];
     foreach ($questions as $q) {
-        $chosen = (int)($_POST['q_' . $q['id']] ?? 0);
+        $chosen  = (int)($_POST['q_'.$q['id']] ?? 0);
         $correct = (int)$q['correct_answer'] === $chosen;
         if ($correct) $score++;
-        $answers[] = ['id' => $q['id'], 'chosen' => $chosen, 'correct_answer' => (int)$q['correct_answer'], 'is_correct' => $correct];
+        $answers[] = ['id'=>$q['id'],'chosen'=>$chosen,'correct_answer'=>(int)$q['correct_answer'],'is_correct'=>$correct];
     }
     $passed = $score >= $pre_pass ? 1 : 0;
-    $pdo->prepare("INSERT INTO lms_student_pre_exam (student_uid, score, total, passed, attempt_no) VALUES (?,?,?,?,?)")
-        ->execute([$uid, $score, $total, $passed, $attempt_no]);
-    $result = ['score' => $score, 'total' => $total, 'passed' => $passed, 'answers' => $answers, 'questions' => $questions];
+    $pdo->prepare("INSERT INTO lms_student_pre_exam (student_uid,subject_id,score,total,passed,attempt_no) VALUES (?,?,?,?,?,?)")
+        ->execute([$uid,$subject_id,$score,$total,$passed,$attempt_no]);
+    $result = ['score'=>$score,'total'=>$total,'passed'=>$passed,'answers'=>$answers,'questions'=>$questions];
 }
 
-$questions = $pdo->query("SELECT * FROM lms_pre_questions ORDER BY id")->fetchAll();
+$qs = $pdo->prepare("SELECT * FROM lms_pre_questions WHERE subject_id=? ORDER BY id");
+$qs->execute([$subject_id]); $questions = $qs->fetchAll();
 $total_q = count($questions);
+$back_url = '/student/lms_subject.php?subject_id='.$subject_id;
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
@@ -63,10 +74,9 @@ body { font-family: 'Prompt', sans-serif; }
 </head>
 <body class="min-h-screen bg-slate-50" style="padding-top:env(safe-area-inset-top)">
 
-<!-- Header -->
 <div class="text-white px-5 pt-5 pb-6 shadow-xl" style="background:linear-gradient(135deg,#7C3AED,#4F46E5)">
   <div class="flex items-center gap-3 mb-1">
-    <a href="/student/lms.php" class="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/25">
+    <a href="<?=$back_url?>" class="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/25">
       <i class="bi bi-arrow-left"></i>
     </a>
     <div>
@@ -88,7 +98,6 @@ body { font-family: 'Prompt', sans-serif; }
   <p class="font-bold">ยังไม่มีข้อสอบ</p>
 </div>
 <?php elseif ($result): ?>
-<!-- Result screen -->
 <div class="px-4 py-5 max-w-lg mx-auto space-y-4">
   <div class="rounded-2xl p-6 text-center shadow-sm <?=$result['passed']?'border-2 border-emerald-300 bg-emerald-50':'border-2 border-rose-300 bg-rose-50'?>">
     <div class="text-5xl mb-3"><?=$result['passed']?'🎉':'😢'?></div>
@@ -96,7 +105,6 @@ body { font-family: 'Prompt', sans-serif; }
     <p class="text-4xl font-black mt-2 <?=$result['passed']?'text-emerald-600':'text-rose-500'?>"><?=$result['score']?> <span class="text-lg text-slate-400 font-bold">/ <?=$result['total']?></span></p>
     <p class="text-sm text-slate-500 mt-1">เกณฑ์ผ่าน <?=$pre_pass?> ข้อ</p>
   </div>
-  <!-- Answer review -->
   <p class="text-xs font-black text-slate-400 uppercase tracking-wider px-1">เฉลย</p>
   <?php foreach ($result['questions'] as $i => $q):
     $ans = null;
@@ -124,30 +132,30 @@ body { font-family: 'Prompt', sans-serif; }
   <?php endforeach; ?>
   <div class="flex gap-3">
     <?php if ($result['passed']): ?>
-    <a href="/student/lms.php" class="flex-1 py-3 bg-violet-600 text-white font-bold text-sm rounded-xl text-center shadow-lg shadow-violet-200/50">
+    <a href="<?=$back_url?>" class="flex-1 py-3 bg-violet-600 text-white font-bold text-sm rounded-xl text-center shadow-lg shadow-violet-200/50">
       <i class="bi bi-mortarboard-fill mr-1"></i> เข้าสู่บทเรียน
     </a>
     <?php else: ?>
-    <a href="/student/lms.php" class="flex-1 py-3 border border-slate-200 text-slate-600 font-bold text-sm rounded-xl text-center">
+    <a href="<?=$back_url?>" class="flex-1 py-3 border border-slate-200 text-slate-600 font-bold text-sm rounded-xl text-center">
       <i class="bi bi-arrow-left mr-1"></i> กลับ
     </a>
-    <a href="/student/lms_pre_exam.php" class="flex-1 py-3 bg-violet-600 text-white font-bold text-sm rounded-xl text-center shadow-lg shadow-violet-200/50">
+    <a href="/student/lms_pre_exam.php?subject_id=<?=$subject_id?>" class="flex-1 py-3 bg-violet-600 text-white font-bold text-sm rounded-xl text-center shadow-lg shadow-violet-200/50">
       <i class="bi bi-arrow-repeat mr-1"></i> ทำซ้ำ
     </a>
     <?php endif; ?>
   </div>
 </div>
 <?php else: ?>
-<!-- Exam form -->
 <form method="POST" id="examForm" class="px-4 py-5 max-w-lg mx-auto space-y-4 pb-24">
+  <input type="hidden" name="subject_id" value="<?=$subject_id?>">
   <?php foreach ($questions as $i => $q): ?>
-  <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" id="q<?=$q['id']?>">
+  <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <p class="text-sm font-bold text-slate-800 mb-1 leading-snug">
       <span class="text-violet-600 font-black mr-1"><?=$i+1?>.</span>
       <?=htmlspecialchars($q['question_text'],ENT_QUOTES,'UTF-8')?>
     </p>
     <?php if (!empty($q['question_img'])): ?>
-    <img src="/<?=htmlspecialchars($q['question_img'],ENT_QUOTES,'UTF-8')?>" class="rounded-xl w-full max-h-48 object-contain my-3 bg-slate-50">
+    <img src="/uploads/lms/questions/<?=htmlspecialchars($q['question_img'],ENT_QUOTES,'UTF-8')?>" class="rounded-xl w-full max-h-48 object-contain my-3 bg-slate-50">
     <?php endif; ?>
     <div class="space-y-2 mt-3">
       <?php for($n=1;$n<=4;$n++): ?>
@@ -161,7 +169,6 @@ body { font-family: 'Prompt', sans-serif; }
   </div>
   <?php endforeach; ?>
 </form>
-<!-- Submit bar -->
 <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-slate-200 px-4 py-4 safe-area-bottom">
   <div class="max-w-lg mx-auto flex items-center gap-4">
     <div class="flex-1">
@@ -187,9 +194,8 @@ window.addEventListener('load', () => {
   Swal.fire({icon:'error',title:'ยังไม่ผ่าน',text:'คะแนน <?=$result['score']?>/<?=$result['total']?> ข้อ (ต้องได้ <?=$pre_pass?> ข้อ)',confirmButtonColor:'#7C3AED'});
 });
 <?php else: ?>
-// Track answered count
 const radios = document.querySelectorAll('input[type=radio]');
-const total = <?=$total_q?>;
+const total  = <?=$total_q?>;
 function countAnswered() {
   const names = new Set([...radios].map(r => r.name));
   let cnt = 0;
@@ -198,7 +204,6 @@ function countAnswered() {
   document.getElementById('progressBar').style.width = (cnt/total*100)+'%';
 }
 radios.forEach(r => r.addEventListener('change', countAnswered));
-
 function submitExam() {
   const names = new Set([...radios].map(r => r.name));
   let cnt = 0;
@@ -208,8 +213,7 @@ function submitExam() {
     return;
   }
   Swal.fire({
-    icon:'question', title:'ส่งคำตอบ?',
-    text:`ตอบครบ ${total} ข้อแล้ว`,
+    icon:'question', title:'ส่งคำตอบ?', text:`ตอบครบ ${total} ข้อแล้ว`,
     showCancelButton:true, confirmButtonColor:'#7C3AED',
     cancelButtonText:'ตรวจสอบอีกครั้ง', confirmButtonText:'ส่งเลย'
   }).then(r => { if (r.isConfirmed) document.getElementById('examForm').submit(); });
