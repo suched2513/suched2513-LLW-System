@@ -20,6 +20,13 @@ $post_pass = $settings['post_pass_score'] ?? 6;
 $max_att   = $settings['post_max_attempts'] ?? 3;
 $back_url  = '/student/lms_subject.php?subject_id='.$subject_id;
 
+// Check post-exam time window
+$now_ts    = time();
+$open_ts   = !empty($settings['post_exam_open_at'])  ? strtotime($settings['post_exam_open_at'])  : null;
+$close_ts  = !empty($settings['post_exam_close_at']) ? strtotime($settings['post_exam_close_at']) : null;
+$window_set = ($open_ts || $close_ts);
+$in_window  = (!$open_ts || $now_ts >= $open_ts) && (!$close_ts || $now_ts <= $close_ts);
+
 // Already passed?
 $already_passed = $pdo->prepare("SELECT id FROM lms_student_post_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
 $already_passed->execute([$uid,$subject_id]);
@@ -29,6 +36,11 @@ if ($already_passed->fetch()) { header('Location: '.$back_url); exit(); }
 $pre_done = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
 $pre_done->execute([$uid,$subject_id]);
 if (!$pre_done->fetch()) { header('Location: '.$back_url); exit(); }
+
+// Block if outside time window (skip block if student already passed — let redirect above handle it)
+if ($window_set && !$in_window) {
+    header('Location: '.$back_url.'&exam_closed=1'); exit();
+}
 
 // Attempt count
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_post_exam WHERE student_uid=? AND subject_id=?");

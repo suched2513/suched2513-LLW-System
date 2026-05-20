@@ -16,8 +16,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pre_pass  = max(1, (int)$_POST['pre_pass_score']);
     $post_pass = max(1, (int)$_POST['post_pass_score']);
     $max_att   = max(1, (int)$_POST['post_max_attempts']);
-    $pdo->prepare("UPDATE lms_exam_settings SET pre_pass_score=?, post_pass_score=?, post_max_attempts=? WHERE subject_id=?")
-        ->execute([$pre_pass, $post_pass, $max_att, $subject_id]);
+
+    $open_raw  = trim($_POST['post_exam_open_at']  ?? '');
+    $close_raw = trim($_POST['post_exam_close_at'] ?? '');
+    $open_at   = $open_raw  ? date('Y-m-d H:i:s', strtotime($open_raw))  : null;
+    $close_at  = $close_raw ? date('Y-m-d H:i:s', strtotime($close_raw)) : null;
+
+    if ($open_at && $close_at && $close_at <= $open_at) {
+        $msg = 'error:เวลาปิดต้องหลังเวลาเปิดเสมอ';
+        header('Location: exam_settings.php?subject_id='.$subject_id.'&msg='.urlencode($msg)); exit();
+    }
+
+    $pdo->prepare("UPDATE lms_exam_settings SET pre_pass_score=?, post_pass_score=?, post_max_attempts=?, post_exam_open_at=?, post_exam_close_at=? WHERE subject_id=?")
+        ->execute([$pre_pass, $post_pass, $max_att, $open_at, $close_at, $subject_id]);
     $msg = 'success:บันทึกการตั้งค่าสำเร็จ';
     header('Location: exam_settings.php?subject_id='.$subject_id.'&msg='.urlencode($msg)); exit();
 }
@@ -73,9 +84,9 @@ require_once __DIR__ . '/../components/layout_start.php';
         <p class="text-xs text-blue-600 mt-2"><i class="fas fa-info-circle mr-1"></i>สอบได้ไม่จำกัดครั้ง จนกว่าจะผ่าน</p>
       </div>
 
-      <div class="rounded-xl p-4 bg-rose-50 border border-rose-100">
-        <div class="font-bold text-rose-800 text-xs mb-3"><i class="fas fa-flag-checkered mr-1"></i> แบบทดสอบหลังเรียน</div>
-        <div class="mb-3">
+      <div class="rounded-xl p-4 bg-rose-50 border border-rose-100 space-y-3">
+        <div class="font-bold text-rose-800 text-xs mb-1"><i class="fas fa-flag-checkered mr-1"></i> แบบทดสอบหลังเรียน</div>
+        <div>
           <label class="block text-xs font-black text-slate-500 mb-1">จำนวนข้อที่ผ่านขึ้นไป
             <span class="font-normal text-slate-400">(จาก <?=$post_total?> ข้อ)</span></label>
           <div class="flex items-center gap-3">
@@ -93,6 +104,24 @@ require_once __DIR__ . '/../components/layout_start.php';
               class="w-24 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-rose-400 outline-none">
             <span class="text-xs text-slate-400">ครั้ง</span>
           </div>
+        </div>
+        <div class="border-t border-rose-200 pt-3">
+          <div class="font-bold text-rose-700 text-xs mb-2"><i class="fas fa-clock mr-1"></i> ช่วงเวลาเปิดสอบ <span class="font-normal text-rose-400">(ไม่กำหนด = เปิดตลอด)</span></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-black text-slate-500 mb-1">เปิดสอบ</label>
+              <input type="datetime-local" name="post_exam_open_at"
+                value="<?=!empty($s['post_exam_open_at']) ? date('Y-m-d\TH:i', strtotime($s['post_exam_open_at'])) : ''?>"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-rose-400 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-black text-slate-500 mb-1">ปิดสอบ</label>
+              <input type="datetime-local" name="post_exam_close_at"
+                value="<?=!empty($s['post_exam_close_at']) ? date('Y-m-d\TH:i', strtotime($s['post_exam_close_at'])) : ''?>"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-rose-400 outline-none">
+            </div>
+          </div>
+          <p class="text-xs text-rose-500 mt-2"><i class="fas fa-info-circle mr-1"></i>นักเรียนจะเข้าสอบได้เฉพาะในช่วงเวลาที่กำหนด ลบค่าออกทั้งสองช่องเพื่อเปิดตลอดเวลา</p>
         </div>
       </div>
 
@@ -112,6 +141,26 @@ require_once __DIR__ . '/../components/layout_start.php';
       <div class="text-xs text-slate-400 mb-1">การตั้งค่าปัจจุบัน — หลังเรียน</div>
       <div class="text-3xl font-black text-rose-500"><?=$s['post_pass_score']??'—'?><span class="text-base font-normal text-slate-400"> / <?=$post_total?> ข้อ</span></div>
       <div class="text-xs text-slate-400 mt-1">สอบได้ <strong><?=$s['post_max_attempts']??3?></strong> ครั้ง</div>
+      <?php
+        $now = time();
+        $open  = !empty($s['post_exam_open_at'])  ? strtotime($s['post_exam_open_at'])  : null;
+        $close = !empty($s['post_exam_close_at']) ? strtotime($s['post_exam_close_at']) : null;
+        if ($open || $close):
+          $is_open = (!$open || $now >= $open) && (!$close || $now <= $close);
+      ?>
+      <div class="mt-2 flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full <?=$is_open?'bg-emerald-500':'bg-slate-300'?>"></span>
+        <span class="text-xs font-bold <?=$is_open?'text-emerald-600':'text-slate-400'?>"><?=$is_open?'เปิดสอบอยู่':'ยังไม่ถึงเวลา / ปิดแล้ว'?></span>
+      </div>
+      <?php if ($open): ?>
+      <div class="text-xs text-slate-400 mt-1">เปิด: <?=date('d/m/Y H:i', $open)?></div>
+      <?php endif; ?>
+      <?php if ($close): ?>
+      <div class="text-xs text-slate-400">ปิด: <?=date('d/m/Y H:i', $close)?></div>
+      <?php endif; ?>
+      <?php else: ?>
+      <div class="text-xs text-slate-400 mt-1">เปิดตลอดเวลา</div>
+      <?php endif; ?>
     </div>
     <div class="bg-orange-50 rounded-2xl border border-orange-100 p-5">
       <div class="font-bold text-orange-700 text-xs mb-2"><i class="fas fa-exclamation-triangle mr-1"></i>เงื่อนไขรีเซ็ต</div>

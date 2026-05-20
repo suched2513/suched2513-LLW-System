@@ -30,6 +30,13 @@ $pre_pass  = $settings['pre_pass_score'] ?? 6;
 $post_pass = $settings['post_pass_score'] ?? 6;
 $max_att   = $settings['post_max_attempts'] ?? 3;
 
+$now_ts   = time();
+$open_ts  = !empty($settings['post_exam_open_at'])  ? strtotime($settings['post_exam_open_at'])  : null;
+$close_ts = !empty($settings['post_exam_close_at']) ? strtotime($settings['post_exam_close_at']) : null;
+$post_window_set = ($open_ts || $close_ts);
+$post_in_window  = (!$open_ts || $now_ts >= $open_ts) && (!$close_ts || $now_ts <= $close_ts);
+$was_exam_closed = isset($_GET['exam_closed']);
+
 $tpre = $pdo->prepare("SELECT COUNT(*) FROM lms_pre_questions WHERE subject_id=?"); $tpre->execute([$subject_id]); $total_pre = (int)$tpre->fetchColumn();
 $tpost = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE subject_id=?"); $tpost->execute([$subject_id]); $total_post = (int)$tpost->fetchColumn();
 
@@ -92,6 +99,13 @@ foreach ($units as $u) {
 <script>
 window.addEventListener('load',()=>{
   Swal.fire({icon:'info',title:'รีเซ็ตแล้ว',text:'ประวัติสอบถูกรีเซ็ตทั้งหมด เริ่มต้นใหม่ได้เลย',confirmButtonColor:'#7C3AED',timer:3000,showConfirmButton:false});
+});
+</script>
+<?php endif; ?>
+<?php if ($was_exam_closed): ?>
+<script>
+window.addEventListener('load',()=>{
+  Swal.fire({icon:'warning',title:'ยังไม่ถึงเวลาสอบ',text:'แบบทดสอบหลังเรียนยังไม่เปิดในขณะนี้ กรุณารอจนกว่าจะถึงเวลาที่กำหนด',confirmButtonColor:'#7C3AED'});
 });
 </script>
 <?php endif; ?>
@@ -195,7 +209,12 @@ window.addEventListener('load',()=>{
 
   <!-- Post-exam card -->
   <?php if ($pre_passed): ?>
-  <div class="rounded-2xl border p-5 shadow-sm <?=$post_passed?'border-emerald-200 bg-emerald-50/50':'border-rose-200 bg-rose-50/50'?>">
+  <?php
+    $card_border = $post_passed ? 'border-emerald-200 bg-emerald-50/50'
+                 : ($post_window_set && !$post_in_window ? 'border-slate-200 bg-slate-50/50'
+                 : 'border-rose-200 bg-rose-50/50');
+  ?>
+  <div class="rounded-2xl border p-5 shadow-sm <?=$card_border?>">
     <div class="flex items-start justify-between gap-3">
       <div>
         <p class="font-black text-slate-800 text-sm">แบบทดสอบหลังเรียน</p>
@@ -205,6 +224,8 @@ window.addEventListener('load',()=>{
       <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full flex-shrink-0">ผ่านแล้ว</span>
       <?php elseif ($post_attempt_count >= $max_att): ?>
       <span class="px-2.5 py-1 bg-slate-100 text-slate-500 text-xs font-black rounded-full flex-shrink-0">รีเซ็ตแล้ว</span>
+      <?php elseif ($post_window_set && !$post_in_window): ?>
+      <span class="px-2.5 py-1 bg-slate-100 text-slate-500 text-xs font-black rounded-full flex-shrink-0"><i class="bi bi-clock mr-1"></i>ยังไม่เปิด</span>
       <?php else: ?>
       <span class="px-2.5 py-1 bg-rose-100 text-rose-600 text-xs font-black rounded-full flex-shrink-0">รอสอบ (<?=$post_attempt_count?>/<?=$max_att?>)</span>
       <?php endif; ?>
@@ -218,7 +239,20 @@ window.addEventListener('load',()=>{
       <p class="text-lg font-black text-emerald-600"><?=$post_passed['score']?> / <?=$post_passed['total']?></p>
       <?php endif; ?>
     </div>
+    <?php elseif ($post_window_set && !$post_in_window): ?>
+    <div class="mt-3 p-3 bg-white rounded-xl border border-slate-100">
+      <?php if ($open_ts && $now_ts < $open_ts): ?>
+      <p class="text-xs text-slate-500 text-center"><i class="bi bi-calendar-event mr-1"></i>เปิดสอบ <?=date('d/m/Y เวลา H:i', $open_ts)?> น.</p>
+      <?php elseif ($close_ts && $now_ts > $close_ts): ?>
+      <p class="text-xs text-slate-500 text-center"><i class="bi bi-calendar-x mr-1"></i>หมดเวลาสอบแล้ว (ปิด <?=date('d/m/Y H:i', $close_ts)?> น.)</p>
+      <?php endif; ?>
+    </div>
     <?php elseif (!$post_passed): ?>
+    <?php if ($post_window_set && $close_ts): ?>
+    <div class="mt-2 text-xs text-slate-400 flex items-center gap-1">
+      <i class="bi bi-clock"></i> ปิดสอบ <?=date('d/m/Y H:i', $close_ts)?> น.
+    </div>
+    <?php endif; ?>
     <a href="/student/lms_post_exam.php?subject_id=<?=$subject_id?>"
        class="mt-3 w-full flex items-center justify-center gap-2 py-2.5 bg-rose-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-rose-200/50 active:scale-95 transition-transform">
       <i class="bi bi-flag-fill"></i> เริ่มสอบหลังเรียน
