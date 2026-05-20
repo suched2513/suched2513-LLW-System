@@ -191,6 +191,9 @@ require_once __DIR__ . '/../components/layout_start.php';
     <a href="progress.php?subject_id=<?=$s['id']?>" class="px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-bold rounded-lg hover:bg-amber-100 transition-all">
       <i class="fas fa-chart-line mr-1"></i>ความคืบหน้า
     </a>
+    <a href="exam_answers.php?subject_id=<?=$s['id']?>" class="px-3 py-1.5 bg-violet-50 text-violet-700 text-xs font-bold rounded-lg hover:bg-violet-100 transition-all">
+      <i class="fas fa-pen-fancy mr-1"></i>ตรวจอัตนัย
+    </a>
   </div>
 </div>
 <?php endforeach; ?>

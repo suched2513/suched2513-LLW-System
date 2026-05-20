@@ -13,7 +13,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'answers') {
     $uid2 = (int)($_GET['unit_id'] ?? 0);
     $sid  = (int)($_GET['subject_id'] ?? 0);
     $rows = $pdo->prepare("
-        SELECT e.exercise_title, se.answer_text, se.submitted_at
+        SELECT e.id AS exercise_id, e.exercise_title,
+               se.id AS sub_id, se.answer_text, se.grade, se.feedback, se.reviewed_at, se.submitted_at
         FROM lms_student_exercises se
         JOIN lms_unit_exercises e ON e.id = se.exercise_id
         WHERE se.student_uid=? AND se.unit_id=? AND se.subject_id=?
@@ -23,31 +24,61 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'answers') {
     echo json_encode($rows->fetchAll()); exit();
 }
 
+// AJAX: save exercise feedback
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['ajax'] === 'save_feedback') {
+    header('Content-Type: application/json');
+    try {
+        $sub_id   = (int)$_POST['sub_id'];
+        $grade    = $_POST['grade'] !== '' ? max(0, min(100, (int)$_POST['grade'])) : null;
+        $feedback = trim($_POST['feedback'] ?? '');
+        $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, reviewed_at=NOW() WHERE id=?")
+            ->execute([$grade, $feedback ?: null, $sub_id]);
+        echo json_encode(['ok' => true]);
+    } catch (Exception $e) {
+        error_log($e->getMessage());
+        echo json_encode(['ok' => false]);
+    }
+    exit();
+}
+
+// AJAX: reset student progress
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['ajax'] === 'reset_student') {
+    header('Content-Type: application/json');
+    try {
+        $uid = (int)$_POST['student_uid'];
+        $sid = (int)$_POST['subject_id'];
+        if (!$uid || !$sid) throw new Exception('invalid');
+        $pdo->beginTransaction();
+        $pdo->prepare("DELETE FROM lms_student_pre_exam      WHERE student_uid=? AND subject_id=?")->execute([$uid,$sid]);
+        $pdo->prepare("DELETE FROM lms_student_post_exam     WHERE student_uid=? AND subject_id=?")->execute([$uid,$sid]);
+        $pdo->prepare("DELETE FROM lms_student_exercises     WHERE student_uid=? AND subject_id=?")->execute([$uid,$sid]);
+        $pdo->prepare("DELETE FROM lms_student_exam_answers  WHERE student_uid=? AND subject_id=?")->execute([$uid,$sid]);
+        $pdo->commit();
+        echo json_encode(['ok' => true]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        error_log($e->getMessage());
+        echo json_encode(['ok' => false]);
+    }
+    exit();
+}
+
 $sel_subject = (int)($_GET['subject_id'] ?? 0);
 $sel_class   = $_GET['class'] ?? '';
 
 $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
 
-$subject = null;
-$classes = [];
-$units   = [];
-$students = [];
-$settings = null;
+$subject = null; $classes = []; $units = []; $students = []; $settings = null;
 
 if ($sel_subject) {
     $ss = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $ss->execute([$sel_subject]); $subject = $ss->fetch();
     if ($subject) {
         $cs = $pdo->prepare("SELECT classroom FROM lms_subject_classrooms WHERE subject_id=? ORDER BY classroom");
-        $cs->execute([$sel_subject]);
-        $classes = $cs->fetchAll(PDO::FETCH_COLUMN);
-
+        $cs->execute([$sel_subject]); $classes = $cs->fetchAll(PDO::FETCH_COLUMN);
         $us = $pdo->prepare("SELECT * FROM lms_units WHERE subject_id=? ORDER BY order_no");
-        $us->execute([$sel_subject]);
-        $units = $us->fetchAll();
-
+        $us->execute([$sel_subject]); $units = $us->fetchAll();
         $es = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE subject_id=?");
-        $es->execute([$sel_subject]);
-        $settings = $es->fetch();
+        $es->execute([$sel_subject]); $settings = $es->fetch();
     }
 }
 
@@ -60,12 +91,26 @@ if ($sel_subject && $sel_class) {
           AND student_id NOT IN (SELECT subject_code FROM att_subjects)
         ORDER BY student_id
     ");
-    $q->execute([$sel_class]);
-    $students = $q->fetchAll();
+    $q->execute([$sel_class]); $students = $q->fetchAll();
 }
 
-$pre_pass  = $settings['pre_pass_score'] ?? 6;
+$pre_pass  = $settings['pre_pass_score']  ?? 6;
 $post_pass = $settings['post_pass_score'] ?? 6;
+
+// Pre-compute stats for KPI
+$kpi = ['total'=>count($students),'pre_done'=>0,'post_passed'=>0,'not_started'=>0,'score_sum'=>0,'score_cnt'=>0];
+$student_data = [];
+foreach ($students as $s) {
+    $uid = $s['id'];
+    $pre  = $pdo->prepare("SELECT score,total FROM lms_student_pre_exam  WHERE student_uid=? AND subject_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $pre->execute([$uid,$sel_subject]); $pre=$pre->fetch();
+    $pre_latest = $pdo->prepare("SELECT score,total FROM lms_student_pre_exam  WHERE student_uid=? AND subject_id=? ORDER BY taken_at DESC LIMIT 1"); $pre_latest->execute([$uid,$sel_subject]); $pre_latest=$pre_latest->fetch();
+    $post = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND subject_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $post->execute([$uid,$sel_subject]); $post=$post->fetch();
+    $post_latest = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND subject_id=? ORDER BY taken_at DESC LIMIT 1"); $post_latest->execute([$uid,$sel_subject]); $post_latest=$post_latest->fetch();
+    if ($pre)         $kpi['pre_done']++;
+    if ($post)        { $kpi['post_passed']++; $kpi['score_sum']+=$post['score']; $kpi['score_cnt']++; }
+    if (!$pre_latest && !$post_latest) $kpi['not_started']++;
+    $student_data[$uid] = compact('pre','pre_latest','post','post_latest');
+}
 
 $pageTitle    = 'ความคืบหน้า';
 $pageSubtitle = 'ผลการเรียนและสถานะนักเรียน';
@@ -73,20 +118,28 @@ $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
-<div class="flex items-center gap-3 mb-6">
-  <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-amber-400 to-orange-500">
-    <i class="fas fa-chart-line text-white"></i>
+<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-amber-400 to-orange-500">
+      <i class="fas fa-chart-line text-white"></i>
+    </div>
+    <div>
+      <h2 class="text-lg font-black text-slate-800">ความคืบหน้า</h2>
+      <p class="text-xs text-slate-400">ผลการเรียนแต่ละวิชา</p>
+    </div>
   </div>
-  <div>
-    <h2 class="text-lg font-black text-slate-800">ความคืบหน้า</h2>
-    <p class="text-xs text-slate-400">ตรวจสอบผลการเรียนแต่ละวิชา</p>
-  </div>
+  <?php if ($sel_subject && $sel_class): ?>
+  <a href="exam_answers.php?subject_id=<?=$sel_subject?>&class=<?=urlencode($sel_class)?>"
+     class="px-3 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-violet-200 hover:bg-violet-700 transition-all">
+    <i class="fas fa-pen-fancy mr-1"></i> ตรวจอัตนัย
+  </a>
+  <?php endif; ?>
 </div>
 
-<!-- Selectors -->
+<!-- Filters -->
 <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-5 mb-5">
   <form method="GET" class="flex gap-3 items-center flex-wrap">
-    <label class="text-xs font-black text-slate-500">วิชา :</label>
+    <label class="text-xs font-black text-slate-500">วิชา:</label>
     <select name="subject_id" onchange="this.form.submit()"
       class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-violet-400 outline-none">
       <option value="">-- เลือกวิชา --</option>
@@ -97,7 +150,7 @@ require_once __DIR__ . '/../components/layout_start.php';
       <?php endforeach; ?>
     </select>
     <?php if ($sel_subject && !empty($classes)): ?>
-    <label class="text-xs font-black text-slate-500">ห้อง :</label>
+    <label class="text-xs font-black text-slate-500">ห้อง:</label>
     <select name="class" onchange="this.form.submit()"
       class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-violet-400 outline-none">
       <option value="">-- เลือกห้อง --</option>
@@ -113,8 +166,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 
 <?php if (!$sel_subject): ?>
 <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-16 text-center text-slate-300">
-  <i class="fas fa-hand-point-up text-5xl mb-3 block opacity-30"></i>
-  <p>โปรดเลือกวิชาก่อน</p>
+  <i class="fas fa-hand-point-up text-5xl mb-3 block opacity-30"></i><p>โปรดเลือกวิชาก่อน</p>
 </div>
 <?php elseif (!$sel_class): ?>
 <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-16 text-center text-slate-300">
@@ -126,42 +178,70 @@ require_once __DIR__ . '/../components/layout_start.php';
   <p>ไม่มีนักเรียนในห้องนี้</p>
 </div>
 <?php else: ?>
+
+<!-- KPI -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+  <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-5">
+    <p class="text-xs text-slate-400 font-bold mb-1">นักเรียนทั้งหมด</p>
+    <p class="text-3xl font-black text-slate-700"><?=$kpi['total']?></p>
+    <p class="text-xs text-slate-400 mt-1">ห้อง <?=htmlspecialchars($sel_class,ENT_QUOTES,'UTF-8')?></p>
+  </div>
+  <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-5">
+    <p class="text-xs text-slate-400 font-bold mb-1">ทำก่อนเรียนแล้ว</p>
+    <p class="text-3xl font-black text-blue-600"><?=$kpi['pre_done']?></p>
+    <p class="text-xs text-slate-400 mt-1">จาก <?=$kpi['total']?> คน</p>
+  </div>
+  <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-5">
+    <p class="text-xs text-slate-400 font-bold mb-1">ผ่านหลังเรียน</p>
+    <p class="text-3xl font-black text-emerald-600"><?=$kpi['post_passed']?></p>
+    <p class="text-xs text-slate-400 mt-1"><?=$kpi['score_cnt']>0?'เฉลี่ย '.round($kpi['score_sum']/$kpi['score_cnt'],1).' คะแนน':'ยังไม่มีข้อมูล'?></p>
+  </div>
+  <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-5">
+    <p class="text-xs text-slate-400 font-bold mb-1">ยังไม่เริ่ม</p>
+    <p class="text-3xl font-black text-rose-500"><?=$kpi['not_started']?></p>
+    <p class="text-xs text-slate-400 mt-1">ยังไม่มีประวัติเลย</p>
+  </div>
+</div>
+
+<!-- Table -->
 <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden">
   <div class="overflow-x-auto">
     <table class="w-full text-xs">
       <thead class="bg-slate-50 text-slate-400 font-black uppercase tracking-wider">
         <tr>
-          <th class="px-4 py-3 w-10">#</th>
-          <th class="px-4 py-3 text-left">ชื่อ</th>
-          <th class="px-4 py-3 text-center" style="min-width:90px">ก่อนเรียน<br><span class="font-normal text-[10px]">ผ่าน ≥ <?=$pre_pass?></span></th>
+          <th class="px-4 py-3 w-8">#</th>
+          <th class="px-4 py-3 text-left">ชื่อ–สกุล</th>
+          <th class="px-4 py-3 text-center" style="min-width:88px">ก่อนเรียน</th>
           <?php foreach ($units as $u): ?>
-          <th class="px-4 py-3 text-center" style="min-width:80px"><?=htmlspecialchars(mb_substr($u['unit_name'],0,12),ENT_QUOTES,'UTF-8')?><br><span class="font-normal text-[10px]">แบบฝึกหัด</span></th>
+          <th class="px-4 py-3 text-center" style="min-width:76px"><?=htmlspecialchars(mb_substr($u['unit_name'],0,10),ENT_QUOTES,'UTF-8')?><br><span class="font-normal text-[10px]">แบบฝึก</span></th>
           <?php endforeach; ?>
-          <th class="px-4 py-3 text-center" style="min-width:90px">หลังเรียน<br><span class="font-normal text-[10px]">ผ่าน ≥ <?=$post_pass?></span></th>
+          <th class="px-4 py-3 text-center" style="min-width:88px">หลังเรียน<br><span class="font-normal text-[10px]">ผ่าน ≥ <?=$post_pass?></span></th>
+          <th class="px-4 py-3 text-center w-16">รีเซ็ต</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-50">
         <?php foreach ($students as $i => $s):
-          $uid = $s['id'];
-          $pre  = $pdo->prepare("SELECT score,total FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $pre->execute([$uid,$sel_subject]); $pre=$pre->fetch();
-          $pre_latest = $pdo->prepare("SELECT score,total FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? ORDER BY taken_at DESC LIMIT 1"); $pre_latest->execute([$uid,$sel_subject]); $pre_latest=$pre_latest->fetch();
-          $post = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND subject_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $post->execute([$uid,$sel_subject]); $post=$post->fetch();
-          $post_latest = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND subject_id=? ORDER BY taken_at DESC LIMIT 1"); $post_latest->execute([$uid,$sel_subject]); $post_latest=$post_latest->fetch();
+          $uid  = $s['id'];
+          $d    = $student_data[$uid];
+          $pre  = $d['pre']; $pre_latest = $d['pre_latest'];
+          $post = $d['post']; $post_latest = $d['post_latest'];
         ?>
-        <tr class="hover:bg-slate-50/50 transition-colors">
+        <tr class="hover:bg-slate-50/50 transition-colors" id="row_<?=$uid?>">
           <td class="px-4 py-3 text-center text-slate-400"><?=$i+1?></td>
-          <td class="px-4 py-3 font-bold text-slate-700"><?=htmlspecialchars($s['student_name'],ENT_QUOTES,'UTF-8')?><div class="text-[10px] text-slate-400"><?=htmlspecialchars($s['student_id'],ENT_QUOTES,'UTF-8')?></div></td>
+          <td class="px-4 py-3">
+            <div class="font-bold text-slate-700"><?=htmlspecialchars($s['student_name'],ENT_QUOTES,'UTF-8')?></div>
+            <div class="text-[10px] text-slate-400"><?=htmlspecialchars($s['student_id'],ENT_QUOTES,'UTF-8')?></div>
+          </td>
           <td class="px-4 py-3 text-center">
             <?php if ($pre): ?>
-            <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 font-black rounded-full"><i class="fas fa-check-circle"></i> <?=$pre['score']?>/<?=$pre['total']?></span>
+            <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 font-black rounded-full"><i class="fas fa-check-circle mr-0.5"></i><?=$pre['score']?>/<?=$pre['total']?></span>
             <?php else: ?>
-            <span class="px-2 py-0.5 bg-rose-50 text-rose-400 rounded-full"><?=$pre_latest?$pre_latest['score'].'/'.$pre_latest['total']:'—'?></span>
+            <span class="px-2 py-0.5 bg-slate-50 text-slate-400 rounded-full"><?=$pre_latest?$pre_latest['score'].'/'.$pre_latest['total']:'—'?></span>
             <?php endif; ?>
           </td>
           <?php foreach ($units as $u):
             $exs = $pdo->prepare("SELECT id FROM lms_unit_exercises WHERE unit_id=?"); $exs->execute([$u['id']]); $exs=$exs->fetchAll();
-            $ex_total = count($exs);
-            $submitted = 0;
+            $ex_total = count($exs); $submitted = 0;
             foreach ($exs as $ex) {
                 $chk = $pdo->prepare("SELECT id FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? AND subject_id=? LIMIT 1");
                 $chk->execute([$uid,$ex['id'],$sel_subject]);
@@ -181,10 +261,17 @@ require_once __DIR__ . '/../components/layout_start.php';
           <?php endforeach; ?>
           <td class="px-4 py-3 text-center">
             <?php if ($post): ?>
-            <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 font-black rounded-full"><i class="fas fa-check-circle"></i> <?=$post['score']?>/<?=$post['total']?></span>
+            <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 font-black rounded-full"><i class="fas fa-check-circle mr-0.5"></i><?=$post['score']?>/<?=$post['total']?></span>
             <?php else: ?>
-            <span class="px-2 py-0.5 bg-rose-50 text-rose-400 rounded-full"><?=$post_latest?$post_latest['score'].'/'.$post_latest['total']:'—'?></span>
+            <span class="px-2 py-0.5 bg-slate-50 text-slate-400 rounded-full"><?=$post_latest?$post_latest['score'].'/'.$post_latest['total']:'—'?></span>
             <?php endif; ?>
+          </td>
+          <td class="px-4 py-3 text-center">
+            <button onclick="resetStudent(<?=$uid?>, '<?=htmlspecialchars($s['student_name'],ENT_QUOTES,'UTF-8')?>')"
+              class="w-7 h-7 bg-rose-50 text-rose-400 rounded-lg hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center mx-auto"
+              title="รีเซ็ตประวัติ">
+              <i class="fas fa-undo text-xs"></i>
+            </button>
           </td>
         </tr>
         <?php endforeach; ?>
@@ -194,23 +281,25 @@ require_once __DIR__ . '/../components/layout_start.php';
 </div>
 <?php endif; ?>
 
-<!-- Answer Modal -->
+<!-- Exercise Answer Modal -->
 <div id="ansModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="background:rgba(0,0,0,0.4)">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
       <div>
-        <h3 class="font-black text-slate-800 text-sm" id="ansName">ชื่อนักเรียน</h3>
-        <p class="text-xs text-slate-400 mt-0.5" id="ansUnit">หน่วย</p>
+        <h3 class="font-black text-slate-800 text-sm" id="ansName"></h3>
+        <p class="text-xs text-slate-400 mt-0.5" id="ansUnit"></p>
       </div>
       <button onclick="closeModal('ansModal')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-lg"></i></button>
     </div>
-    <div id="ansContent" class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+    <div id="ansContent" class="p-5 space-y-4 overflow-y-auto flex-1">
       <div class="text-center text-slate-300 py-8">กำลังโหลด...</div>
     </div>
   </div>
 </div>
 
 <script>
+const SUBJECT_ID = <?=$sel_subject?:0?>;
+
 function openModal(id){const el=document.getElementById(id);el.classList.remove('hidden');el.classList.add('flex');}
 function closeModal(id){const el=document.getElementById(id);el.classList.add('hidden');el.classList.remove('flex');}
 
@@ -219,24 +308,82 @@ async function viewAnswers(unitId, uid, name, unitName) {
   document.getElementById('ansUnit').textContent = unitName;
   document.getElementById('ansContent').innerHTML = '<div class="text-center py-8 text-slate-300">กำลังโหลด...</div>';
   openModal('ansModal');
-  const data = await fetch(`progress.php?ajax=answers&unit_id=${unitId}&student_uid=${uid}&subject_id=<?=$sel_subject?>`).then(r=>r.json());
+  const data = await fetch(`progress.php?ajax=answers&unit_id=${unitId}&student_uid=${uid}&subject_id=${SUBJECT_ID}`).then(r=>r.json());
   if (!data.length) {
     document.getElementById('ansContent').innerHTML = '<div class="text-center py-8 text-slate-300">ยังไม่มีคำตอบ</div>';
     return;
   }
   let html = '';
   data.forEach(d => {
-    const dt = new Date(d.submitted_at).toLocaleString('th-TH');
+    const dt  = new Date(d.submitted_at).toLocaleString('th-TH');
     const ans = (d.answer_text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') || '<em class="text-slate-300">ไม่มีข้อความ</em>';
+    const gradeVal    = d.grade    !== null ? d.grade    : '';
+    const feedbackVal = d.feedback !== null ? d.feedback : '';
+    const reviewed    = d.reviewed_at !== null;
     html += `<div class="rounded-xl bg-slate-50 border border-slate-100 p-4">
       <div class="flex justify-between items-center mb-2">
         <span class="text-xs font-black text-slate-700"><i class="fas fa-tasks text-teal-500 mr-1"></i>${d.exercise_title}</span>
         <span class="text-xs text-slate-400">${dt}</span>
       </div>
-      <div class="text-xs text-slate-600 bg-white p-3 rounded-lg border-l-4 border-teal-400 leading-relaxed">${ans}</div>
+      <div class="text-xs text-slate-600 bg-white p-3 rounded-lg border-l-4 border-teal-400 leading-relaxed mb-3">${ans}</div>
+      <div class="flex gap-2 items-end flex-wrap">
+        <div>
+          <label class="block text-[10px] font-black text-slate-400 mb-1">คะแนน</label>
+          <input type="number" min="0" max="100" value="${gradeVal}" placeholder="—"
+            class="w-20 border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold text-center focus:ring-2 focus:ring-violet-400 outline-none"
+            id="sg_${d.sub_id}">
+        </div>
+        <div class="flex-1 min-w-36">
+          <label class="block text-[10px] font-black text-slate-400 mb-1">ความคิดเห็น</label>
+          <input type="text" value="${feedbackVal}" placeholder="พิมพ์ความคิดเห็น..."
+            class="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-violet-400 outline-none"
+            id="sf_${d.sub_id}">
+        </div>
+        <button onclick="saveExFeedback(${d.sub_id})"
+          class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${reviewed?'bg-emerald-500 text-white':'bg-violet-600 text-white hover:bg-violet-700'}"
+          id="sbtn_${d.sub_id}">
+          <i class="fas fa-save mr-1"></i>${reviewed?'อัปเดต':'บันทึก'}
+        </button>
+      </div>
     </div>`;
   });
   document.getElementById('ansContent').innerHTML = html;
+}
+
+async function saveExFeedback(subId) {
+  const grade    = document.getElementById('sg_'+subId).value;
+  const feedback = document.getElementById('sf_'+subId).value;
+  const btn = document.getElementById('sbtn_'+subId);
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>';
+  const fd = new FormData();
+  fd.append('ajax','save_feedback'); fd.append('sub_id',subId);
+  fd.append('grade',grade); fd.append('feedback',feedback);
+  const res = await fetch('progress.php?subject_id='+SUBJECT_ID, {method:'POST',body:fd}).then(r=>r.json());
+  if (res.ok) {
+    btn.innerHTML = '<i class="fas fa-check mr-1"></i>บันทึกแล้ว';
+    btn.className = btn.className.replace('bg-violet-600 hover:bg-violet-700','bg-emerald-500');
+    setTimeout(()=>{ btn.disabled=false; btn.innerHTML='<i class="fas fa-save mr-1"></i>อัปเดต'; },2500);
+  } else {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-save mr-1"></i>บันทึก';
+  }
+}
+
+function resetStudent(uid, name) {
+  Swal.fire({
+    icon:'warning', title:'รีเซ็ตประวัติ?',
+    html:`<span class="font-bold">${name}</span><br><span class="text-sm text-slate-500">ประวัติสอบและแบบฝึกหัดทั้งหมดของวิชานี้จะถูกลบ</span>`,
+    showCancelButton:true, confirmButtonColor:'#ef4444',
+    cancelButtonText:'ยกเลิก', confirmButtonText:'รีเซ็ตเลย'
+  }).then(async r => {
+    if (!r.isConfirmed) return;
+    const fd = new FormData();
+    fd.append('ajax','reset_student'); fd.append('student_uid',uid); fd.append('subject_id',SUBJECT_ID);
+    const res = await fetch('progress.php', {method:'POST',body:fd}).then(r=>r.json());
+    if (res.ok) {
+      document.getElementById('row_'+uid).style.opacity='0.4';
+      Swal.fire({icon:'success',title:'รีเซ็ตแล้ว',timer:1500,showConfirmButton:false});
+    }
+  });
 }
 </script>
 

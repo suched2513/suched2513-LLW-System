@@ -45,6 +45,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Pre-exam always passes — it's before-learning assessment only
     $pdo->prepare("INSERT INTO lms_student_pre_exam (student_uid,subject_id,score,total,passed,attempt_no) VALUES (?,?,?,?,1,?)")
         ->execute([$uid,$subject_id,$score,$total_choice,$attempt_no]);
+    $exam_record_id = (int)$pdo->lastInsertId();
+    // Save text answers for teacher review
+    foreach ($questions_post as $q) {
+        if (($q['question_type'] ?? 'choice') === 'text') {
+            $text = trim($_POST['q_'.$q['id']] ?? '');
+            if ($text !== '') {
+                $pdo->prepare("INSERT INTO lms_student_exam_answers (student_uid,subject_id,exam_type,exam_record_id,question_id,answer_text) VALUES (?,?,'pre',?,?,?)")
+                    ->execute([$uid,$subject_id,$exam_record_id,$q['id'],$text]);
+            }
+        }
+    }
     $result = ['score'=>$score,'total'=>$total_choice,'answers'=>$answers,'questions'=>$questions_post];
 }
 

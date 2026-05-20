@@ -84,6 +84,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $passed = ($total_choice === 0 || $score >= $post_pass) ? 1 : 0;
     $pdo->prepare("INSERT INTO lms_student_post_exam (student_uid,subject_id,score,total,passed,attempt_no) VALUES (?,?,?,?,?,?)")
         ->execute([$uid,$subject_id,$score,$total_choice,$passed,$attempt_no]);
+    $exam_record_id = (int)$pdo->lastInsertId();
+    // Save text answers for teacher review
+    foreach ($questions_post as $q) {
+        if (($q['question_type'] ?? 'choice') === 'text') {
+            $text = trim($_POST['q_'.$q['id']] ?? '');
+            if ($text !== '') {
+                $pdo->prepare("INSERT INTO lms_student_exam_answers (student_uid,subject_id,exam_type,exam_record_id,question_id,answer_text) VALUES (?,?,'post',?,?,?)")
+                    ->execute([$uid,$subject_id,$exam_record_id,$q['id'],$text]);
+            }
+        }
+    }
     $result = ['score'=>$score,'total'=>$total_choice,'passed'=>$passed,'answers'=>$answers,'questions'=>$questions_post,
                'attempt_no'=>$attempt_no,'max_att'=>$max_att];
 }

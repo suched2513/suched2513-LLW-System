@@ -53,13 +53,13 @@ $exercises_stmt = $pdo->prepare("SELECT * FROM lms_unit_exercises WHERE unit_id=
 $exercises_stmt->execute([$unit_id]);
 $exercises = $exercises_stmt->fetchAll();
 
-// Student submissions for this unit
+// Student submissions + teacher feedback for this unit
 $submitted_map = [];
 foreach ($exercises as $ex) {
-    $sub = $pdo->prepare("SELECT answer_text FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
+    $sub = $pdo->prepare("SELECT answer_text, grade, feedback, reviewed_at FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
     $sub->execute([$uid, $ex['id']]);
     $row = $sub->fetch();
-    if ($row) $submitted_map[$ex['id']] = $row['answer_text'];
+    if ($row) $submitted_map[$ex['id']] = $row;
 }
 
 $ex_total    = count($exercises);
@@ -217,12 +217,16 @@ body { font-family: 'Prompt', sans-serif; }
   <?php if (!empty($exercises)): ?>
   <p class="text-xs font-black text-slate-400 uppercase tracking-wider px-1 pt-2">แบบฝึกหัด (<?=$ex_total?> ข้อ)</p>
   <?php foreach ($exercises as $ex):
-    $done = isset($submitted_map[$ex['id']]);
+    $sub  = $submitted_map[$ex['id']] ?? null;
+    $done = $sub !== null;
+    $reviewed = $done && $sub['reviewed_at'] !== null;
   ?>
-  <div class="bg-white rounded-2xl border <?=$done?'border-emerald-200':'border-amber-200'?> p-5 shadow-sm">
+  <div class="bg-white rounded-2xl border <?=$reviewed?'border-violet-200':($done?'border-emerald-200':'border-amber-200')?> p-5 shadow-sm">
     <div class="flex items-start justify-between gap-3 mb-3">
       <p class="font-bold text-slate-800 text-sm flex-1"><?=htmlspecialchars($ex['exercise_title'],ENT_QUOTES,'UTF-8')?></p>
-      <?php if ($done): ?>
+      <?php if ($reviewed): ?>
+      <span class="px-2.5 py-1 bg-violet-100 text-violet-700 text-xs font-black rounded-full flex-shrink-0"><i class="bi bi-patch-check-fill mr-1"></i>ตรวจแล้ว</span>
+      <?php elseif ($done): ?>
       <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full flex-shrink-0"><i class="bi bi-check-circle-fill mr-1"></i>ส่งแล้ว</span>
       <?php else: ?>
       <span class="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-black rounded-full flex-shrink-0">รอส่ง</span>
@@ -231,9 +235,22 @@ body { font-family: 'Prompt', sans-serif; }
     <?php if ($done): ?>
     <div class="bg-emerald-50 rounded-xl p-3 text-xs text-emerald-700 border border-emerald-100">
       <p class="font-black mb-1">คำตอบของคุณ:</p>
-      <p class="leading-relaxed"><?=nl2br(htmlspecialchars($submitted_map[$ex['id']],ENT_QUOTES,'UTF-8'))?></p>
+      <p class="leading-relaxed"><?=nl2br(htmlspecialchars($sub['answer_text'],ENT_QUOTES,'UTF-8'))?></p>
     </div>
-    <button onclick="openExercise(<?=$ex['id']?>, <?=htmlspecialchars(json_encode($ex['exercise_title']),ENT_QUOTES,'UTF-8')?>, <?=htmlspecialchars(json_encode($submitted_map[$ex['id']]),ENT_QUOTES,'UTF-8')?>)"
+    <?php if ($reviewed): ?>
+    <div class="mt-2 bg-violet-50 rounded-xl p-3 border border-violet-100 space-y-1">
+      <div class="flex items-center justify-between">
+        <p class="text-xs font-black text-violet-700"><i class="bi bi-person-check-fill mr-1"></i>ครูตรวจแล้ว</p>
+        <?php if ($sub['grade'] !== null): ?>
+        <span class="px-2.5 py-0.5 bg-violet-600 text-white text-xs font-black rounded-full"><?=$sub['grade']?> คะแนน</span>
+        <?php endif; ?>
+      </div>
+      <?php if (!empty($sub['feedback'])): ?>
+      <p class="text-xs text-violet-600 leading-relaxed"><?=nl2br(htmlspecialchars($sub['feedback'],ENT_QUOTES,'UTF-8'))?></p>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
+    <button onclick="openExercise(<?=$ex['id']?>, <?=htmlspecialchars(json_encode($ex['exercise_title']),ENT_QUOTES,'UTF-8')?>, <?=htmlspecialchars(json_encode($sub['answer_text']),ENT_QUOTES,'UTF-8')?>)"
       class="mt-2 w-full py-2 border border-emerald-300 text-emerald-700 font-bold text-xs rounded-xl active:opacity-70">
       <i class="bi bi-pencil-fill mr-1"></i> แก้ไขคำตอบ
     </button>
