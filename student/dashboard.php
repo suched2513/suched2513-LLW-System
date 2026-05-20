@@ -220,6 +220,18 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
         </div>
     </a>
 
+    <!-- บทเรียน LMS -->
+    <a href="/student/lms.php"
+       class="bg-white rounded-3xl p-4 shadow-sm border border-violet-100 active:scale-95 transition-transform flex flex-col gap-3">
+        <div class="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center">
+            <i class="bi bi-mortarboard-fill text-violet-500 text-2xl"></i>
+        </div>
+        <div>
+            <p class="font-black text-slate-700 text-sm leading-tight">บทเรียน</p>
+            <p class="text-violet-500 text-sm font-bold mt-0.5">เนื้อหา & ทดสอบ</p>
+        </div>
+    </a>
+
     <!-- การบ้าน -->
     <a href="/student/homework.php"
        class="bg-white rounded-3xl p-4 shadow-sm border border-indigo-100 active:scale-95 transition-transform flex flex-col gap-3">
