@@ -37,12 +37,22 @@ $tpost = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE subject_id
 $pre_passed = $pdo->prepare("SELECT id,score,total FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
 $pre_passed->execute([$uid,$subject_id]); $pre_passed = $pre_passed->fetch();
 
+// Auto-pass pre-exam when no questions exist
+if (!$pre_passed && $total_pre === 0) {
+    $pre_passed = ['id' => 0, 'score' => 0, 'total' => 0, 'auto' => true];
+}
+
 $pre_latest = $pdo->prepare("SELECT score,total,attempt_no FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? ORDER BY taken_at DESC LIMIT 1");
 $pre_latest->execute([$uid,$subject_id]); $pre_latest = $pre_latest->fetch();
 
 // Post-exam status
 $post_passed = $pdo->prepare("SELECT id,score,total FROM lms_student_post_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
 $post_passed->execute([$uid,$subject_id]); $post_passed = $post_passed->fetch();
+
+// Auto-pass post-exam when no questions exist
+if (!$post_passed && $total_post === 0) {
+    $post_passed = ['id' => 0, 'score' => 0, 'total' => 0, 'auto' => true];
+}
 
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_post_exam WHERE student_uid=? AND subject_id=?");
 $stmt->execute([$uid,$subject_id]); $post_attempt_count = (int)$stmt->fetchColumn();
@@ -129,10 +139,16 @@ window.addEventListener('load',()=>{
       <?php endif; ?>
     </div>
     <?php if ($pre_passed): ?>
+    <?php if (!empty($pre_passed['auto'])): ?>
+    <div class="mt-3 p-3 bg-white rounded-xl border border-emerald-100 text-center">
+      <p class="text-xs text-slate-500">ยังไม่มีข้อสอบ — เข้าเรียนได้เลย</p>
+    </div>
+    <?php else: ?>
     <div class="mt-3 p-3 bg-white rounded-xl border border-emerald-100 text-center">
       <p class="text-xs text-slate-500">คะแนนที่ผ่าน</p>
       <p class="text-lg font-black text-emerald-600"><?=$pre_passed['score']?> / <?=$pre_passed['total']?></p>
     </div>
+    <?php endif; ?>
     <?php else: ?>
     <?php if ($pre_latest): ?>
     <div class="mt-2 text-xs text-slate-500">ครั้งล่าสุด: <?=$pre_latest['score']?>/<?=$pre_latest['total']?> ข้อ (ครั้งที่ <?=$pre_latest['attempt_no']?>)</div>
@@ -197,8 +213,12 @@ window.addEventListener('load',()=>{
     </div>
     <?php if ($post_passed): ?>
     <div class="mt-3 p-3 bg-white rounded-xl border border-emerald-100 text-center">
+      <?php if (!empty($post_passed['auto'])): ?>
+      <p class="text-xs text-slate-500">ยังไม่มีข้อสอบ — ผ่านอัตโนมัติ</p>
+      <?php else: ?>
       <p class="text-xs text-slate-500">คะแนนที่ผ่าน</p>
       <p class="text-lg font-black text-emerald-600"><?=$post_passed['score']?> / <?=$post_passed['total']?></p>
+      <?php endif; ?>
     </div>
     <?php elseif (!$post_passed): ?>
     <a href="/student/lms_post_exam.php?subject_id=<?=$subject_id?>"
