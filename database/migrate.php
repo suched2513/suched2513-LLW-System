@@ -15,10 +15,14 @@
  * ⚠️ ห้ามเรียกผ่าน browser — CLI only
  */
 
-// ─── Guard: CLI only ──────────────────────────────────────────
-if (php_sapi_name() !== 'cli') {
-    http_response_code(403);
-    die('Migration runner is CLI only.');
+// ─── Guard: CLI or authenticated super_admin web ─────────────
+$is_cli = php_sapi_name() === 'cli';
+if (!$is_cli) {
+    session_start();
+    if (($_SESSION['llw_role'] ?? '') !== 'super_admin') {
+        http_response_code(403);
+        die('Access denied.');
+    }
 }
 
 // ─── Bootstrap ────────────────────────────────────────────────
@@ -28,8 +32,16 @@ $pdo = getPdo();
 $migrationsDir = __DIR__ . '/migrations';
 $seedsDir      = __DIR__ . '/seeds';
 
+// ─── Web: output HTML header ─────────────────────────────────
+if (!$is_cli) {
+    echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Migration</title>'
+        . '<style>body{font-family:monospace;background:#0f172a;color:#94a3b8;padding:2rem}'
+        . 'pre{margin:0}.ok{color:#4ade80}.warn{color:#fbbf24}.err{color:#f87171}</style></head>'
+        . '<body><pre>';
+}
+
 // ─── Parse CLI args ───────────────────────────────────────────
-$args = array_slice($argv, 1);
+$args = $is_cli ? array_slice($argv, 1) : [];
 $command = 'migrate'; // default
 $param   = null;
 
@@ -61,14 +73,22 @@ $pdo->exec("
 // ─── Helper functions ─────────────────────────────────────────
 
 function out(string $msg, string $type = 'info'): void {
-    $colors = ['info' => "\033[36m", 'ok' => "\033[32m", 'warn' => "\033[33m", 'err' => "\033[31m", 'reset' => "\033[0m"];
-    $prefix = match($type) {
-        'ok'   => $colors['ok']   . '  ✓ ',
-        'warn' => $colors['warn'] . '  ⚠ ',
-        'err'  => $colors['err']  . '  ✗ ',
-        default => $colors['info'] . '  → ',
-    };
-    echo $prefix . $msg . $colors['reset'] . PHP_EOL;
+    global $is_cli;
+    if ($is_cli) {
+        $colors = ['info' => "\033[36m", 'ok' => "\033[32m", 'warn' => "\033[33m", 'err' => "\033[31m", 'reset' => "\033[0m"];
+        $prefix = match($type) {
+            'ok'   => $colors['ok']   . '  ✓ ',
+            'warn' => $colors['warn'] . '  ⚠ ',
+            'err'  => $colors['err']  . '  ✗ ',
+            default => $colors['info'] . '  → ',
+        };
+        echo $prefix . $msg . $colors['reset'] . PHP_EOL;
+    } else {
+        $cls = match($type) { 'ok' => 'ok', 'warn' => 'warn', 'err' => 'err', default => '' };
+        $icon = match($type) { 'ok' => '✓', 'warn' => '⚠', 'err' => '✗', default => '→' };
+        echo '<span class="' . $cls . '">  ' . $icon . ' ' . htmlspecialchars($msg) . '</span>' . "\n";
+        ob_flush(); flush();
+    }
 }
 
 function getExecuted(PDO $pdo): array {
@@ -284,6 +304,9 @@ if (str_contains($command, 'seed')) {
 }
 
 echo PHP_EOL;
+if (!$is_cli) {
+    echo '</pre></body></html>';
+}
 exit(0);
 
 // ─── Seed runner ──────────────────────────────────────────────
