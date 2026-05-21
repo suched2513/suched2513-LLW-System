@@ -9,7 +9,7 @@ return [
     'up' => function (PDO $pdo) {
         // 1. Fetch Unique Master Students from att_students
         $master_students = $pdo->query("
-            SELECT student_id, name, classroom 
+            SELECT student_id, MAX(name) as name, MAX(classroom) as classroom 
             FROM att_students 
             WHERE student_id IS NOT NULL 
               AND TRIM(student_id) != ''

@@ -6,7 +6,11 @@
 return [
     'up' => function(PDO $pdo) {
         // 1. เพิ่ม is_elective ใน att_subjects
-        $pdo->exec("ALTER TABLE att_subjects ADD COLUMN IF NOT EXISTS is_elective TINYINT(1) NOT NULL DEFAULT 0 COMMENT '0=บังคับ, 1=วิชาเลือก' AFTER classroom");
+        try {
+            $pdo->exec("ALTER TABLE att_subjects ADD COLUMN is_elective TINYINT(1) NOT NULL DEFAULT 0 COMMENT '0=บังคับ, 1=วิชาเลือก' AFTER classroom");
+        } catch (Exception $e) {
+            // Ignore if column already exists
+        }
 
         // 2. สร้าง att_subject_students (enrollment สำหรับวิชาเลือก)
         $pdo->exec("
@@ -23,6 +27,10 @@ return [
     },
     'down' => function(PDO $pdo) {
         $pdo->exec("DROP TABLE IF EXISTS att_subject_students");
-        $pdo->exec("ALTER TABLE att_subjects DROP COLUMN IF EXISTS is_elective");
+        try {
+            $pdo->exec("ALTER TABLE att_subjects DROP COLUMN is_elective");
+        } catch (Exception $e) {
+            // Ignore if column doesn't exist
+        }
     }
 ];

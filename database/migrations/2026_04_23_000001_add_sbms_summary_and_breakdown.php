@@ -17,14 +17,16 @@ return [
             return;
         }
 
-        // 1. Add Breakdown columns to sbms_disbursements (supporting input_11 to input_1015 style)
-        // For simplicity and flexibility, we'll add a JSON column for itemized expenses
-        // but also specific columns for common summary fields
-        $pdo->exec("ALTER TABLE sbms_disbursements
-            ADD COLUMN IF NOT EXISTS expense_items JSON NULL AFTER amount,
-            ADD COLUMN IF NOT EXISTS total_spent_before DECIMAL(15,2) DEFAULT 0 AFTER expense_items,
-            ADD COLUMN IF NOT EXISTS balance_remaining DECIMAL(15,2) DEFAULT 0 AFTER total_spent_before
-        ");
+        // 1. Add Breakdown columns to sbms_disbursements
+        try {
+            $pdo->exec("ALTER TABLE sbms_disbursements ADD COLUMN expense_items JSON NULL AFTER amount");
+        } catch (Exception $e) {}
+        try {
+            $pdo->exec("ALTER TABLE sbms_disbursements ADD COLUMN total_spent_before DECIMAL(15,2) DEFAULT 0 AFTER expense_items");
+        } catch (Exception $e) {}
+        try {
+            $pdo->exec("ALTER TABLE sbms_disbursements ADD COLUMN balance_remaining DECIMAL(15,2) DEFAULT 0 AFTER total_spent_before");
+        } catch (Exception $e) {}
 
         // 2. Create sbms_summaries table
         $pdo->exec("CREATE TABLE IF NOT EXISTS sbms_summaries (
@@ -54,11 +56,14 @@ return [
 
     'down' => function (PDO $pdo) {
         $pdo->exec("DROP TABLE IF EXISTS sbms_summaries");
-        $pdo->exec("ALTER TABLE sbms_disbursements 
-            DROP COLUMN IF EXISTS expense_items,
-            DROP COLUMN IF EXISTS total_spent_before,
-            DROP COLUMN IF EXISTS balance_remaining
-        ");
+        try {
+            $pdo->exec("ALTER TABLE sbms_disbursements DROP COLUMN expense_items");
+        } catch (Exception $e) {}
+        try {
+            $pdo->exec("ALTER TABLE sbms_disbursements DROP COLUMN total_spent_before");
+        } catch (Exception $e) {}
+        try {
+            $pdo->exec("ALTER TABLE sbms_disbursements DROP COLUMN balance_remaining");
+        } catch (Exception $e) {}
     },
 ];
-

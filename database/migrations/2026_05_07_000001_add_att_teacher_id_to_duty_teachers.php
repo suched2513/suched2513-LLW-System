@@ -8,21 +8,20 @@
  */
 return [
     'up' => function (PDO $pdo) {
-        // เพิ่ม column att_teacher_id (ถ้ายังไม่มี)
-        $pdo->exec("
-            ALTER TABLE duty_teachers
-            ADD COLUMN IF NOT EXISTS att_teacher_id INT NULL
-                COMMENT 'FK → att_teachers.id (NULL = เพิ่มด้วยตนเอง)'
-                AFTER updated_at,
-            ADD UNIQUE KEY IF NOT EXISTS uk_att_teacher_id (att_teacher_id)
-        ");
+        try {
+            $pdo->exec("ALTER TABLE duty_teachers ADD COLUMN att_teacher_id INT NULL COMMENT 'FK → att_teachers.id (NULL = เพิ่มด้วยตนเอง)' AFTER updated_at");
+        } catch (Exception $e) {}
+        try {
+            $pdo->exec("ALTER TABLE duty_teachers ADD UNIQUE KEY uk_att_teacher_id (att_teacher_id)");
+        } catch (Exception $e) {}
     },
 
     'down' => function (PDO $pdo) {
-        $pdo->exec("
-            ALTER TABLE duty_teachers
-            DROP INDEX IF EXISTS uk_att_teacher_id,
-            DROP COLUMN IF EXISTS att_teacher_id
-        ");
+        try {
+            $pdo->exec("ALTER TABLE duty_teachers DROP INDEX uk_att_teacher_id");
+        } catch (Exception $e) {}
+        try {
+            $pdo->exec("ALTER TABLE duty_teachers DROP COLUMN att_teacher_id");
+        } catch (Exception $e) {}
     },
 ];

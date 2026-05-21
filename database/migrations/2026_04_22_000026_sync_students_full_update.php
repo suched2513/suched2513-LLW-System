@@ -13,7 +13,7 @@ return [
 
         // ── Fetch master list from att_students ──
         $students = $pdo->query("
-            SELECT student_id, name, classroom
+            SELECT student_id, MAX(name) as name, MAX(classroom) as classroom
             FROM att_students
             WHERE student_id IS NOT NULL AND TRIM(student_id) != ''
             GROUP BY student_id

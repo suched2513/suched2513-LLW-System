@@ -270,7 +270,12 @@ return [
         // 11. View `users` — บริดจ์ legacy queries → llw_users
         //     (read-only view สำหรับ SELECT/JOIN; write ต้องไป llw_users ตรง)
         // =========================================================
-        $pdo->exec("DROP VIEW IF EXISTS `users`");
+        try {
+            $pdo->exec("DROP TABLE IF EXISTS `users`");
+        } catch (Exception $e) {}
+        try {
+            $pdo->exec("DROP VIEW IF EXISTS `users`");
+        } catch (Exception $e) {}
         $pdo->exec("CREATE VIEW `users` AS
             SELECT
                 `user_id` AS `id`,

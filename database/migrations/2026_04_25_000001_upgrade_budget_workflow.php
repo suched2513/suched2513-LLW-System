@@ -1,58 +1,65 @@
 <?php
 return [
     'up' => function (PDO $pdo) {
-        // Add workflow columns to budget_disbursements
-        $sql = "ALTER TABLE budget_disbursements 
-                ADD COLUMN doc_no VARCHAR(50) NULL AFTER disbursement_id,
-                ADD COLUMN current_step VARCHAR(50) DEFAULT 'pending_project' AFTER status,
-                
-                -- Step 2: Project Head
-                ADD COLUMN project_head_id INT NULL,
-                ADD COLUMN project_head_signed_at DATETIME NULL,
-                
-                -- Step 3: Plan Head
-                ADD COLUMN plan_head_id INT NULL,
-                ADD COLUMN plan_head_signed_at DATETIME NULL,
-                ADD COLUMN plan_budget_total DECIMAL(15,2) NULL,
-                ADD COLUMN plan_budget_used DECIMAL(15,2) NULL,
-                ADD COLUMN plan_budget_remain DECIMAL(15,2) NULL,
-                ADD COLUMN plan_is_in_plan TINYINT(1) DEFAULT 1,
-                
-                -- Step 4: Procurement Head
-                ADD COLUMN procurement_head_id INT NULL,
-                ADD COLUMN procurement_head_signed_at DATETIME NULL,
-                ADD COLUMN procurement_result ENUM('can_buy', 'cannot_buy') NULL,
-                
-                -- Step 5: Finance Head
-                ADD COLUMN finance_head_id INT NULL,
-                ADD COLUMN finance_head_signed_at DATETIME NULL,
-                
-                -- Step 6: Deputy Director
-                ADD COLUMN deputy_id INT NULL,
-                ADD COLUMN deputy_signed_at DATETIME NULL,
-                ADD COLUMN deputy_comment TEXT NULL,
-                ADD COLUMN deputy_result ENUM('approved', 'rejected') NULL,
-                
-                -- Step 7: Director
-                ADD COLUMN director_id INT NULL,
-                ADD COLUMN director_signed_at DATETIME NULL,
-                ADD COLUMN director_result ENUM('approved', 'rejected') NULL,
-                
-                ADD INDEX (current_step),
-                ADD INDEX (status)";
-        
-        $pdo->exec($sql);
+        $cols = [
+            "doc_no VARCHAR(50) NULL AFTER disbursement_id",
+            "current_step VARCHAR(50) DEFAULT 'pending_project' AFTER status",
+            "project_head_id INT NULL",
+            "project_head_signed_at DATETIME NULL",
+            "plan_head_id INT NULL",
+            "plan_head_signed_at DATETIME NULL",
+            "plan_budget_total DECIMAL(15,2) NULL",
+            "plan_budget_used DECIMAL(15,2) NULL",
+            "plan_budget_remain DECIMAL(15,2) NULL",
+            "plan_is_in_plan TINYINT(1) DEFAULT 1",
+            "procurement_head_id INT NULL",
+            "procurement_head_signed_at DATETIME NULL",
+            "procurement_result ENUM('can_buy', 'cannot_buy') NULL",
+            "finance_head_id INT NULL",
+            "finance_head_signed_at DATETIME NULL",
+            "deputy_id INT NULL",
+            "deputy_signed_at DATETIME NULL",
+            "deputy_comment TEXT NULL",
+            "deputy_result ENUM('approved', 'rejected') NULL",
+            "director_id INT NULL",
+            "director_signed_at DATETIME NULL",
+            "director_result ENUM('approved', 'rejected') NULL"
+        ];
+
+        foreach ($cols as $col) {
+            try {
+                $name = explode(' ', trim($col))[0];
+                $pdo->exec("ALTER TABLE budget_disbursements ADD COLUMN $col");
+            } catch (Exception $e) {
+                // Ignore if column already exists
+            }
+        }
+
+        try {
+            $pdo->exec("ALTER TABLE budget_disbursements ADD INDEX (current_step)");
+        } catch (Exception $e) {}
+        try {
+            $pdo->exec("ALTER TABLE budget_disbursements ADD INDEX (status)");
+        } catch (Exception $e) {}
     },
     'down' => function (PDO $pdo) {
-        $sql = "ALTER TABLE budget_disbursements 
-                DROP COLUMN doc_no, DROP COLUMN current_step,
-                DROP COLUMN project_head_id, DROP COLUMN project_head_signed_at,
-                DROP COLUMN plan_head_id, DROP COLUMN plan_head_signed_at,
-                DROP COLUMN plan_budget_total, DROP COLUMN plan_budget_used, DROP COLUMN plan_budget_remain, DROP COLUMN plan_is_in_plan,
-                DROP COLUMN procurement_head_id, DROP COLUMN procurement_head_signed_at, DROP COLUMN procurement_result,
-                DROP COLUMN finance_head_id, DROP COLUMN finance_head_signed_at,
-                DROP COLUMN deputy_id, DROP COLUMN deputy_signed_at, DROP COLUMN deputy_comment, DROP COLUMN deputy_result,
-                DROP COLUMN director_id, DROP COLUMN director_signed_at, DROP COLUMN director_result";
-        $pdo->exec($sql);
+        $cols = [
+            "doc_no", "current_step",
+            "project_head_id", "project_head_signed_at",
+            "plan_head_id", "plan_head_signed_at",
+            "plan_budget_total", "plan_budget_used", "plan_budget_remain", "plan_is_in_plan",
+            "procurement_head_id", "procurement_head_signed_at", "procurement_result",
+            "finance_head_id", "finance_head_signed_at",
+            "deputy_id", "deputy_signed_at", "deputy_comment", "deputy_result",
+            "director_id", "director_signed_at", "director_result"
+        ];
+
+        foreach ($cols as $col) {
+            try {
+                $pdo->exec("ALTER TABLE budget_disbursements DROP COLUMN $col");
+            } catch (Exception $e) {
+                // Ignore if column doesn't exist
+            }
+        }
     }
 ];

@@ -95,122 +95,7 @@ function getPmPdo(): PDO {
     }
 }
 
-// ตรวจสอบและสร้างตาราง + ข้อมูลเดโมอัตโนมัติ (Self-Healing / Auto-Seed System)
-function initDatabaseStructure() {
-    $pdo = getPmPdo();
-    
-    // สร้างตาราง users
-    $pdo->exec("CREATE TABLE IF NOT EXISTS pm_users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        fullname VARCHAR(150) NOT NULL,
-        username VARCHAR(50) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        role ENUM('admin', 'executive', 'teacher') NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
-
-    // สร้างตาราง classrooms
-    $pdo->exec("CREATE TABLE IF NOT EXISTS pm_classrooms (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        level VARCHAR(50) NOT NULL,
-        room_name VARCHAR(50) NOT NULL,
-        teacher_name VARCHAR(150) NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
-
-    // ตรวจสอบและสร้างห้องเรียนเดโม หากยังไม่มี
-    $stmt = $pdo->query("SELECT COUNT(*) FROM pm_classrooms");
-    if ($stmt->fetchColumn() == 0) {
-        $pdo->exec("INSERT INTO pm_classrooms (level, room_name, teacher_name) VALUES 
-        ('ม.1', '1', 'สมชาย ใจดี'),
-        ('ม.1', '2', 'สมศรี รักษ์ดี'),
-        ('ม.2', '1', 'ประยุทธ์ สู้ๆ'),
-        ('ม.2', '2', 'ประวิตร วงษ์สวย'),
-        ('ม.3', '1', 'อนุทิน กัญชาดี'),
-        ('ม.3', '2', 'พิธา ก้าวหน้า')");
-    }
-
-    // ตรวจสอบและสร้างผู้ใช้เดโม
-    $stmt = $pdo->query("SELECT COUNT(*) FROM pm_users");
-    if ($stmt->fetchColumn() == 0) {
-        // แอดมิน: admin_user / admin1234
-        // ผู้บริหาร: director_user / director1234
-        // ครูที่ปรึกษา: teacher_user / teacher1234
-        $users = [
-            ['fullname' => 'แอดมิน ระบบ', 'username' => 'admin_user', 'password' => password_hash('admin1234', PASSWORD_DEFAULT), 'role' => 'admin'],
-            ['fullname' => 'ผู้อำนวยการ สมศักดิ์', 'username' => 'director_user', 'password' => password_hash('director1234', PASSWORD_DEFAULT), 'role' => 'executive'],
-            ['fullname' => 'สมชาย ใจดี', 'username' => 'teacher_user', 'password' => password_hash('teacher1234', PASSWORD_DEFAULT), 'role' => 'teacher']
-        ];
-        
-        $insert = $pdo->prepare("INSERT INTO pm_users (fullname, username, password, role) VALUES (?, ?, ?, ?)");
-        foreach ($users as $u) {
-            $insert->execute([$u['fullname'], $u['username'], $u['password'], $u['role']]);
-        }
-    }
-
-    // สร้างตาราง meetings
-    $pdo->exec("CREATE TABLE IF NOT EXISTS pm_meetings (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        meeting_date DATE NOT NULL,
-        semester VARCHAR(10) NOT NULL,
-        academic_year INT NOT NULL,
-        classroom_id INT NOT NULL,
-        total_students INT NOT NULL,
-        total_parents INT NOT NULL,
-        attend_count INT NOT NULL,
-        absent_count INT NOT NULL,
-        summary TEXT,
-        problems TEXT,
-        suggestions TEXT,
-        created_by INT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (classroom_id) REFERENCES pm_classrooms(id) ON DELETE CASCADE,
-        FOREIGN KEY (created_by) REFERENCES pm_users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
-
-    // สร้างตาราง network_parents
-    $pdo->exec("CREATE TABLE IF NOT EXISTS pm_network_parents (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        meeting_id INT NOT NULL,
-        position_name ENUM('ประธาน', 'รองประธาน', 'กรรมการ', 'เลขานุการ') NOT NULL,
-        parent_name VARCHAR(150) NOT NULL,
-        student_name VARCHAR(150) NOT NULL,
-        student_class VARCHAR(50) NOT NULL,
-        address TEXT NOT NULL,
-        phone VARCHAR(20) NOT NULL,
-        image_path VARCHAR(255) DEFAULT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (meeting_id) REFERENCES pm_meetings(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
-
-    // สร้างตาราง meeting_images
-    $pdo->exec("CREATE TABLE IF NOT EXISTS pm_meeting_images (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        meeting_id INT NOT NULL,
-        image_path VARCHAR(255) NOT NULL,
-        uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (meeting_id) REFERENCES pm_meetings(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
-
-    // สร้างตาราง comments
-    $pdo->exec("CREATE TABLE IF NOT EXISTS pm_comments (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        meeting_id INT NOT NULL,
-        comment_text TEXT NOT NULL,
-        commented_by INT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (meeting_id) REFERENCES pm_meetings(id) ON DELETE CASCADE,
-        FOREIGN KEY (commented_by) REFERENCES pm_users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
-}
-
-// เรียกให้ระบบตรวจสอบตารางฐานข้อมูลและ Seed อัตโนมัติเมื่อมีการโหลด
-try {
-    initDatabaseStructure();
-} catch (Exception $e) {
-    // ป้องกันการล่มถ้ายังไม่มีการ import sql หรือ db ยังไม่พร้อม
-    error_log('[Parent Meeting] Database initialization error: ' . $e->getMessage());
-}
+// Database structure is initialized via standard migration files.
 
 // ── Base Path Detection ──────────────────────────────────────────
 $docRoot = str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT']));
@@ -246,6 +131,51 @@ function th_date($dateStr) {
 
 // ฟังก์ชันตรวจสอบการ Login
 function checkLogin() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // อ้างอิงสิทธิ์จากเซสชันกลางของระบบหลัก LLW (ถ้ามี) เพื่อทำการลงทะเบียนหรือล็อคอินให้อัตโนมัติ
+    if (!isset($_SESSION['pm_user_id']) && isset($_SESSION['llw_role'])) {
+        try {
+            $pdo = getPmPdo();
+            $stmt = $pdo->prepare("SELECT * FROM pm_users WHERE username = ?");
+            $stmt->execute([$_SESSION['username']]);
+            $pmUser = $stmt->fetch();
+            
+            $roleMap = [
+                'super_admin' => 'admin',
+                'wfh_admin' => 'executive',
+                'att_teacher' => 'teacher',
+                'wfh_staff' => 'teacher',
+                'cb_admin' => 'teacher'
+            ];
+            $pmRole = $roleMap[$_SESSION['llw_role']] ?? 'teacher';
+            
+            if ($pmUser) {
+                $_SESSION['pm_user_id'] = $pmUser['id'];
+                $_SESSION['pm_fullname'] = $pmUser['fullname'];
+                $_SESSION['pm_username'] = $pmUser['username'];
+                $_SESSION['pm_role'] = $pmUser['role'];
+            } else {
+                $fullname = $_SESSION['fullname'] ?? ($_SESSION['firstname'] . ' ' . ($_SESSION['lastname'] ?? ''));
+                if (empty(trim($fullname))) {
+                    $fullname = $_SESSION['username'];
+                }
+                $randPass = password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT);
+                $ins = $pdo->prepare("INSERT INTO pm_users (fullname, username, password, role) VALUES (?, ?, ?, ?)");
+                $ins->execute([$fullname, $_SESSION['username'], $randPass, $pmRole]);
+                
+                $_SESSION['pm_user_id'] = $pdo->lastInsertId();
+                $_SESSION['pm_fullname'] = $fullname;
+                $_SESSION['pm_username'] = $_SESSION['username'];
+                $_SESSION['pm_role'] = $pmRole;
+            }
+        } catch (Exception $e) {
+            error_log('[Parent Meeting] Auto-login failed: ' . $e->getMessage());
+        }
+    }
+    
     if (!isset($_SESSION['pm_user_id'])) {
         header('Location: ' . pm_url('login.php'));
         exit;

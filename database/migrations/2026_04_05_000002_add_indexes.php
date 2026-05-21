@@ -5,33 +5,49 @@
  */
 return [
     'up' => function (PDO $pdo) {
+        $createIndex = function($pdo, $table, $index, $columns) {
+            try {
+                $pdo->exec("CREATE INDEX `$index` ON `$table` ($columns)");
+            } catch (Exception $e) {
+                // Ignore if index already exists
+            }
+        };
+
         // ── Attendance: ค้นหาตาม date + teacher_id บ่อย ──
-        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_att_date_teacher ON att_attendance (date, teacher_id)");
-        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_att_student ON att_attendance (student_id)");
+        $createIndex($pdo, 'att_attendance', 'idx_att_date_teacher', 'date, teacher_id');
+        $createIndex($pdo, 'att_attendance', 'idx_att_student', 'student_id');
 
         // ── WFH: ค้นหาตาม log_date บ่อย ──
-        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_wfh_logdate ON wfh_timelogs (log_date)");
-        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_wfh_user_date ON wfh_timelogs (user_id, log_date)");
+        $createIndex($pdo, 'wfh_timelogs', 'idx_wfh_logdate', 'log_date');
+        $createIndex($pdo, 'wfh_timelogs', 'idx_wfh_user_date', 'user_id, log_date');
 
         // ── Chromebook: ค้นหาตาม status บ่อย ──
-        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_cb_status ON cb_borrow_logs (status)");
+        $createIndex($pdo, 'cb_borrow_logs', 'idx_cb_status', 'status');
 
         // ── Leave: ค้นหาตาม status + teacher ──
-        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_leave_status ON leave_requests (status_boss1)");
-        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_leave_teacher ON leave_requests (teacher_id)");
+        $createIndex($pdo, 'leave_requests', 'idx_leave_status', 'status_boss1');
+        $createIndex($pdo, 'leave_requests', 'idx_leave_teacher', 'teacher_id');
 
         // ── Users: ค้นหาตาม role + status ──
-        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_users_role ON llw_users (role, status)");
+        $createIndex($pdo, 'llw_users', 'idx_users_role', 'role, status');
     },
 
     'down' => function (PDO $pdo) {
-        $pdo->exec("DROP INDEX IF EXISTS idx_att_date_teacher ON att_attendance");
-        $pdo->exec("DROP INDEX IF EXISTS idx_att_student ON att_attendance");
-        $pdo->exec("DROP INDEX IF EXISTS idx_wfh_logdate ON wfh_timelogs");
-        $pdo->exec("DROP INDEX IF EXISTS idx_wfh_user_date ON wfh_timelogs");
-        $pdo->exec("DROP INDEX IF EXISTS idx_cb_status ON cb_borrow_logs");
-        $pdo->exec("DROP INDEX IF EXISTS idx_leave_status ON leave_requests");
-        $pdo->exec("DROP INDEX IF EXISTS idx_leave_teacher ON leave_requests");
-        $pdo->exec("DROP INDEX IF EXISTS idx_users_role ON llw_users");
+        $dropIndex = function($pdo, $table, $index) {
+            try {
+                $pdo->exec("DROP INDEX `$index` ON `$table`");
+            } catch (Exception $e) {
+                // Ignore if index doesn't exist
+            }
+        };
+
+        $dropIndex($pdo, 'att_attendance', 'idx_att_date_teacher');
+        $dropIndex($pdo, 'att_attendance', 'idx_att_student');
+        $dropIndex($pdo, 'wfh_timelogs', 'idx_wfh_logdate');
+        $dropIndex($pdo, 'wfh_timelogs', 'idx_wfh_user_date');
+        $dropIndex($pdo, 'cb_borrow_logs', 'idx_cb_status');
+        $dropIndex($pdo, 'leave_requests', 'idx_leave_status');
+        $dropIndex($pdo, 'leave_requests', 'idx_leave_teacher');
+        $dropIndex($pdo, 'llw_users', 'idx_users_role');
     },
 ];
