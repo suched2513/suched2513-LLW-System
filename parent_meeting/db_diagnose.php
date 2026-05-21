@@ -9,6 +9,15 @@ if (($_GET['token'] ?? '') !== 'llw_secure_diag_123') {
 header('Content-Type: text/plain; charset=utf-8');
 
 try {
+    echo "DB_HOST: " . (defined('DB_HOST') ? DB_HOST : 'undefined') . "\n";
+    echo "DB_USER: " . (defined('DB_USER') ? DB_USER : 'undefined') . "\n";
+    echo "DB_NAME: " . (defined('DB_NAME') ? DB_NAME : 'undefined') . "\n";
+    echo "DB_PASS Length: " . (defined('DB_PASS') ? strlen(DB_PASS) : 'undefined') . "\n";
+    echo "PM_DB_HOST: " . PM_DB_HOST . "\n";
+    echo "PM_DB_USER: " . PM_DB_USER . "\n";
+    echo "PM_DB_NAME: " . PM_DB_NAME . "\n";
+    echo "PM_DB_PASS Length: " . strlen(PM_DB_PASS) . "\n\n";
+    
     $pdo = getPmPdo();
     echo "Connected successfully to: " . PM_DB_NAME . "\n\n";
     
