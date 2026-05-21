@@ -58,17 +58,17 @@ try {
         }
     }
 
-    // 5. ดึงข้อมูลผู้เข้าร่วม (ชล.๐๒)
+    // 5. ดึงข้อมูลผู้เข้าร่วม (ลลว.๐๒)
     $attStmt = $pdo->prepare("SELECT * FROM pm_meeting_attendants WHERE meeting_id = ? ORDER BY id ASC");
     $attStmt->execute([$meetingId]);
     $attendants = $attStmt->fetchAll();
     
-    // 6. ดึงข้อมูลผู้ขาด (ชล.๐๓)
+    // 6. ดึงข้อมูลผู้ขาด (ลลว.๐๓)
     $absStmt = $pdo->prepare("SELECT * FROM pm_meeting_absents WHERE meeting_id = ? ORDER BY id ASC");
     $absStmt->execute([$meetingId]);
     $absents = $absStmt->fetchAll();
     
-    // 7. ดึงข้อมูลประสานสัมพันธ์ (ชล.๐๔)
+    // 7. ดึงข้อมูลประสานสัมพันธ์ (ลลว.๐๔)
     $relStmt = $pdo->prepare("SELECT * FROM pm_student_relations WHERE meeting_id = ? ORDER BY id ASC");
     $relStmt->execute([$meetingId]);
     $relations = $relStmt->fetchAll();
@@ -80,7 +80,7 @@ try {
     }
     unset($rel);
     
-    // 8. ดึงข้อมูลกลุ่ม Meet & Greet (ชล.๐๕)
+    // 8. ดึงข้อมูลกลุ่ม Meet & Greet (ลลว.๐๕)
     $grpStmt = $pdo->prepare("SELECT * FROM pm_meet_greet_groups WHERE meeting_id = ? ORDER BY id ASC");
     $grpStmt->execute([$meetingId]);
     $groups = $grpStmt->fetchAll();
@@ -89,7 +89,7 @@ try {
     }
     unset($grp);
     
-    // 9. ดึงข้อมูลจดหมายความในใจ (ชล.๐๖)
+    // 9. ดึงข้อมูลจดหมายความในใจ (ลลว.๐๖)
     $letStmt = $pdo->prepare("SELECT * FROM pm_student_letters WHERE meeting_id = ? ORDER BY id ASC");
     $letStmt->execute([$meetingId]);
     $letters = $letStmt->fetchAll();
@@ -276,7 +276,7 @@ function displayPrintMemberCard($title, $data) {
     <div class="no-print-bar">
         <div class="container-fluid d-flex flex-wrap align-items-center justify-content-between gap-3">
             <div>
-                <h5 class="m-0 font-bold" style="color: #2563eb;"><i class="bi bi-printer-fill me-2"></i>ระบบรายงาน Classroom Meeting (ชล.๐๑ - ชล.๐๖)</h5>
+                <h5 class="m-0 font-bold" style="color: #2563eb;"><i class="bi bi-printer-fill me-2"></i>ระบบรายงาน Classroom Meeting (ลลว.๐๑ - ลลว.๐๖)</h5>
                 <small class="text-muted">เลือกส่วนที่ต้องการออกรายงาน/จัดพิมพ์ แล้วกดปุ่มพิมพ์รายงานหรือบันทึกเป็นไฟล์ PDF</small>
             </div>
             
@@ -291,7 +291,7 @@ function displayPrintMemberCard($title, $data) {
                 </div>
                 <div class="form-check">
                     <input class="form-check-input section-toggle" type="checkbox" id="toggle-chon01" checked data-target="page-chon01">
-                    <label class="form-check-label font-bold" for="toggle-chon01">ชล.๐๑ (บันทึก/รายงาน)</label>
+                    <label class="form-check-label font-bold" for="toggle-chon01">ลลว.๐๑ (บันทึก/รายงาน)</label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input section-toggle" type="checkbox" id="toggle-appendix" checked data-target="page-appendix-cover">
@@ -299,23 +299,23 @@ function displayPrintMemberCard($title, $data) {
                 </div>
                 <div class="form-check">
                     <input class="form-check-input section-toggle" type="checkbox" id="toggle-chon02" checked data-target="page-chon02">
-                    <label class="form-check-label font-bold" for="toggle-chon02">ชล.๐๒ (ผู้เข้าร่วม)</label>
+                    <label class="form-check-label font-bold" for="toggle-chon02">ลลว.๐๒ (ผู้เข้าร่วม)</label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input section-toggle" type="checkbox" id="toggle-chon03" checked data-target="page-chon03">
-                    <label class="form-check-label font-bold" for="toggle-chon03">ชล.๐๓ (ติดตามผู้ขาด)</label>
+                    <label class="form-check-label font-bold" for="toggle-chon03">ลลว.๐๓ (ติดตามผู้ขาด)</label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input section-toggle" type="checkbox" id="toggle-chon04" checked data-target="page-chon04">
-                    <label class="form-check-label font-bold" for="toggle-chon04">ชล.๐๔ (ประสานสัมพันธ์)</label>
+                    <label class="form-check-label font-bold" for="toggle-chon04">ลลว.๐๔ (ประสานสัมพันธ์)</label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input section-toggle" type="checkbox" id="toggle-chon05" checked data-target="page-chon05">
-                    <label class="form-check-label font-bold" for="toggle-chon05">ชล.๐๕ (Meet & Greet)</label>
+                    <label class="form-check-label font-bold" for="toggle-chon05">ลลว.๐๕ (Meet & Greet)</label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input section-toggle" type="checkbox" id="toggle-chon06" checked data-target="page-chon06">
-                    <label class="form-check-label font-bold" for="toggle-chon06">ชล.๐๖ (ความในใจลูก)</label>
+                    <label class="form-check-label font-bold" for="toggle-chon06">ลลว.๐๖ (ความในใจลูก)</label>
                 </div>
                 <div class="form-check">
                     <input class="form-check-input section-toggle" type="checkbox" id="toggle-network" checked data-target="page-network">
@@ -417,7 +417,7 @@ function displayPrintMemberCard($title, $data) {
                     <td style="text-align: right;"></td>
                 </tr>
                 <tr>
-                    <td>รายงานผลการจัดกิจกรรมการประชุมผู้ปกครองชั้นเรียน (ชล.๐๑)</td>
+                    <td>รายงานผลการจัดกิจกรรมการประชุมผู้ปกครองชั้นเรียน (ลลว.๐๑)</td>
                     <td style="text-align: right;">๑</td>
                 </tr>
                 <tr>
@@ -449,23 +449,23 @@ function displayPrintMemberCard($title, $data) {
                     <td style="text-align: right;"></td>
                 </tr>
                 <tr>
-                    <td style="padding-left: 20px;">- ใบลงชื่อผู้เข้าร่วมประชุมผู้ปกครองชั้นเรียน (ชล.๐๒)</td>
+                    <td style="padding-left: 20px;">- ใบลงชื่อผู้เข้าร่วมประชุมผู้ปกครองชั้นเรียน (ลลว.๐๒)</td>
                     <td style="text-align: right;"></td>
                 </tr>
                 <tr>
-                    <td style="padding-left: 20px;">- ใบลงชื่อการติดตามผู้ปกครองที่ไม่มาเข้าร่วมประชุม (ชล.๐๓)</td>
+                    <td style="padding-left: 20px;">- ใบลงชื่อการติดตามผู้ปกครองที่ไม่มาเข้าร่วมประชุม (ลลว.๐๓)</td>
                     <td style="text-align: right;"></td>
                 </tr>
                 <tr>
-                    <td style="padding-left: 20px;">- แบบบันทึกประสานสัมพันธ์ผู้ปกครองกับครูที่ปรึกษา (ชล.๐๔)</td>
+                    <td style="padding-left: 20px;">- แบบบันทึกประสานสัมพันธ์ผู้ปกครองกับครูที่ปรึกษา (ลลว.๐๔)</td>
                     <td style="text-align: right;"></td>
                 </tr>
                 <tr>
-                    <td style="padding-left: 20px;">- แบบบันทึกกิจกรรมกลุ่มย่อย Meet and Greet (ชล.๐๕)</td>
+                    <td style="padding-left: 20px;">- แบบบันทึกกิจกรรมกลุ่มย่อย Meet and Greet (ลลว.๐๕)</td>
                     <td style="text-align: right;"></td>
                 </tr>
                 <tr>
-                    <td style="padding-left: 20px;">- จดหมายความในใจของลูกที่อยากบอกผู้ปกครอง (ชล.๐๖)</td>
+                    <td style="padding-left: 20px;">- จดหมายความในใจของลูกที่อยากบอกผู้ปกครอง (ลลว.๐๖)</td>
                     <td style="text-align: right;"></td>
                 </tr>
                 <tr>
@@ -481,10 +481,10 @@ function displayPrintMemberCard($title, $data) {
     </div>
 
     <!-- ──────────────────────────────────────────────────────── -->
-    <!-- 4. ชล.๐๑ PAGE 1 (MEMO / บันทึกข้อความ) -->
+    <!-- 4. ลลว.๐๑ PAGE 1 (MEMO / บันทึกข้อความ) -->
     <!-- ──────────────────────────────────────────────────────── -->
     <div class="print-page page-chon01" style="padding: 20mm 15mm 20mm 20mm;">
-        <div style="text-align: right; font-size: 12px; font-weight: bold; margin-bottom: 5px;">ชล.๐๑</div>
+        <div style="text-align: right; font-size: 12px; font-weight: bold; margin-bottom: 5px;">ลลว.๐๑</div>
         
         <div style="position: relative; margin-bottom: 10px; height: 2.2cm;">
             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Krut_Muang_Thai.svg/120px-Krut_Muang_Thai.svg.png" style="width: 1.6cm; height: auto; position: absolute; left: 0; top: 0;" alt="Garuda Logo">
@@ -581,10 +581,10 @@ function displayPrintMemberCard($title, $data) {
     </div>
 
     <!-- ──────────────────────────────────────────────────────── -->
-    <!-- 5. ชล.๐๑ PAGE 2 (SUMMARY REPORT) -->
+    <!-- 5. ลลว.๐๑ PAGE 2 (SUMMARY REPORT) -->
     <!-- ──────────────────────────────────────────────────────── -->
     <div class="print-page page-chon01" style="padding: 20mm 15mm 20mm 25mm; font-size: 14px;">
-        <div style="text-align: right; font-size: 12px; font-weight: bold; margin-bottom: 5px;">ชล.๐๑ (หน้า ๒)</div>
+        <div style="text-align: right; font-size: 12px; font-weight: bold; margin-bottom: 5px;">ลลว.๐๑ (หน้า ๒)</div>
         
         <div style="text-align: center; margin-bottom: 15px;">
             <h4 style="font-weight: bold; margin-bottom: 5px;">รายงานผลการจัดกิจกรรมการประชุมผู้ปกครองชั้นเรียน (Classroom Meeting)</h4>
@@ -608,15 +608,15 @@ function displayPrintMemberCard($title, $data) {
             
             <strong class="d-block mt-2">๓. บทบาทหน้าที่ครูที่ปรึกษาในการจัดประชุมผู้ปกครองชั้นเรียน</strong>
             <div style="padding-left: 10px;">
-                ครูที่ปรึกษามีบทบาทในการเตรียมข้อมูลการเรียน พฤติกรรม และข้อมูลระดับคะแนนพฤติกรรมของนักเรียน และเป็นผู้ดำเนินกิจกรรมห้องเรียน ประสานสัมพันธ์กับผู้ปกครองเพื่อรวบรวมข้อมูลตามเอกสาร ชล.๐๒ - ชล.๐๖ สรุปเป็นรูปเล่มรายงานส่งระดับชั้นและกลุ่มบริหารงานบุคคลตามลำดับ
+                ครูที่ปรึกษามีบทบาทในการเตรียมข้อมูลการเรียน พฤติกรรม และข้อมูลระดับคะแนนพฤติกรรมของนักเรียน และเป็นผู้ดำเนินกิจกรรมห้องเรียน ประสานสัมพันธ์กับผู้ปกครองเพื่อรวบรวมข้อมูลตามเอกสาร ลลว.๐๒ - ลลว.๐๖ สรุปเป็นรูปเล่มรายงานส่งระดับชั้นและกลุ่มบริหารงานบุคคลตามลำดับ
             </div>
             
             <strong class="d-block mt-2">๔. ขั้นตอนแนวปฏิบัติในการประชุมผู้ปกครองชั้นเรียน</strong>
             <div style="padding-left: 10px;">
                 - ดำเนินการจัดประชุมในวันที่ <?= th_date($meeting['meeting_date']) ?> ณ ห้องเรียนโฮมรูม<br>
-                - ครูที่ปรึกษาชี้แจงระเบียบ แจกเอกสารแสดงผลการเรียนและบันทึกประสานสัมพันธ์ ชล.๐๔<br>
-                - จัดกิจกรรมกลุ่ม Meet & Greet ชล.๐๕ และให้นักเรียนส่งมอบบันทึกจดหมายความในใจลูก ชล.๐๖ แก่ผู้ปกครอง<br>
-                - ติดตามผู้ปกครองที่ไม่มาร่วมประชุมพร้อมบันทึกลงในเอกสาร ชล.๐๓
+                - ครูที่ปรึกษาชี้แจงระเบียบ แจกเอกสารแสดงผลการเรียนและบันทึกประสานสัมพันธ์ ลลว.๐๔<br>
+                - จัดกิจกรรมกลุ่ม Meet & Greet ลลว.๐๕ และให้นักเรียนส่งมอบบันทึกจดหมายความในใจลูก ลลว.๐๖ แก่ผู้ปกครอง<br>
+                - ติดตามผู้ปกครองที่ไม่มาร่วมประชุมพร้อมบันทึกลงในเอกสาร ลลว.๐๓
             </div>
             
             <strong class="d-block mt-2">๕. ผลที่คาดว่าจะได้รับ</strong>
@@ -665,14 +665,14 @@ function displayPrintMemberCard($title, $data) {
         <div style="border: 4px double #000; padding: 25px 60px; border-radius: 12px; margin-top: 80mm;">
             <h1 style="font-size: 42px; font-weight: bold; margin: 0; font-family: 'Sarabun', sans-serif;">ภาคผนวก</h1>
         </div>
-        <p style="margin-top: 15px; font-size: 16px; font-family: 'Sarabun', sans-serif; color: #475569;">(เอกสารหลักฐานประกอบรายงาน ชล.๐๒ - ชล.๐๖)</p>
+        <p style="margin-top: 15px; font-size: 16px; font-family: 'Sarabun', sans-serif; color: #475569;">(เอกสารหลักฐานประกอบรายงาน ลลว.๐๒ - ลลว.๐๖)</p>
     </div>
 
     <!-- ──────────────────────────────────────────────────────── -->
-    <!-- 7. ชล.๐๒ (ใบลงชื่อเข้าร่วม) -->
+    <!-- 7. ลลว.๐๒ (ใบลงชื่อเข้าร่วม) -->
     <!-- ──────────────────────────────────────────────────────── -->
     <div class="print-page page-chon02">
-        <div style="text-align: right; font-size: 12px; font-weight: bold;">ชล.๐๒</div>
+        <div style="text-align: right; font-size: 12px; font-weight: bold;">ลลว.๐๒</div>
         <div style="text-align: center; margin-bottom: 15px;">
             <h4 style="font-weight: bold; margin-bottom: 5px;">ใบลงชื่อผู้เข้าร่วมกิจกรรมประชุมผู้ปกครองชั้นเรียน (Classroom Meeting)</h4>
             <h5 style="font-weight: bold;">ภาคเรียนที่ <?= th_num(esc($meeting['semester'])) ?> ปีการศึกษา <?= th_num(esc($meeting['academic_year'])) ?></h5>
@@ -721,10 +721,10 @@ function displayPrintMemberCard($title, $data) {
     </div>
 
     <!-- ──────────────────────────────────────────────────────── -->
-    <!-- 8. ชล.๐๓ (ติดตามผู้ขาด) -->
+    <!-- 8. ลลว.๐๓ (ติดตามผู้ขาด) -->
     <!-- ──────────────────────────────────────────────────────── -->
     <div class="print-page page-chon03">
-        <div style="text-align: right; font-size: 12px; font-weight: bold;">ชล.๐๓</div>
+        <div style="text-align: right; font-size: 12px; font-weight: bold;">ลลว.๐๓</div>
         <div style="text-align: center; margin-bottom: 15px;">
             <h4 style="font-weight: bold; margin-bottom: 5px;">ใบลงชื่อการติดตามผู้ปกครองนักเรียนที่ไม่มาเข้าร่วมกิจกรรม (Classroom Meeting)</h4>
             <h5 style="font-weight: bold;">ภาคเรียนที่ <?= th_num(esc($meeting['semester'])) ?> ปีการศึกษา <?= th_num(esc($meeting['academic_year'])) ?></h5>
@@ -788,12 +788,12 @@ function displayPrintMemberCard($title, $data) {
     </div>
 
     <!-- ──────────────────────────────────────────────────────── -->
-    <!-- 9. ชล.๐๔ (แบบประสานสัมพันธ์รายคน - ๑ หน้าต่อคน) -->
+    <!-- 9. ลลว.๐๔ (แบบประสานสัมพันธ์รายคน - ๑ หน้าต่อคน) -->
     <!-- ──────────────────────────────────────────────────────── -->
     <?php foreach ($relations as $rel): ?>
         <div class="print-page page-chon04" style="font-size: 12px; line-height: 1.35;">
             <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px;">
-                <div>ชล.๐๔</div>
+                <div>ลลว.๐๔</div>
                 <div>แบบบันทึกประสานสัมพันธ์ผู้ปกครองกับครูที่ปรึกษา</div>
             </div>
             
@@ -976,10 +976,10 @@ function displayPrintMemberCard($title, $data) {
     <?php endforeach; ?>
 
     <!-- ──────────────────────────────────────────────────────── -->
-    <!-- 10. ชล.๐๕ (Meet & Greet) -->
+    <!-- 10. ลลว.๐๕ (Meet & Greet) -->
     <!-- ──────────────────────────────────────────────────────── -->
     <div class="print-page page-chon05">
-        <div style="text-align: right; font-size: 12px; font-weight: bold;">ชล.๐๕</div>
+        <div style="text-align: right; font-size: 12px; font-weight: bold;">ลลว.๐๕</div>
         <div style="text-align: center; margin-bottom: 20px;">
             <h4 style="font-weight: bold; margin-bottom: 5px;">แบบบันทึกกิจกรรมกลุ่มย่อย Meet and Greet</h4>
             <h5 style="font-weight: bold;">ภาคเรียนที่ <?= th_num(esc($meeting['semester'])) ?> ปีการศึกษา <?= th_num(esc($meeting['academic_year'])) ?></h5>
@@ -1052,12 +1052,12 @@ function displayPrintMemberCard($title, $data) {
     </div>
 
     <!-- ──────────────────────────────────────────────────────── -->
-    <!-- 11. ชล.๐๖ (ความในใจของลูก - ๑ หน้าต่อคน) -->
+    <!-- 11. ลลว.๐๖ (ความในใจของลูก - ๑ หน้าต่อคน) -->
     <!-- ──────────────────────────────────────────────────────── -->
     <?php foreach ($letters as $let): ?>
         <div class="print-page page-chon06" style="font-size: 13px; line-height: 1.45; padding: 25mm 20mm 20mm 25mm;">
             <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px;">
-                <div>ชล.๐๖</div>
+                <div>ลลว.๐๖</div>
                 <div>ความในใจของลูกที่อยากบอกผู้ปกครอง</div>
             </div>
             

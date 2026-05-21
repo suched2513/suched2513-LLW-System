@@ -68,17 +68,17 @@ try {
                 $img['image_path'] = pm_url($img['image_path']);
             }
 
-            // ดึงผู้เข้าร่วมประชุม (ชล.๐๒)
+            // ดึงผู้เข้าร่วมประชุม (ลลว.๐๒)
             $attStmt = $pdo->prepare("SELECT * FROM pm_meeting_attendants WHERE meeting_id = ? ORDER BY id ASC");
             $attStmt->execute([$meetingId]);
             $attendants = $attStmt->fetchAll();
 
-            // ดึงผู้ขาดประชุม (ชล.๐๓)
+            // ดึงผู้ขาดประชุม (ลลว.๐๓)
             $absStmt = $pdo->prepare("SELECT * FROM pm_meeting_absents WHERE meeting_id = ? ORDER BY id ASC");
             $absStmt->execute([$meetingId]);
             $absents = $absStmt->fetchAll();
 
-            // ดึงข้อมูลประสานสัมพันธ์ (ชล.๐๔)
+            // ดึงข้อมูลประสานสัมพันธ์ (ลลว.๐๔)
             $relStmt = $pdo->prepare("SELECT * FROM pm_student_relations WHERE meeting_id = ? ORDER BY id ASC");
             $relStmt->execute([$meetingId]);
             $relations = $relStmt->fetchAll();
@@ -89,7 +89,7 @@ try {
                 $rel['improve_parent_json'] = json_decode($rel['improve_parent_json'] ?? '[]', true);
             }
 
-            // ดึงข้อมูลกลุ่ม (ชล.๐๕)
+            // ดึงข้อมูลกลุ่ม (ลลว.๐๕)
             $grpStmt = $pdo->prepare("SELECT * FROM pm_meet_greet_groups WHERE meeting_id = ? ORDER BY id ASC");
             $grpStmt->execute([$meetingId]);
             $groups = $grpStmt->fetchAll();
@@ -97,7 +97,7 @@ try {
                 $grp['attendants_json'] = json_decode($grp['attendants_json'] ?? '[]', true);
             }
 
-            // ดึงความในใจของลูก (ชล.๐๖)
+            // ดึงความในใจของลูก (ลลว.๐๖)
             $letStmt = $pdo->prepare("SELECT * FROM pm_student_letters WHERE meeting_id = ? ORDER BY id ASC");
             $letStmt->execute([$meetingId]);
             $letters = $letStmt->fetchAll();
@@ -135,7 +135,7 @@ try {
             $problems = $_POST['problems'] ?? '';
             $suggestions = $_POST['suggestions'] ?? '';
 
-            // คอลัมน์เพิ่มเติมของ ชล.๐๑
+            // คอลัมน์เพิ่มเติมของ ลลว.๐๑
             $docNo = $_POST['doc_no'] ?? '';
             $docDate = !empty($_POST['doc_date']) ? $_POST['doc_date'] : null;
             $commandNo = $_POST['command_no'] ?? '';
@@ -215,14 +215,14 @@ try {
                 $meetingId = $pdo->lastInsertId();
             }
 
-            // จัดการข้อมูลลูกของตาราง ชล.๐๒ ถึง ชล.๐๖
+            // จัดการข้อมูลลูกของตาราง ลลว.๐๒ ถึง ลลว.๐๖
             $attendants = json_decode($_POST['attendants_data'] ?? '[]', true);
             $absents = json_decode($_POST['absents_data'] ?? '[]', true);
             $relations = json_decode($_POST['relations_data'] ?? '[]', true);
             $groups = json_decode($_POST['groups_data'] ?? '[]', true);
             $letters = json_decode($_POST['letters_data'] ?? '[]', true);
 
-            // 1. ชล.๐๒: เคลียร์แล้วบันทึกใหม่
+            // 1. ลลว.๐๒: เคลียร์แล้วบันทึกใหม่
             $pdo->prepare("DELETE FROM pm_meeting_attendants WHERE meeting_id = ?")->execute([$meetingId]);
             $insAtt = $pdo->prepare("INSERT INTO pm_meeting_attendants (meeting_id, student_name, parent_name, phone, relationship) VALUES (?, ?, ?, ?, ?)");
             foreach ($attendants as $att) {
@@ -237,7 +237,7 @@ try {
                 }
             }
 
-            // 2. ชล.๐๓: เคลียร์แล้วบันทึกใหม่
+            // 2. ลลว.๐๓: เคลียร์แล้วบันทึกใหม่
             $pdo->prepare("DELETE FROM pm_meeting_absents WHERE meeting_id = ?")->execute([$meetingId]);
             $insAbs = $pdo->prepare("INSERT INTO pm_meeting_absents (meeting_id, student_name, parent_name, phone, relationship, absent_reason, follow_up_status, follow_up_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             foreach ($absents as $abs) {
@@ -255,7 +255,7 @@ try {
                 }
             }
 
-            // 3. ชล.๐๔: เคลียร์แล้วบันทึกใหม่
+            // 3. ลลว.๐๔: เคลียร์แล้วบันทึกใหม่
             $pdo->prepare("DELETE FROM pm_student_relations WHERE meeting_id = ?")->execute([$meetingId]);
             $insRel = $pdo->prepare("
                 INSERT INTO pm_student_relations (
@@ -297,7 +297,7 @@ try {
                 }
             }
 
-            // 4. ชล.๐๕: เคลียร์แล้วบันทึกใหม่
+            // 4. ลลว.๐๕: เคลียร์แล้วบันทึกใหม่
             $pdo->prepare("DELETE FROM pm_meet_greet_groups WHERE meeting_id = ?")->execute([$meetingId]);
             $insGrp = $pdo->prepare("INSERT INTO pm_meet_greet_groups (meeting_id, group_topic, attendants_json, discussion_summary, discussion_resolution, school_support_request) VALUES (?, ?, ?, ?, ?, ?)");
             foreach ($groups as $grp) {
@@ -313,7 +313,7 @@ try {
                 }
             }
 
-            // 5. ชล.๐๖: เคลียร์แล้วบันทึกใหม่
+            // 5. ลลว.๐๖: เคลียร์แล้วบันทึกใหม่
             $pdo->prepare("DELETE FROM pm_student_letters WHERE meeting_id = ?")->execute([$meetingId]);
             $insLet = $pdo->prepare("INSERT INTO pm_student_letters (meeting_id, student_name, classroom_no, student_no, letter_to_whom, impressed_story, inner_feelings, proud_story, improvement_plan, parent_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             foreach ($letters as $let) {

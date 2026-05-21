@@ -131,27 +131,27 @@ require_once __DIR__ . '/components/layout_start.php';
                     <!-- Bootstrap Nav Tabs -->
                     <ul class="nav nav-tabs nav-justified mb-4" id="meetingTab" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active font-bold text-sm" id="tab1-tab" data-bs-toggle="tab" data-bs-target="#tab1" type="button" role="tab">ชล.๐๑ (บันทึก/สรุป)</button>
+                            <button class="nav-link active font-bold text-sm" id="tab1-tab" data-bs-toggle="tab" data-bs-target="#tab1" type="button" role="tab">ลลว.๐๑ (บันทึก/สรุป)</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link font-bold text-sm" id="tab2-tab" data-bs-toggle="tab" data-bs-target="#tab2" type="button" role="tab">ชล.๐๒ (ผู้เข้าร่วม)</button>
+                            <button class="nav-link font-bold text-sm" id="tab2-tab" data-bs-toggle="tab" data-bs-target="#tab2" type="button" role="tab">ลลว.๐๒ (ผู้เข้าร่วม)</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link font-bold text-sm" id="tab3-tab" data-bs-toggle="tab" data-bs-target="#tab3" type="button" role="tab">ชล.๐๓ (ผู้ขาดประชุม)</button>
+                            <button class="nav-link font-bold text-sm" id="tab3-tab" data-bs-toggle="tab" data-bs-target="#tab3" type="button" role="tab">ลลว.๐๓ (ผู้ขาดประชุม)</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link font-bold text-sm" id="tab4-tab" data-bs-toggle="tab" data-bs-target="#tab4" type="button" role="tab">ชล.๐๔ (ประสานสัมพันธ์)</button>
+                            <button class="nav-link font-bold text-sm" id="tab4-tab" data-bs-toggle="tab" data-bs-target="#tab4" type="button" role="tab">ลลว.๐๔ (ประสานสัมพันธ์)</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link font-bold text-sm" id="tab5-tab" data-bs-toggle="tab" data-bs-target="#tab5" type="button" role="tab">ชล.๐๕ (Meet & Greet)</button>
+                            <button class="nav-link font-bold text-sm" id="tab5-tab" data-bs-toggle="tab" data-bs-target="#tab5" type="button" role="tab">ลลว.๐๕ (Meet & Greet)</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link font-bold text-sm" id="tab6-tab" data-bs-toggle="tab" data-bs-target="#tab6" type="button" role="tab">ชล.๐๖ (ความในใจลูก)</button>
+                            <button class="nav-link font-bold text-sm" id="tab6-tab" data-bs-toggle="tab" data-bs-target="#tab6" type="button" role="tab">ลลว.๐๖ (ความในใจลูก)</button>
                         </li>
                     </ul>
 
                     <div class="tab-content" id="meetingTabContent">
-                        <!-- Tab 1: ชล.๐๑ -->
+                        <!-- Tab 1: ลลว.๐๑ -->
                         <div class="tab-pane fade show active" id="tab1" role="tabpanel">
                             <div class="row g-3">
                                 <!-- แถวที่ 1 -->
@@ -297,10 +297,10 @@ require_once __DIR__ . '/components/layout_start.php';
                             </div>
                         </div>
 
-                        <!-- Tab 2: ชล.๐๒ (ผู้เข้าร่วม) -->
+                        <!-- Tab 2: ลลว.๐๒ (ผู้เข้าร่วม) -->
                         <div class="tab-pane fade" id="tab2" role="tabpanel">
                             <div class="d-flex align-items-center justify-content-between mb-3">
-                                <h6 class="m-0 font-bold text-dark"><i class="bi bi-people me-1"></i>ใบลงชื่อผู้เข้าร่วมประชุม (ชล.๐๒)</h6>
+                                <h6 class="m-0 font-bold text-dark"><i class="bi bi-people me-1"></i>ใบลงชื่อผู้เข้าร่วมประชุม (ลลว.๐๒)</h6>
                                 <button type="button" class="btn btn-sm btn-outline-primary font-bold" onclick="addAttendantRow()">
                                     <i class="bi bi-plus-circle me-1"></i> เพิ่มแถวผู้เข้าร่วม
                                 </button>
@@ -323,10 +323,10 @@ require_once __DIR__ . '/components/layout_start.php';
                             </div>
                         </div>
 
-                        <!-- Tab 3: ชล.๐๓ (ผู้ขาดประชุม) -->
+                        <!-- Tab 3: ลลว.๐๓ (ผู้ขาดประชุม) -->
                         <div class="tab-pane fade" id="tab3" role="tabpanel">
                             <div class="d-flex align-items-center justify-content-between mb-3">
-                                <h6 class="m-0 font-bold text-dark"><i class="bi bi-person-x me-1"></i>ใบลงชื่อติดตามผู้ไม่เข้าร่วมประชุม (ชล.๐๓)</h6>
+                                <h6 class="m-0 font-bold text-dark"><i class="bi bi-person-x me-1"></i>ใบลงชื่อติดตามผู้ไม่เข้าร่วมประชุม (ลลว.๐๓)</h6>
                                 <button type="button" class="btn btn-sm btn-outline-primary font-bold" onclick="addAbsentRow()">
                                     <i class="bi bi-plus-circle me-1"></i> เพิ่มแถวผู้ขาดประชุม
                                 </button>
@@ -352,12 +352,12 @@ require_once __DIR__ . '/components/layout_start.php';
                             </div>
                         </div>
 
-                        <!-- Tab 4: ชล.๐๔ (ประสานสัมพันธ์) -->
+                        <!-- Tab 4: ลลว.๐๔ (ประสานสัมพันธ์) -->
                         <div class="tab-pane fade" id="tab4" role="tabpanel">
                             <div class="d-flex align-items-center justify-content-between mb-3">
-                                <h6 class="m-0 font-bold text-dark"><i class="bi bi-clipboard-check me-1"></i>แบบบันทึกประสานสัมพันธ์ผู้ปกครองกับครูที่ปรึกษา (ชล.๐๔)</h6>
+                                <h6 class="m-0 font-bold text-dark"><i class="bi bi-clipboard-check me-1"></i>แบบบันทึกประสานสัมพันธ์ผู้ปกครองกับครูที่ปรึกษา (ลลว.๐๔)</h6>
                                 <button type="button" class="btn btn-sm btn-outline-primary font-bold" onclick="addNewRelationRow()">
-                                    <i class="bi bi-plus-circle me-1"></i> เพิ่มนักเรียนประเมิน ชล.๐๔
+                                    <i class="bi bi-plus-circle me-1"></i> เพิ่มนักเรียนประเมิน ลลว.๐๔
                                 </button>
                             </div>
                             <div class="table-responsive">
@@ -379,10 +379,10 @@ require_once __DIR__ . '/components/layout_start.php';
                             </div>
                         </div>
 
-                        <!-- Tab 5: ชล.๐๕ (Meet & Greet) -->
+                        <!-- Tab 5: ลลว.๐๕ (Meet & Greet) -->
                         <div class="tab-pane fade" id="tab5" role="tabpanel">
                             <div class="d-flex align-items-center justify-content-between mb-3">
-                                <h6 class="m-0 font-bold text-dark"><i class="bi bi-chat-square-quote me-1"></i>บันทึกกิจกรรมกลุ่มย่อย Meet and Greet (ชล.๐๕)</h6>
+                                <h6 class="m-0 font-bold text-dark"><i class="bi bi-chat-square-quote me-1"></i>บันทึกกิจกรรมกลุ่มย่อย Meet and Greet (ลลว.๐๕)</h6>
                                 <button type="button" class="btn btn-sm btn-outline-primary font-bold" onclick="addGroupRow()">
                                     <i class="bi bi-plus-circle me-1"></i> เพิ่มกลุ่มย่อย
                                 </button>
@@ -406,12 +406,12 @@ require_once __DIR__ . '/components/layout_start.php';
                             </div>
                         </div>
 
-                        <!-- Tab 6: ชล.๐๖ (ความในใจของลูก) -->
+                        <!-- Tab 6: ลลว.๐๖ (ความในใจของลูก) -->
                         <div class="tab-pane fade" id="tab6" role="tabpanel">
                             <div class="d-flex align-items-center justify-content-between mb-3">
-                                <h6 class="m-0 font-bold text-dark"><i class="bi bi-envelope-heart me-1"></i>บันทึกความในใจของลูกที่อยากบอกผู้ปกครอง (ชล.๐๖)</h6>
+                                <h6 class="m-0 font-bold text-dark"><i class="bi bi-envelope-heart me-1"></i>บันทึกความในใจของลูกที่อยากบอกผู้ปกครอง (ลลว.๐๖)</h6>
                                 <button type="button" class="btn btn-sm btn-outline-primary font-bold" onclick="addNewLetterRow()">
-                                    <i class="bi bi-plus-circle me-1"></i> เพิ่มบันทึกจดหมาย ชล.๐๖
+                                    <i class="bi bi-plus-circle me-1"></i> เพิ่มบันทึกจดหมาย ลลว.๐๖
                                 </button>
                             </div>
                             <div class="table-responsive">
@@ -447,13 +447,13 @@ require_once __DIR__ . '/components/layout_start.php';
 </div>
 
 <!-- ==========================================
-     SUB-MODAL FOR ชล.๐๔ (ประสานสัมพันธ์)
+     SUB-MODAL FOR ลลว.๐๔ (ประสานสัมพันธ์)
      ========================================== -->
 <div class="modal fade" id="relationSubModal" tabindex="-1" aria-labelledby="relationSubModalLabel" aria-hidden="true" data-bs-backdrop="static" style="z-index: 20050 !important;">
     <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content rounded-4 shadow border-0">
             <div class="modal-header bg-primary text-white py-3 px-4">
-                <h5 class="modal-title font-bold" id="relationSubModalLabel"><i class="bi bi-person-check me-2"></i>รายละเอียดแบบบันทึกประสานสัมพันธ์ ชล.๐๔</h5>
+                <h5 class="modal-title font-bold" id="relationSubModalLabel"><i class="bi bi-person-check me-2"></i>รายละเอียดแบบบันทึกประสานสัมพันธ์ ลลว.๐๔</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
@@ -646,13 +646,13 @@ require_once __DIR__ . '/components/layout_start.php';
 </div>
 
 <!-- ==========================================
-     SUB-MODAL FOR ชล.๐๖ (ความในใจของลูก)
+     SUB-MODAL FOR ลลว.๐๖ (ความในใจของลูก)
      ========================================== -->
 <div class="modal fade" id="letterSubModal" tabindex="-1" aria-labelledby="letterSubModalLabel" aria-hidden="true" data-bs-backdrop="static" style="z-index: 20050 !important;">
     <div class="modal-dialog modal-lg modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content rounded-4 shadow border-0">
             <div class="modal-header bg-success text-white py-3 px-4">
-                <h5 class="modal-title font-bold" id="letterSubModalLabel"><i class="bi bi-heart-fill text-danger me-2"></i>รายละเอียดบันทึกความในใจของลูก ชล.๐๖</h5>
+                <h5 class="modal-title font-bold" id="letterSubModalLabel"><i class="bi bi-heart-fill text-danger me-2"></i>รายละเอียดบันทึกความในใจของลูก ลลว.๐๖</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
@@ -705,7 +705,7 @@ require_once __DIR__ . '/components/layout_start.php';
 </div>
 
 <script>
-// Global Arrays for Sub-form data (ชล.๐๔ และ ชล.๐๖)
+// Global Arrays for Sub-form data (ลลว.๐๔ และ ลลว.๐๖)
 let currentRelations = [];
 let currentLetters = [];
 
@@ -783,8 +783,8 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
-        // Serialize inline tables (ชล.๐๒, ชล.๐๓, ชล.๐๕)
-        // 1. ชล.๐๒ (ผู้เข้าร่วม)
+        // Serialize inline tables (ลลว.๐๒, ลลว.๐๓, ลลว.๐๕)
+        // 1. ลลว.๐๒ (ผู้เข้าร่วม)
         const attendants = [];
         document.querySelectorAll('#attendantsTableBody tr').forEach(row => {
             const student_name = row.querySelector('.student_name').value.trim();
@@ -799,7 +799,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
         document.getElementById('attendants_data').value = JSON.stringify(attendants);
 
-        // 2. ชล.๐๓ (ผู้ขาดประชุม)
+        // 2. ลลว.๐๓ (ผู้ขาดประชุม)
         const absents = [];
         document.querySelectorAll('#absentsTableBody tr').forEach(row => {
             const student_name = row.querySelector('.student_name').value.trim();
@@ -817,7 +817,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
         document.getElementById('absents_data').value = JSON.stringify(absents);
 
-        // 3. ชล.๐๕ (Meet & Greet)
+        // 3. ลลว.๐๕ (Meet & Greet)
         const groups = [];
         document.querySelectorAll('#groupsTableBody tr').forEach(row => {
             const group_topic = row.querySelector('.group_topic').value.trim();
@@ -835,7 +835,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
         document.getElementById('groups_data').value = JSON.stringify(groups);
 
-        // Serialize global array tables (ชล.๐๔ และ ชล.๐๖)
+        // Serialize global array tables (ลลว.๐๔ และ ลลว.๐๖)
         document.getElementById('relations_data').value = JSON.stringify(currentRelations);
         document.getElementById('letters_data').value = JSON.stringify(currentLetters);
 
@@ -857,7 +857,7 @@ document.addEventListener("DOMContentLoaded", function() {
             
             if (data.status === 'success') {
                 $('#meetingModal').modal('hide');
-                showAlert('สำเร็จ', 'บันทึกข้อมูลรายงานการประชุมและแบบฟอร์ม ชล.๐๑ - ชล.๐๖ เรียบร้อยแล้ว', 'success')
+                showAlert('สำเร็จ', 'บันทึกข้อมูลรายงานการประชุมและแบบฟอร์ม ลลว.๐๑ - ลลว.๐๖ เรียบร้อยแล้ว', 'success')
                 .then(() => {
                     location.reload();
                 });
@@ -891,7 +891,7 @@ function confirmLoadStudents(classroomId) {
     
     Swal.fire({
         title: 'ดึงรายชื่อนักเรียน?',
-        text: 'ต้องการดึงรายชื่อนักเรียนของห้องนี้จากระบบกลางเพื่อลงข้อมูล ชล.๐๒, ชล.๐๔ และ ชล.๐๖ อัตโนมัติหรือไม่? (ข้อมูลเดิมในตารางเหล่านี้จะถูกล้าง)',
+        text: 'ต้องการดึงรายชื่อนักเรียนของห้องนี้จากระบบกลางเพื่อลงข้อมูล ลลว.๐๒, ลลว.๐๔ และ ลลว.๐๖ อัตโนมัติหรือไม่? (ข้อมูลเดิมในตารางเหล่านี้จะถูกล้าง)',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
@@ -931,7 +931,7 @@ function loadStudentsFromCentral(classroomId) {
             document.getElementById('attend_count').value = students.length;
             document.getElementById('absent_count').value = 0;
             
-            // 2. ล้างและเติม ชล.๐๒ (ผู้มาประชุม)
+            // 2. ล้างและเติม ลลว.๐๒ (ผู้มาประชุม)
             const attendantsBody = document.getElementById('attendantsTableBody');
             attendantsBody.innerHTML = '';
             students.forEach(s => {
@@ -943,10 +943,10 @@ function loadStudentsFromCentral(classroomId) {
                 });
             });
             
-            // 3. เคลียร์ ชล.๐๓ (ผู้ขาดประชุม) - ค่าเริ่มต้นไม่มีใครขาด
+            // 3. เคลียร์ ลลว.๐๓ (ผู้ขาดประชุม) - ค่าเริ่มต้นไม่มีใครขาด
             document.getElementById('absentsTableBody').innerHTML = '';
             
-            // 4. ล้างและเติม ชล.๐๔ (ประสานสัมพันธ์)
+            // 4. ล้างและเติม ลลว.๐๔ (ประสานสัมพันธ์)
             currentRelations = students.map((s, idx) => ({
                 student_name: s.name,
                 classroom_no: s.classroom ? s.classroom.replace(/^ม\./, '') : '',
@@ -974,7 +974,7 @@ function loadStudentsFromCentral(classroomId) {
             }));
             renderRelationsTable();
             
-            // 5. ล้างและเติม ชล.๐๖ (ความในใจของลูก)
+            // 5. ล้างและเติม ลลว.๐๖ (ความในใจของลูก)
             currentLetters = students.map((s, idx) => ({
                 student_name: s.name,
                 classroom_no: s.classroom ? s.classroom.replace(/^ม\./, '') : '',
@@ -988,7 +988,7 @@ function loadStudentsFromCentral(classroomId) {
             }));
             renderLettersTable();
             
-            showAlert('สำเร็จ', `ดึงข้อมูลนักเรียนและเตรียมเอกสาร ชล.๐๒, ชล.๐๔, ชล.๐๖ จำนวน ${students.length} คน เรียบร้อยแล้ว`, 'success');
+            showAlert('สำเร็จ', `ดึงข้อมูลนักเรียนและเตรียมเอกสาร ลลว.๐๒, ลลว.๐๔, ลลว.๐๖ จำนวน ${students.length} คน เรียบร้อยแล้ว`, 'success');
         } else {
             showAlert('เกิดข้อผิดพลาด', res.message || 'ไม่สามารถดึงข้อมูลได้', 'error');
         }
@@ -1012,7 +1012,7 @@ function escapeHtml(string) {
 }
 
 // ------------------------------------------
-// DYNAMIC ROW ADDERS (ชล.๐๒)
+// DYNAMIC ROW ADDERS (ลลว.๐๒)
 // ------------------------------------------
 function addAttendantRow(data = {}) {
     const tbody = document.getElementById('attendantsTableBody');
@@ -1030,7 +1030,7 @@ function addAttendantRow(data = {}) {
 }
 
 // ------------------------------------------
-// DYNAMIC ROW ADDERS (ชล.๐๓)
+// DYNAMIC ROW ADDERS (ลลว.๐๓)
 // ------------------------------------------
 function addAbsentRow(data = {}) {
     const tbody = document.getElementById('absentsTableBody');
@@ -1051,7 +1051,7 @@ function addAbsentRow(data = {}) {
 }
 
 // ------------------------------------------
-// DYNAMIC ROW ADDERS (ชล.๐๕)
+// DYNAMIC ROW ADDERS (ลลว.๐๕)
 // ------------------------------------------
 function addGroupRow(data = {}) {
     const tbody = document.getElementById('groupsTableBody');
@@ -1086,7 +1086,7 @@ function addGroupRow(data = {}) {
 }
 
 // ------------------------------------------
-// COMPLEX TABULAR HANDLERS (ชล.๐๔)
+// COMPLEX TABULAR HANDLERS (ลลว.๐๔)
 // ------------------------------------------
 function renderRelationsTable() {
     const tbody = document.getElementById('relationsTableBody');
@@ -1233,7 +1233,7 @@ function deleteRelationRow(index) {
 }
 
 // ------------------------------------------
-// COMPLEX TABULAR HANDLERS (ชล.๐๖)
+// COMPLEX TABULAR HANDLERS (ลลว.๐๖)
 // ------------------------------------------
 function renderLettersTable() {
     const tbody = document.getElementById('lettersTableBody');
@@ -1320,7 +1320,7 @@ function deleteLetterRow(index) {
 // MODAL OPENERS
 // ------------------------------------------
 function openAddModal() {
-    document.getElementById('meetingModalLabel').textContent = 'เพิ่มบันทึกรายงานการประชุม (ชล.๐๑ - ชล.๐๖)';
+    document.getElementById('meetingModalLabel').textContent = 'เพิ่มบันทึกรายงานการประชุม (ลลว.๐๑ - ลลว.๐๖)';
     document.getElementById('meetingForm').reset();
     document.getElementById('meeting_id').value = '';
     document.getElementById('action').value = 'save_meeting';
@@ -1357,7 +1357,7 @@ function openAddModal() {
 }
 
 function openEditModal(meetingId) {
-    document.getElementById('meetingModalLabel').textContent = 'แก้ไขบันทึกรายงานการประชุม (ชล.๐๑ - ชล.๐๖)';
+    document.getElementById('meetingModalLabel').textContent = 'แก้ไขบันทึกรายงานการประชุม (ลลว.๐๑ - ลลว.๐๖)';
     document.getElementById('meetingForm').reset();
     document.getElementById('meeting_id').value = meetingId;
     document.getElementById('action').value = 'save_meeting';
@@ -1402,7 +1402,7 @@ function openEditModal(meetingId) {
             document.getElementById('problems').value = m.problems || '';
             document.getElementById('suggestions').value = m.suggestions || '';
             
-            // ข้อมูลเสริม ชล.๐๑
+            // ข้อมูลเสริม ลลว.๐๑
             document.getElementById('doc_no').value = m.doc_no || '';
             document.getElementById('doc_date').value = m.doc_date || '';
             document.getElementById('command_no').value = m.command_no || '';
@@ -1416,20 +1416,20 @@ function openEditModal(meetingId) {
             document.getElementById('support_received').value = m.support_received || '';
             document.getElementById('other_observations').value = m.other_observations || '';
 
-            // โหลดตารางย่อย ชล.๐๒
+            // โหลดตารางย่อย ลลว.๐๒
             (data.attendants || []).forEach(att => addAttendantRow(att));
             
-            // โหลดตารางย่อย ชล.๐๓
+            // โหลดตารางย่อย ลลว.๐๓
             (data.absents || []).forEach(abs => addAbsentRow(abs));
 
-            // โหลดตารางย่อย ชล.๐๕
+            // โหลดตารางย่อย ลลว.๐๕
             (data.groups || []).forEach(grp => addGroupRow(grp));
 
-            // โหลดตารางย่อย ชล.๐๔
+            // โหลดตารางย่อย ลลว.๐๔
             currentRelations = data.relations || [];
             renderRelationsTable();
 
-            // โหลดตารางย่อย ชล.๐๖
+            // โหลดตารางย่อย ลลว.๐๖
             currentLetters = data.letters || [];
             renderLettersTable();
 

@@ -116,19 +116,19 @@ function pmEnsureColumns(PDO $pdo): void {
         }
     };
 
-    // columns สำหรับบันทึกข้อความ (ชล.๐๑ ส่วนบน)
+    // columns สำหรับบันทึกข้อความ (ลลว.๐๑ ส่วนบน)
     $addCol('doc_no',             'VARCHAR(100) NULL');
     $addCol('doc_date',           'DATE NULL');
     $addCol('command_no',         'VARCHAR(100) NULL');
     $addCol('command_date',       'DATE NULL');
 
-    // columns สำหรับวาระและมติการประชุม (ชล.๐๑ ส่วนกลาง)
+    // columns สำหรับวาระและมติการประชุม (ลลว.๐๑ ส่วนกลาง)
     $addCol('agenda_1',           'TEXT NULL');
     $addCol('agenda_2',           'TEXT NULL');
     $addCol('agenda_3',           'TEXT NULL');
     $addCol('consensus',          'TEXT NULL');
 
-    // columns สำหรับบรรยากาศการประชุม (ชล.๐๑ ส่วนล่าง)
+    // columns สำหรับบรรยากาศการประชุม (ลลว.๐๑ ส่วนล่าง)
     $addCol('cooperation_rating', 'TEXT NULL');
     $addCol('useful_suggestions', 'TEXT NULL');
     $addCol('support_received',   'TEXT NULL');
