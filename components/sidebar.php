@@ -27,6 +27,7 @@ elseif (strpos($full_url, '/duty/') !== false)            $activeSystem = 'duty'
 elseif (strpos($full_url, '/club/') !== false || strpos($full_url, '/student_club/') !== false) $activeSystem = 'club';
 elseif (strpos($full_url, '/homework/') !== false)        $activeSystem = 'homework';
 elseif (strpos($full_url, '/lms/') !== false)             $activeSystem = 'lms';
+elseif (strpos($full_url, '/parent_meeting/') !== false)   $activeSystem = 'parent_meeting';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
 
 /**
@@ -151,6 +152,14 @@ $subMenus = [
         ['icon' => 'fas fa-layer-group',          'label' => 'จัดการกลุ่มเวร',   'url' => $base_path . '/duty/admin/groups.php',   'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-chalkboard-teacher',   'label' => 'จัดการรายชื่อครู', 'url' => $base_path . '/duty/admin/teachers.php', 'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-cog',                  'label' => 'ตั้งค่าระบบเวร',    'url' => $base_path . '/duty/admin/settings.php', 'roles' => ['super_admin']],
+    ],
+    'parent_meeting' => [
+        ['icon' => 'fas fa-tachometer-alt',  'label' => 'Dashboard',         'url' => $base_path . '/parent_meeting/dashboard.php'],
+        ['icon' => 'fas fa-handshake',        'label' => 'บันทึกการประชุม (ลลว.)', 'url' => $base_path . '/parent_meeting/meetings.php', 'roles' => ['super_admin','att_teacher','wfh_staff','cb_admin','club_admin','bus_admin','bus_finance']],
+        ['icon' => 'fas fa-users-cog',        'label' => 'เครือข่ายผู้ปกครอง',     'url' => $base_path . '/parent_meeting/network.php', 'roles' => ['super_admin','att_teacher','wfh_staff','cb_admin','club_admin','bus_admin','bus_finance']],
+        ['icon' => 'fas fa-file-invoice',     'label' => 'รายงานทั้งหมด',       'url' => $base_path . '/parent_meeting/reports.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-users',            'label' => 'จัดการผู้ใช้งาน',        'url' => $base_path . '/parent_meeting/users.php', 'roles' => ['super_admin']],
+        ['icon' => 'fas fa-cog',              'label' => 'ตั้งค่าระบบ (ห้องเรียน)', 'url' => $base_path . '/parent_meeting/settings.php', 'roles' => ['super_admin']],
     ],
 
 ];
@@ -335,6 +344,26 @@ $subMenus = [
                         ?>
                         <li class="nav-item">
                             <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
+                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
+                                <p><?= $sub['label'] ?></p>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </li>
+
+                <!-- Parent Meeting -->
+                <li class="nav-item <?= $activeSystem === 'parent_meeting' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'parent_meeting' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-handshake"></i>
+                        <p>ระบบประชุมผู้ปกครอง <i class="nav-arrow fas fa-angle-left"></i></p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <?php foreach ($subMenus['parent_meeting'] as $sub): 
+                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                        ?>
+                        <li class="nav-item">
+                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
                                 <i class="nav-icon <?= $sub['icon'] ?>"></i>
                                 <p><?= $sub['label'] ?></p>
                             </a>

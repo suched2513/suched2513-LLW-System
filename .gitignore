@@ -49,3 +49,4 @@ run_seed.php
 find_apache.*
 *.txt
 *.bat
+scratch/

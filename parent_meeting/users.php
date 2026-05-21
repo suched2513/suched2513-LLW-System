@@ -31,6 +31,14 @@ require_once __DIR__ . '/components/layout_start.php';
     </button>
 </div>
 
+<div class="alert alert-info rounded-3 text-sm d-flex align-items-start py-3 px-4 mb-4 border-0" role="alert" style="background-color: rgba(13, 110, 253, 0.08); color: #084298;">
+    <i class="bi bi-info-circle-fill me-2 fs-5 mt-0.5"></i>
+    <div>
+        <span class="font-bold">ระบบล็อกอินเชื่อมกับฐานข้อมูลกลาง (LLW)</span><br>
+        บัญชีผู้ใช้งานและรหัสผ่านทั้งหมดอ้างอิงจากฐานข้อมูลหลักของโรงเรียนโดยตรง เมื่อผู้ใช้งานในระบบหลักเข้าใช้งานระบบประชุมผู้ปกครองเป็นครั้งแรก บัญชีและบทบาทของพวกเขาจะได้รับการซิงค์และบันทึกในตารางผู้ใช้งานของระบบนี้โดยอัตโนมัติ
+    </div>
+</div>
+
 <!-- ตารางรายชื่อผู้ใช้งาน -->
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">

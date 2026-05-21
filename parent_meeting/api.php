@@ -1006,33 +1006,52 @@ try {
 
             $result = [];
             try {
-                // ดึงรายชื่อครูที่ปรึกษาพร้อมห้องเรียนจาก att_teachers + att_subjects
+                // ดึงรายชื่อครูที่ปรึกษาพร้อมห้องเรียนจาก att_teachers
                 $llwPdo->query("SELECT 1 FROM att_teachers LIMIT 1");
                 $teacherStmt = $llwPdo->query("SELECT DISTINCT t.id as teacher_id, t.name as teacher_name FROM att_teachers t ORDER BY t.name ASC");
                 $teachers = $teacherStmt->fetchAll();
 
-                // ดึงห้องเรียนที่ไม่ซ้ำกันจาก att_students
+                // ดึงห้องเรียนพร้อมครูที่ปรึกษา (ถ้ามี) จาก att_students + llw_class_advisors + llw_users
                 $llwPdo->query("SELECT 1 FROM att_students LIMIT 1");
-                $classStmt = $llwPdo->query("SELECT DISTINCT classroom FROM att_students WHERE classroom IS NOT NULL AND classroom != '' ORDER BY classroom ASC");
-                $classrooms_raw = $classStmt->fetchAll(PDO::FETCH_COLUMN);
+                $classStmt = $llwPdo->query("
+                    SELECT DISTINCT s.classroom, CONCAT(u.firstname, ' ', u.lastname) as advisor_name
+                    FROM att_students s
+                    LEFT JOIN llw_class_advisors la ON s.classroom = la.classroom AND la.role_type = 'primary'
+                    LEFT JOIN llw_users u ON la.user_id = u.user_id
+                    WHERE s.classroom IS NOT NULL AND s.classroom != ''
+                    ORDER BY s.classroom ASC
+                ");
+                $classrooms_raw = $classStmt->fetchAll();
 
-                // แปลงรูปแบบ classroom (เช่น "ม.1/1") เป็น level + room
+                // แปลงรูปแบบ classroom (เช่น "ม.1/1") เป็น level + room และเก็บชื่อครูที่ปรึกษา
                 $classroomList = [];
-                foreach ($classrooms_raw as $cls) {
+                foreach ($classrooms_raw as $row) {
+                    $cls = $row['classroom'];
+                    $advisor = trim($row['advisor_name'] ?? '');
+                    if (empty($advisor)) {
+                        $advisor = 'ครูที่ปรึกษา';
+                    }
                     if (preg_match('/^ม\.(\d+)[\/-](\d+)$/', $cls, $m)) {
                         $classroomList[] = [
                             'raw' => $cls,
                             'level' => 'ม.' . $m[1],
                             'room' => $m[2],
+                            'teacher_name' => $advisor
                         ];
                     } elseif (preg_match('/^(\d)[\/-](\d+)$/', $cls, $m)) {
                         $classroomList[] = [
                             'raw' => $cls,
                             'level' => 'ม.' . $m[1],
                             'room' => $m[2],
+                            'teacher_name' => $advisor
                         ];
                     } else {
-                        $classroomList[] = ['raw' => $cls, 'level' => $cls, 'room' => ''];
+                        $classroomList[] = [
+                            'raw' => $cls,
+                            'level' => $cls,
+                            'room' => '',
+                            'teacher_name' => $advisor
+                        ];
                     }
                 }
 
@@ -1062,9 +1081,10 @@ try {
             }
 
             $inserted = 0;
-            $skipped = 0;
+            $updated = 0;
             $insStmt = $pdo->prepare("INSERT INTO pm_classrooms (level, room_name, teacher_name) VALUES (?, ?, ?)");
-            $checkStmt = $pdo->prepare("SELECT id FROM pm_classrooms WHERE level = ? AND room_name = ?");
+            $checkStmt = $pdo->prepare("SELECT id, teacher_name FROM pm_classrooms WHERE level = ? AND room_name = ?");
+            $updStmt = $pdo->prepare("UPDATE pm_classrooms SET teacher_name = ? WHERE id = ?");
 
             foreach ($syncData as $row) {
                 $level = trim($row['level'] ?? '');
@@ -1075,8 +1095,12 @@ try {
 
                 // ตรวจสอบว่ามีห้องนี้อยู่แล้วหรือไม่
                 $checkStmt->execute([$level, $room]);
-                if ($checkStmt->fetch()) {
-                    $skipped++;
+                $existing = $checkStmt->fetch();
+                if ($existing) {
+                    if ($existing['teacher_name'] !== $teacher) {
+                        $updStmt->execute([$teacher, $existing['id']]);
+                        $updated++;
+                    }
                     continue;
                 }
 
@@ -1086,9 +1110,9 @@ try {
 
             echo json_encode([
                 'status' => 'success',
-                'message' => "นำเข้าข้อมูลห้องเรียนสำเร็จ: เพิ่มใหม่ {$inserted} ห้อง, ข้ามที่มีอยู่แล้ว {$skipped} ห้อง",
+                'message' => "นำเข้าห้องเรียนสำเร็จ: เพิ่มใหม่ {$inserted} ห้อง, อัปเดตที่ปรึกษา {$updated} ห้อง",
                 'inserted' => $inserted,
-                'skipped' => $skipped,
+                'updated' => $updated,
             ]);
             break;
 

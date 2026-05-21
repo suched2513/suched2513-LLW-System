@@ -339,7 +339,7 @@ function fetchLlwData() {
 
         // Populate teacher dropdown
         const teacherSel = document.getElementById('syncTeacherSelect');
-        teacherSel.innerHTML = '<option value="">-- กรอกชื่อครูเองหลังนำเข้า --</option>';
+        teacherSel.innerHTML = '<option value="">-- นำเข้าตามครูที่ปรึกษาของระบบกลาง --</option>';
         teachers.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t.teacher_name;
@@ -395,7 +395,7 @@ function performSync() {
             selected.push({
                 level: cls.level,
                 room: cls.room,
-                teacher_name: teacherName || 'ครูที่ปรึกษา'
+                teacher_name: teacherName || cls.teacher_name || 'ครูที่ปรึกษา'
             });
         }
     });

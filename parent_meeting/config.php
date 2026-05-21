@@ -303,12 +303,7 @@ function pmEnsureAllTables(PDO $pdo): void {
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-        // Seed default admin user
-        $cnt = $pdo->query("SELECT COUNT(*) FROM pm_users")->fetchColumn();
-        if ($cnt == 0) {
-            $ins = $pdo->prepare("INSERT INTO pm_users (fullname, username, password, role) VALUES (?, ?, ?, ?)");
-            $ins->execute(['ผู้ดูแลระบบ', 'admin_user', password_hash('admin1234', PASSWORD_DEFAULT), 'admin']);
-        }
+        // No seed default admin user - Rely entirely on central credentials
     } catch (Exception $ex2) {
         error_log('[Parent Meeting] Fallback table creation failed: ' . $ex2->getMessage());
     }
@@ -386,7 +381,7 @@ function checkLogin() {
     }
     
     // อ้างอิงสิทธิ์จากเซสชันกลางของระบบหลัก LLW (ถ้ามี) เพื่อทำการลงทะเบียนหรือล็อคอินให้อัตโนมัติ
-    if (!isset($_SESSION['pm_user_id']) && isset($_SESSION['llw_role'])) {
+    if (isset($_SESSION['llw_role']) && (!isset($_SESSION['pm_user_id']) || ($_SESSION['pm_username'] ?? '') !== $_SESSION['username'])) {
         try {
             $pdo = getPmPdo();
             $stmt = $pdo->prepare("SELECT * FROM pm_users WHERE username = ?");
@@ -398,20 +393,30 @@ function checkLogin() {
                 'wfh_admin' => 'executive',
                 'att_teacher' => 'teacher',
                 'wfh_staff' => 'teacher',
-                'cb_admin' => 'teacher'
+                'cb_admin' => 'teacher',
+                'club_admin' => 'teacher',
+                'bus_admin' => 'teacher',
+                'bus_finance' => 'teacher'
             ];
             $pmRole = $roleMap[$_SESSION['llw_role']] ?? 'teacher';
+            $fullname = $_SESSION['fullname'] ?? (isset($_SESSION['firstname']) ? ($_SESSION['firstname'] . ' ' . ($_SESSION['lastname'] ?? '')) : '');
+            if (empty(trim($fullname))) {
+                $fullname = $_SESSION['username'];
+            }
             
             if ($pmUser) {
+                // Dynamic sync of fullname and role
+                if ($pmUser['fullname'] !== $fullname || $pmUser['role'] !== $pmRole) {
+                    $upd = $pdo->prepare("UPDATE pm_users SET fullname = ?, role = ? WHERE id = ?");
+                    $upd->execute([$fullname, $pmRole, $pmUser['id']]);
+                    $pmUser['fullname'] = $fullname;
+                    $pmUser['role'] = $pmRole;
+                }
                 $_SESSION['pm_user_id'] = $pmUser['id'];
                 $_SESSION['pm_fullname'] = $pmUser['fullname'];
                 $_SESSION['pm_username'] = $pmUser['username'];
                 $_SESSION['pm_role'] = $pmUser['role'];
             } else {
-                $fullname = $_SESSION['fullname'] ?? ($_SESSION['firstname'] . ' ' . ($_SESSION['lastname'] ?? ''));
-                if (empty(trim($fullname))) {
-                    $fullname = $_SESSION['username'];
-                }
                 $randPass = password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT);
                 $ins = $pdo->prepare("INSERT INTO pm_users (fullname, username, password, role) VALUES (?, ?, ?, ?)");
                 $ins->execute([$fullname, $_SESSION['username'], $randPass, $pmRole]);

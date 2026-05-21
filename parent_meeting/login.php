@@ -20,17 +20,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน';
     } else {
         try {
-            $pdo = getPmPdo();
-            $stmt = $pdo->prepare("SELECT * FROM pm_users WHERE username = ?");
+            // ดึงข้อมูลผู้ใช้จากฐานข้อมูลกลาง (llw_users)
+            $llwPdo = getLlwPdo();
+            if (!$llwPdo) {
+                throw new Exception("ไม่สามารถเชื่อมต่อฐานข้อมูลกลางได้");
+            }
+            
+            $stmt = $llwPdo->prepare("SELECT * FROM llw_users WHERE username = ? AND status = 'active' LIMIT 1");
             $stmt->execute([$username]);
             $user = $stmt->fetch();
             
             if ($user && password_verify($password, $user['password'])) {
-                // เก็บค่าใน Session (ใช้ Prefix 'pm_' ป้องกันการกระทบ Session เดิมของเว็บบอร์ดหลัก)
-                $_SESSION['pm_user_id'] = $user['id'];
-                $_SESSION['pm_fullname'] = $user['fullname'];
-                $_SESSION['pm_username'] = $user['username'];
-                $_SESSION['pm_role'] = $user['role'];
+                // การจับคู่สิทธิ์ (Role Mapping)
+                $roleMap = [
+                    'super_admin' => 'admin',
+                    'wfh_admin' => 'executive',
+                    'att_teacher' => 'teacher',
+                    'wfh_staff' => 'teacher',
+                    'cb_admin' => 'teacher',
+                    'club_admin' => 'teacher',
+                    'bus_admin' => 'teacher',
+                    'bus_finance' => 'teacher'
+                ];
+                $pmRole = $roleMap[$user['role']] ?? 'teacher';
+                
+                $fullname = trim(($user['firstname'] ?? '') . ' ' . ($user['lastname'] ?? ''));
+                if (empty($fullname)) {
+                    $fullname = $user['username'];
+                }
+                
+                $pmPdo = getPmPdo();
+                // ตรวจสอบหรืออัปเดตผู้ใช้ใน pm_users
+                $pmStmt = $pmPdo->prepare("SELECT * FROM pm_users WHERE username = ?");
+                $pmStmt->execute([$username]);
+                $pmUser = $pmStmt->fetch();
+                
+                if ($pmUser) {
+                    $upd = $pmPdo->prepare("UPDATE pm_users SET fullname = ?, role = ?, password = ? WHERE id = ?");
+                    $upd->execute([$fullname, $pmRole, $user['password'], $pmUser['id']]);
+                    $pmUserId = $pmUser['id'];
+                } else {
+                    $ins = $pmPdo->prepare("INSERT INTO pm_users (fullname, username, password, role) VALUES (?, ?, ?, ?)");
+                    $ins->execute([$fullname, $username, $user['password'], $pmRole]);
+                    $pmUserId = $pmPdo->lastInsertId();
+                }
+                
+                // บันทึก Session กลางของระบบโรงเรียน
+                $_SESSION['user_id'] = $user['user_id'];
+                $_SESSION['username'] = $user['username'];
+                $_SESSION['firstname'] = $user['firstname'];
+                $_SESSION['fullname'] = $fullname;
+                $_SESSION['llw_role'] = $user['role'];
+                $_SESSION['role'] = in_array($user['role'], ['super_admin', 'wfh_admin']) ? 'admin' : 'user';
+                
+                // ดึงบทบาททั้งหมดของผู้ใช้ (Multi-role support)
+                $rolesAll = [$user['role']];
+                try {
+                    $rs = $llwPdo->prepare("SELECT role FROM llw_user_roles WHERE user_id = ?");
+                    $rs->execute([$user['user_id']]);
+                    $tmp = $rs->fetchAll(PDO::FETCH_COLUMN);
+                    if (!empty($tmp)) {
+                        $rolesAll = array_values(array_unique(array_merge($rolesAll, $tmp)));
+                    }
+                } catch (Throwable $e) {}
+                $_SESSION['llw_roles'] = $rolesAll;
+                
+                // หากเป็นครู ให้ดึงรหัสครูที่ปรึกษา (teacher_id) ด้วย
+                if (in_array($user['role'], ['att_teacher', 'super_admin', 'club_admin'])) {
+                    $t = $llwPdo->prepare("SELECT id, name FROM att_teachers WHERE username = ? LIMIT 1");
+                    $t->execute([$username]);
+                    $teacher = $t->fetch();
+                    if ($teacher) {
+                        $_SESSION['teacher_id'] = $teacher['id'];
+                        $_SESSION['teacher_name'] = $teacher['name'];
+                    }
+                }
+                
+                // อัปเดตเวลาเข้าสู่ระบบหลัก
+                $u = $llwPdo->prepare("UPDATE llw_users SET last_login = NOW() WHERE user_id = ?");
+                $u->execute([$user['user_id']]);
+                
+                // บันทึก Session ของระบบประชุมผู้ปกครอง
+                $_SESSION['pm_user_id'] = $pmUserId;
+                $_SESSION['pm_fullname'] = $fullname;
+                $_SESSION['pm_username'] = $username;
+                $_SESSION['pm_role'] = $pmRole;
                 
                 header('Location: ' . pm_url('dashboard.php'));
                 exit;
@@ -39,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } catch (Exception $e) {
             error_log('[Parent Meeting] Login Error: ' . $e->getMessage());
-            $error = 'เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล';
+            $error = 'เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล: ' . $e->getMessage();
         }
     }
 }
@@ -101,12 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
 
             <div class="text-center mt-4 border-top pt-3 border-white/50">
-                <p class="mb-1 text-xs text-muted">บัญชีผู้ทดสอบในระบบ:</p>
-                <div class="text-xs text-start bg-light rounded-3 p-2 font-mono">
-                    <div><strong>ครู:</strong> teacher_user / teacher1234</div>
-                    <div><strong>ผู้บริหาร:</strong> director_user / director1234</div>
-                    <div><strong>แอดมิน:</strong> admin_user / admin1234</div>
-                </div>
+                <p class="mb-1 text-xs text-muted">กรุณาเข้าสู่ระบบด้วยบัญชีผู้ใช้ระบบโรงเรียน (LLW)</p>
                 <a href="/index.php" class="d-inline-block text-xs mt-3 text-decoration-none text-primary">
                     <i class="bi bi-arrow-left"></i> กลับหน้าหลักโรงเรียน
                 </a>
