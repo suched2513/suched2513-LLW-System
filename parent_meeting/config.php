@@ -96,6 +96,45 @@ function getPmPdo(): PDO {
     }
 }
 
+// ── Ensure Columns (ALTER TABLE) ──────────────────────────────────────────
+// เพิ่ม column ที่ขาดหายในตาราง pm_meetings โดยไม่ทำลายข้อมูลเดิม
+// เรียกใช้เมื่อตาราง pm_users มีอยู่แล้ว (คือ migration เก่าสร้างไว้ก่อน)
+function pmEnsureColumns(PDO $pdo): void {
+    static $colChecked = false;
+    if ($colChecked) return;
+    $colChecked = true;
+
+    // Helper: เพิ่ม column เฉพาะเมื่อยังไม่มี (safe idempotent)
+    $addCol = function (string $column, string $def) use ($pdo): void {
+        try {
+            $stmt = $pdo->query("SHOW COLUMNS FROM `pm_meetings` LIKE '{$column}'");
+            if (!$stmt->fetch()) {
+                $pdo->exec("ALTER TABLE `pm_meetings` ADD COLUMN `{$column}` {$def}");
+            }
+        } catch (Exception $e) {
+            error_log("[Parent Meeting] pmEnsureColumns({$column}): " . $e->getMessage());
+        }
+    };
+
+    // columns สำหรับบันทึกข้อความ (ชล.๐๑ ส่วนบน)
+    $addCol('doc_no',             'VARCHAR(100) NULL');
+    $addCol('doc_date',           'DATE NULL');
+    $addCol('command_no',         'VARCHAR(100) NULL');
+    $addCol('command_date',       'DATE NULL');
+
+    // columns สำหรับวาระและมติการประชุม (ชล.๐๑ ส่วนกลาง)
+    $addCol('agenda_1',           'TEXT NULL');
+    $addCol('agenda_2',           'TEXT NULL');
+    $addCol('agenda_3',           'TEXT NULL');
+    $addCol('consensus',          'TEXT NULL');
+
+    // columns สำหรับบรรยากาศการประชุม (ชล.๐๑ ส่วนล่าง)
+    $addCol('cooperation_rating', 'TEXT NULL');
+    $addCol('useful_suggestions', 'TEXT NULL');
+    $addCol('support_received',   'TEXT NULL');
+    $addCol('other_observations', 'TEXT NULL');
+}
+
 // ── Self-Healing Migration ───────────────────────────────────────────────
 // สร้างตาราง pm_* อัตโนมัติหากยังไม่มี (แก้ปัญหา Production ไม่ต้องรัน migrate ด้วยมือ)
 function pmEnsureTables(PDO $pdo): void {
@@ -106,7 +145,9 @@ function pmEnsureTables(PDO $pdo): void {
     try {
         // ตรวจสอบว่าตารางหลักมีอยู่แล้วหรือไม่
         $pdo->query("SELECT 1 FROM pm_users LIMIT 1");
-        return; // ตารางมีอยู่แล้ว ไม่ต้องสร้าง
+        // ตารางมีอยู่แล้ว → ตรวจสอบและเพิ่ม column ใหม่ที่อาจขาด
+        pmEnsureColumns($pdo);
+        return;
     } catch (Exception $e) {
         // ตารางยังไม่มี → รัน migration
     }
