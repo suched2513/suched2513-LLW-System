@@ -949,13 +949,26 @@ try {
 
         case 'get_llw_students':
             // ดึงรายชื่อนักเรียนตามห้องเรียนจาก att_students
-            if ($role !== 'admin') {
+            if (!in_array($role, ['admin', 'teacher'])) {
                 http_response_code(403);
-                echo json_encode(['status' => 'error', 'message' => 'เฉพาะแอดมินเท่านั้นที่เข้าถึงได้']);
+                echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้']);
                 exit;
             }
 
             $classroom = trim($_GET['classroom'] ?? '');
+            $classroomId = (int)($_GET['classroom_id'] ?? 0);
+
+            // หากระบุ classroom_id ให้ดึงชื่อห้องเรียนจาก pm_classrooms
+            if ($classroomId > 0) {
+                $cStmt = $pdo->prepare("SELECT level, room_name FROM pm_classrooms WHERE id = ?");
+                $cStmt->execute([$classroomId]);
+                $clsData = $cStmt->fetch();
+                if ($clsData) {
+                    // กำหนดรูปแบบห้องเรียน เช่น "ม.1/1" หรือ "ม.2/3"
+                    $classroom = $clsData['level'] . '/' . $clsData['room_name'];
+                }
+            }
+
             $llwPdo = getLlwPdo();
             if (!$llwPdo) {
                 echo json_encode(['status' => 'error', 'message' => 'ไม่สามารถเชื่อมต่อฐานข้อมูลกลางได้']);

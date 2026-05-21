@@ -178,6 +178,9 @@ require_once __DIR__ . '/components/layout_start.php';
                                             <option value="<?= $c['id'] ?>">ม.<?= esc($c['level'] . '/' . $c['room_name'] . ' - ครู' . $c['teacher_name']) ?></option>
                                         <?php endforeach; ?>
                                     </select>
+                                    <button type="button" class="btn btn-link btn-sm p-0 mt-1 font-bold text-xs text-decoration-none text-primary" id="btnSyncStudents" onclick="triggerManualStudentSync()" style="display:none;">
+                                        <i class="bi bi-cloud-download me-1"></i>ดึงรายชื่อนักเรียนจากข้อมูลกลาง
+                                    </button>
                                 </div>
 
                                 <!-- แถวที่ 2: สั่งการและหนังสือราชการ -->
@@ -726,6 +729,23 @@ document.addEventListener("DOMContentLoaded", function() {
     totalInput.addEventListener('input', calcAbsent);
     attendInput.addEventListener('input', calcAbsent);
 
+    // ซิงค์รายชื่อนักเรียนเมื่อเลือกห้องเรียน
+    const classroomSelect = document.getElementById('classroom_id');
+    const btnSyncStudents = document.getElementById('btnSyncStudents');
+
+    classroomSelect.addEventListener('change', function() {
+        if (this.value) {
+            btnSyncStudents.style.display = 'inline-block';
+            // ถามผู้ใช้เพื่อดึงรายชื่อเฉพาะตอนเพิ่มใหม่ (meeting_id ว่าง)
+            const meetingId = document.getElementById('meeting_id').value;
+            if (!meetingId) {
+                confirmLoadStudents(this.value);
+            }
+        } else {
+            btnSyncStudents.style.display = 'none';
+        }
+    });
+
     // พรีวิวรูปภาพใหม่เมื่อเลือกไฟล์
     const imagesInput = document.getElementById('images-input');
     const newImagesContainer = document.getElementById('new-images-container');
@@ -853,6 +873,132 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 });
+
+// ------------------------------------------
+// STUDENT SYNC FUNCTIONS FROM CENTRAL LLW
+// ------------------------------------------
+function triggerManualStudentSync() {
+    const classroomId = document.getElementById('classroom_id').value;
+    if (!classroomId) {
+        showAlert('คำเตือน', 'กรุณาเลือกห้องเรียนก่อนดึงข้อมูล', 'warning');
+        return;
+    }
+    confirmLoadStudents(classroomId);
+}
+
+function confirmLoadStudents(classroomId) {
+    if (!classroomId) return;
+    
+    Swal.fire({
+        title: 'ดึงรายชื่อนักเรียน?',
+        text: 'ต้องการดึงรายชื่อนักเรียนของห้องนี้จากระบบกลางเพื่อลงข้อมูล ชล.๐๒, ชล.๐๔ และ ชล.๐๖ อัตโนมัติหรือไม่? (ข้อมูลเดิมในตารางเหล่านี้จะถูกล้าง)',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'ใช่, ดึงข้อมูล',
+        cancelButtonText: 'ยกเลิก'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            loadStudentsFromCentral(classroomId);
+        }
+    });
+}
+
+function loadStudentsFromCentral(classroomId) {
+    Swal.fire({
+        title: 'กำลังดึงข้อมูลนักเรียน...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    fetch(`api.php?action=get_llw_students&classroom_id=${classroomId}`)
+    .then(res => res.json())
+    .then(res => {
+        Swal.close();
+        if (res.status === 'success') {
+            const students = res.data;
+            if (students.length === 0) {
+                showAlert('ไม่พบข้อมูล', 'ไม่พบรายชื่อนักเรียนในห้องเรียนนี้จากระบบกลาง', 'warning');
+                return;
+            }
+            
+            // 1. อัปเดตจำนวนและสถิติ
+            document.getElementById('total_students').value = students.length;
+            document.getElementById('total_parents').value = students.length;
+            document.getElementById('attend_count').value = students.length;
+            document.getElementById('absent_count').value = 0;
+            
+            // 2. ล้างและเติม ชล.๐๒ (ผู้มาประชุม)
+            const attendantsBody = document.getElementById('attendantsTableBody');
+            attendantsBody.innerHTML = '';
+            students.forEach(s => {
+                addAttendantRow({
+                    student_name: s.name,
+                    parent_name: '',
+                    phone: '',
+                    relationship: 'ผู้ปกครอง'
+                });
+            });
+            
+            // 3. เคลียร์ ชล.๐๓ (ผู้ขาดประชุม) - ค่าเริ่มต้นไม่มีใครขาด
+            document.getElementById('absentsTableBody').innerHTML = '';
+            
+            // 4. ล้างและเติม ชล.๐๔ (ประสานสัมพันธ์)
+            currentRelations = students.map((s, idx) => ({
+                student_name: s.name,
+                classroom_no: s.classroom ? s.classroom.replace(/^ม\./, '') : '',
+                student_no: idx + 1,
+                parent_name: '',
+                relationship: 'ผู้ปกครอง',
+                grade_zero_count: 0,
+                grade_r_count: 0,
+                grade_ms_count: 0,
+                grade_mp_count: 0,
+                behavior_score_deducted: 0,
+                praise_teacher_json: [],
+                praise_teacher_other: '',
+                praise_parent_json: [],
+                praise_parent_other: '',
+                improve_teacher_json: [],
+                improve_teacher_other: '',
+                improve_parent_json: [],
+                improve_parent_other: '',
+                teacher_remedy: '',
+                parent_remedy: '',
+                parent_support_request: '',
+                parent_meeting_impression: '',
+                parent_teacher_feedback: ''
+            }));
+            renderRelationsTable();
+            
+            // 5. ล้างและเติม ชล.๐๖ (ความในใจของลูก)
+            currentLetters = students.map((s, idx) => ({
+                student_name: s.name,
+                classroom_no: s.classroom ? s.classroom.replace(/^ม\./, '') : '',
+                student_no: idx + 1,
+                letter_to_whom: 'ผู้ปกครอง',
+                impressed_story: '',
+                inner_feelings: '',
+                proud_story: '',
+                improvement_plan: '',
+                parent_response: ''
+            }));
+            renderLettersTable();
+            
+            showAlert('สำเร็จ', `ดึงข้อมูลนักเรียนและเตรียมเอกสาร ชล.๐๒, ชล.๐๔, ชล.๐๖ จำนวน ${students.length} คน เรียบร้อยแล้ว`, 'success');
+        } else {
+            showAlert('เกิดข้อผิดพลาด', res.message || 'ไม่สามารถดึงข้อมูลได้', 'error');
+        }
+    })
+    .catch(err => {
+        Swal.close();
+        console.error(err);
+        showAlert('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อระบบได้', 'error');
+    });
+}
 
 // HTML Escaper helper
 function escapeHtml(string) {
@@ -1184,6 +1330,9 @@ function openAddModal() {
     document.getElementById('absentsTableBody').innerHTML = '';
     document.getElementById('groupsTableBody').innerHTML = '';
 
+    // Hide sync button
+    document.getElementById('btnSyncStudents').style.display = 'none';
+
     // Clear arrays
     currentRelations = [];
     renderRelationsTable();
@@ -1221,6 +1370,9 @@ function openEditModal(meetingId) {
     document.getElementById('absentsTableBody').innerHTML = '';
     document.getElementById('groupsTableBody').innerHTML = '';
     
+    // Hide sync button initially
+    document.getElementById('btnSyncStudents').style.display = 'none';
+
     currentRelations = [];
     renderRelationsTable();
     currentLetters = [];
@@ -1236,6 +1388,12 @@ function openEditModal(meetingId) {
             document.getElementById('semester').value = m.semester;
             document.getElementById('academic_year').value = m.academic_year;
             document.getElementById('classroom_id').value = m.classroom_id;
+            
+            // Show sync button since classroom is loaded
+            if (m.classroom_id) {
+                document.getElementById('btnSyncStudents').style.display = 'inline-block';
+            }
+            
             document.getElementById('total_students').value = m.total_students;
             document.getElementById('total_parents').value = m.total_parents;
             document.getElementById('attend_count').value = m.attend_count;
