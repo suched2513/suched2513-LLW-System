@@ -13,20 +13,20 @@ $pdo = getPmPdo();
 
 try {
     // 1. สถิติจำนวนห้องเรียนทั้งหมด
-    $totalRooms = (int)$pdo->query("SELECT COUNT(*) FROM classrooms")->fetchColumn();
+    $totalRooms = (int)$pdo->query("SELECT COUNT(*) FROM pm_classrooms")->fetchColumn();
     
     // 2. จำนวนห้องที่ส่งรายงานแล้ว (อย่างน้อย 1 รายงาน)
-    $submittedRooms = (int)$pdo->query("SELECT COUNT(DISTINCT classroom_id) FROM meetings")->fetchColumn();
+    $submittedRooms = (int)$pdo->query("SELECT COUNT(DISTINCT classroom_id) FROM pm_meetings")->fetchColumn();
     
     // 3. จำนวนห้องที่ยังไม่ได้ส่งรายงาน
     $pendingRooms = max(0, $totalRooms - $submittedRooms);
     
     // 4. จำนวนเครือข่ายผู้ปกครองทั้งหมด
-    $totalNetworks = (int)$pdo->query("SELECT COUNT(*) FROM network_parents")->fetchColumn();
+    $totalNetworks = (int)$pdo->query("SELECT COUNT(*) FROM pm_network_parents")->fetchColumn();
     
     // 5. สถิติร้อยละผู้ปกครองที่เข้าร่วมเฉลี่ย
     $avgAttendance = 0;
-    $attStmt = $pdo->query("SELECT SUM(attend_count) as total_attend, SUM(total_parents) as total_parents FROM meetings");
+    $attStmt = $pdo->query("SELECT SUM(attend_count) as total_attend, SUM(total_parents) as total_parents FROM pm_meetings");
     $attData = $attStmt->fetch();
     if ($attData && $attData['total_parents'] > 0) {
         $avgAttendance = round(($attData['total_attend'] / $attData['total_parents']) * 100, 2);
@@ -38,8 +38,8 @@ try {
         SELECT c.level, 
                SUM(m.attend_count) as attend_sum, 
                SUM(m.total_parents) as parents_sum
-        FROM meetings m
-        JOIN classrooms c ON m.classroom_id = c.id
+        FROM pm_meetings m
+        JOIN pm_classrooms c ON m.classroom_id = c.id
         GROUP BY c.level
         ORDER BY c.level
     ";
@@ -63,9 +63,9 @@ try {
     // 7. รายการรายงานการประชุมล่าสุด 5 รายการ
     $recentMeetingsQuery = "
         SELECT m.id, m.meeting_date, m.semester, m.academic_year, c.level, c.room_name, u.fullname as creator_name
-        FROM meetings m
-        JOIN classrooms c ON m.classroom_id = c.id
-        JOIN users u ON m.created_by = u.id
+        FROM pm_meetings m
+        JOIN pm_classrooms c ON m.classroom_id = c.id
+        JOIN pm_users u ON m.created_by = u.id
         ORDER BY m.created_at DESC
         LIMIT 5
     ";

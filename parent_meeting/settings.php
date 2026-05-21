@@ -13,7 +13,7 @@ $pdo = getPmPdo();
 
 try {
     // ดึงห้องเรียนทั้งหมด
-    $stmt = $pdo->query("SELECT * FROM classrooms ORDER BY level, room_name");
+    $stmt = $pdo->query("SELECT * FROM pm_classrooms ORDER BY level, room_name");
     $classrooms = $stmt->fetchAll();
 } catch (Exception $e) {
     error_log('[Parent Meeting] Classrooms Fetch Error: ' . $e->getMessage());

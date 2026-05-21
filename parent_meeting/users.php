@@ -13,7 +13,7 @@ $pdo = getPmPdo();
 
 try {
     // ดึงผู้ใช้งานทั้งหมด
-    $stmt = $pdo->query("SELECT id, fullname, username, role, created_at FROM users ORDER BY role, fullname");
+    $stmt = $pdo->query("SELECT id, fullname, username, role, created_at FROM pm_users ORDER BY role, fullname");
     $users = $stmt->fetchAll();
 } catch (Exception $e) {
     error_log('[Parent Meeting] Users Fetch Error: ' . $e->getMessage());

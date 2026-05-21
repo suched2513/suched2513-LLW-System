@@ -100,7 +100,7 @@ function initDatabaseStructure() {
     $pdo = getPmPdo();
     
     // สร้างตาราง users
-    $pdo->exec("CREATE TABLE IF NOT EXISTS users (
+    $pdo->exec("CREATE TABLE IF NOT EXISTS pm_users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         fullname VARCHAR(150) NOT NULL,
         username VARCHAR(50) UNIQUE NOT NULL,
@@ -110,7 +110,7 @@ function initDatabaseStructure() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // สร้างตาราง classrooms
-    $pdo->exec("CREATE TABLE IF NOT EXISTS classrooms (
+    $pdo->exec("CREATE TABLE IF NOT EXISTS pm_classrooms (
         id INT AUTO_INCREMENT PRIMARY KEY,
         level VARCHAR(50) NOT NULL,
         room_name VARCHAR(50) NOT NULL,
@@ -119,9 +119,9 @@ function initDatabaseStructure() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // ตรวจสอบและสร้างห้องเรียนเดโม หากยังไม่มี
-    $stmt = $pdo->query("SELECT COUNT(*) FROM classrooms");
+    $stmt = $pdo->query("SELECT COUNT(*) FROM pm_classrooms");
     if ($stmt->fetchColumn() == 0) {
-        $pdo->exec("INSERT INTO classrooms (level, room_name, teacher_name) VALUES 
+        $pdo->exec("INSERT INTO pm_classrooms (level, room_name, teacher_name) VALUES 
         ('ม.1', '1', 'สมชาย ใจดี'),
         ('ม.1', '2', 'สมศรี รักษ์ดี'),
         ('ม.2', '1', 'ประยุทธ์ สู้ๆ'),
@@ -131,7 +131,7 @@ function initDatabaseStructure() {
     }
 
     // ตรวจสอบและสร้างผู้ใช้เดโม
-    $stmt = $pdo->query("SELECT COUNT(*) FROM users");
+    $stmt = $pdo->query("SELECT COUNT(*) FROM pm_users");
     if ($stmt->fetchColumn() == 0) {
         // แอดมิน: admin_user / admin1234
         // ผู้บริหาร: director_user / director1234
@@ -142,14 +142,14 @@ function initDatabaseStructure() {
             ['fullname' => 'สมชาย ใจดี', 'username' => 'teacher_user', 'password' => password_hash('teacher1234', PASSWORD_DEFAULT), 'role' => 'teacher']
         ];
         
-        $insert = $pdo->prepare("INSERT INTO users (fullname, username, password, role) VALUES (?, ?, ?, ?)");
+        $insert = $pdo->prepare("INSERT INTO pm_users (fullname, username, password, role) VALUES (?, ?, ?, ?)");
         foreach ($users as $u) {
             $insert->execute([$u['fullname'], $u['username'], $u['password'], $u['role']]);
         }
     }
 
     // สร้างตาราง meetings
-    $pdo->exec("CREATE TABLE IF NOT EXISTS meetings (
+    $pdo->exec("CREATE TABLE IF NOT EXISTS pm_meetings (
         id INT AUTO_INCREMENT PRIMARY KEY,
         meeting_date DATE NOT NULL,
         semester VARCHAR(10) NOT NULL,
@@ -164,12 +164,12 @@ function initDatabaseStructure() {
         suggestions TEXT,
         created_by INT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE,
-        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (classroom_id) REFERENCES pm_classrooms(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES pm_users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // สร้างตาราง network_parents
-    $pdo->exec("CREATE TABLE IF NOT EXISTS network_parents (
+    $pdo->exec("CREATE TABLE IF NOT EXISTS pm_network_parents (
         id INT AUTO_INCREMENT PRIMARY KEY,
         meeting_id INT NOT NULL,
         position_name ENUM('ประธาน', 'รองประธาน', 'กรรมการ', 'เลขานุการ') NOT NULL,
@@ -180,27 +180,27 @@ function initDatabaseStructure() {
         phone VARCHAR(20) NOT NULL,
         image_path VARCHAR(255) DEFAULT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE
+        FOREIGN KEY (meeting_id) REFERENCES pm_meetings(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // สร้างตาราง meeting_images
-    $pdo->exec("CREATE TABLE IF NOT EXISTS meeting_images (
+    $pdo->exec("CREATE TABLE IF NOT EXISTS pm_meeting_images (
         id INT AUTO_INCREMENT PRIMARY KEY,
         meeting_id INT NOT NULL,
         image_path VARCHAR(255) NOT NULL,
         uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE
+        FOREIGN KEY (meeting_id) REFERENCES pm_meetings(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 
     // สร้างตาราง comments
-    $pdo->exec("CREATE TABLE IF NOT EXISTS comments (
+    $pdo->exec("CREATE TABLE IF NOT EXISTS pm_comments (
         id INT AUTO_INCREMENT PRIMARY KEY,
         meeting_id INT NOT NULL,
         comment_text TEXT NOT NULL,
         commented_by INT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (meeting_id) REFERENCES meetings(id) ON DELETE CASCADE,
-        FOREIGN KEY (commented_by) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (meeting_id) REFERENCES pm_meetings(id) ON DELETE CASCADE,
+        FOREIGN KEY (commented_by) REFERENCES pm_users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
 }
 

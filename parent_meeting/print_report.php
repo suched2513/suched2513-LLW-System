@@ -16,9 +16,9 @@ try {
     // 1. ดึงข้อมูลรายงานการประชุม
     $stmt = $pdo->prepare("
         SELECT m.*, c.level, c.room_name, c.teacher_name, u.fullname as creator_name
-        FROM meetings m
-        JOIN classrooms c ON m.classroom_id = c.id
-        JOIN users u ON m.created_by = u.id
+        FROM pm_meetings m
+        JOIN pm_classrooms c ON m.classroom_id = c.id
+        JOIN pm_users u ON m.created_by = u.id
         WHERE m.id = ?
     ");
     $stmt->execute([$meetingId]);
@@ -29,15 +29,15 @@ try {
     }
     
     // 2. ดึงรูปกิจกรรมประกอบรายงาน
-    $imgStmt = $pdo->prepare("SELECT * FROM meeting_images WHERE meeting_id = ?");
+    $imgStmt = $pdo->prepare("SELECT * FROM pm_meeting_images WHERE meeting_id = ?");
     $imgStmt->execute([$meetingId]);
     $images = $imgStmt->fetchAll();
     
     // 3. ดึงความเห็นผู้บริหาร
     $cmtStmt = $pdo->prepare("
         SELECT c.*, u.fullname as commenter_name 
-        FROM comments c
-        JOIN users u ON c.commented_by = u.id
+        FROM pm_comments c
+        JOIN pm_users u ON c.commented_by = u.id
         WHERE c.meeting_id = ?
         ORDER BY c.created_at ASC
     ");
@@ -45,7 +45,7 @@ try {
     $comments = $cmtStmt->fetchAll();
     
     // 4. ดึงเครือข่ายผู้ปกครอง
-    $netStmt = $pdo->prepare("SELECT * FROM network_parents WHERE meeting_id = ?");
+    $netStmt = $pdo->prepare("SELECT * FROM pm_network_parents WHERE meeting_id = ?");
     $netStmt->execute([$meetingId]);
     $rawNetwork = $netStmt->fetchAll();
     

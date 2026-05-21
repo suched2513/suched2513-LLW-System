@@ -13,24 +13,24 @@ $pdo = getPmPdo();
 
 // ดึงข้อมูลห้องเรียนทั้งหมดเพื่อใช้ใน Dropdown
 try {
-    $classrooms = $pdo->query("SELECT * FROM classrooms ORDER BY level, room_name")->fetchAll();
+    $classrooms = $pdo->query("SELECT * FROM pm_classrooms ORDER BY level, room_name")->fetchAll();
     
     // ดึงประวัติการประชุม
     // หากเป็นแอดมิน เห็นทั้งหมด, หากเป็นครูธรรมดา เห็นเฉพาะที่ตนเองสร้าง
     if ($_SESSION['pm_role'] === 'admin') {
         $stmt = $pdo->query("
             SELECT m.*, c.level, c.room_name, u.fullname as creator_name
-            FROM meetings m
-            JOIN classrooms c ON m.classroom_id = c.id
-            JOIN users u ON m.created_by = u.id
+            FROM pm_meetings m
+            JOIN pm_classrooms c ON m.classroom_id = c.id
+            JOIN pm_users u ON m.created_by = u.id
             ORDER BY m.meeting_date DESC, m.created_at DESC
         ");
     } else {
         $stmt = $pdo->prepare("
             SELECT m.*, c.level, c.room_name, u.fullname as creator_name
-            FROM meetings m
-            JOIN classrooms c ON m.classroom_id = c.id
-            JOIN users u ON m.created_by = u.id
+            FROM pm_meetings m
+            JOIN pm_classrooms c ON m.classroom_id = c.id
+            JOIN pm_users u ON m.created_by = u.id
             WHERE m.created_by = ?
             ORDER BY m.meeting_date DESC, m.created_at DESC
         ");

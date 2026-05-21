@@ -16,15 +16,15 @@ try {
     if ($_SESSION['pm_role'] === 'admin') {
         $meetingsStmt = $pdo->query("
             SELECT m.id as meeting_id, m.semester, m.academic_year, c.level, c.room_name
-            FROM meetings m
-            JOIN classrooms c ON m.classroom_id = c.id
+            FROM pm_meetings m
+            JOIN pm_classrooms c ON m.classroom_id = c.id
             ORDER BY m.academic_year DESC, m.semester DESC, c.level, c.room_name
         ");
     } else {
         $meetingsStmt = $pdo->prepare("
             SELECT m.id as meeting_id, m.semester, m.academic_year, c.level, c.room_name
-            FROM meetings m
-            JOIN classrooms c ON m.classroom_id = c.id
+            FROM pm_meetings m
+            JOIN pm_classrooms c ON m.classroom_id = c.id
             WHERE m.created_by = ?
             ORDER BY m.academic_year DESC, m.semester DESC, c.level, c.room_name
         ");
@@ -41,7 +41,7 @@ try {
     // ดึงเครือข่ายผู้ปกครองทั้งหมดของ Meeting ID นี้
     $networkList = [];
     if ($activeMeetingId > 0) {
-        $stmt = $pdo->prepare("SELECT * FROM network_parents WHERE meeting_id = ?");
+        $stmt = $pdo->prepare("SELECT * FROM pm_network_parents WHERE meeting_id = ?");
         $stmt->execute([$activeMeetingId]);
         $rawNetwork = $stmt->fetchAll();
         

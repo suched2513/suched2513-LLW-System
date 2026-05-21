@@ -43,9 +43,9 @@ try {
             // ดึงข้อมูลการประชุม
             $stmt = $pdo->prepare("
                 SELECT m.*, c.level, c.room_name, c.teacher_name, u.fullname as creator_name
-                FROM meetings m
-                JOIN classrooms c ON m.classroom_id = c.id
-                JOIN users u ON m.created_by = u.id
+                FROM pm_meetings m
+                JOIN pm_classrooms c ON m.classroom_id = c.id
+                JOIN pm_users u ON m.created_by = u.id
                 WHERE m.id = ?
             ");
             $stmt->execute([$meetingId]);
@@ -59,7 +59,7 @@ try {
             $meeting['meeting_date_formatted'] = th_date($meeting['meeting_date']);
 
             // ดึงรูปภาพบรรยากาศการประชุม
-            $imgStmt = $pdo->prepare("SELECT id, image_path FROM meeting_images WHERE meeting_id = ?");
+            $imgStmt = $pdo->prepare("SELECT id, image_path FROM pm_meeting_images WHERE meeting_id = ?");
             $imgStmt->execute([$meetingId]);
             $images = $imgStmt->fetchAll();
 
@@ -114,7 +114,7 @@ try {
                 // โหมดแก้ไข
                 // ถ้าสิทธิ์เป็นครู ตรวจสอบความสิทธิ์การแก้ไข (เป็นผู้บันทึก)
                 if ($role === 'teacher') {
-                    $checkStmt = $pdo->prepare("SELECT created_by FROM meetings WHERE id = ?");
+                    $checkStmt = $pdo->prepare("SELECT created_by FROM pm_meetings WHERE id = ?");
                     $checkStmt->execute([$meetingId]);
                     $owner = $checkStmt->fetchColumn();
                     if ($owner != $userId) {
@@ -123,7 +123,7 @@ try {
                 }
 
                 $stmt = $pdo->prepare("
-                    UPDATE meetings 
+                    UPDATE pm_meetings 
                     SET meeting_date = ?, semester = ?, academic_year = ?, classroom_id = ?, 
                         total_students = ?, total_parents = ?, attend_count = ?, absent_count = ?, 
                         summary = ?, problems = ?, suggestions = ?
@@ -137,7 +137,7 @@ try {
             } else {
                 // โหมดเพิ่มใหม่
                 $stmt = $pdo->prepare("
-                    INSERT INTO meetings (meeting_date, semester, academic_year, classroom_id, total_students, total_parents, attend_count, absent_count, summary, problems, suggestions, created_by)
+                    INSERT INTO pm_meetings (meeting_date, semester, academic_year, classroom_id, total_students, total_parents, attend_count, absent_count, summary, problems, suggestions, created_by)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([
@@ -183,7 +183,7 @@ try {
                     $destPath = $uploadDir . $newFileName;
 
                     if (move_uploaded_file($tmpName, $destPath)) {
-                        $imgStmt = $pdo->prepare("INSERT INTO meeting_images (meeting_id, image_path) VALUES (?, ?)");
+                        $imgStmt = $pdo->prepare("INSERT INTO pm_meeting_images (meeting_id, image_path) VALUES (?, ?)");
                         $imgStmt->execute([$meetingId, 'uploads/' . $newFileName]);
                     } else {
                         throw new Exception("อัปโหลดไฟล์ไม่สำเร็จ: $fileName");
@@ -212,8 +212,8 @@ try {
             if ($role === 'teacher') {
                 $checkStmt = $pdo->prepare("
                     SELECT m.created_by 
-                    FROM meeting_images mi
-                    JOIN meetings m ON mi.meeting_id = m.id
+                    FROM pm_meeting_images mi
+                    JOIN pm_meetings m ON mi.meeting_id = m.id
                     WHERE mi.id = ?
                 ");
                 $checkStmt->execute([$imageId]);
@@ -224,7 +224,7 @@ try {
             }
 
             // ดึงพาธรูปภาพมาเพื่อทำการลบจากเซิร์ฟเวอร์
-            $stmt = $pdo->prepare("SELECT image_path FROM meeting_images WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT image_path FROM pm_meeting_images WHERE id = ?");
             $stmt->execute([$imageId]);
             $imgPath = $stmt->fetchColumn();
 
@@ -236,7 +236,7 @@ try {
             }
 
             // ลบจากฐานข้อมูล
-            $deleteStmt = $pdo->prepare("DELETE FROM meeting_images WHERE id = ?");
+            $deleteStmt = $pdo->prepare("DELETE FROM pm_meeting_images WHERE id = ?");
             $deleteStmt->execute([$imageId]);
 
             echo json_encode(['status' => 'success', 'message' => 'ลบรูปภาพเรียบร้อยแล้ว']);
@@ -257,7 +257,7 @@ try {
 
             // ตรวจสอบสิทธิ์เจ้าของรายงาน (สำหรับสิทธิ์ครู)
             if ($role === 'teacher') {
-                $checkStmt = $pdo->prepare("SELECT created_by FROM meetings WHERE id = ?");
+                $checkStmt = $pdo->prepare("SELECT created_by FROM pm_meetings WHERE id = ?");
                 $checkStmt->execute([$meetingId]);
                 $owner = $checkStmt->fetchColumn();
                 if ($owner != $userId) {
@@ -268,7 +268,7 @@ try {
             $pdo->beginTransaction();
 
             // ดึงและลบรูปกิจกรรมทั้งหมดจากเซิร์ฟเวอร์
-            $imgStmt = $pdo->prepare("SELECT image_path FROM meeting_images WHERE meeting_id = ?");
+            $imgStmt = $pdo->prepare("SELECT image_path FROM pm_meeting_images WHERE meeting_id = ?");
             $imgStmt->execute([$meetingId]);
             $images = $imgStmt->fetchAll();
             foreach ($images as $img) {
@@ -279,7 +279,7 @@ try {
             }
 
             // ดึงและลบรูปเครือข่ายผู้ปกครองทั้งหมดของรายงานนี้จากเซิร์ฟเวอร์
-            $netStmt = $pdo->prepare("SELECT image_path FROM network_parents WHERE meeting_id = ?");
+            $netStmt = $pdo->prepare("SELECT image_path FROM pm_network_parents WHERE meeting_id = ?");
             $netStmt->execute([$meetingId]);
             $networkImages = $netStmt->fetchAll();
             foreach ($networkImages as $nimg) {
@@ -292,7 +292,7 @@ try {
             }
 
             // ลบรายงานการประชุม (Cascade ลบตารางอื่นอัตโนมัติ)
-            $deleteStmt = $pdo->prepare("DELETE FROM meetings WHERE id = ?");
+            $deleteStmt = $pdo->prepare("DELETE FROM pm_meetings WHERE id = ?");
             $deleteStmt->execute([$meetingId]);
 
             $pdo->commit();
@@ -308,7 +308,7 @@ try {
                 throw new Exception('ไม่ระบุ ID สมาชิกเครือข่ายผู้ปกครอง');
             }
 
-            $stmt = $pdo->prepare("SELECT * FROM network_parents WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT * FROM pm_network_parents WHERE id = ?");
             $stmt->execute([$networkId]);
             $network = $stmt->fetch();
 
@@ -350,7 +350,7 @@ try {
 
             // ตรวจสอบสิทธิ์ความเป็นเจ้าของ meeting ของห้องเรียนนั้น (สำหรับครู)
             if ($role === 'teacher') {
-                $checkStmt = $pdo->prepare("SELECT created_by FROM meetings WHERE id = ?");
+                $checkStmt = $pdo->prepare("SELECT created_by FROM pm_meetings WHERE id = ?");
                 $checkStmt->execute([$meetingId]);
                 $owner = $checkStmt->fetchColumn();
                 if ($owner != $userId) {
@@ -364,7 +364,7 @@ try {
             if ($networkId == 0) {
                 // ตรวจสอบโควตาสำหรับตำแหน่งที่ไม่ใช่ กรรมการ (ประธาน, รองประธาน, เลขานุการ มีได้แค่ 1 ต่อ 1 รายงาน)
                 if ($positionName !== 'กรรมการ') {
-                    $checkPosStmt = $pdo->prepare("SELECT id FROM network_parents WHERE meeting_id = ? AND position_name = ?");
+                    $checkPosStmt = $pdo->prepare("SELECT id FROM pm_network_parents WHERE meeting_id = ? AND position_name = ?");
                     $checkPosStmt->execute([$meetingId, $positionName]);
                     $existingId = $checkPosStmt->fetchColumn();
                     
@@ -374,7 +374,7 @@ try {
                     }
                 } else {
                     // ตำแหน่ง กรรมการ มีได้สูงสุด 2 คน
-                    $checkPosStmt = $pdo->prepare("SELECT COUNT(*) FROM network_parents WHERE meeting_id = ? AND position_name = 'กรรมการ'");
+                    $checkPosStmt = $pdo->prepare("SELECT COUNT(*) FROM pm_network_parents WHERE meeting_id = ? AND position_name = 'กรรมการ'");
                     $checkPosStmt->execute([$meetingId]);
                     $countKom = (int)$checkPosStmt->fetchColumn();
                     if ($countKom >= 2) {
@@ -386,7 +386,7 @@ try {
             $imagePath = null;
             if ($networkId > 0) {
                 // ดึงภาพเดิมไว้เผื่อกรณีไม่ได้แก้ไขรูปภาพ
-                $oldImgStmt = $pdo->prepare("SELECT image_path FROM network_parents WHERE id = ?");
+                $oldImgStmt = $pdo->prepare("SELECT image_path FROM pm_network_parents WHERE id = ?");
                 $oldImgStmt->execute([$networkId]);
                 $imagePath = $oldImgStmt->fetchColumn();
             }
@@ -436,7 +436,7 @@ try {
             if ($networkId > 0) {
                 // อัปเดตข้อมูล
                 $stmt = $pdo->prepare("
-                    UPDATE network_parents 
+                    UPDATE pm_network_parents 
                     SET parent_name = ?, student_name = ?, student_class = ?, phone = ?, address = ?, image_path = ?
                     WHERE id = ?
                 ");
@@ -444,7 +444,7 @@ try {
             } else {
                 // เพิ่มข้อมูลใหม่
                 $stmt = $pdo->prepare("
-                    INSERT INTO network_parents (meeting_id, position_name, parent_name, student_name, student_class, phone, address, image_path)
+                    INSERT INTO pm_network_parents (meeting_id, position_name, parent_name, student_name, student_class, phone, address, image_path)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([$meetingId, $positionName, $parentName, $studentName, $studentClass, $phone, $address, $imagePath]);
@@ -471,8 +471,8 @@ try {
             if ($role === 'teacher') {
                 $checkStmt = $pdo->prepare("
                     SELECT m.created_by 
-                    FROM network_parents np
-                    JOIN meetings m ON np.meeting_id = m.id
+                    FROM pm_network_parents np
+                    JOIN pm_meetings m ON np.meeting_id = m.id
                     WHERE np.id = ?
                 ");
                 $checkStmt->execute([$networkId]);
@@ -482,7 +482,7 @@ try {
                 }
             }
 
-            $stmt = $pdo->prepare("SELECT image_path FROM network_parents WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT image_path FROM pm_network_parents WHERE id = ?");
             $stmt->execute([$networkId]);
             $imgPath = $stmt->fetchColumn();
 
@@ -493,7 +493,7 @@ try {
                 }
             }
 
-            $deleteStmt = $pdo->prepare("DELETE FROM network_parents WHERE id = ?");
+            $deleteStmt = $pdo->prepare("DELETE FROM pm_network_parents WHERE id = ?");
             $deleteStmt->execute([$networkId]);
 
             echo json_encode(['status' => 'success', 'message' => 'ลบข้อมูลสมาชิกเครือข่ายผู้ปกครองเรียบร้อยแล้ว']);
@@ -510,8 +510,8 @@ try {
 
             $stmt = $pdo->prepare("
                 SELECT c.*, u.fullname as commenter_name 
-                FROM comments c
-                JOIN users u ON c.commented_by = u.id
+                FROM pm_comments c
+                JOIN pm_users u ON c.commented_by = u.id
                 WHERE c.meeting_id = ?
                 ORDER BY c.created_at ASC
             ");
@@ -543,7 +543,7 @@ try {
                 throw new Exception('กรุณากรอกข้อเสนอแนะความเห็นผู้บริหาร');
             }
 
-            $stmt = $pdo->prepare("INSERT INTO comments (meeting_id, comment_text, commented_by) VALUES (?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO pm_comments (meeting_id, comment_text, commented_by) VALUES (?, ?, ?)");
             $stmt->execute([$meetingId, trim($commentText), $userId]);
 
             echo json_encode(['status' => 'success', 'message' => 'บันทึกข้อเสนอแนะความเห็นเรียบร้อยแล้ว']);
@@ -564,7 +564,7 @@ try {
                 throw new Exception('ไม่ระบุ ID ผู้ใช้');
             }
 
-            $stmt = $pdo->prepare("SELECT id, fullname, username, role FROM users WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT id, fullname, username, role FROM pm_users WHERE id = ?");
             $stmt->execute([$tgtUserId]);
             $targetUser = $stmt->fetch();
 
@@ -603,7 +603,7 @@ try {
 
             if ($tgtUserId > 0) {
                 // ตรวจสอบชื่อผู้ซ้ำ (ยกเว้นไอดีตนเอง)
-                $chk = $pdo->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
+                $chk = $pdo->prepare("SELECT id FROM pm_users WHERE username = ? AND id != ?");
                 $chk->execute([$username, $tgtUserId]);
                 if ($chk->fetch()) {
                     throw new Exception('ชื่อผู้ใช้งาน (Username) นี้มีผู้ใช้รายอื่นในระบบแล้ว');
@@ -612,23 +612,23 @@ try {
                 if (!empty($password)) {
                     // อัปเดตพร้อมรหัสผ่านใหม่
                     $hash = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("UPDATE users SET fullname = ?, username = ?, role = ?, password = ? WHERE id = ?");
+                    $stmt = $pdo->prepare("UPDATE pm_users SET fullname = ?, username = ?, role = ?, password = ? WHERE id = ?");
                     $stmt->execute([$fullname, $username, $userRole, $hash, $tgtUserId]);
                 } else {
                     // อัปเดตโดยไม่เปลี่ยนรหัสผ่าน
-                    $stmt = $pdo->prepare("UPDATE users SET fullname = ?, username = ?, role = ? WHERE id = ?");
+                    $stmt = $pdo->prepare("UPDATE pm_users SET fullname = ?, username = ?, role = ? WHERE id = ?");
                     $stmt->execute([$fullname, $username, $userRole, $tgtUserId]);
                 }
             } else {
                 // เพิ่มผู้ใช้ใหม่
-                $chk = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+                $chk = $pdo->prepare("SELECT id FROM pm_users WHERE username = ?");
                 $chk->execute([$username]);
                 if ($chk->fetch()) {
                     throw new Exception('ชื่อผู้ใช้งาน (Username) นี้มีผู้ใช้ในระบบแล้ว');
                 }
 
                 $hash = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("INSERT INTO users (fullname, username, password, role) VALUES (?, ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO pm_users (fullname, username, password, role) VALUES (?, ?, ?, ?)");
                 $stmt->execute([$fullname, $username, $hash, $userRole]);
             }
 
@@ -653,7 +653,7 @@ try {
                 throw new Exception('คุณไม่สามารถลบบัญชีของตัวเองที่กำลังใช้งานได้');
             }
 
-            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+            $stmt = $pdo->prepare("DELETE FROM pm_users WHERE id = ?");
             $stmt->execute([$tgtUserId]);
 
             echo json_encode(['status' => 'success', 'message' => 'ลบข้อมูลผู้ใช้งานเรียบร้อยแล้ว']);
@@ -674,7 +674,7 @@ try {
                 throw new Exception('ไม่ระบุ ID ห้องเรียน');
             }
 
-            $stmt = $pdo->prepare("SELECT * FROM classrooms WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT * FROM pm_classrooms WHERE id = ?");
             $stmt->execute([$classroomId]);
             $classroom = $stmt->fetch();
 
@@ -705,10 +705,10 @@ try {
             }
 
             if ($classroomId > 0) {
-                $stmt = $pdo->prepare("UPDATE classrooms SET level = ?, room_name = ?, teacher_name = ? WHERE id = ?");
+                $stmt = $pdo->prepare("UPDATE pm_classrooms SET level = ?, room_name = ?, teacher_name = ? WHERE id = ?");
                 $stmt->execute([$level, $roomName, $teacherName, $classroomId]);
             } else {
-                $stmt = $pdo->prepare("INSERT INTO classrooms (level, room_name, teacher_name) VALUES (?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO pm_classrooms (level, room_name, teacher_name) VALUES (?, ?, ?)");
                 $stmt->execute([$level, $roomName, $teacherName]);
             }
 
@@ -727,7 +727,7 @@ try {
                 throw new Exception('ไม่ระบุ ID ห้องเรียน');
             }
 
-            $stmt = $pdo->prepare("DELETE FROM classrooms WHERE id = ?");
+            $stmt = $pdo->prepare("DELETE FROM pm_classrooms WHERE id = ?");
             $stmt->execute([$classroomId]);
 
             echo json_encode(['status' => 'success', 'message' => 'ลบข้อมูลห้องเรียนเรียบร้อยแล้ว']);

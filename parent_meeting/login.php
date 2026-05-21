@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $pdo = getPmPdo();
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+            $stmt = $pdo->prepare("SELECT * FROM pm_users WHERE username = ?");
             $stmt->execute([$username]);
             $user = $stmt->fetch();
             

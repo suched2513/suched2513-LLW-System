@@ -13,7 +13,7 @@ $pdo = getPmPdo();
 
 try {
     // ดึงปีการศึกษาและเทอมที่มีการส่งรายงานเข้ามา เพื่อเอามาทำตัวกรอง
-    $filterStmt = $pdo->query("SELECT DISTINCT semester, academic_year FROM meetings ORDER BY academic_year DESC, semester DESC");
+    $filterStmt = $pdo->query("SELECT DISTINCT semester, academic_year FROM pm_meetings ORDER BY academic_year DESC, semester DESC");
     $filters = $filterStmt->fetchAll();
     
     // ตั้งค่าตัวเลือกตัวกรอง
@@ -24,10 +24,10 @@ try {
     // สร้าง SQL Query แบบ Dynamic ตามตัวเลือก
     $query = "
         SELECT m.*, c.level, c.room_name, c.teacher_name, u.fullname as creator_name,
-               (SELECT COUNT(*) FROM comments WHERE meeting_id = m.id) as comment_count
-        FROM meetings m
-        JOIN classrooms c ON m.classroom_id = c.id
-        JOIN users u ON m.created_by = u.id
+               (SELECT COUNT(*) FROM pm_comments WHERE meeting_id = m.id) as comment_count
+        FROM pm_meetings m
+        JOIN pm_classrooms c ON m.classroom_id = c.id
+        JOIN pm_users u ON m.created_by = u.id
         WHERE 1=1
     ";
     $params = [];
