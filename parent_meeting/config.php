@@ -12,11 +12,22 @@ if (session_status() === PHP_SESSION_NONE) {
 ini_set('default_charset', 'UTF-8');
 date_default_timezone_set('Asia/Bangkok');
 
-// ข้อมูลเชื่อมต่อฐานข้อมูล (ปรับเปลี่ยนได้ตามต้องการ)
-define('PM_DB_HOST', 'localhost');
-define('PM_DB_USER', 'root');
-define('PM_DB_PASS', '');
-define('PM_DB_NAME', 'school_parent_meeting'); // หรือ 'llw_db' หากใช้ฐานข้อมูลร่วม
+// โหลดค่ากำหนดเชื่อมต่อฐานข้อมูลจากระบบหลัก (สำหรับกรณีขึ้น Production)
+$central_db_file = __DIR__ . '/../config/database.php';
+if (file_exists($central_db_file)) {
+    require_once $central_db_file;
+}
+
+// กำหนดค่า Default หากไม่มีการระบุไว้ในฐานข้อมูลกลาง
+if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
+if (!defined('DB_USER')) define('DB_USER', 'root');
+if (!defined('DB_PASS')) define('DB_PASS', '');
+if (!defined('DB_NAME')) define('DB_NAME', 'school_parent_meeting');
+
+define('PM_DB_HOST', DB_HOST);
+define('PM_DB_USER', DB_USER);
+define('PM_DB_PASS', DB_PASS);
+define('PM_DB_NAME', DB_NAME);
 
 // ฟังก์ชันเชื่อมต่อ PDO พร้อมระบบสร้างฐานข้อมูลอัตโนมัติ (Self-Healing DB Connection)
 function getPmPdo(): PDO {
