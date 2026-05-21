@@ -142,31 +142,19 @@ function pmEnsureTables(PDO $pdo): void {
     if ($checked) return;
     $checked = true;
 
-    try {
-        // ตรวจสอบว่าตารางหลักมีอยู่แล้วหรือไม่
-        $pdo->query("SELECT 1 FROM pm_users LIMIT 1");
-        // ตารางมีอยู่แล้ว → ตรวจสอบและเพิ่ม column ใหม่ที่อาจขาด
-        pmEnsureColumns($pdo);
-        return;
-    } catch (Exception $e) {
-        // ตารางยังไม่มี → รัน migration
-    }
+    // ── เสมอ: สร้างตารางทั้งหมดที่ยังไม่มี (IF NOT EXISTS = ปลอดภัย 100%) ──
+    pmEnsureAllTables($pdo);
 
-    // รัน migration file ผ่าน migration runner หากมี
-    $migrationFile = __DIR__ . '/../database/migrations/2026_05_21_000002_create_pm_tables.php';
-    if (file_exists($migrationFile)) {
-        try {
-            $migration = require $migrationFile;
-            if (is_array($migration) && isset($migration['up']) && is_callable($migration['up'])) {
-                $migration['up']($pdo);
-            }
-        } catch (Exception $ex) {
-            error_log('[Parent Meeting] Self-healing migration failed: ' . $ex->getMessage());
-        }
-        return;
-    }
+    // ── เสมอ: เพิ่ม column ใหม่ที่อาจขาดในตารางเก่า ──
+    pmEnsureColumns($pdo);
+}
 
-    // Fallback: สร้างตารางขั้นต่ำโดยตรงหาก migration file ไม่พบ
+// สร้างทุกตาราง pm_* ที่ยังไม่มี (ปลอดภัยเรียกซ้ำกี่ครั้งก็ได้)
+function pmEnsureAllTables(PDO $pdo): void {
+    static $tableChecked = false;
+    if ($tableChecked) return;
+    $tableChecked = true;
+
     try {
         $pdo->exec("CREATE TABLE IF NOT EXISTS pm_users (
             id INT AUTO_INCREMENT PRIMARY KEY,
