@@ -918,6 +918,167 @@ try {
             echo json_encode(['status' => 'success', 'message' => 'ลบข้อมูลห้องเรียนเรียบร้อยแล้ว']);
             break;
 
+        // ==========================================
+        // CENTRAL LLW DATA SYNC ACTIONS (ADMIN ONLY)
+        // ==========================================
+
+        case 'get_llw_teachers':
+            // ดึงรายชื่อครูที่ปรึกษาจากตาราง att_teachers ของระบบกลาง
+            if ($role !== 'admin') {
+                http_response_code(403);
+                echo json_encode(['status' => 'error', 'message' => 'เฉพาะแอดมินเท่านั้นที่เข้าถึงได้']);
+                exit;
+            }
+
+            $llwPdo = getLlwPdo();
+            if (!$llwPdo) {
+                echo json_encode(['status' => 'error', 'message' => 'ไม่สามารถเชื่อมต่อฐานข้อมูลกลางได้']);
+                break;
+            }
+
+            try {
+                // ตรวจสอบว่าตาราง att_teachers มีอยู่ก่อน
+                $llwPdo->query("SELECT 1 FROM att_teachers LIMIT 1");
+                $stmt = $llwPdo->query("SELECT id, name, username FROM att_teachers ORDER BY name ASC");
+                $teachers = $stmt->fetchAll();
+                echo json_encode(['status' => 'success', 'data' => $teachers, 'count' => count($teachers)]);
+            } catch (Exception $e) {
+                echo json_encode(['status' => 'error', 'message' => 'ไม่พบตาราง att_teachers ในฐานข้อมูลกลาง: ' . $e->getMessage()]);
+            }
+            break;
+
+        case 'get_llw_students':
+            // ดึงรายชื่อนักเรียนตามห้องเรียนจาก att_students
+            if ($role !== 'admin') {
+                http_response_code(403);
+                echo json_encode(['status' => 'error', 'message' => 'เฉพาะแอดมินเท่านั้นที่เข้าถึงได้']);
+                exit;
+            }
+
+            $classroom = trim($_GET['classroom'] ?? '');
+            $llwPdo = getLlwPdo();
+            if (!$llwPdo) {
+                echo json_encode(['status' => 'error', 'message' => 'ไม่สามารถเชื่อมต่อฐานข้อมูลกลางได้']);
+                break;
+            }
+
+            try {
+                $llwPdo->query("SELECT 1 FROM att_students LIMIT 1");
+                if (!empty($classroom)) {
+                    $stmt = $llwPdo->prepare("SELECT id, student_id, name, classroom FROM att_students WHERE classroom = ? ORDER BY name ASC");
+                    $stmt->execute([$classroom]);
+                } else {
+                    $stmt = $llwPdo->query("SELECT id, student_id, name, classroom FROM att_students ORDER BY classroom, name ASC");
+                }
+                $students = $stmt->fetchAll();
+                echo json_encode(['status' => 'success', 'data' => $students, 'count' => count($students)]);
+            } catch (Exception $e) {
+                echo json_encode(['status' => 'error', 'message' => 'ไม่พบตาราง att_students: ' . $e->getMessage()]);
+            }
+            break;
+
+        case 'get_llw_classrooms':
+            // ดึงห้องเรียนทั้งหมดที่มีอยู่ใน att_subjects (ข้อมูลจากระบบเช็คชื่อ) 
+            if ($role !== 'admin') {
+                http_response_code(403);
+                echo json_encode(['status' => 'error', 'message' => 'เฉพาะแอดมินเท่านั้นที่เข้าถึงได้']);
+                exit;
+            }
+
+            $llwPdo = getLlwPdo();
+            if (!$llwPdo) {
+                echo json_encode(['status' => 'error', 'message' => 'ไม่สามารถเชื่อมต่อฐานข้อมูลกลางได้']);
+                break;
+            }
+
+            $result = [];
+            try {
+                // ดึงรายชื่อครูที่ปรึกษาพร้อมห้องเรียนจาก att_teachers + att_subjects
+                $llwPdo->query("SELECT 1 FROM att_teachers LIMIT 1");
+                $teacherStmt = $llwPdo->query("SELECT DISTINCT t.id as teacher_id, t.name as teacher_name FROM att_teachers t ORDER BY t.name ASC");
+                $teachers = $teacherStmt->fetchAll();
+
+                // ดึงห้องเรียนที่ไม่ซ้ำกันจาก att_students
+                $llwPdo->query("SELECT 1 FROM att_students LIMIT 1");
+                $classStmt = $llwPdo->query("SELECT DISTINCT classroom FROM att_students WHERE classroom IS NOT NULL AND classroom != '' ORDER BY classroom ASC");
+                $classrooms_raw = $classStmt->fetchAll(PDO::FETCH_COLUMN);
+
+                // แปลงรูปแบบ classroom (เช่น "ม.1/1") เป็น level + room
+                $classroomList = [];
+                foreach ($classrooms_raw as $cls) {
+                    if (preg_match('/^ม\.(\d+)[\/-](\d+)$/', $cls, $m)) {
+                        $classroomList[] = [
+                            'raw' => $cls,
+                            'level' => 'ม.' . $m[1],
+                            'room' => $m[2],
+                        ];
+                    } elseif (preg_match('/^(\d)[\/-](\d+)$/', $cls, $m)) {
+                        $classroomList[] = [
+                            'raw' => $cls,
+                            'level' => 'ม.' . $m[1],
+                            'room' => $m[2],
+                        ];
+                    } else {
+                        $classroomList[] = ['raw' => $cls, 'level' => $cls, 'room' => ''];
+                    }
+                }
+
+                $result = [
+                    'teachers' => $teachers,
+                    'classrooms' => $classroomList,
+                ];
+            } catch (Exception $e) {
+                // ถ้า att_teachers หรือ att_students ไม่มี ให้ส่งข้อมูลเปล่า
+                $result = ['teachers' => [], 'classrooms' => []];
+            }
+
+            echo json_encode(['status' => 'success', 'data' => $result]);
+            break;
+
+        case 'sync_classrooms_from_llw':
+            // Sync ห้องเรียนจากข้อมูลกลาง LLW เข้า pm_classrooms
+            if ($role !== 'admin') {
+                http_response_code(403);
+                echo json_encode(['status' => 'error', 'message' => 'เฉพาะแอดมินเท่านั้นที่เข้าถึงได้']);
+                exit;
+            }
+
+            $syncData = $input['classrooms'] ?? [];
+            if (empty($syncData)) {
+                throw new Exception('ไม่มีข้อมูลห้องเรียนที่จะนำเข้า');
+            }
+
+            $inserted = 0;
+            $skipped = 0;
+            $insStmt = $pdo->prepare("INSERT INTO pm_classrooms (level, room_name, teacher_name) VALUES (?, ?, ?)");
+            $checkStmt = $pdo->prepare("SELECT id FROM pm_classrooms WHERE level = ? AND room_name = ?");
+
+            foreach ($syncData as $row) {
+                $level = trim($row['level'] ?? '');
+                $room = trim($row['room'] ?? '');
+                $teacher = trim($row['teacher_name'] ?? 'ครูที่ปรึกษา');
+
+                if (empty($level) || empty($room)) continue;
+
+                // ตรวจสอบว่ามีห้องนี้อยู่แล้วหรือไม่
+                $checkStmt->execute([$level, $room]);
+                if ($checkStmt->fetch()) {
+                    $skipped++;
+                    continue;
+                }
+
+                $insStmt->execute([$level, $room, $teacher]);
+                $inserted++;
+            }
+
+            echo json_encode([
+                'status' => 'success',
+                'message' => "นำเข้าข้อมูลห้องเรียนสำเร็จ: เพิ่มใหม่ {$inserted} ห้อง, ข้ามที่มีอยู่แล้ว {$skipped} ห้อง",
+                'inserted' => $inserted,
+                'skipped' => $skipped,
+            ]);
+            break;
+
         default:
             throw new Exception('การทำงาน (Action) ไม่ถูกต้อง');
     }

@@ -42,6 +42,7 @@ function getPmPdo(): PDO {
         $pdo = new PDO($dsn, PM_DB_USER, PM_DB_PASS);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        pmEnsureTables($pdo); // Self-healing: สร้างตาราง pm_* ถ้ายังไม่มี
         return $pdo;
     } catch (PDOException $e) {
         // หากฐานข้อมูลไม่มีอยู่ (Error Code 1049) ให้พยายามสร้างฐานข้อมูลขึ้นมาใหม่
@@ -95,7 +96,227 @@ function getPmPdo(): PDO {
     }
 }
 
-// Database structure is initialized via standard migration files.
+// ── Self-Healing Migration ───────────────────────────────────────────────
+// สร้างตาราง pm_* อัตโนมัติหากยังไม่มี (แก้ปัญหา Production ไม่ต้องรัน migrate ด้วยมือ)
+function pmEnsureTables(PDO $pdo): void {
+    static $checked = false;
+    if ($checked) return;
+    $checked = true;
+
+    try {
+        // ตรวจสอบว่าตารางหลักมีอยู่แล้วหรือไม่
+        $pdo->query("SELECT 1 FROM pm_users LIMIT 1");
+        return; // ตารางมีอยู่แล้ว ไม่ต้องสร้าง
+    } catch (Exception $e) {
+        // ตารางยังไม่มี → รัน migration
+    }
+
+    // รัน migration file ผ่าน migration runner หากมี
+    $migrationFile = __DIR__ . '/../database/migrations/2026_05_21_000002_create_pm_tables.php';
+    if (file_exists($migrationFile)) {
+        try {
+            $migration = require $migrationFile;
+            if (is_array($migration) && isset($migration['up']) && is_callable($migration['up'])) {
+                $migration['up']($pdo);
+            }
+        } catch (Exception $ex) {
+            error_log('[Parent Meeting] Self-healing migration failed: ' . $ex->getMessage());
+        }
+        return;
+    }
+
+    // Fallback: สร้างตารางขั้นต่ำโดยตรงหาก migration file ไม่พบ
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS pm_users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            fullname VARCHAR(150) NOT NULL,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            role ENUM('admin','executive','teacher') NOT NULL DEFAULT 'teacher',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS pm_classrooms (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            level VARCHAR(50) NOT NULL,
+            room_name VARCHAR(50) NOT NULL,
+            teacher_name VARCHAR(150) NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS pm_meetings (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            meeting_date DATE NOT NULL,
+            semester VARCHAR(10) NOT NULL,
+            academic_year INT NOT NULL,
+            classroom_id INT NOT NULL,
+            total_students INT DEFAULT 0,
+            total_parents INT DEFAULT 0,
+            attend_count INT DEFAULT 0,
+            absent_count INT DEFAULT 0,
+            summary TEXT NULL,
+            problems TEXT NULL,
+            suggestions TEXT NULL,
+            doc_no VARCHAR(100) NULL,
+            doc_date DATE NULL,
+            command_no VARCHAR(100) NULL,
+            command_date DATE NULL,
+            agenda_1 TEXT NULL,
+            agenda_2 TEXT NULL,
+            agenda_3 TEXT NULL,
+            consensus TEXT NULL,
+            cooperation_rating TEXT NULL,
+            useful_suggestions TEXT NULL,
+            support_received TEXT NULL,
+            other_observations TEXT NULL,
+            created_by INT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS pm_meeting_attendants (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            meeting_id INT NOT NULL,
+            student_name VARCHAR(150) NOT NULL,
+            parent_name VARCHAR(150) NOT NULL DEFAULT '',
+            phone VARCHAR(30) NOT NULL DEFAULT '',
+            relationship VARCHAR(100) NOT NULL DEFAULT ''
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS pm_meeting_absents (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            meeting_id INT NOT NULL,
+            student_name VARCHAR(150) NOT NULL,
+            parent_name VARCHAR(150) NOT NULL DEFAULT '',
+            phone VARCHAR(30) NOT NULL DEFAULT '',
+            relationship VARCHAR(100) NOT NULL DEFAULT '',
+            absent_reason VARCHAR(255) NULL,
+            follow_up_status VARCHAR(255) NULL,
+            follow_up_date DATE NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS pm_student_relations (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            meeting_id INT NOT NULL,
+            student_name VARCHAR(150) NOT NULL,
+            classroom_no VARCHAR(20) NOT NULL DEFAULT '',
+            student_no INT DEFAULT 0,
+            parent_name VARCHAR(150) NOT NULL DEFAULT '',
+            relationship VARCHAR(100) NOT NULL DEFAULT '',
+            grade_zero_count INT DEFAULT 0,
+            grade_r_count INT DEFAULT 0,
+            grade_ms_count INT DEFAULT 0,
+            grade_mp_count INT DEFAULT 0,
+            behavior_score_deducted INT DEFAULT 0,
+            praise_teacher_json TEXT NULL,
+            praise_teacher_other VARCHAR(255) NULL,
+            praise_parent_json TEXT NULL,
+            praise_parent_other VARCHAR(255) NULL,
+            improve_teacher_json TEXT NULL,
+            improve_teacher_other VARCHAR(255) NULL,
+            improve_parent_json TEXT NULL,
+            improve_parent_other VARCHAR(255) NULL,
+            teacher_remedy TEXT NULL,
+            parent_remedy TEXT NULL,
+            parent_support_request TEXT NULL,
+            parent_meeting_impression TEXT NULL,
+            parent_teacher_feedback TEXT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS pm_meet_greet_groups (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            meeting_id INT NOT NULL,
+            group_topic VARCHAR(255) NOT NULL,
+            attendants_json TEXT NULL,
+            discussion_summary TEXT NULL,
+            discussion_resolution TEXT NULL,
+            school_support_request TEXT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS pm_student_letters (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            meeting_id INT NOT NULL,
+            student_name VARCHAR(150) NOT NULL,
+            classroom_no VARCHAR(20) NOT NULL DEFAULT '',
+            student_no INT DEFAULT 0,
+            letter_to_whom VARCHAR(150) NOT NULL DEFAULT '',
+            impressed_story TEXT NULL,
+            inner_feelings TEXT NULL,
+            proud_story TEXT NULL,
+            improvement_plan TEXT NULL,
+            parent_response TEXT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS pm_network_parents (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            meeting_id INT NOT NULL,
+            position_name ENUM('ประธาน','รองประธาน','กรรมการ','เลขานุการ') NOT NULL,
+            parent_name VARCHAR(150) NOT NULL,
+            student_name VARCHAR(150) NOT NULL,
+            student_class VARCHAR(50) NOT NULL,
+            address TEXT NOT NULL,
+            phone VARCHAR(20) NOT NULL,
+            image_path VARCHAR(255) DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS pm_meeting_images (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            meeting_id INT NOT NULL,
+            image_path VARCHAR(255) NOT NULL,
+            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $pdo->exec("CREATE TABLE IF NOT EXISTS pm_comments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            meeting_id INT NOT NULL,
+            comment_text TEXT NOT NULL,
+            commented_by INT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Seed default admin user
+        $cnt = $pdo->query("SELECT COUNT(*) FROM pm_users")->fetchColumn();
+        if ($cnt == 0) {
+            $ins = $pdo->prepare("INSERT INTO pm_users (fullname, username, password, role) VALUES (?, ?, ?, ?)");
+            $ins->execute(['ผู้ดูแลระบบ', 'admin_user', password_hash('admin1234', PASSWORD_DEFAULT), 'admin']);
+        }
+    } catch (Exception $ex2) {
+        error_log('[Parent Meeting] Fallback table creation failed: ' . $ex2->getMessage());
+    }
+}
+
+// ── Central LLW Database Connection ──────────────────────────────────────
+// ดึงข้อมูลจาก DB กลาง (att_teachers, att_students) สำหรับ sync ข้อมูลชั้นเรียน
+function getLlwPdo(): ?PDO {
+    static $llwPdo = null;
+    static $tried = false;
+    if ($tried) return $llwPdo;
+    $tried = true;
+
+    // ลอง getPdo() จากระบบหลักก่อน (ถ้าโหลดมาแล้ว)
+    if (function_exists('getPdo')) {
+        try {
+            $llwPdo = getPdo();
+            return $llwPdo;
+        } catch (Exception $e) {
+            // fallthrough
+        }
+    }
+
+    // ลอง connect โดยตรง
+    try {
+        $dsn = 'mysql:host=' . PM_DB_HOST . ';dbname=' . (defined('DB_NAME') ? DB_NAME : 'llw_db') . ';charset=utf8mb4';
+        $llwPdo = new PDO($dsn, PM_DB_USER, PM_DB_PASS, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        ]);
+        return $llwPdo;
+    } catch (Exception $e) {
+        error_log('[Parent Meeting] getLlwPdo failed: ' . $e->getMessage());
+        return null;
+    }
+}
+
 
 // ── Base Path Detection ──────────────────────────────────────────
 $docRoot = str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT']));
