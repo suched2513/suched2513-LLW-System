@@ -149,22 +149,31 @@ try {
             $supportReceived = $_POST['support_received'] ?? '';
             $otherObservations = $_POST['other_observations'] ?? '';
 
-            if (empty($meetingDate) || empty($semester) || $academicYear <= 0 || $classroomId <= 0 || $totalParents < 0 || $attendCount < 0) {
-                throw new Exception('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
-            }
+            // ตรวจสอบพารามิเตอร์บันทึกเฉพาะแท็บ (tab1 - tab6 หรือ all)
+            $saveOnly = $_POST['save_only'] ?? 'all';
 
-            if ($attendCount > $totalParents) {
-                throw new Exception('จำนวนผู้เข้าร่วมประชุม ห้ามมากกว่าจำนวนผู้ปกครองทั้งหมด');
-            }
+            if ($saveOnly === 'all' || $saveOnly === 'tab1') {
+                if (empty($meetingDate) || empty($semester) || $academicYear <= 0 || $classroomId <= 0 || $totalParents < 0 || $attendCount < 0) {
+                    throw new Exception('กรุณากรอกข้อมูลที่จำเป็นใน ลลว.๐๑ ให้ครบถ้วน');
+                }
 
-            // คำนวณจำนวนผู้ขาดที่ถูกต้อง
-            $absentCount = max(0, $totalParents - $attendCount);
+                if ($attendCount > $totalParents) {
+                    throw new Exception('จำนวนผู้เข้าร่วมประชุม ห้ามมากกว่าจำนวนผู้ปกครองทั้งหมด');
+                }
+
+                // คำนวณจำนวนผู้ขาดที่ถูกต้อง
+                $absentCount = max(0, $totalParents - $attendCount);
+            } else {
+                // หากจะบันทึกแท็บย่อยอื่นๆ ต้องมี meeting_id หลักก่อน
+                if ($meetingId <= 0) {
+                    throw new Exception('ไม่พบรหัสรายงานการประชุมหลัก กรุณาบันทึก ลลว.๐๑ ก่อน');
+                }
+            }
 
             $pdo->beginTransaction();
 
+            // ตรวจสอบสิทธิ์ความเป็นเจ้าของรายงานการประชุม (สำหรับครู)
             if ($meetingId > 0) {
-                // โหมดแก้ไข
-                // ถ้าสิทธิ์เป็นครู ตรวจสอบความสิทธิ์การแก้ไข (เป็นผู้บันทึก)
                 if ($role === 'teacher') {
                     $checkStmt = $pdo->prepare("SELECT created_by FROM pm_meetings WHERE id = ?");
                     $checkStmt->execute([$meetingId]);
@@ -173,211 +182,226 @@ try {
                         throw new Exception('คุณไม่มีสิทธิ์แก้ไขรายงานการประชุมห้องเรียนนี้');
                     }
                 }
+            }
 
-                $stmt = $pdo->prepare("
-                    UPDATE pm_meetings 
-                    SET meeting_date = ?, semester = ?, academic_year = ?, classroom_id = ?, 
-                        total_students = ?, total_parents = ?, attend_count = ?, absent_count = ?, 
-                        summary = ?, problems = ?, suggestions = ?,
-                        doc_no = ?, doc_date = ?, command_no = ?, command_date = ?,
-                        agenda_1 = ?, agenda_2 = ?, agenda_3 = ?, consensus = ?,
-                        cooperation_rating = ?, useful_suggestions = ?, support_received = ?, other_observations = ?
-                    WHERE id = ?
+            // 1. บันทึก/แก้ไขข้อมูล ลลว.๐๑ (ตาราง pm_meetingsหลัก)
+            if ($saveOnly === 'all' || $saveOnly === 'tab1') {
+                if ($meetingId > 0) {
+                    // โหมดแก้ไข
+                    $stmt = $pdo->prepare("
+                        UPDATE pm_meetings 
+                        SET meeting_date = ?, semester = ?, academic_year = ?, classroom_id = ?, 
+                            total_students = ?, total_parents = ?, attend_count = ?, absent_count = ?, 
+                            summary = ?, problems = ?, suggestions = ?,
+                            doc_no = ?, doc_date = ?, command_no = ?, command_date = ?,
+                            agenda_1 = ?, agenda_2 = ?, agenda_3 = ?, consensus = ?,
+                            cooperation_rating = ?, useful_suggestions = ?, support_received = ?, other_observations = ?
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([
+                        $meetingDate, $semester, $academicYear, $classroomId,
+                        $totalStudents, $totalParents, $attendCount, $absentCount,
+                        $summary, $problems, $suggestions,
+                        $docNo, $docDate, $commandNo, $commandDate,
+                        $agenda1, $agenda2, $agenda3, $consensus,
+                        $cooperationRating, $usefulSuggestions, $supportReceived, $otherObservations,
+                        $meetingId
+                    ]);
+                } else {
+                    // โหมดเพิ่มใหม่
+                    $stmt = $pdo->prepare("
+                        INSERT INTO pm_meetings (
+                            meeting_date, semester, academic_year, classroom_id, total_students, total_parents, attend_count, absent_count, 
+                            summary, problems, suggestions, created_by,
+                            doc_no, doc_date, command_no, command_date,
+                            agenda_1, agenda_2, agenda_3, consensus,
+                            cooperation_rating, useful_suggestions, support_received, other_observations
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ");
+                    $stmt->execute([
+                        $meetingDate, $semester, $academicYear, $classroomId, $totalStudents, $totalParents, $attendCount, $absentCount,
+                        $summary, $problems, $suggestions, $userId,
+                        $docNo, $docDate, $commandNo, $commandDate,
+                        $agenda1, $agenda2, $agenda3, $consensus,
+                        $cooperationRating, $usefulSuggestions, $supportReceived, $otherObservations
+                    ]);
+                    $meetingId = $pdo->lastInsertId();
+                }
+
+                // อัปโหลดไฟล์รูปภาพกิจกรรม (ถ้ามี) - อยู่ในหน้า ลลว.๐๑
+                if (isset($_FILES['images']) && !empty($_FILES['images']['name'][0])) {
+                    $files = $_FILES['images'];
+                    $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+                    $uploadDir = __DIR__ . '/uploads/';
+
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
+                    }
+
+                    for ($i = 0; $i < count($files['name']); $i++) {
+                        if ($files['error'][$i] !== UPLOAD_ERR_OK) {
+                            continue;
+                        }
+
+                        $fileName = $files['name'][$i];
+                        $fileSize = $files['size'][$i];
+                        $tmpName = $files['tmp_name'][$i];
+                        
+                        if ($fileSize > 5 * 1024 * 1024) {
+                            throw new Exception("ขนาดไฟล์รูปภาพเกิน 5MB: $fileName");
+                        }
+
+                        $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                        if (!in_array($ext, $allowedExtensions)) {
+                            throw new Exception("ประเภทไฟล์ไม่รองรับ (.jpg, .jpeg, .png, .webp เท่านั้น): $fileName");
+                        }
+
+                        $newFileName = uniqid('meet_') . '_' . time() . '_' . $i . '.' . $ext;
+                        $destPath = $uploadDir . $newFileName;
+
+                        if (move_uploaded_file($tmpName, $destPath)) {
+                            $imgStmt = $pdo->prepare("INSERT INTO pm_meeting_images (meeting_id, image_path) VALUES (?, ?)");
+                            $imgStmt->execute([$meetingId, 'uploads/' . $newFileName]);
+                        } else {
+                            throw new Exception("อัปโหลดไฟล์ไม่สำเร็จ: $fileName");
+                        }
+                    }
+                }
+            }
+
+            // 2. ลลว.๐๒ (ผู้เข้าร่วม)
+            if ($saveOnly === 'all' || $saveOnly === 'tab2') {
+                $attendants = json_decode($_POST['attendants_data'] ?? '[]', true);
+                $pdo->prepare("DELETE FROM pm_meeting_attendants WHERE meeting_id = ?")->execute([$meetingId]);
+                $insAtt = $pdo->prepare("INSERT INTO pm_meeting_attendants (meeting_id, student_name, parent_name, phone, relationship) VALUES (?, ?, ?, ?, ?)");
+                foreach ($attendants as $att) {
+                    if (!empty(trim($att['student_name']))) {
+                        $insAtt->execute([
+                            $meetingId,
+                            trim($att['student_name']),
+                            trim($att['parent_name'] ?? ''),
+                            trim($att['phone'] ?? ''),
+                            trim($att['relationship'] ?? '')
+                        ]);
+                    }
+                }
+            }
+
+            // 3. ลลว.๐๓ (ผู้ขาดประชุม)
+            if ($saveOnly === 'all' || $saveOnly === 'tab3') {
+                $absents = json_decode($_POST['absents_data'] ?? '[]', true);
+                $pdo->prepare("DELETE FROM pm_meeting_absents WHERE meeting_id = ?")->execute([$meetingId]);
+                $insAbs = $pdo->prepare("INSERT INTO pm_meeting_absents (meeting_id, student_name, parent_name, phone, relationship, absent_reason, follow_up_status, follow_up_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                foreach ($absents as $abs) {
+                    if (!empty(trim($abs['student_name']))) {
+                        $insAbs->execute([
+                            $meetingId,
+                            trim($abs['student_name']),
+                            trim($abs['parent_name'] ?? ''),
+                            trim($abs['phone'] ?? ''),
+                            trim($abs['relationship'] ?? ''),
+                            trim($abs['absent_reason'] ?? ''),
+                            trim($abs['follow_up_status'] ?? ''),
+                            !empty($abs['follow_up_date']) ? $abs['follow_up_date'] : null
+                        ]);
+                    }
+                }
+            }
+
+            // 4. ลลว.๐๔ (ประสานสัมพันธ์)
+            if ($saveOnly === 'all' || $saveOnly === 'tab4') {
+                $relations = json_decode($_POST['relations_data'] ?? '[]', true);
+                $pdo->prepare("DELETE FROM pm_student_relations WHERE meeting_id = ?")->execute([$meetingId]);
+                $insRel = $pdo->prepare("
+                    INSERT INTO pm_student_relations (
+                        meeting_id, student_name, classroom_no, student_no, parent_name, relationship,
+                        grade_zero_count, grade_r_count, grade_ms_count, grade_mp_count, behavior_score_deducted,
+                        praise_teacher_json, praise_teacher_other, praise_parent_json, praise_parent_other,
+                        improve_teacher_json, improve_teacher_other, improve_parent_json, improve_parent_other,
+                        teacher_remedy, parent_remedy, parent_support_request, parent_meeting_impression, parent_teacher_feedback
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
-                $stmt->execute([
-                    $meetingDate, $semester, $academicYear, $classroomId,
-                    $totalStudents, $totalParents, $attendCount, $absentCount,
-                    $summary, $problems, $suggestions,
-                    $docNo, $docDate, $commandNo, $commandDate,
-                    $agenda1, $agenda2, $agenda3, $consensus,
-                    $cooperationRating, $usefulSuggestions, $supportReceived, $otherObservations,
-                    $meetingId
-                ]);
-            } else {
-                // โหมดเพิ่มใหม่
-                $stmt = $pdo->prepare("
-                    INSERT INTO pm_meetings (
-                        meeting_date, semester, academic_year, classroom_id, total_students, total_parents, attend_count, absent_count, 
-                        summary, problems, suggestions, created_by,
-                        doc_no, doc_date, command_no, command_date,
-                        agenda_1, agenda_2, agenda_3, consensus,
-                        cooperation_rating, useful_suggestions, support_received, other_observations
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ");
-                $stmt->execute([
-                    $meetingDate, $semester, $academicYear, $classroomId, $totalStudents, $totalParents, $attendCount, $absentCount,
-                    $summary, $problems, $suggestions, $userId,
-                    $docNo, $docDate, $commandNo, $commandDate,
-                    $agenda1, $agenda2, $agenda3, $consensus,
-                    $cooperationRating, $usefulSuggestions, $supportReceived, $otherObservations
-                ]);
-                $meetingId = $pdo->lastInsertId();
-            }
-
-            // จัดการข้อมูลลูกของตาราง ลลว.๐๒ ถึง ลลว.๐๖
-            $attendants = json_decode($_POST['attendants_data'] ?? '[]', true);
-            $absents = json_decode($_POST['absents_data'] ?? '[]', true);
-            $relations = json_decode($_POST['relations_data'] ?? '[]', true);
-            $groups = json_decode($_POST['groups_data'] ?? '[]', true);
-            $letters = json_decode($_POST['letters_data'] ?? '[]', true);
-
-            // 1. ลลว.๐๒: เคลียร์แล้วบันทึกใหม่
-            $pdo->prepare("DELETE FROM pm_meeting_attendants WHERE meeting_id = ?")->execute([$meetingId]);
-            $insAtt = $pdo->prepare("INSERT INTO pm_meeting_attendants (meeting_id, student_name, parent_name, phone, relationship) VALUES (?, ?, ?, ?, ?)");
-            foreach ($attendants as $att) {
-                if (!empty(trim($att['student_name']))) {
-                    $insAtt->execute([
-                        $meetingId,
-                        trim($att['student_name']),
-                        trim($att['parent_name'] ?? ''),
-                        trim($att['phone'] ?? ''),
-                        trim($att['relationship'] ?? '')
-                    ]);
-                }
-            }
-
-            // 2. ลลว.๐๓: เคลียร์แล้วบันทึกใหม่
-            $pdo->prepare("DELETE FROM pm_meeting_absents WHERE meeting_id = ?")->execute([$meetingId]);
-            $insAbs = $pdo->prepare("INSERT INTO pm_meeting_absents (meeting_id, student_name, parent_name, phone, relationship, absent_reason, follow_up_status, follow_up_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            foreach ($absents as $abs) {
-                if (!empty(trim($abs['student_name']))) {
-                    $insAbs->execute([
-                        $meetingId,
-                        trim($abs['student_name']),
-                        trim($abs['parent_name'] ?? ''),
-                        trim($abs['phone'] ?? ''),
-                        trim($abs['relationship'] ?? ''),
-                        trim($abs['absent_reason'] ?? ''),
-                        trim($abs['follow_up_status'] ?? ''),
-                        !empty($abs['follow_up_date']) ? $abs['follow_up_date'] : null
-                    ]);
-                }
-            }
-
-            // 3. ลลว.๐๔: เคลียร์แล้วบันทึกใหม่
-            $pdo->prepare("DELETE FROM pm_student_relations WHERE meeting_id = ?")->execute([$meetingId]);
-            $insRel = $pdo->prepare("
-                INSERT INTO pm_student_relations (
-                    meeting_id, student_name, classroom_no, student_no, parent_name, relationship,
-                    grade_zero_count, grade_r_count, grade_ms_count, grade_mp_count, behavior_score_deducted,
-                    praise_teacher_json, praise_teacher_other, praise_parent_json, praise_parent_other,
-                    improve_teacher_json, improve_teacher_other, improve_parent_json, improve_parent_other,
-                    teacher_remedy, parent_remedy, parent_support_request, parent_meeting_impression, parent_teacher_feedback
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            foreach ($relations as $rel) {
-                if (!empty(trim($rel['student_name']))) {
-                    $insRel->execute([
-                        $meetingId,
-                        trim($rel['student_name']),
-                        trim($rel['classroom_no'] ?? ''),
-                        (int)($rel['student_no'] ?? 0),
-                        trim($rel['parent_name'] ?? ''),
-                        trim($rel['relationship'] ?? ''),
-                        (int)($rel['grade_zero_count'] ?? 0),
-                        (int)($rel['grade_r_count'] ?? 0),
-                        (int)($rel['grade_ms_count'] ?? 0),
-                        (int)($rel['grade_mp_count'] ?? 0),
-                        (int)($rel['behavior_score_deducted'] ?? 0),
-                        json_encode($rel['praise_teacher_json'] ?? []),
-                        trim($rel['praise_teacher_other'] ?? ''),
-                        json_encode($rel['praise_parent_json'] ?? []),
-                        trim($rel['praise_parent_other'] ?? ''),
-                        json_encode($rel['improve_teacher_json'] ?? []),
-                        trim($rel['improve_teacher_other'] ?? ''),
-                        json_encode($rel['improve_parent_json'] ?? []),
-                        trim($rel['improve_parent_other'] ?? ''),
-                        trim($rel['teacher_remedy'] ?? ''),
-                        trim($rel['parent_remedy'] ?? ''),
-                        trim($rel['parent_support_request'] ?? ''),
-                        trim($rel['parent_meeting_impression'] ?? ''),
-                        trim($rel['parent_teacher_feedback'] ?? '')
-                    ]);
-                }
-            }
-
-            // 4. ลลว.๐๕: เคลียร์แล้วบันทึกใหม่
-            $pdo->prepare("DELETE FROM pm_meet_greet_groups WHERE meeting_id = ?")->execute([$meetingId]);
-            $insGrp = $pdo->prepare("INSERT INTO pm_meet_greet_groups (meeting_id, group_topic, attendants_json, discussion_summary, discussion_resolution, school_support_request) VALUES (?, ?, ?, ?, ?, ?)");
-            foreach ($groups as $grp) {
-                if (!empty(trim($grp['group_topic']))) {
-                    $insGrp->execute([
-                        $meetingId,
-                        trim($grp['group_topic']),
-                        json_encode($grp['attendants_json'] ?? []),
-                        trim($grp['discussion_summary'] ?? ''),
-                        trim($grp['discussion_resolution'] ?? ''),
-                        trim($grp['school_support_request'] ?? '')
-                    ]);
-                }
-            }
-
-            // 5. ลลว.๐๖: เคลียร์แล้วบันทึกใหม่
-            $pdo->prepare("DELETE FROM pm_student_letters WHERE meeting_id = ?")->execute([$meetingId]);
-            $insLet = $pdo->prepare("INSERT INTO pm_student_letters (meeting_id, student_name, classroom_no, student_no, letter_to_whom, impressed_story, inner_feelings, proud_story, improvement_plan, parent_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            foreach ($letters as $let) {
-                if (!empty(trim($let['student_name']))) {
-                    $insLet->execute([
-                        $meetingId,
-                        trim($let['student_name']),
-                        trim($let['classroom_no'] ?? ''),
-                        (int)($let['student_no'] ?? 0),
-                        trim($let['letter_to_whom'] ?? ''),
-                        trim($let['impressed_story'] ?? ''),
-                        trim($let['inner_feelings'] ?? ''),
-                        trim($let['proud_story'] ?? ''),
-                        trim($let['improvement_plan'] ?? ''),
-                        trim($let['parent_response'] ?? '')
-                    ]);
-                }
-            }
-
-            // อัปโหลดไฟล์รูปภาพกิจกรรม (ถ้ามี)
-            if (isset($_FILES['images']) && !empty($_FILES['images']['name'][0])) {
-                $files = $_FILES['images'];
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
-                $uploadDir = __DIR__ . '/uploads/';
-
-                // ตรวจสอบและสร้างโฟลเดอร์ถ้าไม่มี
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
-                }
-
-                for ($i = 0; $i < count($files['name']); $i++) {
-                    if ($files['error'][$i] !== UPLOAD_ERR_OK) {
-                        continue;
+                foreach ($relations as $rel) {
+                    if (!empty(trim($rel['student_name']))) {
+                        $insRel->execute([
+                            $meetingId,
+                            trim($rel['student_name']),
+                            trim($rel['classroom_no'] ?? ''),
+                            (int)($rel['student_no'] ?? 0),
+                            trim($rel['parent_name'] ?? ''),
+                            trim($rel['relationship'] ?? ''),
+                            (int)($rel['grade_zero_count'] ?? 0),
+                            (int)($rel['grade_r_count'] ?? 0),
+                            (int)($rel['grade_ms_count'] ?? 0),
+                            (int)($rel['grade_mp_count'] ?? 0),
+                            (int)($rel['behavior_score_deducted'] ?? 0),
+                            json_encode($rel['praise_teacher_json'] ?? []),
+                            trim($rel['praise_teacher_other'] ?? ''),
+                            json_encode($rel['praise_parent_json'] ?? []),
+                            trim($rel['praise_parent_other'] ?? ''),
+                            json_encode($rel['improve_teacher_json'] ?? []),
+                            trim($rel['improve_teacher_other'] ?? ''),
+                            json_encode($rel['improve_parent_json'] ?? []),
+                            trim($rel['improve_parent_other'] ?? ''),
+                            trim($rel['teacher_remedy'] ?? ''),
+                            trim($rel['parent_remedy'] ?? ''),
+                            trim($rel['parent_support_request'] ?? ''),
+                            trim($rel['parent_meeting_impression'] ?? ''),
+                            trim($rel['parent_teacher_feedback'] ?? '')
+                        ]);
                     }
+                }
+            }
 
-                    $fileName = $files['name'][$i];
-                    $fileSize = $files['size'][$i];
-                    $tmpName = $files['tmp_name'][$i];
-                    
-                    // เช็คขนาดไฟล์ (ไม่เกิน 5MB)
-                    if ($fileSize > 5 * 1024 * 1024) {
-                        throw new Exception("ขนาดไฟล์รูปภาพเกิน 5MB: $fileName");
+            // 5. ลลว.๐๕ (Meet & Greet)
+            if ($saveOnly === 'all' || $saveOnly === 'tab5') {
+                $groups = json_decode($_POST['groups_data'] ?? '[]', true);
+                $pdo->prepare("DELETE FROM pm_meet_greet_groups WHERE meeting_id = ?")->execute([$meetingId]);
+                $insGrp = $pdo->prepare("INSERT INTO pm_meet_greet_groups (meeting_id, group_topic, attendants_json, discussion_summary, discussion_resolution, school_support_request) VALUES (?, ?, ?, ?, ?, ?)");
+                foreach ($groups as $grp) {
+                    if (!empty(trim($grp['group_topic']))) {
+                        $insGrp->execute([
+                            $meetingId,
+                            trim($grp['group_topic']),
+                            json_encode($grp['attendants_json'] ?? []),
+                            trim($grp['discussion_summary'] ?? ''),
+                            trim($grp['discussion_resolution'] ?? ''),
+                            trim($grp['school_support_request'] ?? '')
+                        ]);
                     }
+                }
+            }
 
-                    $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-                    if (!in_array($ext, $allowedExtensions)) {
-                        throw new Exception("ประเภทไฟล์ไม่รองรับ (.jpg, .jpeg, .png, .webp เท่านั้น): $fileName");
-                    }
-
-                    // สุ่มชื่อไฟล์ใหม่
-                    $newFileName = uniqid('meet_') . '_' . time() . '_' . $i . '.' . $ext;
-                    $destPath = $uploadDir . $newFileName;
-
-                    if (move_uploaded_file($tmpName, $destPath)) {
-                        $imgStmt = $pdo->prepare("INSERT INTO pm_meeting_images (meeting_id, image_path) VALUES (?, ?)");
-                        $imgStmt->execute([$meetingId, 'uploads/' . $newFileName]);
-                    } else {
-                        throw new Exception("อัปโหลดไฟล์ไม่สำเร็จ: $fileName");
+            // 6. ลลว.๐๖ (ความในใจลูก)
+            if ($saveOnly === 'all' || $saveOnly === 'tab6') {
+                $letters = json_decode($_POST['letters_data'] ?? '[]', true);
+                $pdo->prepare("DELETE FROM pm_student_letters WHERE meeting_id = ?")->execute([$meetingId]);
+                $insLet = $pdo->prepare("INSERT INTO pm_student_letters (meeting_id, student_name, classroom_no, student_no, letter_to_whom, impressed_story, inner_feelings, proud_story, improvement_plan, parent_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                foreach ($letters as $let) {
+                    if (!empty(trim($let['student_name']))) {
+                        $insLet->execute([
+                            $meetingId,
+                            trim($let['student_name']),
+                            trim($let['classroom_no'] ?? ''),
+                            (int)($let['student_no'] ?? 0),
+                            trim($let['letter_to_whom'] ?? ''),
+                            trim($let['impressed_story'] ?? ''),
+                            trim($let['inner_feelings'] ?? ''),
+                            trim($let['proud_story'] ?? ''),
+                            trim($let['improvement_plan'] ?? ''),
+                            trim($let['parent_response'] ?? '')
+                        ]);
                     }
                 }
             }
 
             $pdo->commit();
-            echo json_encode(['status' => 'success', 'message' => 'บันทึกข้อมูลรายงานการประชุมเรียบร้อยแล้ว']);
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'บันทึกข้อมูลเรียบร้อยแล้ว',
+                'meeting_id' => $meetingId
+            ]);
             break;
 
         case 'delete_image':

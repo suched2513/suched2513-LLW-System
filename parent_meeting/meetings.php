@@ -435,11 +435,16 @@ require_once __DIR__ . '/components/layout_start.php';
                     </div>
                 </div>
                 
-                <div class="modal-footer border-top py-3 px-4">
-                    <button type="button" class="btn btn-outline-secondary rounded-3 px-4 font-bold text-sm" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="submit" class="btn btn-primary rounded-3 px-4 font-bold text-sm" id="btnSaveMeeting">
-                        <i class="bi bi-save me-1"></i> บันทึกข้อมูลทั้งหมด
+                <div class="modal-footer border-top py-3 px-4 d-flex justify-content-between w-100">
+                    <button type="button" class="btn btn-outline-primary rounded-3 px-4 font-bold text-sm" id="btnSaveCurrentTab">
+                        <i class="bi bi-save-fill me-1"></i> บันทึกเฉพาะ ลลว.๐๑
                     </button>
+                    <div>
+                        <button type="button" class="btn btn-outline-secondary rounded-3 px-4 font-bold text-sm me-2" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary rounded-3 px-4 font-bold text-sm" id="btnSaveMeeting">
+                            <i class="bi bi-save me-1"></i> บันทึกข้อมูลทั้งหมด
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -708,6 +713,8 @@ require_once __DIR__ . '/components/layout_start.php';
 // Global Arrays for Sub-form data (ลลว.๐๔ และ ลลว.๐๖)
 let currentRelations = [];
 let currentLetters = [];
+let activeTabId = 'tab1';
+let hasSavedAnyTab = false;
 
 document.addEventListener("DOMContentLoaded", function() {
     // โหลด DataTable
@@ -871,6 +878,29 @@ document.addEventListener("DOMContentLoaded", function() {
             console.error(err);
             showAlert('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
         });
+    });
+
+    // Track active tab and update save button
+    const tabElList = document.querySelectorAll('#meetingTab button[data-bs-toggle="tab"]');
+    tabElList.forEach(tabEl => {
+        tabEl.addEventListener('shown.bs.tab', function(event) {
+            const targetId = event.target.getAttribute('data-bs-target');
+            activeTabId = targetId.replace('#', '');
+            updateSaveCurrentTabButton();
+        });
+    });
+
+    // Save current tab button listener
+    const btnSaveCurrentTab = document.getElementById('btnSaveCurrentTab');
+    if (btnSaveCurrentTab) {
+        btnSaveCurrentTab.addEventListener('click', saveCurrentTab);
+    }
+
+    // Modal hidden listener - reload if any tab was saved during the modal session
+    $('#meetingModal').on('hidden.bs.modal', function () {
+        if (hasSavedAnyTab) {
+            location.reload();
+        }
     });
 });
 
@@ -1320,6 +1350,10 @@ function deleteLetterRow(index) {
 // MODAL OPENERS
 // ------------------------------------------
 function openAddModal() {
+    activeTabId = 'tab1';
+    hasSavedAnyTab = false;
+    updateSaveCurrentTabButton();
+
     document.getElementById('meetingModalLabel').textContent = 'เพิ่มบันทึกรายงานการประชุม (ลลว.๐๑ - ลลว.๐๖)';
     document.getElementById('meetingForm').reset();
     document.getElementById('meeting_id').value = '';
@@ -1357,6 +1391,10 @@ function openAddModal() {
 }
 
 function openEditModal(meetingId) {
+    activeTabId = 'tab1';
+    hasSavedAnyTab = false;
+    updateSaveCurrentTabButton();
+
     document.getElementById('meetingModalLabel').textContent = 'แก้ไขบันทึกรายงานการประชุม (ลลว.๐๑ - ลลว.๐๖)';
     document.getElementById('meetingForm').reset();
     document.getElementById('meeting_id').value = meetingId;
@@ -1537,6 +1575,204 @@ function deleteMeeting(meetingId) {
             showAlert('เกิดข้อผิดพลาด', 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้', 'error');
         });
     });
+}
+
+function updateSaveCurrentTabButton() {
+    const btnSaveCurrentTab = document.getElementById('btnSaveCurrentTab');
+    if (!btnSaveCurrentTab) return;
+    
+    let tabLabel = '';
+    switch(activeTabId) {
+        case 'tab1': tabLabel = 'ลลว.๐๑'; break;
+        case 'tab2': tabLabel = 'ลลว.๐๒'; break;
+        case 'tab3': tabLabel = 'ลลว.๐๓'; break;
+        case 'tab4': tabLabel = 'ลลว.๐๔'; break;
+        case 'tab5': tabLabel = 'ลลว.๐๕'; break;
+        case 'tab6': tabLabel = 'ลลว.๐๖'; break;
+        default: tabLabel = 'ลลว.๐๑';
+    }
+    
+    btnSaveCurrentTab.innerHTML = `<i class="bi bi-save-fill me-1"></i> บันทึกเฉพาะ ${tabLabel}`;
+}
+
+function saveCurrentTab() {
+    const meetingIdInput = document.getElementById('meeting_id');
+    const meetingId = parseInt(meetingIdInput.value) || 0;
+
+    // 1. Validation check
+    if (activeTabId !== 'tab1' && meetingId <= 0) {
+        showAlert('คำเตือน', 'กรุณาบันทึกข้อมูลหลัก ลลว.๐๑ ก่อนบันทึกหน้าอื่น', 'warning');
+        return;
+    }
+
+    if (activeTabId === 'tab1') {
+        const meetingDate = document.getElementById('meeting_date').value;
+        const semester = document.getElementById('semester').value;
+        const academicYear = document.getElementById('academic_year').value;
+        const classroomId = document.getElementById('classroom_id').value;
+        const totalParents = parseInt(document.getElementById('total_parents').value) || 0;
+        const attendCount = parseInt(document.getElementById('attend_count').value) || 0;
+
+        if (!meetingDate || !semester || !academicYear || !classroomId || totalParents < 0 || attendCount < 0) {
+            showAlert('คำเตือน', 'กรุณากรอกข้อมูลที่จำเป็นใน ลลว.๐๑ ให้ครบถ้วน', 'warning');
+            return;
+        }
+
+        if (attendCount > totalParents) {
+            showAlert('คำเตือน', 'จำนวนผู้ปกครองที่เข้าร่วมประชุม ห้ามมากกว่าจำนวนผู้ปกครองทั้งหมด', 'warning');
+            return;
+        }
+    }
+
+    // 2. Serialize corresponding tab data
+    if (activeTabId === 'tab2') {
+        const attendants = [];
+        document.querySelectorAll('#attendantsTableBody tr').forEach(row => {
+            const student_name = row.querySelector('.student_name').value.trim();
+            if (student_name) {
+                attendants.push({
+                    student_name: student_name,
+                    parent_name: row.querySelector('.parent_name').value.trim(),
+                    phone: row.querySelector('.phone').value.trim(),
+                    relationship: row.querySelector('.relationship').value.trim()
+                });
+            }
+        });
+        document.getElementById('attendants_data').value = JSON.stringify(attendants);
+    } else if (activeTabId === 'tab3') {
+        const absents = [];
+        document.querySelectorAll('#absentsTableBody tr').forEach(row => {
+            const student_name = row.querySelector('.student_name').value.trim();
+            if (student_name) {
+                absents.push({
+                    student_name: student_name,
+                    parent_name: row.querySelector('.parent_name').value.trim(),
+                    phone: row.querySelector('.phone').value.trim(),
+                    relationship: row.querySelector('.relationship').value.trim(),
+                    absent_reason: row.querySelector('.absent_reason').value.trim(),
+                    follow_up_status: row.querySelector('.follow_up_status').value.trim(),
+                    follow_up_date: row.querySelector('.follow_up_date').value
+                });
+            }
+        });
+        document.getElementById('absents_data').value = JSON.stringify(absents);
+    } else if (activeTabId === 'tab4') {
+        document.getElementById('relations_data').value = JSON.stringify(currentRelations);
+    } else if (activeTabId === 'tab5') {
+        const groups = [];
+        document.querySelectorAll('#groupsTableBody tr').forEach(row => {
+            const group_topic = row.querySelector('.group_topic').value.trim();
+            if (group_topic) {
+                const attendants_text = row.querySelector('.attendants_text').value;
+                const attendants_json = attendants_text.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                groups.push({
+                    group_topic: group_topic,
+                    attendants_json: attendants_json,
+                    discussion_summary: row.querySelector('.discussion_summary').value.trim(),
+                    discussion_resolution: row.querySelector('.discussion_resolution').value.trim(),
+                    school_support_request: row.querySelector('.school_support_request').value.trim()
+                });
+            }
+        });
+        document.getElementById('groups_data').value = JSON.stringify(groups);
+    } else if (activeTabId === 'tab6') {
+        document.getElementById('letters_data').value = JSON.stringify(currentLetters);
+    }
+
+    // Prepare FormData
+    const form = document.getElementById('meetingForm');
+    const formData = new FormData(form);
+    formData.set('save_only', activeTabId);
+
+    // Disable button during saving
+    const btnSaveCurrentTab = document.getElementById('btnSaveCurrentTab');
+    const originalHTML = btnSaveCurrentTab.innerHTML;
+    btnSaveCurrentTab.disabled = true;
+    btnSaveCurrentTab.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> กำลังบันทึก...';
+
+    fetch('api.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        btnSaveCurrentTab.disabled = false;
+        btnSaveCurrentTab.innerHTML = originalHTML;
+
+        if (data.status === 'success') {
+            hasSavedAnyTab = true;
+            if (data.meeting_id) {
+                meetingIdInput.value = data.meeting_id;
+                document.getElementById('action').value = 'save_meeting';
+            }
+            
+            // If tab1 and image was uploaded, refresh the image container
+            if (activeTabId === 'tab1') {
+                const imagesInput = document.getElementById('images-input');
+                if (imagesInput && imagesInput.files && imagesInput.files.length > 0) {
+                    refreshMeetingImages(meetingIdInput.value || data.meeting_id);
+                }
+            }
+
+            showAlert('สำเร็จ', 'บันทึกข้อมูลหน้า ' + getTabThaiName(activeTabId) + ' เรียบร้อยแล้ว', 'success');
+        } else {
+            showAlert('เกิดข้อผิดพลาด', data.message || 'บันทึกข้อมูลไม่สำเร็จ', 'error');
+        }
+    })
+    .catch(err => {
+        btnSaveCurrentTab.disabled = false;
+        btnSaveCurrentTab.innerHTML = originalHTML;
+        console.error(err);
+        showAlert('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+    });
+}
+
+function getTabThaiName(tabId) {
+    switch(tabId) {
+        case 'tab1': return 'ลลว.๐๑';
+        case 'tab2': return 'ลลว.๐๒';
+        case 'tab3': return 'ลลว.๐๓';
+        case 'tab4': return 'ลลว.๐๔';
+        case 'tab5': return 'ลลว.๐๕';
+        case 'tab6': return 'ลลว.๐๖';
+        default: return tabId;
+    }
+}
+
+function refreshMeetingImages(meetingId) {
+    if (!meetingId) return;
+    fetch(`api.php?action=get_meeting&id=${meetingId}`)
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            const images = data.images || [];
+            const grid = document.getElementById('existing-images-grid');
+            grid.innerHTML = ''; // Clear previous existing images
+            if (images.length > 0) {
+                document.getElementById('existing-images-container').classList.remove('d-none');
+                images.forEach(img => {
+                    const item = document.createElement('div');
+                    item.className = 'preview-item';
+                    item.id = `existing-img-wrapper-${img.id}`;
+                    item.innerHTML = `
+                        <img src="${img.image_path}">
+                        <button type="button" class="btn-remove" onclick="deleteMeetingImage(${img.id})" title="ลบภาพนี้">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    `;
+                    grid.appendChild(item);
+                });
+            } else {
+                document.getElementById('existing-images-container').classList.add('d-none');
+            }
+            
+            // Clear new images input & preview grid
+            document.getElementById('images-input').value = '';
+            document.getElementById('new-images-container').classList.add('d-none');
+            document.getElementById('new-images-grid').innerHTML = '';
+        }
+    })
+    .catch(err => console.error('Error refreshing images:', err));
 }
 </script>
 
