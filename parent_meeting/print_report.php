@@ -381,11 +381,15 @@ function displayPrintMemberCard($title, $data) {
             การจัดกิจกรรมการประชุมผู้ปกครองในชั้นเรียน (Classroom Meeting) เป็นวิธีการหนึ่งในระบบดูแลช่วยเหลือนักเรียน ที่จัดให้ครูที่ปรึกษาและผู้ปกครองได้พบปะเพื่อสนทนา ปรึกษาหารือ และแลกเปลี่ยนความคิดเห็นและประสบการณ์ในการดูแลนักเรียนระหว่างกัน เพื่อหาแนวทางในการแก้ไข ปรับปรุง และพัฒนานักเรียนในปกครองให้เป็นบุคคลที่มีคุณภาพต่อไป ใน<?= th_date_full($meeting['meeting_date']) ?> ทางโรงเรียนละลมวิทยา ได้จัดกิจกรรมประชุมผู้ปกครองในชั้นเรียน (Classroom Meeting) ในระดับชั้นมัธยมศึกษาปีที่ ๑–๖ ขึ้น ในฐานะครูที่ปรึกษาชั้นมัธยมศึกษาปีที่ <?= th_num(esc($meeting['level'])) ?>/<?= th_num(esc($meeting['room_name'])) ?> จึงได้จัดทำรายงานผลการดำเนินงานเพื่อให้เห็นแนวทางในการประชุมดังกล่าว
         </div>
         
-        <div style="display: flex; justify-content: flex-end; margin-top: 60px;">
-            <div style="width: 50%; text-align: center; line-height: 2.0; font-size: 15px;">
-                ลงชื่อ............................................................<br>
-                (............................................................)<br>
-                ครูที่ปรึกษา
+        <div style="display: flex; justify-content: flex-end; margin-top: 60px; font-family: 'Sarabun', sans-serif;">
+            <div style="width: <?= count($teachers) > 1 ? '70%' : '45%' ?>; display: flex; justify-content: space-around; line-height: 1.8; font-size: 15px;">
+                <?php foreach ($teachers as $t_name): ?>
+                    <div style="text-align: center; width: 45%;">
+                        ลงชื่อ............................................................<br>
+                        (<?= esc($t_name) ?>)<br>
+                        ครูที่ปรึกษา
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
@@ -517,9 +521,9 @@ function displayPrintMemberCard($title, $data) {
             <div style="width: 55%; text-align: center; line-height: 1.8;">
                 <?php foreach ($teachers as $idx => $t_name): ?>
                     <div style="margin-bottom: 12px;">
-                        ลงชื่อ............................................................ ผู้รายงาน<br>
+                        ลงชื่อ............................................................<br>
                         (<?= esc($t_name) ?>)<br>
-                        ครูที่ปรึกษาชั้นมัธยมศึกษาปีที่ <?= th_num(esc($meeting['level'])) ?>/<?= th_num(esc($meeting['room_name'])) ?>
+                        ครูที่ปรึกษาชั้นมัธยมศึกษาปีที่ <?= th_num(esc($meeting['level'])) ?>/<?= th_num(esc($meeting['room_name'])) ?> / ผู้รายงาน
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -647,12 +651,12 @@ function displayPrintMemberCard($title, $data) {
             </div>
         </div>
         
-        <div style="display: flex; justify-content: space-around; margin-top: 25px;">
+        <div style="display: flex; justify-content: space-around; margin-top: 25px; line-height: 1.8;">
             <?php foreach ($teachers as $t_name): ?>
                 <div style="text-align: center; width: 45%;">
-                    ลงชื่อ............................................................ ครูที่ปรึกษา<br>
+                    ลงชื่อ............................................................<br>
                     (<?= esc($t_name) ?>)<br>
-                    ผู้จัดทำรายงานการประชุม
+                    ครูที่ปรึกษา / ผู้จัดทำรายงานการประชุม
                 </div>
             <?php endforeach; ?>
         </div>
@@ -710,11 +714,12 @@ function displayPrintMemberCard($title, $data) {
             </tbody>
         </table>
         
-        <div style="display: flex; justify-content: space-around; margin-top: 30px;">
+        <div style="display: flex; justify-content: space-around; margin-top: 30px; line-height: 1.8;">
             <?php foreach ($teachers as $t_name): ?>
                 <div style="text-align: center; width: 45%;">
-                    ลงชื่อ............................................................ ครูที่ปรึกษา<br>
-                    (<?= esc($t_name) ?>)
+                    ลงชื่อ............................................................<br>
+                    (<?= esc($t_name) ?>)<br>
+                    ครูที่ปรึกษา
                 </div>
             <?php endforeach; ?>
         </div>
@@ -777,11 +782,12 @@ function displayPrintMemberCard($title, $data) {
             </tbody>
         </table>
         
-        <div style="display: flex; justify-content: space-around; margin-top: 30px;">
+        <div style="display: flex; justify-content: space-around; margin-top: 30px; line-height: 1.8;">
             <?php foreach ($teachers as $t_name): ?>
                 <div style="text-align: center; width: 45%;">
-                    ลงชื่อ............................................................ ครูที่ปรึกษา<br>
-                    (<?= esc($t_name) ?>)
+                    ลงชื่อ............................................................<br>
+                    (<?= esc($t_name) ?>)<br>
+                    ครูที่ปรึกษา
                 </div>
             <?php endforeach; ?>
         </div>
@@ -965,9 +971,10 @@ function displayPrintMemberCard($title, $data) {
                 </div>
                 <div style="width: 45%; text-align: center; line-height: 1.8;">
                     <?php foreach ($teachers as $t_name): ?>
-                        <div style="margin-top: 2px;">
-                            ลงชื่อ............................................................ ครูที่ปรึกษา<br>
-                            (<?= esc($t_name) ?>)
+                        <div style="margin-top: 4px;">
+                            ลงชื่อ............................................................<br>
+                            (<?= esc($t_name) ?>)<br>
+                            ครูที่ปรึกษา
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -1041,11 +1048,12 @@ function displayPrintMemberCard($title, $data) {
             <?php endforeach; ?>
         <?php endif; ?>
         
-        <div style="display: flex; justify-content: space-around; margin-top: 30px;">
+        <div style="display: flex; justify-content: space-around; margin-top: 30px; line-height: 1.8;">
             <?php foreach ($teachers as $t_name): ?>
                 <div style="text-align: center; width: 45%;">
-                    ลงชื่อ............................................................ ครูที่ปรึกษา<br>
-                    (<?= esc($t_name) ?>)
+                    ลงชื่อ............................................................<br>
+                    (<?= esc($t_name) ?>)<br>
+                    ครูที่ปรึกษา
                 </div>
             <?php endforeach; ?>
         </div>
@@ -1157,11 +1165,12 @@ function displayPrintMemberCard($title, $data) {
             </div>
         </div>
         
-        <div style="display: flex; justify-content: space-around; margin-top: 60px; font-family: 'Sarabun', sans-serif;">
+        <div style="display: flex; justify-content: space-around; margin-top: 60px; font-family: 'Sarabun', sans-serif; line-height: 1.8;">
             <?php foreach ($teachers as $t_name): ?>
                 <div style="text-align: center; width: 45%;">
-                    ลงชื่อ............................................................ ครูที่ปรึกษา<br>
-                    (<?= esc($t_name) ?>)
+                    ลงชื่อ............................................................<br>
+                    (<?= esc($t_name) ?>)<br>
+                    ครูที่ปรึกษา
                 </div>
             <?php endforeach; ?>
         </div>
@@ -1195,11 +1204,12 @@ function displayPrintMemberCard($title, $data) {
             </div>
         <?php endif; ?>
         
-        <div style="display: flex; justify-content: space-around; margin-top: 60px; font-family: 'Sarabun', sans-serif;">
+        <div style="display: flex; justify-content: space-around; margin-top: 60px; font-family: 'Sarabun', sans-serif; line-height: 1.8;">
             <?php foreach ($teachers as $t_name): ?>
                 <div style="text-align: center; width: 45%;">
-                    ลงชื่อ............................................................ ครูที่ปรึกษา<br>
-                    (<?= esc($t_name) ?>)
+                    ลงชื่อ............................................................<br>
+                    (<?= esc($t_name) ?>)<br>
+                    ครูที่ปรึกษา
                 </div>
             <?php endforeach; ?>
         </div>

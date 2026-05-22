@@ -1038,11 +1038,12 @@ try {
                 // ดึงห้องเรียนพร้อมครูที่ปรึกษา (ถ้ามี) จาก att_students + llw_class_advisors + llw_users
                 $llwPdo->query("SELECT 1 FROM att_students LIMIT 1");
                 $classStmt = $llwPdo->query("
-                    SELECT DISTINCT s.classroom, CONCAT(u.firstname, ' ', u.lastname) as advisor_name
-                    FROM att_students s
-                    LEFT JOIN llw_class_advisors la ON s.classroom = la.classroom AND la.role_type = 'primary'
-                    LEFT JOIN llw_users u ON la.user_id = u.user_id
-                    WHERE s.classroom IS NOT NULL AND s.classroom != ''
+                    SELECT s.classroom, 
+                           (SELECT GROUP_CONCAT(CONCAT(u.firstname, ' ', u.lastname) ORDER BY la.role_type ASC, la.id ASC SEPARATOR ' และ ')
+                            FROM llw_class_advisors la
+                            LEFT JOIN llw_users u ON la.user_id = u.user_id
+                            WHERE la.classroom = s.classroom) as advisor_name
+                    FROM (SELECT DISTINCT classroom FROM att_students WHERE classroom IS NOT NULL AND classroom != '') s
                     ORDER BY s.classroom ASC
                 ");
                 $classrooms_raw = $classStmt->fetchAll();
