@@ -375,10 +375,14 @@ function displayPrintMemberCard($title, $data) {
     <!-- ──────────────────────────────────────────────────────── -->
     <div class="print-page page-cover text-center d-flex flex-column justify-content-between">
         <div>
-            <div style="margin-top: 25mm; margin-bottom: 20mm;">
+            <div style="margin-top: 8mm; margin-bottom: 15mm;">
                 <img src="https://suched2513.github.io/image/%E0%B8%95%E0%B8%A3%E0%B8%B2%E0%B8%A5%E0%B8%B0%E0%B8%A5%E0%B8%A1%E0%B8%A7%E0%B8%B4%E0%B8%9767.png" style="width: 4.2cm; height: auto;" alt="Lalom Wittaya School Logo">
             </div>
-            <h2 style="font-weight: 800; font-size: 26px; margin-bottom: 10px; line-height: 1.6;">แบบรายงานผล<br>การจัดกิจกรรมประชุมผู้ปกครองชั้นเรียน (Classroom Meeting)</h2>
+            <h2 style="font-weight: 800; font-size: 26px; margin-bottom: 10px; line-height: 1.7;">
+                แบบรายงานผล<br>
+                การจัดกิจกรรมประชุมผู้ปกครองชั้นเรียน<br>
+                <span style="white-space: nowrap;">(Classroom Meeting)</span>
+            </h2>
             <h3 style="font-weight: 600; font-size: 19px; margin-bottom: 20px;">ชั้นมัธยมศึกษาปีที่ <?= th_num(esc($meeting['level'])) ?>/<?= th_num(esc($meeting['room_name'])) ?> &nbsp; ภาคเรียนที่ <?= th_num(esc($meeting['semester'])) ?> &nbsp; ปีการศึกษา <?= th_num(esc($meeting['academic_year'])) ?></h3>
         </div>
         
