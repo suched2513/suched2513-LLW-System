@@ -23,8 +23,16 @@ try {
     
     // สร้าง SQL Query แบบ Dynamic ตามตัวเลือก
     $query = "
-        SELECT m.*, c.level, c.room_name, c.teacher_name, u.fullname as creator_name,
-               (SELECT COUNT(*) FROM pm_comments WHERE meeting_id = m.id) as comment_count
+        SELECT m.*, c.level, c.room_name, u.fullname as creator_name,
+               (SELECT COUNT(*) FROM pm_comments WHERE meeting_id = m.id) as comment_count,
+               COALESCE(
+                   (SELECT GROUP_CONCAT(CONCAT(lu.firstname, ' ', lu.lastname)
+                           ORDER BY la.role_type ASC, la.id ASC SEPARATOR ' และ ')
+                    FROM llw_class_advisors la
+                    LEFT JOIN llw_users lu ON la.user_id = lu.user_id
+                    WHERE la.classroom = CONCAT(c.level, '/', c.room_name)),
+                   c.teacher_name
+               ) as teacher_name
         FROM pm_meetings m
         JOIN pm_classrooms c ON m.classroom_id = c.id
         JOIN pm_users u ON m.created_by = u.id

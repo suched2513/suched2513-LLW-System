@@ -13,9 +13,17 @@ if ($meetingId === 0) {
 $pdo = getPmPdo();
 
 try {
-    // 1. ดึงข้อมูลรายงานการประชุม
+    // 1. ดึงข้อมูลรายงานการประชุม พร้อมครูที่ปรึกษาจาก llw_class_advisors (dynamic — รองรับ 2 คน)
     $stmt = $pdo->prepare("
-        SELECT m.*, c.level, c.room_name, c.teacher_name, u.fullname as creator_name
+        SELECT m.*, c.level, c.room_name, u.fullname as creator_name,
+               COALESCE(
+                   (SELECT GROUP_CONCAT(CONCAT(lu.firstname, ' ', lu.lastname)
+                           ORDER BY la.role_type ASC, la.id ASC SEPARATOR ' และ ')
+                    FROM llw_class_advisors la
+                    LEFT JOIN llw_users lu ON la.user_id = lu.user_id
+                    WHERE la.classroom = CONCAT(c.level, '/', c.room_name)),
+                   c.teacher_name
+               ) as teacher_name
         FROM pm_meetings m
         JOIN pm_classrooms c ON m.classroom_id = c.id
         JOIN pm_users u ON m.created_by = u.id

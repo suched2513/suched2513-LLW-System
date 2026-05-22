@@ -13,7 +13,20 @@ $pdo = getPmPdo();
 
 // ดึงข้อมูลห้องเรียนทั้งหมดเพื่อใช้ใน Dropdown
 try {
-    $classrooms = $pdo->query("SELECT * FROM pm_classrooms ORDER BY level, room_name")->fetchAll();
+    // ดึงห้องเรียนทั้งหมดสำหรับ Dropdown พร้อมครูที่ปรึกษาจาก llw_class_advisors (dynamic — รองรับ 2 คน)
+    $classrooms = $pdo->query("
+        SELECT c.*,
+            COALESCE(
+                (SELECT GROUP_CONCAT(CONCAT(u.firstname, ' ', u.lastname)
+                        ORDER BY la.role_type ASC, la.id ASC SEPARATOR ' และ ')
+                 FROM llw_class_advisors la
+                 LEFT JOIN llw_users u ON la.user_id = u.user_id
+                 WHERE la.classroom = CONCAT(c.level, '/', c.room_name)),
+                c.teacher_name
+            ) as teacher_name
+        FROM pm_classrooms c
+        ORDER BY c.level, c.room_name
+    ")->fetchAll();
     
     // ดึงประวัติการประชุม
     // หากเป็นแอดมิน เห็นทั้งหมด, หากเป็นครูธรรมดา เห็นเฉพาะที่ตนเองสร้าง
