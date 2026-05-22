@@ -746,14 +746,16 @@ function displayPrintMemberCard($title, $data) {
             </div>
         </div>
         
-        <div style="display: flex; justify-content: space-around; margin-top: 25px; line-height: 1.8;">
-            <?php foreach ($teachers as $t_name): ?>
-                <div style="text-align: center; width: 45%;">
-                    ลงชื่อ............................................................<br>
-                    (<?= esc($t_name) ?>)<br>
-                    ครูที่ปรึกษา / ผู้จัดทำรายงานการประชุม
-                </div>
-            <?php endforeach; ?>
+        <div style="display: flex; justify-content: flex-end; margin-top: 25px; font-size: 14px;">
+            <div style="width: 55%; text-align: center; line-height: 1.8;">
+                <?php foreach ($teachers as $t_name): ?>
+                    <div style="margin-bottom: 20px;">
+                        ลงชื่อ............................................................<br>
+                        (<?= esc($t_name) ?>)<br>
+                        ครูที่ปรึกษา / ผู้จัดทำรายงานการประชุม
+                    </div>
+                <?php endforeach; ?>
+            </div>
         </div>
     </div>
 
