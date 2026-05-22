@@ -283,6 +283,23 @@ function displayPrintMemberCard($title, $data) {
                 display: none !important;
             }
         }
+
+        /* ── Thai Official Document Layout Helpers ─────────────────── */
+        /* numbered/bulleted flex row */
+        .doc-item       { display: flex; gap: 6px; margin-bottom: 4px; line-height: 1.65; }
+        .doc-item-num   { min-width: 22px; flex-shrink: 0; }
+        /* sub-numbered row (๒.๑, ๔.๓ …) */
+        .doc-sub-item   { display: flex; gap: 6px; margin-bottom: 3px; line-height: 1.65; }
+        .doc-sub-num    { min-width: 34px; flex-shrink: 0; }
+        /* label + dotted value on ONE line */
+        .doc-field-row  { display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px; }
+        .doc-field-lbl  { white-space: nowrap; flex-shrink: 0; }
+        .doc-field-val  { flex: 1; border-bottom: 1px dotted #000; min-height: 18px;
+                          padding: 0 4px; word-break: break-word; }
+        /* section spacing */
+        .doc-sec        { margin-bottom: 10px; }
+        /* memo header label column */
+        .memo-label     { font-weight: bold; min-width: 90px; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -510,13 +527,22 @@ function displayPrintMemberCard($title, $data) {
             <div style="text-align: center; font-size: 28px; font-weight: bold; padding-top: 10px;">บันทึกข้อความ</div>
         </div>
         
-        <div style="font-size: 15px; line-height: 1.8; border-bottom: 1px solid #000; padding-bottom: 8px; margin-bottom: 12px;">
-            <div><strong>ส่วนราชการ</strong> <span style="margin-left: 10px;">งานระบบดูแลช่วยเหลือนักเรียนและเครือข่ายผู้ปกครอง โรงเรียนละลมวิทยา</span></div>
-            <div style="display: flex; justify-content: space-between;">
-                <div style="flex: 1;"><strong>ที่</strong> <span style="margin-left: 10px;">พิเศษ/<?= th_num(esc($meeting['doc_no'])) ?></span></div>
-                <div style="flex: 1;"><strong>วันที่</strong> <span style="margin-left: 10px;"><?= th_date_full($meeting['doc_date']) ?></span></div>
+        <!-- หัวบันทึกข้อความ (aligned label-value layout) -->
+        <div style="font-size: 15px; line-height: 1.9; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 14px;">
+            <div style="display: flex; gap: 12px; align-items: flex-start; margin-bottom: 2px;">
+                <span class="memo-label">ส่วนราชการ</span>
+                <span>งานระบบดูแลช่วยเหลือนักเรียนและเครือข่ายผู้ปกครอง โรงเรียนละลมวิทยา</span>
             </div>
-            <div><strong>เรื่อง</strong> <span style="margin-left: 10px;">รายงานผลการดำเนินงานประชุมผู้ปกครองชั้นเรียน (Classroom Meeting) ภาคเรียนที่ <?= th_num(esc($meeting['semester'])) ?> ปีการศึกษา <?= th_num(esc($meeting['academic_year'])) ?></span></div>
+            <div style="display: flex; gap: 12px; align-items: baseline; margin-bottom: 2px;">
+                <span class="memo-label">ที่</span>
+                <span style="flex: 1;">พิเศษ/<?= th_num(esc($meeting['doc_no'])) ?></span>
+                <span style="font-weight: bold; margin-right: 12px;">วันที่</span>
+                <span style="flex: 2;"><?= th_date_full($meeting['doc_date']) ?></span>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+                <span class="memo-label">เรื่อง</span>
+                <span>รายงานผลการดำเนินงานประชุมผู้ปกครองชั้นเรียน (Classroom Meeting) ภาคเรียนที่ <?= th_num(esc($meeting['semester'])) ?> ปีการศึกษา <?= th_num(esc($meeting['academic_year'])) ?></span>
+            </div>
         </div>
         
         <div style="font-size: 15px; margin-bottom: 15px;"><strong>เรียน</strong> <span style="margin-left: 10px;">ผู้อำนวยการโรงเรียนละลมวิทยา</span></div>
@@ -611,58 +637,112 @@ function displayPrintMemberCard($title, $data) {
             <p style="margin: 0;">ชั้นมัธยมศึกษาปีที่ <?= th_num(esc($meeting['level'])) ?>/<?= th_num(esc($meeting['room_name'])) ?> &nbsp; โรงเรียนละลมวิทยา</p>
         </div>
         
-        <div style="line-height: 1.6; text-align: justify;">
-            <strong>๑. ความสำคัญและความเป็นมา</strong><br>
-            <div class="indent-1">
-                การจัดกิจกรรมประชุมผู้ปกครองในชั้นเรียน (Classroom Meeting) เป็นกิจกรรมที่ทางโรงเรียนได้จัดขึ้น เพื่อให้ครูที่ปรึกษาและผู้ปกครองได้มาพบปะพูดคุย สนทนา แลกเปลี่ยนความคิดเห็นซึ่งกันและกัน เพื่อหาแนวทางและร่วมมือกันในการดูแลช่วยเหลือนักเรียน โรงเรียนละลมวิทยา ได้เล็งเห็นความสำคัญของการประชุมผู้ปกครองชั้นเรียน จึงกำหนดให้มีการจัดกิจกรรมประชุมขึ้น เพื่อหาแนวทางในการปรับปรุง แก้ไข พัฒนาพฤติกรรมที่ไม่พึงประสงค์ของนักเรียน และส่งเสริมพฤติกรรมที่ดีของนักเรียนให้ดียิ่งๆ ขึ้นไป
+        <div style="line-height: 1.65; text-align: justify;">
+
+            <!-- ๑. ความสำคัญและความเป็นมา -->
+            <div class="doc-sec">
+                <strong>๑. ความสำคัญและความเป็นมา</strong>
+                <div class="indent-1" style="margin-top: 2px;">
+                    การจัดกิจกรรมประชุมผู้ปกครองในชั้นเรียน (Classroom Meeting) เป็นกิจกรรมที่ทางโรงเรียนได้จัดขึ้น เพื่อให้ครูที่ปรึกษาและผู้ปกครองได้มาพบปะพูดคุย สนทนา แลกเปลี่ยนความคิดเห็นซึ่งกันและกัน เพื่อหาแนวทางและร่วมมือกันในการดูแลช่วยเหลือนักเรียน โรงเรียนละลมวิทยา ได้เล็งเห็นความสำคัญของการประชุมผู้ปกครองชั้นเรียน จึงกำหนดให้มีการจัดกิจกรรมประชุมขึ้น เพื่อหาแนวทางในการปรับปรุง แก้ไข พัฒนาพฤติกรรมที่ไม่พึงประสงค์ของนักเรียน และส่งเสริมพฤติกรรมที่ดีของนักเรียนให้ดียิ่งๆ ขึ้นไป
+                </div>
             </div>
-            
-            <strong class="d-block mt-2">๒. วัตถุประสงค์ของการจัดกิจกรรมประชุมผู้ปกครองในชั้นเรียน</strong>
-            <div style="padding-left: 10px;">
-                ๑. เพื่อให้ผู้ปกครองได้รู้และเข้าใจถึงกฎระเบียบของทางโรงเรียน สามารถนำไปอบรมสั่งสอนนักเรียนในปกครองได้<br>
-                ๒. เพื่อให้ผู้ปกครองได้มีโอกาสพบปะกับครูประจำชั้นและรับทราบพฤติกรรมด้านการเรียน ความประพฤติ การปรับตัวตามศักยภาพ และอื่น ๆ ของนักเรียน<br>
-                ๓. เพื่อให้ผู้ปกครองตระหนักถึงบทบาทหน้าที่ในการดูแลเอาใจใส่บุตรหลาน และร่วมกันหาแนวทางในการดูแลช่วยเหลือนักเรียน<br>
-                ๔. เพื่อให้ผู้ปกครองได้มีโอกาสเสนอแนะแนวทางการมีส่วนร่วมในการดำเนินงานตามระบบดูแลช่วยเหลือนักเรียน และสร้างความสัมพันธ์ที่ดี ความร่วมมือระหว่างบ้านกับโรงเรียนในการป้องกัน แก้ไขและพัฒนานักเรียน
+
+            <!-- ๒. วัตถุประสงค์ -->
+            <div class="doc-sec">
+                <strong>๒. วัตถุประสงค์ของการจัดกิจกรรมประชุมผู้ปกครองในชั้นเรียน</strong>
+                <div style="padding-left: 15px; margin-top: 3px;">
+                    <div class="doc-item"><span class="doc-item-num">๑.</span><span>เพื่อให้ผู้ปกครองได้รู้และเข้าใจถึงกฎระเบียบของทางโรงเรียน สามารถนำไปอบรมสั่งสอนนักเรียนในปกครองได้</span></div>
+                    <div class="doc-item"><span class="doc-item-num">๒.</span><span>เพื่อให้ผู้ปกครองได้มีโอกาสพบปะกับครูประจำชั้นและรับทราบพฤติกรรมด้านการเรียน ความประพฤติ การปรับตัวตามศักยภาพ และอื่น ๆ ของนักเรียน</span></div>
+                    <div class="doc-item"><span class="doc-item-num">๓.</span><span>เพื่อให้ผู้ปกครองตระหนักถึงบทบาทหน้าที่ในการดูแลเอาใจใส่บุตรหลาน และร่วมกันหาแนวทางในการดูแลช่วยเหลือนักเรียน</span></div>
+                    <div class="doc-item"><span class="doc-item-num">๔.</span><span>เพื่อให้ผู้ปกครองได้มีโอกาสเสนอแนะแนวทางการมีส่วนร่วมในการดำเนินงานตามระบบดูแลช่วยเหลือนักเรียน และสร้างความสัมพันธ์ที่ดี ความร่วมมือระหว่างบ้านกับโรงเรียนในการป้องกัน แก้ไขและพัฒนานักเรียน</span></div>
+                </div>
             </div>
-            
-            <strong class="d-block mt-2">๓. บทบาทหน้าที่ครูที่ปรึกษาในการจัดประชุมผู้ปกครองชั้นเรียน</strong>
-            <div style="padding-left: 10px;">
-                ครูที่ปรึกษามีบทบาทในการเตรียมข้อมูลการเรียน พฤติกรรม และข้อมูลระดับคะแนนพฤติกรรมของนักเรียน และเป็นผู้ดำเนินกิจกรรมห้องเรียน ประสานสัมพันธ์กับผู้ปกครองเพื่อรวบรวมข้อมูลตามเอกสาร ลลว.๐๒ - ลลว.๐๖ สรุปเป็นรูปเล่มรายงานส่งระดับชั้นและกลุ่มบริหารงานบุคคลตามลำดับ
+
+            <!-- ๓. บทบาทหน้าที่ -->
+            <div class="doc-sec">
+                <strong>๓. บทบาทหน้าที่ครูที่ปรึกษาในการจัดประชุมผู้ปกครองชั้นเรียน</strong>
+                <div style="padding-left: 15px; margin-top: 3px;">
+                    ครูที่ปรึกษามีบทบาทในการเตรียมข้อมูลการเรียน พฤติกรรม และข้อมูลระดับคะแนนพฤติกรรมของนักเรียน และเป็นผู้ดำเนินกิจกรรมห้องเรียน ประสานสัมพันธ์กับผู้ปกครองเพื่อรวบรวมข้อมูลตามเอกสาร ลลว.๐๒ - ลลว.๐๖ สรุปเป็นรูปเล่มรายงานส่งระดับชั้นและกลุ่มบริหารงานบุคคลตามลำดับ
+                </div>
             </div>
-            
-            <strong class="d-block mt-2">๔. ขั้นตอนแนวปฏิบัติในการประชุมผู้ปกครองชั้นเรียน</strong>
-            <div style="padding-left: 10px;">
-                - ดำเนินการจัดประชุมในวันที่ <?= th_date($meeting['meeting_date']) ?> ณ ห้องเรียนโฮมรูม<br>
-                - ครูที่ปรึกษาชี้แจงระเบียบ แจกเอกสารแสดงผลการเรียนและบันทึกประสานสัมพันธ์ ลลว.๐๔<br>
-                - จัดกิจกรรมกลุ่ม Meet & Greet ลลว.๐๕ และให้นักเรียนส่งมอบบันทึกจดหมายความในใจลูก ลลว.๐๖ แก่ผู้ปกครอง<br>
-                - ติดตามผู้ปกครองที่ไม่มาร่วมประชุมพร้อมบันทึกลงในเอกสาร ลลว.๐๓
+
+            <!-- ๔. ขั้นตอนแนวปฏิบัติ -->
+            <div class="doc-sec">
+                <strong>๔. ขั้นตอนแนวปฏิบัติในการประชุมผู้ปกครองชั้นเรียน</strong>
+                <div style="padding-left: 15px; margin-top: 3px;">
+                    <div class="doc-item"><span style="min-width: 14px;">-</span><span>ดำเนินการจัดประชุมในวันที่ <?= th_date($meeting['meeting_date']) ?> ณ ห้องเรียนโฮมรูม</span></div>
+                    <div class="doc-item"><span style="min-width: 14px;">-</span><span>ครูที่ปรึกษาชี้แจงระเบียบ แจกเอกสารแสดงผลการเรียนและบันทึกประสานสัมพันธ์ ลลว.๐๔</span></div>
+                    <div class="doc-item"><span style="min-width: 14px;">-</span><span>จัดกิจกรรมกลุ่ม Meet &amp; Greet ลลว.๐๕ และให้นักเรียนส่งมอบบันทึกจดหมายความในใจลูก ลลว.๐๖ แก่ผู้ปกครอง</span></div>
+                    <div class="doc-item"><span style="min-width: 14px;">-</span><span>ติดตามผู้ปกครองที่ไม่มาร่วมประชุมพร้อมบันทึกลงในเอกสาร ลลว.๐๓</span></div>
+                </div>
             </div>
-            
-            <strong class="d-block mt-2">๕. ผลที่คาดว่าจะได้รับ</strong>
-            <div style="padding-left: 10px;">
-                ผู้ปกครองได้รับรู้แนวทางการช่วยเหลือ ร่วมมือปรับพฤติกรรม ตระหนักในสิทธิหน้าที่และสร้างสายสัมพันธ์ความอบอุ่นระหว่างบ้านกับโรงเรียนเพื่อพัฒนาผู้เรียนอย่างมีประสิทธิภาพ
+
+            <!-- ๕. ผลที่คาดว่าจะได้รับ -->
+            <div class="doc-sec">
+                <strong>๕. ผลที่คาดว่าจะได้รับ</strong>
+                <div style="padding-left: 15px; margin-top: 3px;">
+                    ผู้ปกครองได้รับรู้แนวทางการช่วยเหลือ ร่วมมือปรับพฤติกรรม ตระหนักในสิทธิหน้าที่และสร้างสายสัมพันธ์ความอบอุ่นระหว่างบ้านกับโรงเรียนเพื่อพัฒนาผู้เรียนอย่างมีประสิทธิภาพ
+                </div>
             </div>
-            
-            <strong class="d-block mt-2">๖. สรุปและข้อเสนอแนะ</strong><br>
-            <div style="padding-left: 10px;">
-                <strong>๑. ข้อมูลทั่วไป:</strong> จำนวนผู้ปกครองทั้งหมด <span class="dotted-line" style="width: 30px; text-align: center;"><?= th_num($meeting['total_parents']) ?></span> คน 
-                เข้าร่วมประชุมจำนวน <span class="dotted-line" style="width: 30px; text-align: center;"><?= th_num($meeting['attend_count']) ?></span> คน (คิดเป็นร้อยละ <?= th_num($attend_pct) ?>) 
-                ไม่เข้าร่วมจำนวน <span class="dotted-line" style="width: 30px; text-align: center;"><?= th_num($meeting['absent_count']) ?></span> คน (คิดเป็นร้อยละ <?= th_num($absent_pct) ?>)
-                ได้รับการติดตามจำนวน <span class="dotted-line" style="width: 30px; text-align: center;"><?= th_num($followed_count) ?></span> คน (คิดเป็นร้อยละ <?= th_num($follow_pct) ?>)<br>
-                
-                <strong>๒. หัวข้อสำคัญของการประชุม:</strong><br>
-                &nbsp;&nbsp;&nbsp;&nbsp;๒.๑ <?= esc($meeting['agenda_1'] ? $meeting['agenda_1'] : 'ชี้แจงกฎระเบียบโรงเรียน และผลการเรียนกลางภาคเรียน') ?><br>
-                &nbsp;&nbsp;&nbsp;&nbsp;๒.๒ <?= esc($meeting['agenda_2'] ? $meeting['agenda_2'] : 'ปรึกษาแนวทางแก้ไขพฤติกรรมและการตัดคะแนนพฤติกรรม') ?><br>
-                &nbsp;&nbsp;&nbsp;&nbsp;๒.๓ <?= esc($meeting['agenda_3'] ? $meeting['agenda_3'] : 'จัดตั้งคณะกรรมการเครือข่ายผู้ปกครอง และกิจกรรม Meet & Greet') ?><br>
-                
-                <strong>๓. ข้อสรุปจากการประชุม:</strong><br>
-                <div style="border: 1px solid #ccc; background: #fafafa; padding: 6px; font-size: 13px; min-height: 35px; white-space: pre-wrap; margin-top: 3px; border-radius: 4px;"><?= esc($meeting['consensus'] ? $meeting['consensus'] : 'ไม่มีข้อสรุปเพิ่มเติม') ?></div>
-                
-                <strong>๔. บรรยากาศการประชุม และข้อสังเกต:</strong><br>
-                &nbsp;&nbsp;&nbsp;&nbsp;๔.๑ ความร่วมมือในการเสนอความคิดเห็น: <span class="dotted-line" style="width: 75%;"><?= esc($meeting['cooperation_rating'] ? $meeting['cooperation_rating'] : 'ดีเยี่ยม ผู้ปกครองให้ความร่วมมือดี') ?></span><br>
-                &nbsp;&nbsp;&nbsp;&nbsp;๔.๒ การให้ข้อคิดเห็นที่มีประโยชน์: <span class="dotted-line" style="width: 78%;"><?= esc($meeting['useful_suggestions'] ? $meeting['useful_suggestions'] : 'ผู้ปกครองเสนอแนะเรื่องความปลอดภัยในการเดินทาง') ?></span><br>
-                &nbsp;&nbsp;&nbsp;&nbsp;๔.๓ การให้การสนับสนุนโรงเรียน: <span class="dotted-line" style="width: 80%;"><?= esc($meeting['support_received'] ? $meeting['support_received'] : 'ผู้ปกครองพร้อมสนับสนุนการจัดกิจกรรมห้องเรียน') ?></span><br>
-                &nbsp;&nbsp;&nbsp;&nbsp;๔.๔ สังเกตอื่นๆ: <span class="dotted-line" style="width: 88%;"><?= esc($meeting['other_observations'] ? $meeting['other_observations'] : 'บรรยากาศเป็นกันเองและอบอุ่น') ?></span>
+
+            <!-- ๖. สรุปและข้อเสนอแนะ -->
+            <div>
+                <strong>๖. สรุปและข้อเสนอแนะ</strong>
+                <div style="padding-left: 15px; margin-top: 3px;">
+
+                    <!-- ๑. ข้อมูลทั่วไป -->
+                    <div style="margin-bottom: 8px;">
+                        <strong>๑. ข้อมูลทั่วไป:</strong>
+                        จำนวนผู้ปกครองทั้งหมด <span class="dotted-line" style="width: 30px; text-align: center;"><?= th_num($meeting['total_parents']) ?></span> คน
+                        เข้าร่วมประชุมจำนวน <span class="dotted-line" style="width: 30px; text-align: center;"><?= th_num($meeting['attend_count']) ?></span> คน (คิดเป็นร้อยละ <?= th_num($attend_pct) ?>)
+                        ไม่เข้าร่วมจำนวน <span class="dotted-line" style="width: 30px; text-align: center;"><?= th_num($meeting['absent_count']) ?></span> คน (คิดเป็นร้อยละ <?= th_num($absent_pct) ?>)
+                        ได้รับการติดตามจำนวน <span class="dotted-line" style="width: 30px; text-align: center;"><?= th_num($followed_count) ?></span> คน (คิดเป็นร้อยละ <?= th_num($follow_pct) ?>)
+                    </div>
+
+                    <!-- ๒. หัวข้อสำคัญ -->
+                    <div style="margin-bottom: 8px;">
+                        <strong>๒. หัวข้อสำคัญของการประชุม:</strong>
+                        <div style="padding-left: 15px; margin-top: 3px;">
+                            <div class="doc-sub-item"><span class="doc-sub-num">๒.๑</span><span><?= esc($meeting['agenda_1'] ? $meeting['agenda_1'] : 'ชี้แจงกฎระเบียบโรงเรียน และผลการเรียนกลางภาคเรียน') ?></span></div>
+                            <div class="doc-sub-item"><span class="doc-sub-num">๒.๒</span><span><?= esc($meeting['agenda_2'] ? $meeting['agenda_2'] : 'ปรึกษาแนวทางแก้ไขพฤติกรรมและการตัดคะแนนพฤติกรรม') ?></span></div>
+                            <div class="doc-sub-item"><span class="doc-sub-num">๒.๓</span><span><?= esc($meeting['agenda_3'] ? $meeting['agenda_3'] : 'จัดตั้งคณะกรรมการเครือข่ายผู้ปกครอง และกิจกรรม Meet &amp; Greet') ?></span></div>
+                        </div>
+                    </div>
+
+                    <!-- ๓. ข้อสรุป -->
+                    <div style="margin-bottom: 8px;">
+                        <strong>๓. ข้อสรุปจากการประชุม:</strong>
+                        <div style="border: 1px solid #ccc; background: #fafafa; padding: 5px 8px; font-size: 13px; min-height: 32px; white-space: pre-wrap; margin-top: 3px; border-radius: 3px; line-height: 1.6;"><?= esc($meeting['consensus'] ? $meeting['consensus'] : 'ไม่มีข้อสรุปเพิ่มเติม') ?></div>
+                    </div>
+
+                    <!-- ๔. บรรยากาศ (flex label + dotted value) -->
+                    <div>
+                        <strong>๔. บรรยากาศการประชุม และข้อสังเกต:</strong>
+                        <div style="padding-left: 15px; margin-top: 5px;">
+                            <div class="doc-field-row">
+                                <span class="doc-sub-num">๔.๑</span>
+                                <span class="doc-field-lbl">ความร่วมมือในการเสนอความคิดเห็น:</span>
+                                <span class="doc-field-val"><?= esc($meeting['cooperation_rating'] ? $meeting['cooperation_rating'] : 'ดีเยี่ยม ผู้ปกครองให้ความร่วมมือดี') ?></span>
+                            </div>
+                            <div class="doc-field-row">
+                                <span class="doc-sub-num">๔.๒</span>
+                                <span class="doc-field-lbl">การให้ข้อคิดเห็นที่มีประโยชน์:</span>
+                                <span class="doc-field-val"><?= esc($meeting['useful_suggestions'] ? $meeting['useful_suggestions'] : 'ผู้ปกครองเสนอแนะเรื่องความปลอดภัยในการเดินทาง') ?></span>
+                            </div>
+                            <div class="doc-field-row">
+                                <span class="doc-sub-num">๔.๓</span>
+                                <span class="doc-field-lbl">การให้การสนับสนุนโรงเรียน:</span>
+                                <span class="doc-field-val"><?= esc($meeting['support_received'] ? $meeting['support_received'] : 'ผู้ปกครองพร้อมสนับสนุนการจัดกิจกรรมห้องเรียน') ?></span>
+                            </div>
+                            <div class="doc-field-row">
+                                <span class="doc-sub-num">๔.๔</span>
+                                <span class="doc-field-lbl">สังเกตอื่นๆ:</span>
+                                <span class="doc-field-val"><?= esc($meeting['other_observations'] ? $meeting['other_observations'] : 'บรรยากาศเป็นกันเองและอบอุ่น') ?></span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
         
