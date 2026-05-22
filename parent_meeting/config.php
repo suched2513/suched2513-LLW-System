@@ -445,3 +445,82 @@ function checkRole($allowedRoles = []) {
         exit;
     }
 }
+
+/**
+ * ตรวจสอบสิทธิ์การเข้าถึง/แก้ไขรายงานการประชุม (สำหรับครู)
+ * คืนค่า true หากเป็นแอดมิน, เป็นเจ้าของรายงาน, หรือเป็นครูที่ปรึกษาของห้องเรียนนั้นๆ ใน llw_class_advisors
+ */
+function hasMeetingAccess($meetingId) {
+    if (!isset($_SESSION['pm_role'])) {
+        return false;
+    }
+    
+    // แอดมินเข้าถึงได้ทุกห้องเรียนอยู่แล้ว
+    if ($_SESSION['pm_role'] === 'admin') {
+        return true;
+    }
+    
+    $pdo = getPmPdo();
+    
+    try {
+        // ดึงข้อมูลผู้สร้างห้องเรียนและรหัสห้องเรียน
+        $stmt = $pdo->prepare("
+            SELECT m.created_by, c.level, c.room_name 
+            FROM pm_meetings m
+            JOIN pm_classrooms c ON m.classroom_id = c.id
+            WHERE m.id = ?
+        ");
+        $stmt->execute([$meetingId]);
+        $meeting = $stmt->fetch();
+        
+        if (!$meeting) {
+            return false;
+        }
+        
+        // 1. ตรวจสอบว่าเป็นผู้สร้างรายงานหรือไม่
+        if ($meeting['created_by'] == $_SESSION['pm_user_id']) {
+            return true;
+        }
+        
+        // 2. ตรวจสอบจากตาราง llw_class_advisors ว่าเป็นครูที่ปรึกษาของห้องนี้หรือไม่
+        $llwUserId = $_SESSION['user_id'] ?? 0;
+        if ($llwUserId > 0) {
+            $classroom = $meeting['level'] . '/' . $meeting['room_name'];
+            $checkStmt = $pdo->prepare("
+                SELECT COUNT(*) 
+                FROM llw_class_advisors 
+                WHERE classroom = ? AND user_id = ?
+            ");
+            $checkStmt->execute([$classroom, $llwUserId]);
+            if ((int)$checkStmt->fetchColumn() > 0) {
+                return true;
+            }
+        }
+    } catch (Exception $e) {
+        error_log('[Parent Meeting] hasMeetingAccess error: ' . $e->getMessage());
+    }
+    
+    return false;
+}
+
+/**
+ * จัดรูปแบบรายชื่อครูที่ปรึกษา โดยใส่คำนำหน้า "ครู" ให้ครบถ้วนทุกคน
+ */
+function format_teacher_names($teacher_name) {
+    if (empty($teacher_name) || $teacher_name === 'ครูที่ปรึกษา') {
+        return 'ครูที่ปรึกษา';
+    }
+    // แยกชื่อครูด้วยเครื่องหมายจุลภาค, ทับ, หรือคำว่า "และ"
+    $teachers = preg_split('/(,|และ|\/)/u', $teacher_name);
+    $formatted = [];
+    foreach ($teachers as $t) {
+        $t = trim($t);
+        if ($t === '') continue;
+        if (mb_strpos($t, 'ครู') === 0) {
+            $formatted[] = $t;
+        } else {
+            $formatted[] = 'ครู' . $t;
+        }
+    }
+    return implode(' และ ', $formatted);
+}

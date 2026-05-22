@@ -31,10 +31,12 @@ try {
             FROM pm_meetings m
             JOIN pm_classrooms c ON m.classroom_id = c.id
             JOIN pm_users u ON m.created_by = u.id
-            WHERE m.created_by = ?
+            WHERE m.created_by = ? OR CONCAT(c.level, '/', c.room_name) IN (
+                SELECT classroom FROM llw_class_advisors WHERE user_id = ?
+            )
             ORDER BY m.meeting_date DESC, m.created_at DESC
         ");
-        $stmt->execute([$_SESSION['pm_user_id']]);
+        $stmt->execute([$_SESSION['pm_user_id'], $_SESSION['user_id'] ?? 0]);
     }
     $meetings = $stmt->fetchAll();
 } catch (Exception $e) {
@@ -175,7 +177,7 @@ require_once __DIR__ . '/components/layout_start.php';
                                     <select class="form-select rounded-3 py-2 text-sm" name="classroom_id" id="classroom_id" required>
                                         <option value="">-- เลือกห้องเรียน --</option>
                                         <?php foreach ($classrooms as $c): ?>
-                                            <option value="<?= $c['id'] ?>">ม.<?= esc($c['level'] . '/' . $c['room_name'] . ' - ครู' . $c['teacher_name']) ?></option>
+                                            <option value="<?= $c['id'] ?>">ม.<?= esc($c['level'] . '/' . $c['room_name']) ?> - <?= esc(format_teacher_names($c['teacher_name'])) ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                     <button type="button" class="btn btn-link btn-sm p-0 mt-1 font-bold text-xs text-decoration-none text-primary" id="btnSyncStudents" onclick="triggerManualStudentSync()" style="display:none;">

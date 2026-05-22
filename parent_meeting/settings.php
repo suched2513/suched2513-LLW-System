@@ -61,7 +61,7 @@ require_once __DIR__ . '/components/layout_start.php';
                             <td><?= $no++ ?></td>
                             <td><span class="badge bg-primary-subtle text-primary rounded px-2.5 py-1.5 font-bold">มัธยมศึกษาปีที่ <?= esc(str_replace('ม.', '', $c['level'])) ?></span></td>
                             <td>ห้อง <strong><?= esc($c['room_name']) ?></strong></td>
-                            <td><span class="font-bold text-dark"><i class="bi bi-person-circle text-muted me-1.5"></i>ครู<?= esc($c['teacher_name']) ?></span></td>
+                            <td><span class="font-bold text-dark"><i class="bi bi-person-circle text-muted me-1.5"></i><?= esc(format_teacher_names($c['teacher_name'])) ?></span></td>
                             <td class="text-center">
                                 <div class="btn-group gap-1">
                                     <button class="btn btn-sm btn-outline-info rounded px-2 py-1" onclick="openEditModal(<?= $c['id'] ?>)" title="แก้ไขข้อมูล">

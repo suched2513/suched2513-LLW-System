@@ -138,7 +138,7 @@ require_once __DIR__ . '/components/layout_start.php';
                             <td><span class="badge bg-primary text-white rounded px-2.5 py-1 font-bold">ม.<?= esc($r['level'] . '/' . $r['room_name']) ?></span></td>
                             <td><span class="font-bold text-dark"><?= th_date($r['meeting_date']) ?></span></td>
                             <td>เทอม <?= esc($r['semester'] . '/' . $r['academic_year']) ?></td>
-                            <td><?= esc($r['teacher_name']) ?></td>
+                            <td><?= esc(format_teacher_names($r['teacher_name'])) ?></td>
                             <td>
                                 <span class="font-bold text-success"><?= esc($r['attend_count']) ?></span> / <?= esc($r['total_parents']) ?> คน
                                 <div class="text-xs text-muted">(คิดเป็น <?= $rate ?>%)</div>
@@ -383,7 +383,7 @@ function viewReportDetails(meetingId) {
         if (data.status === 'success') {
             const m = data.data;
             document.getElementById('view_classroom').textContent = `ม.${m.level}/${m.room_name}`;
-            document.getElementById('view_teacher').textContent = `ครู${m.teacher_name}`;
+            document.getElementById('view_teacher').textContent = m.teacher_name_formatted || `ครู${m.teacher_name}`;
             document.getElementById('view_date').textContent = m.meeting_date_formatted;
             document.getElementById('view_semester').textContent = `เทอม ${m.semester}/${m.academic_year}`;
             document.getElementById('view_students').textContent = `${m.total_students} คน / ${m.total_parents} คน`;

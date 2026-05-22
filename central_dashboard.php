@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * central_dashboard.php — The "Super Dashboard" for LLW Platinum
  */
@@ -180,7 +180,7 @@ try {
             COUNT(DISTINCT s.id) as cnt,
             COUNT(DISTINCT CASE WHEN s.gender = 'ชาย' OR s.name LIKE 'เด็กชาย%' OR s.name LIKE 'นาย%' OR s.name LIKE 'ด.ช.%' THEN s.id END) as male_cnt,
             COUNT(DISTINCT CASE WHEN s.gender = 'หญิง' OR s.name LIKE 'เด็กหญิง%' OR s.name LIKE 'นางสาว%' OR s.name LIKE 'ด.ญ.%' THEN s.id END) as female_cnt,
-            GROUP_CONCAT(DISTINCT u.firstname SEPARATOR ' / ') as advisors
+            GROUP_CONCAT(DISTINCT CONCAT('ครู', u.firstname, ' ', COALESCE(u.lastname, '')) ORDER BY ca.role_type ASC, ca.id ASC SEPARATOR ' / ') as advisors
         FROM att_students s
         LEFT JOIN llw_class_advisors ca ON s.classroom = ca.classroom
         LEFT JOIN llw_users u ON ca.user_id = u.user_id
@@ -359,8 +359,8 @@ require_once 'components/layout_start.php';
                         <i class="bi bi-chevron-right text-slate-200 group-hover:text-indigo-600 transition-all"></i>
                     </div>
                     <h4 class="text-xl font-black text-slate-800 tracking-tighter"><?= htmlspecialchars($room['classroom']) ?></h4>
-                    <p class="text-xs font-bold text-slate-400 mt-1 truncate" title="<?= htmlspecialchars($room['advisors']) ?>">
-                        <?= $room['advisors'] ? 'ครู' . htmlspecialchars($room['advisors'], ENT_QUOTES, 'UTF-8') : 'ยังไม่ระบุครูที่ปรึกษา' ?>
+                    <p class="text-xs font-bold text-slate-400 mt-1 truncate" title="<?= htmlspecialchars($room['advisors'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                        <?= $room['advisors'] ? htmlspecialchars($room['advisors'], ENT_QUOTES, 'UTF-8') : 'ยังไม่ระบุครูที่ปรึกษา' ?>
                     </p>
                     
                     <div class="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">

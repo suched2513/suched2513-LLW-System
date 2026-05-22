@@ -28,6 +28,13 @@ try {
         exit('ไม่พบข้อมูลรายงานการประชุมนี้ในระบบ');
     }
     
+    // ตรวจสอบสิทธิ์การเข้าถึงรายงานการประชุม (สำหรับครู)
+    if ($_SESSION['pm_role'] === 'teacher') {
+        if (!hasMeetingAccess($meetingId)) {
+            exit('คุณไม่มีสิทธิ์เข้าถึงรายงานการประชุมฉบับนี้');
+        }
+    }
+    
     // 2. ดึงรูปกิจกรรมประกอบรายงาน
     $imgStmt = $pdo->prepare("SELECT * FROM pm_meeting_images WHERE meeting_id = ?");
     $imgStmt->execute([$meetingId]);

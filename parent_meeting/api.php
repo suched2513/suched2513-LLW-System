@@ -57,6 +57,7 @@ try {
 
             // เพิ่มข้อมูลฟอร์แมตวันที่แบบไทย
             $meeting['meeting_date_formatted'] = th_date($meeting['meeting_date']);
+            $meeting['teacher_name_formatted'] = format_teacher_names($meeting['teacher_name']);
 
             // ดึงรูปภาพบรรยากาศการประชุม
             $imgStmt = $pdo->prepare("SELECT id, image_path FROM pm_meeting_images WHERE meeting_id = ?");
@@ -173,13 +174,26 @@ try {
             $pdo->beginTransaction();
 
             // ตรวจสอบสิทธิ์ความเป็นเจ้าของรายงานการประชุม (สำหรับครู)
-            if ($meetingId > 0) {
-                if ($role === 'teacher') {
-                    $checkStmt = $pdo->prepare("SELECT created_by FROM pm_meetings WHERE id = ?");
-                    $checkStmt->execute([$meetingId]);
-                    $owner = $checkStmt->fetchColumn();
-                    if ($owner != $userId) {
+            if ($role === 'teacher') {
+                if ($meetingId > 0) {
+                    if (!hasMeetingAccess($meetingId)) {
                         throw new Exception('คุณไม่มีสิทธิ์แก้ไขรายงานการประชุมห้องเรียนนี้');
+                    }
+                } else {
+                    // สำหรับกรณีสร้างบันทึกใหม่ ตรวจสอบสิทธิ์ครูที่ปรึกษาต่อห้องเรียนที่เลือก
+                    $classroomStmt = $pdo->prepare("SELECT level, room_name FROM pm_classrooms WHERE id = ?");
+                    $classroomStmt->execute([$classroomId]);
+                    $classroomInfo = $classroomStmt->fetch();
+                    if ($classroomInfo) {
+                        $classroomName = $classroomInfo['level'] . '/' . $classroomInfo['room_name'];
+                        $llwUserId = $_SESSION['user_id'] ?? 0;
+                        $advisorStmt = $pdo->prepare("SELECT COUNT(*) FROM llw_class_advisors WHERE classroom = ? AND user_id = ?");
+                        $advisorStmt->execute([$classroomName, $llwUserId]);
+                        if ((int)$advisorStmt->fetchColumn() === 0) {
+                            throw new Exception('คุณไม่มีสิทธิ์บันทึกรายงานการประชุมของห้องเรียนนี้ (คุณไม่ใช่ครูที่ปรึกษาประจำห้อง)');
+                        }
+                    } else {
+                        throw new Exception('ไม่พบข้อมูลห้องเรียนที่ระบุ');
                     }
                 }
             }
@@ -420,14 +434,13 @@ try {
             // ตรวจสอบสิทธิ์เจ้าของรูปภาพ (สำหรับสิทธิ์ครู)
             if ($role === 'teacher') {
                 $checkStmt = $pdo->prepare("
-                    SELECT m.created_by 
-                    FROM pm_meeting_images mi
-                    JOIN pm_meetings m ON mi.meeting_id = m.id
-                    WHERE mi.id = ?
+                    SELECT meeting_id 
+                    FROM pm_meeting_images
+                    WHERE id = ?
                 ");
                 $checkStmt->execute([$imageId]);
-                $owner = $checkStmt->fetchColumn();
-                if ($owner != $userId) {
+                $mId = $checkStmt->fetchColumn();
+                if (!$mId || !hasMeetingAccess($mId)) {
                     throw new Exception('คุณไม่มีสิทธิ์ลบรูปภาพกิจกรรมของรายงานฉบับนี้');
                 }
             }
@@ -466,10 +479,7 @@ try {
 
             // ตรวจสอบสิทธิ์เจ้าของรายงาน (สำหรับสิทธิ์ครู)
             if ($role === 'teacher') {
-                $checkStmt = $pdo->prepare("SELECT created_by FROM pm_meetings WHERE id = ?");
-                $checkStmt->execute([$meetingId]);
-                $owner = $checkStmt->fetchColumn();
-                if ($owner != $userId) {
+                if (!hasMeetingAccess($meetingId)) {
                     throw new Exception('คุณไม่มีสิทธิ์ลบรายงานการประชุมห้องเรียนนี้');
                 }
             }
@@ -559,10 +569,7 @@ try {
 
             // ตรวจสอบสิทธิ์ความเป็นเจ้าของ meeting ของห้องเรียนนั้น (สำหรับครู)
             if ($role === 'teacher') {
-                $checkStmt = $pdo->prepare("SELECT created_by FROM pm_meetings WHERE id = ?");
-                $checkStmt->execute([$meetingId]);
-                $owner = $checkStmt->fetchColumn();
-                if ($owner != $userId) {
+                if (!hasMeetingAccess($meetingId)) {
                     throw new Exception('คุณไม่มีสิทธิ์จัดการข้อมูลในรายงานการประชุมฉบับนี้');
                 }
             }
@@ -679,14 +686,13 @@ try {
             // ตรวจสอบสิทธิ์เจ้าของ meeting (สำหรับสิทธิ์ครู)
             if ($role === 'teacher') {
                 $checkStmt = $pdo->prepare("
-                    SELECT m.created_by 
-                    FROM pm_network_parents np
-                    JOIN pm_meetings m ON np.meeting_id = m.id
-                    WHERE np.id = ?
+                    SELECT meeting_id 
+                    FROM pm_network_parents
+                    WHERE id = ?
                 ");
                 $checkStmt->execute([$networkId]);
-                $owner = $checkStmt->fetchColumn();
-                if ($owner != $userId) {
+                $mId = $checkStmt->fetchColumn();
+                if (!$mId || !hasMeetingAccess($mId)) {
                     throw new Exception('คุณไม่มีสิทธิ์ลบข้อมูลเครือข่ายของชั้นเรียนนี้');
                 }
             }

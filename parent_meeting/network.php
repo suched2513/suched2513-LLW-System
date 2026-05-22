@@ -25,10 +25,12 @@ try {
             SELECT m.id as meeting_id, m.semester, m.academic_year, c.level, c.room_name
             FROM pm_meetings m
             JOIN pm_classrooms c ON m.classroom_id = c.id
-            WHERE m.created_by = ?
+            WHERE m.created_by = ? OR CONCAT(c.level, '/', c.room_name) IN (
+                SELECT classroom FROM llw_class_advisors WHERE user_id = ?
+            )
             ORDER BY m.academic_year DESC, m.semester DESC, c.level, c.room_name
         ");
-        $meetingsStmt->execute([$_SESSION['pm_user_id']]);
+        $meetingsStmt->execute([$_SESSION['pm_user_id'], $_SESSION['user_id'] ?? 0]);
     }
     $myMeetings = $meetingsStmt->fetchAll();
     
