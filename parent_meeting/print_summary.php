@@ -50,6 +50,14 @@ try {
     $stmt->execute($params);
     $reports = $stmt->fetchAll();
     
+    // Auto-detect semester & academic_year if not specified in filter
+    if ($selSemester === '' && !empty($reports)) {
+        $selSemester = $reports[0]['semester'];
+    }
+    if ($selYear === '' && !empty($reports)) {
+        $selYear = $reports[0]['academic_year'];
+    }
+    
     // ดึงข้อมูลผู้ขาดประชุมของแต่ละห้อง
     $meetingIds = array_column($reports, 'id');
     $absentsByMeeting = [];
