@@ -882,6 +882,68 @@ try {
             echo json_encode(['status' => 'success', 'message' => 'ลบข้อมูลผู้ใช้งานเรียบร้อยแล้ว']);
             break;
 
+        case 'sync_teachers':
+            if ($role !== 'admin') {
+                http_response_code(403);
+                echo json_encode(['status' => 'error', 'message' => 'เฉพาะแอดมินเท่านั้นที่เข้าถึงได้']);
+                exit;
+            }
+
+            $llwPdo = getLlwPdo();
+            if (!$llwPdo) {
+                throw new Exception('ไม่สามารถเชื่อมต่อฐานข้อมูลกลางได้ กรุณาลองใหม่อีกครั้ง');
+            }
+
+            $targetUsername = $input['username'] ?? null;
+
+            // ดึงรายชื่อจาก llw_users
+            if ($targetUsername) {
+                // ซิงค์คนเดียว
+                $llwStmt = $llwPdo->prepare("
+                    SELECT username, CONCAT(firstname, ' ', lastname) as fullname, role as llw_role
+                    FROM llw_users
+                    WHERE username = ? AND status = 'active'
+                ");
+                $llwStmt->execute([$targetUsername]);
+            } else {
+                // ซิงค์ทั้งหมด
+                $llwStmt = $llwPdo->query("
+                    SELECT username, CONCAT(firstname, ' ', lastname) as fullname, role as llw_role
+                    FROM llw_users
+                    WHERE role IN ('att_teacher','wfh_staff','super_admin','wfh_admin')
+                      AND status = 'active'
+                ");
+            }
+            $sourceUsers = $llwStmt->fetchAll();
+
+            $roleMap = [
+                'super_admin' => 'admin',
+                'wfh_admin'   => 'executive',
+                'att_teacher' => 'teacher',
+                'wfh_staff'   => 'teacher',
+                'cb_admin'    => 'teacher',
+            ];
+
+            $synced = 0;
+            $pdo->beginTransaction();
+            $chkStmt = $pdo->prepare("SELECT id FROM pm_users WHERE username = ?");
+            $insStmt = $pdo->prepare("INSERT INTO pm_users (fullname, username, password, role) VALUES (?, ?, ?, ?)");
+            foreach ($sourceUsers as $su) {
+                $chkStmt->execute([$su['username']]);
+                if (!$chkStmt->fetch()) {
+                    $randPass = password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT);
+                    $pmRole   = $roleMap[$su['llw_role']] ?? 'teacher';
+                    $insStmt->execute([trim($su['fullname']), $su['username'], $randPass, $pmRole]);
+                    $synced++;
+                }
+            }
+            $pdo->commit();
+
+            $msg = $synced > 0 ? "ซิงค์สำเร็จ {$synced} คน" : 'ไม่มีรายชื่อใหม่ที่ต้องซิงค์';
+            echo json_encode(['status' => 'success', 'message' => $msg, 'synced' => $synced]);
+            break;
+
+
         // ==========================================
         // CLASSROOM SETTINGS ACTIONS (ADMIN ONLY)
         // ==========================================

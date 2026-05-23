@@ -20,15 +20,46 @@ try {
     $users = [];
 }
 
+// ดึงครูจาก llw_users ที่ยังไม่มีในระบบนี้
+$unsyncedTeachers = [];
+$llwPdo = getLlwPdo();
+if ($llwPdo) {
+    try {
+        $llwStmt = $llwPdo->query("
+            SELECT username, CONCAT(firstname, ' ', lastname) as fullname, role as llw_role
+            FROM llw_users
+            WHERE role IN ('att_teacher','wfh_staff','super_admin','wfh_admin')
+              AND status = 'active'
+            ORDER BY firstname, lastname
+        ");
+        $allLlwUsers = $llwStmt->fetchAll();
+        $pmUsernames = array_flip(array_column($users, 'username'));
+        foreach ($allLlwUsers as $lu) {
+            if (!isset($pmUsernames[$lu['username']])) {
+                $unsyncedTeachers[] = $lu;
+            }
+        }
+    } catch (Exception $e) {
+        error_log('[PM] getLlwTeachers: ' . $e->getMessage());
+    }
+}
+
 require_once __DIR__ . '/components/layout_start.php';
 ?>
 
 <!-- หัวข้อและการจัดการหลัก -->
 <div class="d-flex align-items-center justify-content-between mb-4">
     <h5 class="m-0 font-black text-dark-blue">รายชื่อผู้ใช้งานในระบบ</h5>
-    <button type="button" class="btn btn-primary rounded-3 font-bold shadow-sm" onclick="openAddModal()">
-        <i class="bi bi-person-plus-fill me-1"></i> เพิ่มผู้ใช้ใหม่
-    </button>
+    <div class="d-flex gap-2">
+        <?php if (!empty($unsyncedTeachers)): ?>
+        <button type="button" class="btn btn-warning rounded-3 font-bold shadow-sm" onclick="syncAllTeachers(<?= count($unsyncedTeachers) ?>)">
+            <i class="bi bi-arrow-repeat me-1"></i> ซิงค์ครูจากระบบหลัก (<?= count($unsyncedTeachers) ?> คน)
+        </button>
+        <?php endif; ?>
+        <button type="button" class="btn btn-primary rounded-3 font-bold shadow-sm" onclick="openAddModal()">
+            <i class="bi bi-person-plus-fill me-1"></i> เพิ่มผู้ใช้ใหม่
+        </button>
+    </div>
 </div>
 
 <div class="alert alert-info rounded-3 text-sm d-flex align-items-start py-3 px-4 mb-4 border-0" role="alert" style="background-color: rgba(13, 110, 253, 0.08); color: #084298;">
@@ -97,6 +128,57 @@ require_once __DIR__ . '/components/layout_start.php';
         </div>
     </div>
 </div>
+
+<?php if (!empty($unsyncedTeachers)): ?>
+<div class="card shadow-sm border-0 mt-4">
+    <div class="card-header border-0 d-flex align-items-center justify-content-between py-3 px-4" style="background-color: rgba(245,158,11,0.08);">
+        <div>
+            <h6 class="m-0 font-bold" style="color:#92400e;">
+                <i class="bi bi-person-exclamation me-2"></i>ครูที่ยังไม่เคยเข้าสู่ระบบ (<?= count($unsyncedTeachers) ?> คน)
+            </h6>
+            <p class="text-xs text-muted m-0 mt-1">บัญชีเหล่านี้มีอยู่ในระบบ LLW หลัก แต่ยังไม่เคย Login เข้าระบบรายงานผู้ปกครองนี้</p>
+        </div>
+        <button class="btn btn-sm btn-warning font-bold rounded-3" onclick="syncAllTeachers(<?= count($unsyncedTeachers) ?>)">
+            <i class="bi bi-arrow-repeat me-1"></i> ซิงค์ทั้งหมด
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive p-3">
+            <table class="table table-hover w-100 mb-0" id="unsyncedTable">
+                <thead>
+                    <tr>
+                        <th width="8%">ลำดับ</th>
+                        <th width="35%">ชื่อ - นามสกุล</th>
+                        <th width="27%">Username (ระบบหลัก)</th>
+                        <th width="15%">สิทธิ์เดิม</th>
+                        <th width="15%" class="text-center">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($unsyncedTeachers as $idx => $ut): ?>
+                    <tr>
+                        <td><?= $idx + 1 ?></td>
+                        <td><span class="font-bold text-dark"><?= esc($ut['fullname']) ?></span></td>
+                        <td><code><?= esc($ut['username']) ?></code></td>
+                        <td>
+                            <span class="badge bg-secondary-subtle text-secondary rounded px-2 py-1 font-bold" style="font-size:11px;">
+                                <?= esc($ut['llw_role']) ?>
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-success rounded px-2 py-1"
+                                    onclick="syncOneTeacher('<?= esc($ut['username']) ?>', '<?= esc($ut['fullname']) ?>')">
+                                <i class="bi bi-person-plus"></i> เพิ่ม
+                            </button>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Modal สำหรับ เพิ่ม / แก้ไข ผู้ใช้งาน -->
 <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true" data-bs-backdrop="static">
@@ -270,6 +352,54 @@ function deleteUser(userId) {
             showAlert('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับระบบเซิร์ฟเวอร์ได้', 'error');
         });
     });
+}
+// ซิงค์ครูทั้งหมดจากระบบหลัก
+function syncAllTeachers(count) {
+    Swal.fire({
+        title: 'ซิงค์ครูทั้งหมด?',
+        text: `จะเพิ่มครูที่ยังไม่อยู่ในระบบจำนวน ${count} คน เข้าสู่ระบบโดยอัตโนมัติ`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#f59e0b',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'ซิงค์ทั้งหมด',
+        cancelButtonText: 'ยกเลิก'
+    }).then(result => {
+        if (!result.isConfirmed) return;
+        Swal.fire({ title: 'กำลังซิงค์...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'sync_teachers' })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.status === 'success') {
+                showAlert('สำเร็จ', d.message, 'success').then(() => location.reload());
+            } else {
+                showAlert('ผิดพลาด', d.message || 'ซิงค์ไม่สำเร็จ', 'error');
+            }
+        })
+        .catch(() => showAlert('ผิดพลาด', 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้', 'error'));
+    });
+}
+
+// ซิงค์ครูรายคน
+function syncOneTeacher(username, fullname) {
+    fetch('api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync_teachers', username: username })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            showAlert('สำเร็จ', `เพิ่ม ${fullname} เข้าระบบแล้ว`, 'success').then(() => location.reload());
+        } else {
+            showAlert('ผิดพลาด', d.message || 'เพิ่มไม่สำเร็จ', 'error');
+        }
+    })
+    .catch(() => showAlert('ผิดพลาด', 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้', 'error'));
 }
 </script>
 
