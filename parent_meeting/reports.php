@@ -58,15 +58,101 @@ try {
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
     $reports = $stmt->fetchAll();
-    
+
+    // สถิติรวม
+    $totalMeetings = count($reports);
+    $totalParents  = array_sum(array_column($reports, 'total_parents'));
+    $totalAttend   = array_sum(array_column($reports, 'attend_count'));
+    $totalAbsent   = array_sum(array_column($reports, 'absent_count'));
+    $attendRate    = $totalParents > 0 ? round($totalAttend / $totalParents * 100, 1) : 0;
+
+    // ดึงรายชื่อผู้ขาดแยกตามห้อง (filter เดียวกัน)
+    $absentQuery = "
+        SELECT c.level, c.room_name,
+               a.student_name, a.parent_name, a.phone,
+               a.absent_reason, a.follow_up_status,
+               COALESCE(
+                   (SELECT GROUP_CONCAT(CONCAT(lu.firstname, ' ', lu.lastname)
+                           ORDER BY la.role_type ASC, la.id ASC SEPARATOR ' และ ')
+                    FROM llw_class_advisors la
+                    LEFT JOIN llw_users lu ON la.user_id = lu.user_id
+                    WHERE la.classroom = CONCAT(c.level, '/', c.room_name)),
+                   c.teacher_name
+               ) as teacher_name
+        FROM pm_meeting_absents a
+        JOIN pm_meetings m ON a.meeting_id = m.id
+        JOIN pm_classrooms c ON m.classroom_id = c.id
+        WHERE 1=1
+    ";
+    $absentParams = [];
+    if ($selSemester !== '') { $absentQuery .= " AND m.semester = ?";      $absentParams[] = $selSemester; }
+    if ($selYear     !== '') { $absentQuery .= " AND m.academic_year = ?"; $absentParams[] = $selYear; }
+    if ($selLevel    !== '') { $absentQuery .= " AND c.level = ?";         $absentParams[] = $selLevel; }
+    $absentQuery .= " ORDER BY c.level, c.room_name, a.student_name";
+
+    $absentStmt = $pdo->prepare($absentQuery);
+    $absentStmt->execute($absentParams);
+    $allAbsents = $absentStmt->fetchAll();
+
+    // จัดกลุ่มผู้ขาดตามห้องเรียน
+    $absentsByClass = [];
+    foreach ($allAbsents as $ab) {
+        $key = $ab['level'] . '/' . $ab['room_name'];
+        if (!isset($absentsByClass[$key])) {
+            $absentsByClass[$key] = [
+                'level'        => $ab['level'],
+                'room_name'    => $ab['room_name'],
+                'teacher_name' => $ab['teacher_name'],
+                'absents'      => []
+            ];
+        }
+        $absentsByClass[$key]['absents'][] = $ab;
+    }
+
 } catch (Exception $e) {
     error_log('[Parent Meeting] Reports Fetch Error: ' . $e->getMessage());
-    $filters = [];
-    $reports = [];
+    $filters        = [];
+    $reports        = [];
+    $totalMeetings  = $totalParents = $totalAttend = $totalAbsent = 0;
+    $attendRate     = 0;
+    $absentsByClass = [];
 }
+
 
 require_once __DIR__ . '/components/layout_start.php';
 ?>
+
+<!-- KPI Cards ภาพรวม -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm p-4" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+            <div class="text-white opacity-75 text-xs font-bold text-uppercase mb-1">ห้องที่ส่งรายงาน</div>
+            <div class="text-white fw-black" style="font-size:2rem;"><?= $totalMeetings ?></div>
+            <div class="text-white opacity-75 text-xs">ห้องเรียน</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm p-4" style="background:linear-gradient(135deg,#0ea5e9,#38bdf8);">
+            <div class="text-white opacity-75 text-xs font-bold text-uppercase mb-1">ผู้ปกครองทั้งหมด</div>
+            <div class="text-white fw-black" style="font-size:2rem;"><?= number_format($totalParents) ?></div>
+            <div class="text-white opacity-75 text-xs">คน (ทุกห้อง)</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm p-4" style="background:linear-gradient(135deg,#10b981,#34d399);">
+            <div class="text-white opacity-75 text-xs font-bold text-uppercase mb-1">มาร่วมประชุม</div>
+            <div class="text-white fw-black" style="font-size:2rem;"><?= number_format($totalAttend) ?></div>
+            <div class="text-white opacity-75 text-xs">คน (<?= $attendRate ?>%)</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm p-4" style="background:linear-gradient(135deg,#f43f5e,#fb7185);">
+            <div class="text-white opacity-75 text-xs font-bold text-uppercase mb-1">ไม่ได้มาประชุม</div>
+            <div class="text-white fw-black" style="font-size:2rem;"><?= number_format($totalAbsent) ?></div>
+            <div class="text-white opacity-75 text-xs">คน (<?= $totalParents > 0 ? round($totalAbsent/$totalParents*100,1) : 0 ?>%)</div>
+        </div>
+    </div>
+</div>
 
 <!-- การ์ดตัวกรองค้นหา -->
 <div class="card mb-4 border-0 shadow-sm">
@@ -82,6 +168,9 @@ require_once __DIR__ . '/components/layout_start.php';
                     <option value="ม.1" <?= $selLevel === 'ม.1' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 1</option>
                     <option value="ม.2" <?= $selLevel === 'ม.2' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 2</option>
                     <option value="ม.3" <?= $selLevel === 'ม.3' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 3</option>
+                    <option value="ม.4" <?= $selLevel === 'ม.4' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 4</option>
+                    <option value="ม.5" <?= $selLevel === 'ม.5' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 5</option>
+                    <option value="ม.6" <?= $selLevel === 'ม.6' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 6</option>
                 </select>
             </div>
             
@@ -119,6 +208,96 @@ require_once __DIR__ . '/components/layout_start.php';
         </form>
     </div>
 </div>
+
+<?php if (!empty($absentsByClass)): ?>
+<!-- ภาพรวมผู้ขาดประชุมแยกห้อง -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between py-3">
+        <h6 class="m-0 font-bold" style="color:#be123c;">
+            <i class="bi bi-person-x-fill me-2"></i>ภาพรวมผู้ปกครองที่ไม่ได้มาประชุมแยกห้อง
+        </h6>
+        <span class="badge bg-danger-subtle text-danger font-bold px-3 py-2 rounded-pill">
+            รวม <?= number_format($totalAbsent) ?> คน จาก <?= count($absentsByClass) ?> ห้อง
+        </span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size:13px;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="px-4" style="width:90px;">ห้อง</th>
+                        <th style="width:200px;">ครูที่ปรึกษา</th>
+                        <th style="width:80px;" class="text-center">ขาด</th>
+                        <th>รายชื่อนักเรียน / ผู้ปกครองที่ขาด</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($absentsByClass as $cls):
+                    $cnt = count($cls['absents']);
+                    $colId = 'abs_' . preg_replace('/[^a-z0-9]/i','_', $cls['level'].$cls['room_name']);
+                ?>
+                    <tr class="align-middle">
+                        <td class="px-4 fw-bold">
+                            <span class="badge bg-danger text-white px-2 py-1 rounded">
+                                <?= esc($cls['level'] . '/' . $cls['room_name']) ?>
+                            </span>
+                        </td>
+                        <td class="text-muted" style="font-size:12px;"><?= esc(format_teacher_names($cls['teacher_name'])) ?></td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1"
+                                    data-bs-toggle="collapse" data-bs-target="#<?= $colId ?>">
+                                <?= $cnt ?> คน
+                            </button>
+                        </td>
+                        <td>
+                            <div class="collapse" id="<?= $colId ?>">
+                                <div class="py-2">
+                                <?php foreach ($cls['absents'] as $i => $ab): ?>
+                                    <div class="d-flex align-items-start gap-2 py-1 <?= $i > 0 ? 'border-top' : '' ?>">
+                                        <span class="badge bg-light text-secondary border fw-bold" style="min-width:22px;font-size:10px;"><?= $i+1 ?></span>
+                                        <div class="flex-grow-1">
+                                            <span class="fw-bold text-dark"><?= esc($ab['student_name']) ?></span>
+                                            <?php if ($ab['parent_name']): ?>
+                                                <span class="text-muted ms-1">/ ผปก. <?= esc($ab['parent_name']) ?></span>
+                                            <?php endif; ?>
+                                            <?php if ($ab['phone']): ?>
+                                                <span class="badge bg-light text-secondary ms-1 border" style="font-size:11px;">
+                                                    <i class="bi bi-telephone"></i> <?= esc($ab['phone']) ?>
+                                                </span>
+                                            <?php endif; ?>
+                                            <?php if ($ab['absent_reason']): ?>
+                                                <div class="text-xs text-muted mt-1">
+                                                    <i class="bi bi-chat-left-text me-1"></i>สาเหตุ: <?= esc($ab['absent_reason']) ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="flex-shrink-0">
+                                            <?php if ($ab['follow_up_status'] === 'followed_up'): ?>
+                                                <span class="badge bg-success-subtle text-success rounded-pill px-2" style="font-size:10px;">
+                                                    <i class="bi bi-check-circle-fill"></i> ติดตามแล้ว
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge bg-warning-subtle text-warning rounded-pill px-2" style="font-size:10px;">
+                                                    <i class="bi bi-clock"></i> ยังไม่ติดตาม
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <div class="text-xs text-muted">
+                                <i class="bi bi-caret-down"></i> คลิกที่จำนวนคนเพื่อดูรายชื่อ
+                            </div>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- ตารางรายงานการประชุมทั้งหมด -->
 <div class="card shadow-sm border-0">
