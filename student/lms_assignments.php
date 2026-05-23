@@ -35,14 +35,16 @@ if (!$pre_done->fetch()) {
 
 // Handle exercise submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exercise_id'])) {
-    $ex_id  = (int)$_POST['exercise_id'];
+    $ex_id        = (int)$_POST['exercise_id'];
     $unit_id_post = (int)$_POST['unit_id'];
-    $answer = trim($_POST['answer_text'] ?? '');
+    $answer       = trim($_POST['answer_text'] ?? '');
+    $link_url     = trim($_POST['link_url'] ?? '');
+    if ($link_url !== '' && !filter_var($link_url, FILTER_VALIDATE_URL)) $link_url = '';
 
     $file_paths_arr = [];
-    $allowed_mime   = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
-    $allowed_ext    = ['jpg','jpeg','png','gif','webp','pdf'];
-    $max_size       = 10 * 1024 * 1024;
+    $allowed_mime   = ['image/jpeg','image/png','image/gif','image/webp','application/pdf',
+                       'video/mp4','video/quicktime','video/x-msvideo','video/3gpp','video/webm'];
+    $allowed_ext    = ['jpg','jpeg','png','gif','webp','pdf','mp4','mov','avi','3gp','webm'];
     $upload_dir     = __DIR__ . '/../lms/uploads/exercises/';
     if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
 
@@ -55,6 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exercise_id'])) {
             finfo_close($finfo);
             $ext = strtolower(pathinfo($_FILES['exercise_files']['name'][$fi], PATHINFO_EXTENSION));
             if (!in_array($mime, $allowed_mime) || !in_array($ext, $allowed_ext)) continue;
+            $is_video = str_starts_with($mime, 'video/');
+            $max_size = $is_video ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
             if ($_FILES['exercise_files']['size'][$fi] > $max_size) continue;
             $fname = $uid . '_' . $ex_id . '_' . time() . '_' . $fi . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
             if (move_uploaded_file($_FILES['exercise_files']['tmp_name'][$fi], $upload_dir . $fname)) {
@@ -64,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exercise_id'])) {
     }
     $file_paths_json = !empty($file_paths_arr) ? json_encode($file_paths_arr) : null;
 
-    if ($answer !== '' || !empty($file_paths_arr)) {
+    if ($answer !== '' || !empty($file_paths_arr) || $link_url !== '') {
         $exists_q = $pdo->prepare("SELECT id, file_paths FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
         $exists_q->execute([$uid, $ex_id]);
         $existing = $exists_q->fetch();
@@ -76,16 +80,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exercise_id'])) {
                     if (file_exists($op)) @unlink($op);
                 }
             }
-            if ($file_paths_json) {
-                $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?, file_paths=?, submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
-                    ->execute([$answer, $file_paths_json, $uid, $ex_id]);
-            } else {
-                $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?, submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
-                    ->execute([$answer, $uid, $ex_id]);
-            }
+            $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?, file_paths=COALESCE(?,file_paths), link_url=?, submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
+                ->execute([$answer, $file_paths_json, $link_url ?: null, $uid, $ex_id]);
         } else {
-            $pdo->prepare("INSERT INTO lms_student_exercises (student_uid, exercise_id, unit_id, subject_id, answer_text, file_paths) VALUES (?,?,?,?,?,?)")
-                ->execute([$uid, $ex_id, $unit_id_post, $subject_id, $answer, $file_paths_json]);
+            $pdo->prepare("INSERT INTO lms_student_exercises (student_uid, exercise_id, unit_id, subject_id, answer_text, file_paths, link_url) VALUES (?,?,?,?,?,?,?)")
+                ->execute([$uid, $ex_id, $unit_id_post, $subject_id, $answer, $file_paths_json, $link_url ?: null]);
         }
         header('Location: /student/lms_assignments.php?subject_id=' . $subject_id . '&done=1'); exit();
     }
@@ -99,7 +98,7 @@ $units = $units->fetchAll();
 
 // Load all student submissions for this subject (one query)
 $subs_stmt = $pdo->prepare("
-    SELECT exercise_id, answer_text, file_paths, grade, feedback, reviewed_at, submitted_at
+    SELECT exercise_id, answer_text, file_paths, link_url, grade, feedback, reviewed_at, submitted_at
     FROM lms_student_exercises
     WHERE student_uid=? AND subject_id=?
 ");
@@ -307,6 +306,9 @@ body { font-family: 'Prompt', sans-serif; }
       <?php if (in_array($fext, ['jpg','jpeg','png','gif','webp'])): ?>
       <img src="<?=$base_path . '/' . htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>"
            class="mt-2 w-full max-h-40 object-contain rounded-lg bg-white border border-slate-100" alt="">
+      <?php elseif (in_array($fext, ['mp4','mov','avi','3gp','webm'])): ?>
+      <video src="<?=$base_path . '/' . htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>"
+             controls class="mt-2 w-full rounded-lg border border-slate-100 max-h-48"></video>
       <?php else: ?>
       <a href="<?=$base_path . '/' . htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
          class="mt-1.5 flex items-center gap-2 text-xs text-blue-600 font-bold">
@@ -314,6 +316,12 @@ body { font-family: 'Prompt', sans-serif; }
       </a>
       <?php endif; ?>
       <?php endforeach; ?>
+      <?php endif; ?>
+      <?php if (!empty($sub['link_url'])): ?>
+      <a href="<?=htmlspecialchars($sub['link_url'],ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
+         class="mt-1.5 flex items-center gap-2 text-xs text-blue-600 font-bold">
+        <i class="bi bi-link-45deg text-violet-500 text-base"></i><span class="underline truncate"><?=htmlspecialchars($sub['link_url'],ENT_QUOTES,'UTF-8')?></span>
+      </a>
       <?php endif; ?>
     </div>
     <?php endif; ?>
@@ -337,12 +345,12 @@ body { font-family: 'Prompt', sans-serif; }
 
     <!-- Action button -->
     <?php if (!$done): ?>
-    <button onclick="openExModal(<?=$ex['id']?>,<?=$g['unit']['id']?>,<?=json_encode($ex['exercise_title'])?>,<?=json_encode($ex['description']??'')?>,<?=(int)($ex['max_score']??0)?>,<?=$due_ts??0?>,'',[])"
+    <button onclick="openExModal(<?=$ex['id']?>,<?=$g['unit']['id']?>,<?=json_encode($ex['exercise_title'])?>,<?=json_encode($ex['description']??'')?>,<?=(int)($ex['max_score']??0)?>,<?=$due_ts??0?>,'',[],'') "
       class="ml-10 w-[calc(100%-2.5rem)] py-2 bg-violet-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-violet-200/50 active:scale-95 transition-transform">
       <i class="bi bi-send-fill mr-1"></i> ส่งงาน
     </button>
     <?php elseif ($can_edit): ?>
-    <button onclick="openExModal(<?=$ex['id']?>,<?=$g['unit']['id']?>,<?=json_encode($ex['exercise_title'])?>,<?=json_encode($ex['description']??'')?>,<?=(int)($ex['max_score']??0)?>,<?=$due_ts??0?>,<?=json_encode($sub['answer_text']??'')?>,<?=json_encode(json_decode($sub['file_paths']??'[]',true)??[])?>)"
+    <button onclick="openExModal(<?=$ex['id']?>,<?=$g['unit']['id']?>,<?=json_encode($ex['exercise_title'])?>,<?=json_encode($ex['description']??'')?>,<?=(int)($ex['max_score']??0)?>,<?=$due_ts??0?>,<?=json_encode($sub['answer_text']??'')?>,<?=json_encode(json_decode($sub['file_paths']??'[]',true)??[])?>,<?=json_encode($sub['link_url']??'')?>)"
       class="ml-10 w-[calc(100%-2.5rem)] py-1.5 border border-slate-200 text-slate-500 font-bold text-xs rounded-xl active:opacity-70">
       <i class="bi bi-pencil-fill mr-1"></i> แก้ไขงาน
     </button>
@@ -379,24 +387,38 @@ body { font-family: 'Prompt', sans-serif; }
         <p class="text-xs text-blue-700 leading-relaxed" id="exModalDesc"></p>
       </div>
       <!-- File upload (first — most visible on mobile) -->
+      <!-- File upload: photo / video / pdf -->
       <div>
         <label class="block text-xs font-black text-slate-500 mb-1.5">
-          <i class="bi bi-camera mr-1"></i>ถ่ายรูปงาน / แนบไฟล์
-          <span class="text-slate-400 font-normal">(ไม่บังคับถ้ามีคำตอบ)</span>
+          <i class="bi bi-paperclip mr-1"></i>แนบไฟล์
+          <span class="text-slate-400 font-normal">(รูป / วีดีโอ / PDF — สูงสุด 3 ไฟล์)</span>
         </label>
-        <input type="file" name="exercise_files[]" id="exFileInput" accept="image/*,.pdf"
+        <input type="file" name="exercise_files[]" id="exFileInput"
+          accept="image/*,video/*,.pdf,.mp4,.mov,.avi,.3gp,.webm"
           multiple class="hidden" onchange="previewExFiles(this)">
         <label for="exFileInput"
-          class="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 cursor-pointer hover:border-violet-400 hover:text-violet-500 transition-all font-bold text-sm active:opacity-70">
-          <i class="bi bi-camera text-xl"></i> แตะเพื่อถ่ายรูป / เลือกไฟล์
+          class="flex items-center justify-center gap-3 w-full py-3.5 border-2 border-dashed border-violet-200 rounded-xl text-violet-400 cursor-pointer hover:border-violet-500 hover:text-violet-600 hover:bg-violet-50/50 transition-all font-bold text-sm active:opacity-70">
+          <i class="bi bi-camera-fill text-xl"></i>
+          <span>ถ่ายรูป / อัดวีดีโอ / เลือกไฟล์</span>
         </label>
-        <p class="text-[10px] text-slate-400 mt-1 text-center">รูปหรือ PDF สูงสุด 3 ไฟล์ · 10MB/ไฟล์</p>
+        <p class="text-[10px] text-slate-400 mt-1 text-center">รูป·PDF 10MB/ไฟล์ · วีดีโอ 100MB/ไฟล์</p>
         <div id="exFilePreview" class="mt-2 space-y-1.5"></div>
+      </div>
+      <!-- Link / URL -->
+      <div>
+        <label class="block text-xs font-black text-slate-500 mb-1.5">
+          <i class="bi bi-link-45deg mr-1"></i>ลิงค์ (YouTube / Google Drive / อื่นๆ)
+          <span class="text-slate-400 font-normal">(ไม่บังคับ)</span>
+        </label>
+        <input type="url" name="link_url" id="exModalLink"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-400"
+          placeholder="https://youtube.com/...">
       </div>
       <!-- Text answer -->
       <div>
         <label class="block text-xs font-black text-slate-500 mb-1.5">
-          คำตอบ <span class="text-slate-400 font-normal">(ไม่บังคับถ้ามีไฟล์)</span>
+          <i class="bi bi-pencil mr-1"></i>คำตอบ
+          <span class="text-slate-400 font-normal">(ไม่บังคับถ้ามีไฟล์หรือลิงค์)</span>
         </label>
         <textarea name="answer_text" id="exModalAnswer" rows="3"
           class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-400 resize-none"
@@ -454,11 +476,12 @@ function setFilter(f) {
 }
 
 // ── Modal logic ────────────────────────────────────
-function openExModal(exId, unitId, title, desc, maxScore, dueTs, existingText, existingFiles) {
+function openExModal(exId, unitId, title, desc, maxScore, dueTs, existingText, existingFiles, existingLink) {
   document.getElementById('exModalId').value     = exId;
   document.getElementById('exModalUnitId').value = unitId;
   document.getElementById('exModalTitle').textContent = title;
   document.getElementById('exModalAnswer').value = existingText || '';
+  document.getElementById('exModalLink').value   = existingLink || '';
   const dw = document.getElementById('exDescWrap');
   if (desc) { document.getElementById('exModalDesc').textContent = desc; dw.classList.remove('hidden'); }
   else dw.classList.add('hidden');
@@ -507,17 +530,30 @@ function previewExFiles(input) {
         div.innerHTML = `<img src="${e.target.result}" class="max-h-32 rounded-lg mx-auto object-contain"><p class="text-[10px] text-emerald-600 font-bold mt-1 truncate">${file.name}</p>`;
       };
       reader.readAsDataURL(file);
+    } else if (file.type.startsWith('video/')) {
+      const url = URL.createObjectURL(file);
+      preview.insertAdjacentHTML('beforeend',
+        `<div class="rounded-xl overflow-hidden border border-slate-200 bg-black">
+          <video src="${url}" controls class="w-full max-h-36"></video>
+          <p class="text-[10px] text-slate-400 px-2 py-1 truncate">${file.name}</p>
+        </div>`);
     } else {
-      preview.insertAdjacentHTML('beforeend', `<div class="flex items-center gap-3 px-3 py-2 bg-red-50 rounded-xl border border-red-100"><i class="bi bi-file-earmark-pdf text-red-500 text-xl flex-shrink-0"></i><p class="text-xs font-bold text-slate-700 truncate">${file.name}</p></div>`);
+      const icon = file.type === 'application/pdf' ? 'bi-file-earmark-pdf text-red-500' : 'bi-file-earmark text-slate-500';
+      preview.insertAdjacentHTML('beforeend',
+        `<div class="flex items-center gap-3 px-3 py-2 bg-red-50 rounded-xl border border-red-100">
+          <i class="bi ${icon} text-xl flex-shrink-0"></i>
+          <p class="text-xs font-bold text-slate-700 truncate">${file.name}</p>
+        </div>`);
     }
   });
 }
 
 function validateExForm() {
   const text  = (document.getElementById('exModalAnswer').value || '').trim();
+  const link  = (document.getElementById('exModalLink').value || '').trim();
   const files = document.getElementById('exFileInput').files;
-  if (!text && files.length === 0) {
-    Swal.fire({icon:'warning',title:'กรุณาส่งงาน',text:'พิมพ์คำตอบหรือแนบไฟล์อย่างน้อย 1 อย่าง',confirmButtonColor:'#7C3AED'});
+  if (!text && !link && files.length === 0) {
+    Swal.fire({icon:'warning',title:'กรุณาส่งงาน',text:'แนบไฟล์ / ใส่ลิงค์ / หรือพิมพ์คำตอบอย่างน้อย 1 อย่าง',confirmButtonColor:'#7C3AED'});
     return false;
   }
   if (files.length > 3) {
