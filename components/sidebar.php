@@ -137,6 +137,7 @@ $subMenus = [
     'lms' => [
         ['icon' => 'fas fa-tachometer-alt',    'label' => 'Dashboard LMS',  'url' => $base_path . '/lms/dashboard.php'],
         ['icon' => 'fas fa-layer-group',       'label' => 'วิชาทั้งหมด',    'url' => $base_path . '/lms/subjects.php'],
+        ['icon' => 'fas fa-tasks',             'label' => 'ตรวจงานนักเรียน', 'url' => $base_path . '/lms/grade_exercises.php', 'roles' => ['super_admin','att_teacher']],
         ['icon' => 'fas fa-chart-line',        'label' => 'ความคืบหน้า',    'url' => $base_path . '/lms/progress.php'],
     ],
     'duty' => [
