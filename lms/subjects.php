@@ -2,10 +2,14 @@
 session_start();
 require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
-if ($_SESSION['llw_role'] !== 'super_admin') { header('Location: ' . $base_path . '/login.php'); exit(); }
+if (!in_array($_SESSION['llw_role'], ['super_admin','att_teacher'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 
-$pdo = getPdo();
+$pdo        = getPdo();
+$is_admin   = $_SESSION['llw_role'] === 'super_admin';
+$teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
 $msg = '';
+
+$_has_tid = (bool)$pdo->query("SHOW COLUMNS FROM `lms_subjects` LIKE 'teacher_id'")->fetch();
 
 // POST: add / edit / set_classrooms
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -16,7 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $code = trim($_POST['subject_code'] ?? '');
         if (!$name) { $msg = 'error:กรุณาระบุชื่อวิชา'; }
         else {
-            $pdo->prepare("INSERT INTO lms_subjects (subject_name, subject_code) VALUES (?,?)")->execute([$name, $code ?: null]);
+            if ($_has_tid) {
+                $pdo->prepare("INSERT INTO lms_subjects (subject_name, subject_code, teacher_id) VALUES (?,?,?)")
+                    ->execute([$name, $code ?: null, $is_admin ? null : $teacher_id]);
+            } else {
+                $pdo->prepare("INSERT INTO lms_subjects (subject_name, subject_code) VALUES (?,?)")->execute([$name, $code ?: null]);
+            }
             $sid = (int)$pdo->lastInsertId();
             $pdo->prepare("INSERT INTO lms_exam_settings (subject_id, pre_pass_score, post_pass_score, post_max_attempts) VALUES (?,6,6,3)")->execute([$sid]);
             $msg = 'success:เพิ่มวิชาสำเร็จ';
@@ -67,7 +76,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
 
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
-$subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY created_at")->fetchAll();
+if ($_has_tid && !$is_admin) {
+    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY created_at");
+    $st->execute([$teacher_id]); $subjects = $st->fetchAll();
+} else {
+    $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY created_at")->fetchAll();
+}
 
 $all_classrooms = $pdo->query("
     SELECT DISTINCT classroom FROM att_students

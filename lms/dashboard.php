@@ -2,11 +2,21 @@
 session_start();
 require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
-if ($_SESSION['llw_role'] !== 'super_admin') { header('Location: ' . $base_path . '/login.php'); exit(); }
+if (!in_array($_SESSION['llw_role'], ['super_admin','att_teacher'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 
-$pdo = getPdo();
+$pdo        = getPdo();
+$is_admin   = $_SESSION['llw_role'] === 'super_admin';
+$teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
 
-$subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
+$_has_tid = (bool)$pdo->query("SHOW COLUMNS FROM `lms_subjects` LIKE 'teacher_id'")->fetch();
+
+if ($_has_tid && !$is_admin) {
+    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
+    $st->execute([$teacher_id]);
+    $subjects = $st->fetchAll();
+} else {
+    $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
+}
 
 $subject_stats = [];
 foreach ($subjects as $subj) {

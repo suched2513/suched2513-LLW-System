@@ -135,10 +135,11 @@ $subMenus = [
         ['icon' => 'fas fa-sticky-note',          'label' => 'บันทึกข้อความ',     'url' => $base_path . '/edocument/memos.php'],
     ],
     'lms' => [
-        ['icon' => 'fas fa-tachometer-alt',    'label' => 'Dashboard LMS',  'url' => $base_path . '/lms/dashboard.php'],
-        ['icon' => 'fas fa-layer-group',       'label' => 'วิชาทั้งหมด',    'url' => $base_path . '/lms/subjects.php'],
-        ['icon' => 'fas fa-tasks',             'label' => 'ตรวจงานนักเรียน', 'url' => $base_path . '/lms/grade_exercises.php', 'roles' => ['super_admin','att_teacher']],
-        ['icon' => 'fas fa-chart-line',        'label' => 'ความคืบหน้า',    'url' => $base_path . '/lms/progress.php'],
+        ['icon' => 'fas fa-tachometer-alt',    'label' => 'Dashboard LMS',       'url' => $base_path . '/lms/dashboard.php'],
+        ['icon' => 'fas fa-chalkboard',        'label' => 'วิชาของฉัน',           'url' => $base_path . '/lms/subjects.php'],
+        ['icon' => 'fas fa-tasks',             'label' => 'ตรวจงานนักเรียน',      'url' => $base_path . '/lms/grade_exercises.php', 'roles' => ['super_admin','att_teacher']],
+        ['icon' => 'fas fa-chart-line',        'label' => 'ความคืบหน้านักเรียน',  'url' => $base_path . '/lms/progress.php'],
+        ['icon' => 'fas fa-pen-fancy',         'label' => 'ตรวจข้อสอบอัตนัย',    'url' => $base_path . '/lms/exam_answers.php', 'roles' => ['super_admin','att_teacher']],
     ],
     'duty' => [
         ['icon' => 'fas fa-camera',              'label' => 'ส่งรายงานเวร (ครู)', 'url' => $base_path . '/duty/index.php',          'roles' => ['att_teacher','super_admin','wfh_admin']],

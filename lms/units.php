@@ -2,7 +2,7 @@
 session_start();
 require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
-if ($_SESSION['llw_role'] !== 'super_admin') { header('Location: ' . $base_path . '/login.php'); exit(); }
+if (!in_array($_SESSION['llw_role'], ['super_admin','att_teacher'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 
 $pdo = getPdo();
 $msg = '';

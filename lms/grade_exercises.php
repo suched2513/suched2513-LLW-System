@@ -33,19 +33,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'save') 
 $subject_id  = (int)($_GET['subject_id'] ?? 0);
 $exercise_id = (int)($_GET['exercise_id'] ?? 0);
 
+$_has_tid = (bool)$pdo->query("SHOW COLUMNS FROM `lms_subjects` LIKE 'teacher_id'")->fetch();
+
 // Subjects accessible to this teacher
-if ($is_admin) {
+if ($is_admin || !$_has_tid) {
     $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
 } else {
-    $subjects = $pdo->prepare("
-        SELECT DISTINCT s.* FROM lms_subjects s
-        JOIN lms_units u ON u.subject_id = s.id
-        JOIN lms_unit_exercises e ON e.unit_id = u.id
-        WHERE s.teacher_id = ?
-        ORDER BY s.subject_name
-    ");
-    $subjects->execute([$teacher_id]);
-    $subjects = $subjects->fetchAll();
+    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
+    $st->execute([$teacher_id]);
+    $subjects = $st->fetchAll();
 }
 
 $subject = null; $exercises = []; $exercise = null; $submissions = [];
