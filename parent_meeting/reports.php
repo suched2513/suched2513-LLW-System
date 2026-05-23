@@ -58,101 +58,30 @@ try {
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
     $reports = $stmt->fetchAll();
-
-    // สถิติรวม
-    $totalMeetings = count($reports);
-    $totalParents  = array_sum(array_column($reports, 'total_parents'));
-    $totalAttend   = array_sum(array_column($reports, 'attend_count'));
-    $totalAbsent   = array_sum(array_column($reports, 'absent_count'));
-    $attendRate    = $totalParents > 0 ? round($totalAttend / $totalParents * 100, 1) : 0;
-
-    // ดึงรายชื่อผู้ขาดแยกตามห้อง (filter เดียวกัน)
-    $absentQuery = "
-        SELECT c.level, c.room_name,
-               a.student_name, a.parent_name, a.phone,
-               a.absent_reason, a.follow_up_status,
-               COALESCE(
-                   (SELECT GROUP_CONCAT(CONCAT(lu.firstname, ' ', lu.lastname)
-                           ORDER BY la.role_type ASC, la.id ASC SEPARATOR ' และ ')
-                    FROM llw_class_advisors la
-                    LEFT JOIN llw_users lu ON la.user_id = lu.user_id
-                    WHERE la.classroom = CONCAT(c.level, '/', c.room_name)),
-                   c.teacher_name
-               ) as teacher_name
-        FROM pm_meeting_absents a
-        JOIN pm_meetings m ON a.meeting_id = m.id
-        JOIN pm_classrooms c ON m.classroom_id = c.id
-        WHERE 1=1
-    ";
-    $absentParams = [];
-    if ($selSemester !== '') { $absentQuery .= " AND m.semester = ?";      $absentParams[] = $selSemester; }
-    if ($selYear     !== '') { $absentQuery .= " AND m.academic_year = ?"; $absentParams[] = $selYear; }
-    if ($selLevel    !== '') { $absentQuery .= " AND c.level = ?";         $absentParams[] = $selLevel; }
-    $absentQuery .= " ORDER BY c.level, c.room_name, a.student_name";
-
-    $absentStmt = $pdo->prepare($absentQuery);
-    $absentStmt->execute($absentParams);
-    $allAbsents = $absentStmt->fetchAll();
-
-    // จัดกลุ่มผู้ขาดตามห้องเรียน
-    $absentsByClass = [];
-    foreach ($allAbsents as $ab) {
-        $key = $ab['level'] . '/' . $ab['room_name'];
-        if (!isset($absentsByClass[$key])) {
-            $absentsByClass[$key] = [
-                'level'        => $ab['level'],
-                'room_name'    => $ab['room_name'],
-                'teacher_name' => $ab['teacher_name'],
-                'absents'      => []
-            ];
+    
+    // ดึงข้อมูลผู้ขาดประชุมของแต่ละห้อง
+    $meetingIds = array_column($reports, 'id');
+    $absentsByMeeting = [];
+    if (!empty($meetingIds)) {
+        $inClause = implode(',', array_fill(0, count($meetingIds), '?'));
+        $absentStmt = $pdo->prepare("SELECT * FROM pm_meeting_absents WHERE meeting_id IN ($inClause) ORDER BY id ASC");
+        $absentStmt->execute($meetingIds);
+        $allAbsents = $absentStmt->fetchAll();
+        
+        foreach ($allAbsents as $abs) {
+            $absentsByMeeting[$abs['meeting_id']][] = $abs;
         }
-        $absentsByClass[$key]['absents'][] = $ab;
     }
-
+    
 } catch (Exception $e) {
     error_log('[Parent Meeting] Reports Fetch Error: ' . $e->getMessage());
-    $filters        = [];
-    $reports        = [];
-    $totalMeetings  = $totalParents = $totalAttend = $totalAbsent = 0;
-    $attendRate     = 0;
-    $absentsByClass = [];
+    $filters = [];
+    $reports = [];
+    $absentsByMeeting = [];
 }
-
 
 require_once __DIR__ . '/components/layout_start.php';
 ?>
-
-<!-- KPI Cards ภาพรวม -->
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm p-4" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);">
-            <div class="text-white opacity-75 text-xs font-bold text-uppercase mb-1">ห้องที่ส่งรายงาน</div>
-            <div class="text-white fw-black" style="font-size:2rem;"><?= $totalMeetings ?></div>
-            <div class="text-white opacity-75 text-xs">ห้องเรียน</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm p-4" style="background:linear-gradient(135deg,#0ea5e9,#38bdf8);">
-            <div class="text-white opacity-75 text-xs font-bold text-uppercase mb-1">ผู้ปกครองทั้งหมด</div>
-            <div class="text-white fw-black" style="font-size:2rem;"><?= number_format($totalParents) ?></div>
-            <div class="text-white opacity-75 text-xs">คน (ทุกห้อง)</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm p-4" style="background:linear-gradient(135deg,#10b981,#34d399);">
-            <div class="text-white opacity-75 text-xs font-bold text-uppercase mb-1">มาร่วมประชุม</div>
-            <div class="text-white fw-black" style="font-size:2rem;"><?= number_format($totalAttend) ?></div>
-            <div class="text-white opacity-75 text-xs">คน (<?= $attendRate ?>%)</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card border-0 shadow-sm p-4" style="background:linear-gradient(135deg,#f43f5e,#fb7185);">
-            <div class="text-white opacity-75 text-xs font-bold text-uppercase mb-1">ไม่ได้มาประชุม</div>
-            <div class="text-white fw-black" style="font-size:2rem;"><?= number_format($totalAbsent) ?></div>
-            <div class="text-white opacity-75 text-xs">คน (<?= $totalParents > 0 ? round($totalAbsent/$totalParents*100,1) : 0 ?>%)</div>
-        </div>
-    </div>
-</div>
 
 <!-- การ์ดตัวกรองค้นหา -->
 <div class="card mb-4 border-0 shadow-sm">
@@ -168,9 +97,6 @@ require_once __DIR__ . '/components/layout_start.php';
                     <option value="ม.1" <?= $selLevel === 'ม.1' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 1</option>
                     <option value="ม.2" <?= $selLevel === 'ม.2' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 2</option>
                     <option value="ม.3" <?= $selLevel === 'ม.3' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 3</option>
-                    <option value="ม.4" <?= $selLevel === 'ม.4' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 4</option>
-                    <option value="ม.5" <?= $selLevel === 'ม.5' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 5</option>
-                    <option value="ม.6" <?= $selLevel === 'ม.6' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 6</option>
                 </select>
             </div>
             
@@ -209,152 +135,206 @@ require_once __DIR__ . '/components/layout_start.php';
     </div>
 </div>
 
-<?php if (!empty($absentsByClass)): ?>
-<!-- ภาพรวมผู้ขาดประชุมแยกห้อง -->
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-header bg-white d-flex align-items-center justify-content-between py-3">
-        <h6 class="m-0 font-bold" style="color:#be123c;">
-            <i class="bi bi-person-x-fill me-2"></i>ภาพรวมผู้ปกครองที่ไม่ได้มาประชุมแยกห้อง
-        </h6>
-        <span class="badge bg-danger-subtle text-danger font-bold px-3 py-2 rounded-pill">
-            รวม <?= number_format($totalAbsent) ?> คน จาก <?= count($absentsByClass) ?> ห้อง
-        </span>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0" style="font-size:13px;">
-                <thead class="table-light">
-                    <tr>
-                        <th class="px-4" style="width:90px;">ห้อง</th>
-                        <th style="width:200px;">ครูที่ปรึกษา</th>
-                        <th style="width:80px;" class="text-center">ขาด</th>
-                        <th>รายชื่อนักเรียน / ผู้ปกครองที่ขาด</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php foreach ($absentsByClass as $cls):
-                    $cnt = count($cls['absents']);
-                    $colId = 'abs_' . preg_replace('/[^a-z0-9]/i','_', $cls['level'].$cls['room_name']);
-                ?>
-                    <tr class="align-middle">
-                        <td class="px-4 fw-bold">
-                            <span class="badge bg-danger text-white px-2 py-1 rounded">
-                                <?= esc($cls['level'] . '/' . $cls['room_name']) ?>
-                            </span>
-                        </td>
-                        <td class="text-muted" style="font-size:12px;"><?= esc(format_teacher_names($cls['teacher_name'])) ?></td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1"
-                                    data-bs-toggle="collapse" data-bs-target="#<?= $colId ?>">
-                                <?= $cnt ?> คน
-                            </button>
-                        </td>
-                        <td>
-                            <div class="collapse" id="<?= $colId ?>">
-                                <div class="py-2">
-                                <?php foreach ($cls['absents'] as $i => $ab): ?>
-                                    <div class="d-flex align-items-start gap-2 py-1 <?= $i > 0 ? 'border-top' : '' ?>">
-                                        <span class="badge bg-light text-secondary border fw-bold" style="min-width:22px;font-size:10px;"><?= $i+1 ?></span>
-                                        <div class="flex-grow-1">
-                                            <span class="fw-bold text-dark"><?= esc($ab['student_name']) ?></span>
-                                            <?php if ($ab['parent_name']): ?>
-                                                <span class="text-muted ms-1">/ ผปก. <?= esc($ab['parent_name']) ?></span>
-                                            <?php endif; ?>
-                                            <?php if ($ab['phone']): ?>
-                                                <span class="badge bg-light text-secondary ms-1 border" style="font-size:11px;">
-                                                    <i class="bi bi-telephone"></i> <?= esc($ab['phone']) ?>
-                                                </span>
-                                            <?php endif; ?>
-                                            <?php if ($ab['absent_reason']): ?>
-                                                <div class="text-xs text-muted mt-1">
-                                                    <i class="bi bi-chat-left-text me-1"></i>สาเหตุ: <?= esc($ab['absent_reason']) ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                        <div class="flex-shrink-0">
-                                            <?php if ($ab['follow_up_status'] === 'followed_up'): ?>
-                                                <span class="badge bg-success-subtle text-success rounded-pill px-2" style="font-size:10px;">
-                                                    <i class="bi bi-check-circle-fill"></i> ติดตามแล้ว
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="badge bg-warning-subtle text-warning rounded-pill px-2" style="font-size:10px;">
-                                                    <i class="bi bi-clock"></i> ยังไม่ติดตาม
-                                                </span>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                                </div>
-                            </div>
-                            <div class="text-xs text-muted">
-                                <i class="bi bi-caret-down"></i> คลิกที่จำนวนคนเพื่อดูรายชื่อ
-                            </div>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
-
 <!-- ตารางรายงานการประชุมทั้งหมด -->
 <div class="card shadow-sm border-0">
+    <div class="card-header bg-white p-0 border-bottom">
+        <ul class="nav nav-tabs card-header-tabs m-0 border-0" id="reportTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active px-4 py-3 border-0 rounded-0 font-bold" id="list-tab" data-bs-toggle="tab" data-bs-target="#list-pane" type="button" role="tab" aria-controls="list-pane" aria-selected="true">
+                    <i class="bi bi-file-earmark-text me-2 text-primary"></i>รายงานการประชุมรายห้อง
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link px-4 py-3 border-0 rounded-0 font-bold" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview-pane" type="button" role="tab" aria-controls="overview-pane" aria-selected="false">
+                    <i class="bi bi-people-fill me-2 text-danger"></i>ภาพรวมผู้ไม่มาประชุมผู้ปกครอง
+                </button>
+            </li>
+        </ul>
+    </div>
     <div class="card-body p-0">
-        <div class="table-responsive p-3">
-            <table id="reportsTable" class="table table-hover w-100 mb-0">
-                <thead>
-                    <tr>
-                        <th width="8%">ลำดับ</th>
-                        <th width="12%">ห้องเรียน</th>
-                        <th width="12%">วันที่ประชุม</th>
-                        <th width="12%">เทอม/ปีการศึกษา</th>
-                        <th width="15%">ครูที่ปรึกษา</th>
-                        <th width="12%">ผู้ปกครองเข้าร่วม</th>
-                        <th width="12%">ความเห็นผู้บริหาร</th>
-                        <th width="17%" class="text-center">การจัดการ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php $no = 1; foreach ($reports as $r): 
-                        $rate = $r['total_parents'] > 0 ? round(($r['attend_count'] / $r['total_parents']) * 100, 1) : 0;
+        <div class="tab-content" id="reportTabsContent">
+            <!-- Tab 1: รายงานการประชุมรายห้อง -->
+            <div class="tab-pane fade show active" id="list-pane" role="tabpanel" aria-labelledby="list-tab" tabindex="0">
+                <div class="table-responsive p-3">
+                    <table id="reportsTable" class="table table-hover w-100 mb-0">
+                        <thead>
+                            <tr>
+                                <th width="8%">ลำดับ</th>
+                                <th width="12%">ห้องเรียน</th>
+                                <th width="12%">วันที่ประชุม</th>
+                                <th width="12%">เทอม/ปีการศึกษา</th>
+                                <th width="15%">ครูที่ปรึกษา</th>
+                                <th width="12%">ผู้ปกครองเข้าร่วม</th>
+                                <th width="12%">ความเห็นผู้บริหาร</th>
+                                <th width="17%" class="text-center">การจัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php $no = 1; foreach ($reports as $r): 
+                                $rate = $r['total_parents'] > 0 ? round(($r['attend_count'] / $r['total_parents']) * 100, 1) : 0;
+                            ?>
+                                <tr>
+                                    <td><?= $no++ ?></td>
+                                    <td><span class="badge bg-primary text-white rounded px-2.5 py-1 font-bold">ม.<?= esc($r['level'] . '/' . $r['room_name']) ?></span></td>
+                                    <td><span class="font-bold text-dark"><?= th_date($r['meeting_date']) ?></span></td>
+                                    <td>เทอม <?= esc($r['semester'] . '/' . $r['academic_year']) ?></td>
+                                    <td><?= esc(format_teacher_names($r['teacher_name'])) ?></td>
+                                    <td>
+                                        <span class="font-bold text-success"><?= esc($r['attend_count']) ?></span> / <?= esc($r['total_parents']) ?> คน
+                                        <div class="text-xs text-muted">(คิดเป็น <?= $rate ?>%)</div>
+                                    </td>
+                                    <td>
+                                        <?php if ($r['comment_count'] > 0): ?>
+                                            <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1 text-xs font-bold">
+                                                <i class="bi bi-chat-left-text-fill me-1"></i> ให้ความเห็นแล้ว (<?= $r['comment_count'] ?>)
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-warning-subtle text-warning rounded-pill px-3 py-1 text-xs font-bold">
+                                                <i class="bi bi-chat-left-text me-1"></i> รอผู้บริหารลงความเห็น
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group gap-1">
+                                            <button class="btn btn-sm btn-primary rounded px-2 py-1 text-xs font-bold" onclick="viewReportDetails(<?= $r['id'] ?>)">
+                                                <i class="bi bi-eye"></i> ตรวจรายงาน
+                                            </button>
+                                            <a href="<?= pm_url('print_report.php?id=' . $r['id']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary rounded px-2 py-1" title="พิมพ์รายงาน / PDF">
+                                                <i class="bi bi-printer"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Tab 2: ภาพรวมผู้ไม่มาประชุมผู้ปกครอง -->
+            <div class="tab-pane fade" id="overview-pane" role="tabpanel" aria-labelledby="overview-tab" tabindex="0">
+                <div class="p-4">
+                    <?php
+                    $totalClassroomsCount = count($reports);
+                    $sumStudents = 0;
+                    $sumAttend = 0;
+                    $sumAbsent = 0;
+                    foreach ($reports as $r) {
+                        $sumStudents += (int)$r['total_parents'];
+                        $sumAttend += (int)$r['attend_count'];
+                        $sumAbsent += (int)$r['absent_count'];
+                    }
+                    $overallAttendRate = $sumStudents > 0 ? round(($sumAttend / $sumStudents) * 100, 1) : 0;
                     ?>
-                        <tr>
-                            <td><?= $no++ ?></td>
-                            <td><span class="badge bg-primary text-white rounded px-2.5 py-1 font-bold">ม.<?= esc($r['level'] . '/' . $r['room_name']) ?></span></td>
-                            <td><span class="font-bold text-dark"><?= th_date($r['meeting_date']) ?></span></td>
-                            <td>เทอม <?= esc($r['semester'] . '/' . $r['academic_year']) ?></td>
-                            <td><?= esc(format_teacher_names($r['teacher_name'])) ?></td>
-                            <td>
-                                <span class="font-bold text-success"><?= esc($r['attend_count']) ?></span> / <?= esc($r['total_parents']) ?> คน
-                                <div class="text-xs text-muted">(คิดเป็น <?= $rate ?>%)</div>
-                            </td>
-                            <td>
-                                <?php if ($r['comment_count'] > 0): ?>
-                                    <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1 text-xs font-bold">
-                                        <i class="bi bi-chat-left-text-fill me-1"></i> ให้ความเห็นแล้ว (<?= $r['comment_count'] ?>)
-                                    </span>
-                                <?php else: ?>
-                                    <span class="badge bg-warning-subtle text-warning rounded-pill px-3 py-1 text-xs font-bold">
-                                        <i class="bi bi-chat-left-text me-1"></i> รอผู้บริหารลงความเห็น
-                                    </span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group gap-1">
-                                    <button class="btn btn-sm btn-primary rounded px-2 py-1 text-xs font-bold" onclick="viewReportDetails(<?= $r['id'] ?>)">
-                                        <i class="bi bi-eye"></i> ตรวจรายงาน
-                                    </button>
-                                    <a href="<?= pm_url('print_report.php?id=' . $r['id']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary rounded px-2 py-1" title="พิมพ์รายงาน / PDF">
-                                        <i class="bi bi-printer"></i>
-                                    </a>
+                    
+                    <!-- สถิติแบบการ์ดภาพรวม -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <div class="bg-primary-subtle text-primary rounded-3 p-3 border border-primary-subtle d-flex align-items-center">
+                                <div class="fs-2 me-3"><i class="bi bi-door-open-fill"></i></div>
+                                <div>
+                                    <div class="text-xs text-muted font-bold uppercase">ห้องเรียนที่รายงาน</div>
+                                    <div class="fs-4 font-black"><?= $totalClassroomsCount ?> ห้อง</div>
                                 </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <div class="bg-info-subtle text-info-emphasis rounded-3 p-3 border border-info-subtle d-flex align-items-center">
+                                <div class="fs-2 me-3"><i class="bi bi-people-fill"></i></div>
+                                <div>
+                                    <div class="text-xs text-muted font-bold uppercase">จำนวนนักเรียนทั้งหมด</div>
+                                    <div class="fs-4 font-black"><?= $sumStudents ?> คน</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <div class="bg-success-subtle text-success rounded-3 p-3 border border-success-subtle d-flex align-items-center">
+                                <div class="fs-2 me-3"><i class="bi bi-check-circle-fill"></i></div>
+                                <div>
+                                    <div class="text-xs text-muted font-bold uppercase">ผู้ปกครองที่เข้าร่วม</div>
+                                    <div class="fs-4 font-black text-success"><?= $sumAttend ?> คน <span class="fs-6 font-bold text-muted">(<?= $overallAttendRate ?>%)</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <div class="bg-danger-subtle text-danger rounded-3 p-3 border border-danger-subtle d-flex align-items-center">
+                                <div class="fs-2 me-3"><i class="bi bi-x-circle-fill"></i></div>
+                                <div>
+                                    <div class="text-xs text-muted font-bold uppercase">ผู้ปกครองไม่มาประชุม</div>
+                                    <div class="fs-4 font-black text-danger"><?= $sumAbsent ?> คน</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table id="overviewTable" class="table table-hover w-100 mb-0">
+                            <thead>
+                                <tr>
+                                    <th width="15%">ห้องเรียน</th>
+                                    <th width="15%">จำนวนนักเรียน</th>
+                                    <th width="15%">ไม่มาประชุม</th>
+                                    <th width="55%">รายชื่อนักเรียน / ผู้ปกครองที่ไม่มาเข้าร่วมประชุม</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($reports as $r): 
+                                    $mId = $r['id'];
+                                    $classroomName = 'ม.' . esc($r['level'] . '/' . $r['room_name']);
+                                    $classroomTotal = esc($r['total_parents']) . ' คน';
+                                    $classroomAbsentCount = (int)$r['absent_count'];
+                                    $absentsList = $absentsByMeeting[$mId] ?? [];
+                                ?>
+                                    <tr>
+                                        <td><span class="badge bg-primary text-white rounded px-2.5 py-1 font-bold"><?= $classroomName ?></span></td>
+                                        <td><span class="font-bold text-dark"><?= $classroomTotal ?></span></td>
+                                        <td>
+                                            <?php if ($classroomAbsentCount > 0): ?>
+                                                <span class="badge bg-danger text-white rounded-pill px-2.5 py-1 font-bold"><?= $classroomAbsentCount ?> คน</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 font-bold">0 คน (ครบ 100%)</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($absentsList)): ?>
+                                                <div class="d-flex flex-column gap-1">
+                                                    <?php foreach ($absentsList as $index => $abs): ?>
+                                                        <div class="p-2 bg-light rounded text-xs border border-slate-100">
+                                                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                                                <span class="badge bg-secondary text-white font-bold">คนที่ <?= ($index + 1) ?></span>
+                                                                <span class="font-bold text-dark"><i class="bi bi-person-fill text-muted me-1"></i>นักเรียน:</span> <?= esc($abs['student_name']) ?>
+                                                                <span class="font-bold text-dark"><i class="bi bi-person-heart text-muted me-1"></i>ผู้ปกครอง:</span> <?= esc($abs['parent_name']) ?> (<?= esc($abs['relationship']) ?>)
+                                                                <?php if (!empty($abs['phone'])): ?>
+                                                                    <span class="font-bold text-dark"><i class="bi bi-telephone-fill text-muted me-1"></i>โทร:</span> <a href="tel:<?= esc($abs['phone']) ?>" class="text-decoration-none"><?= esc($abs['phone']) ?></a>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                            <?php if (!empty($abs['absent_reason'])): ?>
+                                                                <div class="mt-1 text-danger">
+                                                                    <strong><i class="bi bi-exclamation-triangle-fill me-1"></i>เหตุผล:</strong> <?= esc($abs['absent_reason']) ?>
+                                                                </div>
+                                                            <?php endif; ?>
+                                                            <?php if (!empty($abs['follow_up_status'])): ?>
+                                                                <div class="mt-1 text-info-emphasis">
+                                                                    <strong><i class="bi bi-chat-dots-fill me-1"></i>ผลการติดตาม:</strong> <?= esc($abs['follow_up_status']) ?>
+                                                                    <?php if (!empty($abs['follow_up_date'])): ?>
+                                                                        (วันที่: <?= th_date($abs['follow_up_date']) ?>)
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            <?php else: ?>
+                                                <span class="text-muted text-xs"><i class="bi bi-check-circle-fill text-success me-1"></i>มาครบทุกคน</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -474,6 +454,19 @@ document.addEventListener("DOMContentLoaded", function() {
     // โหลดตาราง DataTable
     $('#reportsTable').DataTable({
         order: [[2, 'desc']]
+    });
+
+    // โหลดตารางสรุปผู้ไม่มาประชุม
+    $('#overviewTable').DataTable({
+        order: [[0, 'asc']],
+        pageLength: 25
+    });
+
+    // ปรับความกว้างคอลัมน์ของตารางเมื่อสลับแท็บ
+    document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(tabEl => {
+        tabEl.addEventListener('shown.bs.tab', function() {
+            $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+        });
     });
 
     // การส่งความคิดเห็น (Comment) ผ่าน AJAX
@@ -632,6 +625,20 @@ function escapeHtml(string) {
 <style>
 .hover-scale:hover {
     transform: scale(1.05);
+}
+.card-header-tabs .nav-link {
+    color: var(--text-muted);
+    border-bottom: 3px solid transparent !important;
+    transition: all 0.2s;
+}
+.card-header-tabs .nav-link:hover {
+    color: var(--primary-color);
+    background-color: rgba(13, 110, 253, 0.05);
+}
+.card-header-tabs .nav-link.active {
+    color: var(--primary-color) !important;
+    background: transparent !important;
+    border-bottom: 3px solid var(--primary-color) !important;
 }
 </style>
 
