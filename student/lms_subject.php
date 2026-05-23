@@ -69,6 +69,8 @@ $units_stmt = $pdo->prepare("SELECT * FROM lms_units WHERE subject_id=? ORDER BY
 $units_stmt->execute([$subject_id]); $units = $units_stmt->fetchAll();
 
 $unit_progress = [];
+$total_all_ex  = 0;
+$total_all_sub = 0;
 foreach ($units as $u) {
     $exs = $pdo->prepare("SELECT id FROM lms_unit_exercises WHERE unit_id=?"); $exs->execute([$u['id']]); $exs=$exs->fetchAll();
     $ex_total = count($exs); $submitted = 0;
@@ -79,6 +81,8 @@ foreach ($units as $u) {
     }
     $tc = $pdo->prepare("SELECT COUNT(*) FROM lms_topics WHERE unit_id=?"); $tc->execute([$u['id']]); $topics_count=(int)$tc->fetchColumn();
     $unit_progress[$u['id']] = ['ex_total'=>$ex_total,'submitted'=>$submitted,'topics_count'=>$topics_count];
+    $total_all_ex  += $ex_total;
+    $total_all_sub += $submitted;
 }
 ?><!DOCTYPE html>
 <html lang="th">
@@ -130,12 +134,27 @@ window.addEventListener('load',()=>{
       <p class="text-xl font-black"><?=$pre_passed?'✓':'—'?></p>
       <p class="text-xs opacity-80 font-bold">ก่อนเรียน</p>
     </div>
-
     <div class="bg-white/15 rounded-2xl p-3 text-center border border-white/20">
       <p class="text-xl font-black"><?=$post_passed?'✓':'—'?></p>
       <p class="text-xs opacity-80 font-bold">หลังเรียน</p>
     </div>
   </div>
+  <?php if ($pre_passed && $total_all_ex > 0): ?>
+  <a href="/student/lms_assignments.php?subject_id=<?=$subject_id?>"
+     class="mt-3 flex items-center justify-between px-4 py-3 bg-white/15 rounded-2xl border border-white/25 active:bg-white/25 transition-all">
+    <div class="flex items-center gap-2">
+      <i class="bi bi-list-task text-sm"></i>
+      <span class="text-sm font-black">ดูงานทั้งหมด</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-bold">
+        <?=$total_all_sub?>/<?=$total_all_ex?> ชิ้น
+        <?php if ($total_all_sub >= $total_all_ex): ?><i class="bi bi-check-circle-fill text-emerald-300 ml-1"></i><?php endif; ?>
+      </span>
+      <i class="bi bi-chevron-right text-xs opacity-60"></i>
+    </div>
+  </a>
+  <?php endif; ?>
 </div>
 
 <div class="px-4 py-5 space-y-4 max-w-lg mx-auto">
