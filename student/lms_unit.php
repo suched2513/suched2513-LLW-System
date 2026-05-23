@@ -25,51 +25,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exercise_id'])) {
     $ex_id  = (int)$_POST['exercise_id'];
     $answer = trim($_POST['answer_text'] ?? '');
 
-    // File upload handling
-    $file_path  = null;
-    $upload_err = '';
-    if (isset($_FILES['exercise_file']) && $_FILES['exercise_file']['error'] === UPLOAD_ERR_OK) {
-        $allowed_mime = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
-        $allowed_ext  = ['jpg','jpeg','png','gif','webp','pdf'];
-        $max_size     = 10 * 1024 * 1024;
-        $finfo        = finfo_open(FILEINFO_MIME_TYPE);
-        $mime         = finfo_file($finfo, $_FILES['exercise_file']['tmp_name']);
-        finfo_close($finfo);
-        $ext = strtolower(pathinfo($_FILES['exercise_file']['name'], PATHINFO_EXTENSION));
-        if (!in_array($mime, $allowed_mime) || !in_array($ext, $allowed_ext)) {
-            $upload_err = 'รองรับเฉพาะไฟล์รูปภาพและ PDF';
-        } elseif ($_FILES['exercise_file']['size'] > $max_size) {
-            $upload_err = 'ไฟล์ขนาดใหญ่เกิน 10MB';
-        } else {
-            $upload_dir = __DIR__ . '/../lms/uploads/exercises/';
-            if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
-            $filename = $uid . '_' . $ex_id . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-            if (move_uploaded_file($_FILES['exercise_file']['tmp_name'], $upload_dir . $filename)) {
-                $file_path = 'lms/uploads/exercises/' . $filename;
+    // Multi-file upload (up to 3)
+    $file_paths_arr = [];
+    $allowed_mime   = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
+    $allowed_ext    = ['jpg','jpeg','png','gif','webp','pdf'];
+    $max_size       = 10 * 1024 * 1024;
+    $upload_dir     = __DIR__ . '/../lms/uploads/exercises/';
+    if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+
+    if (!empty($_FILES['exercise_files']['name'][0])) {
+        $file_count = min(count($_FILES['exercise_files']['name']), 3);
+        for ($fi = 0; $fi < $file_count; $fi++) {
+            if ($_FILES['exercise_files']['error'][$fi] !== UPLOAD_ERR_OK) continue;
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime  = finfo_file($finfo, $_FILES['exercise_files']['tmp_name'][$fi]);
+            finfo_close($finfo);
+            $ext = strtolower(pathinfo($_FILES['exercise_files']['name'][$fi], PATHINFO_EXTENSION));
+            if (!in_array($mime, $allowed_mime) || !in_array($ext, $allowed_ext)) continue;
+            if ($_FILES['exercise_files']['size'][$fi] > $max_size) continue;
+            $fname = $uid . '_' . $ex_id . '_' . time() . '_' . $fi . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+            if (move_uploaded_file($_FILES['exercise_files']['tmp_name'][$fi], $upload_dir . $fname)) {
+                $file_paths_arr[] = 'lms/uploads/exercises/' . $fname;
             }
         }
     }
+    $file_paths_json = !empty($file_paths_arr) ? json_encode($file_paths_arr) : null;
 
-    if ($answer !== '' || $file_path !== null) {
-        $exists_q = $pdo->prepare("SELECT id, file_path FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
+    if ($answer !== '' || !empty($file_paths_arr)) {
+        $exists_q = $pdo->prepare("SELECT id, file_paths FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
         $exists_q->execute([$uid, $ex_id]);
         $existing = $exists_q->fetch();
         if ($existing) {
-            // Delete old uploaded file if being replaced
-            if ($file_path && !empty($existing['file_path'])) {
-                $old = __DIR__ . '/../' . $existing['file_path'];
-                if (file_exists($old)) @unlink($old);
+            // Delete old uploaded files if replacing
+            if (!empty($file_paths_arr) && !empty($existing['file_paths'])) {
+                $old_files = json_decode($existing['file_paths'], true) ?: [$existing['file_paths']];
+                foreach ($old_files as $of) {
+                    $op = __DIR__ . '/../' . $of;
+                    if (file_exists($op)) @unlink($op);
+                }
             }
-            if ($file_path) {
-                $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?, file_path=?, submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
-                    ->execute([$answer, $file_path, $uid, $ex_id]);
+            if ($file_paths_json) {
+                $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?, file_paths=?, submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
+                    ->execute([$answer, $file_paths_json, $uid, $ex_id]);
             } else {
                 $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?, submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
                     ->execute([$answer, $uid, $ex_id]);
             }
         } else {
-            $pdo->prepare("INSERT INTO lms_student_exercises (student_uid, exercise_id, unit_id, subject_id, answer_text, file_path) VALUES (?,?,?,?,?,?)")
-                ->execute([$uid, $ex_id, $unit_id, $subject_id, $answer, $file_path]);
+            $pdo->prepare("INSERT INTO lms_student_exercises (student_uid, exercise_id, unit_id, subject_id, answer_text, file_paths) VALUES (?,?,?,?,?,?)")
+                ->execute([$uid, $ex_id, $unit_id, $subject_id, $answer, $file_paths_json]);
         }
         header('Location: /student/lms_unit.php?unit_id=' . $unit_id . '&ex_done=1'); exit();
     }
@@ -89,7 +93,7 @@ $exercises = $exercises_stmt->fetchAll();
 // Student submissions + feedback for this unit
 $submitted_map = [];
 foreach ($exercises as $ex) {
-    $sub = $pdo->prepare("SELECT answer_text, file_path, grade, feedback, reviewed_at FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
+    $sub = $pdo->prepare("SELECT answer_text, file_paths, grade, feedback, reviewed_at FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
     $sub->execute([$uid, $ex['id']]);
     $row = $sub->fetch();
     if ($row) $submitted_map[$ex['id']] = $row;
@@ -298,17 +302,19 @@ body { font-family: 'Prompt', sans-serif; }
       <p class="font-black text-emerald-700 mb-1">คำตอบ:</p>
       <p class="text-slate-600 leading-relaxed"><?=nl2br(htmlspecialchars($sub['answer_text'],ENT_QUOTES,'UTF-8'))?></p>
       <?php endif; ?>
-      <?php if (!empty($sub['file_path'])): ?>
-      <?php $fext = strtolower(pathinfo($sub['file_path'], PATHINFO_EXTENSION)); ?>
+      <?php if (!empty($sub['file_paths'])): ?>
+      <?php $sub_files = json_decode($sub['file_paths'], true) ?: [$sub['file_paths']]; ?>
+      <?php foreach ($sub_files as $fp): $fext = strtolower(pathinfo($fp, PATHINFO_EXTENSION)); ?>
       <?php if (in_array($fext, ['jpg','jpeg','png','gif','webp'])): ?>
-      <img src="<?=$base_path . '/' . htmlspecialchars($sub['file_path'],ENT_QUOTES,'UTF-8')?>"
-           class="<?=!empty($sub['answer_text'])?'mt-2':''?> w-full max-h-56 object-contain rounded-xl bg-white border border-emerald-100" alt="งานที่ส่ง">
+      <img src="<?=$base_path . '/' . htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>"
+           class="mt-2 w-full max-h-56 object-contain rounded-xl bg-white border border-emerald-100" alt="งานที่ส่ง">
       <?php else: ?>
-      <a href="<?=$base_path . '/' . htmlspecialchars($sub['file_path'],ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
-         class="flex items-center gap-2 <?=!empty($sub['answer_text'])?'mt-2':''?> px-3 py-2 bg-white border border-emerald-100 rounded-xl text-blue-600 font-bold active:opacity-70">
+      <a href="<?=$base_path . '/' . htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
+         class="mt-2 flex items-center gap-2 px-3 py-2 bg-white border border-emerald-100 rounded-xl text-blue-600 font-bold active:opacity-70">
         <i class="bi bi-file-earmark-pdf text-red-500 text-xl flex-shrink-0"></i><span>ดูไฟล์ที่แนบ</span>
       </a>
       <?php endif; ?>
+      <?php endforeach; ?>
       <?php endif; ?>
     </div>
     <?php if ($reviewed): ?>
@@ -327,13 +333,13 @@ body { font-family: 'Prompt', sans-serif; }
     </div>
     <?php endif; ?>
     <?php if ($can_edit): ?>
-    <button onclick="openExercise(<?=$ex['id']?>,<?=json_encode($ex['exercise_title'])?>,<?=json_encode($ex['description']??'')?>,<?=(int)($ex['max_score']??0)?>,<?=$due_ts??0?>,<?=json_encode($sub['answer_text']??'')?>,<?=json_encode($sub['file_path']??'')?>)"
+    <button onclick="openExercise(<?=$ex['id']?>,<?=json_encode($ex['exercise_title'])?>,<?=json_encode($ex['description']??'')?>,<?=(int)($ex['max_score']??0)?>,<?=$due_ts??0?>,<?=json_encode($sub['answer_text']??'')?>,<?=json_encode(json_decode($sub['file_paths']??'[]',true)??[])?>)"
       class="w-full py-2 border border-emerald-300 text-emerald-700 font-bold text-xs rounded-xl active:opacity-70">
       <i class="bi bi-pencil-fill mr-1"></i> แก้ไขงาน
     </button>
     <?php endif; ?>
     <?php else: ?>
-    <button onclick="openExercise(<?=$ex['id']?>,<?=json_encode($ex['exercise_title'])?>,<?=json_encode($ex['description']??'')?>,<?=(int)($ex['max_score']??0)?>,<?=$due_ts??0?>,'','')"
+    <button onclick="openExercise(<?=$ex['id']?>,<?=json_encode($ex['exercise_title'])?>,<?=json_encode($ex['description']??'')?>,<?=(int)($ex['max_score']??0)?>,<?=$due_ts??0?>,'',[])"
       class="w-full py-2.5 bg-violet-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-violet-200/50 active:scale-95 transition-transform">
       <i class="bi bi-send-fill mr-1"></i> ส่งงาน
     </button>
@@ -372,19 +378,19 @@ body { font-family: 'Prompt', sans-serif; }
           class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-400 resize-none"
           placeholder="พิมพ์คำตอบที่นี่..."></textarea>
       </div>
-      <!-- File upload -->
+      <!-- File upload (up to 3 files) -->
       <div>
         <label class="block text-xs font-black text-slate-500 mb-1.5">
           <i class="bi bi-camera mr-1"></i>ถ่ายรูปงาน / แนบไฟล์
-          <span class="text-slate-400 font-normal">(รูปภาพหรือ PDF สูงสุด 10MB)</span>
+          <span class="text-slate-400 font-normal">(รูปหรือ PDF สูงสุด 3 ไฟล์ · 10MB/ไฟล์)</span>
         </label>
-        <input type="file" name="exercise_file" id="exFileInput" accept="image/*,.pdf"
-          class="hidden" onchange="previewExFile(this)">
+        <input type="file" name="exercise_files[]" id="exFileInput" accept="image/*,.pdf"
+          multiple class="hidden" onchange="previewExFiles(this)">
         <label for="exFileInput"
           class="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 cursor-pointer hover:border-violet-400 hover:text-violet-500 transition-all font-bold text-sm active:opacity-70">
           <i class="bi bi-camera text-xl"></i> แตะเพื่อถ่ายรูป / เลือกไฟล์
         </label>
-        <div id="exFilePreview" class="mt-2"></div>
+        <div id="exFilePreview" class="mt-2 space-y-1.5"></div>
       </div>
       <!-- Buttons -->
       <div class="flex gap-3 pt-1">
@@ -416,7 +422,7 @@ function toggleTopic(id) {
   document.getElementById('chev_'  + id).classList.toggle('open');
 }
 
-function openExercise(id, title, desc, maxScore, dueTs, existingText, existingFile) {
+function openExercise(id, title, desc, maxScore, dueTs, existingText, existingFiles) {
   document.getElementById('exModalId').value = id;
   document.getElementById('exModalTitle').textContent = title;
   document.getElementById('exModalAnswer').value = existingText || '';
@@ -431,21 +437,23 @@ function openExercise(id, title, desc, maxScore, dueTs, existingText, existingFi
   // Due date
   const dueEl = document.getElementById('exModalDue');
   if (dueTs) {
-    const due = new Date(dueTs * 1000);
     const overdue = Date.now() > dueTs * 1000;
-    dueEl.innerHTML = '<i class="bi bi-clock mr-1"></i>หมดเขต: ' + due.toLocaleString('th-TH') + (overdue ? ' <span class="text-rose-600">(เลยกำหนด)</span>' : '');
+    dueEl.innerHTML = '<i class="bi bi-clock mr-1"></i>หมดเขต: ' + new Date(dueTs*1000).toLocaleString('th-TH') + (overdue ? ' <span class="text-rose-600">(เลยกำหนด)</span>' : '');
     dueEl.className = 'text-[10px] font-bold mt-0.5 ' + (overdue ? 'text-rose-500' : 'text-amber-500');
     dueEl.classList.remove('hidden');
   } else dueEl.classList.add('hidden');
-  // File preview (existing)
+  // Show existing files
   document.getElementById('exFileInput').value = '';
   const preview = document.getElementById('exFilePreview');
-  if (existingFile) {
-    const url    = BASE_PATH + '/' + existingFile;
-    const isImg  = /\.(jpg|jpeg|png|gif|webp)$/i.test(existingFile);
-    preview.innerHTML = isImg
-      ? `<div class="bg-slate-50 rounded-xl p-2 border border-slate-100 text-center"><img src="${url}" class="max-h-40 rounded-lg mx-auto object-contain"><p class="text-[10px] text-slate-400 mt-1">ไฟล์เดิม — เลือกใหม่เพื่อเปลี่ยน</p></div>`
-      : `<a href="${url}" target="_blank" class="flex items-center gap-2 px-3 py-2.5 bg-blue-50 rounded-xl border border-blue-100 text-xs text-blue-700 font-bold"><i class="bi bi-file-earmark-pdf text-red-500 text-xl"></i><span>ไฟล์เดิม — คลิกดู</span></a><p class="text-[10px] text-slate-400 mt-1 text-center">เลือกไฟล์ใหม่เพื่อเปลี่ยน</p>`;
+  const files = Array.isArray(existingFiles) ? existingFiles : [];
+  if (files.length > 0) {
+    preview.innerHTML = files.map(fp => {
+      const url = BASE_PATH + '/' + fp;
+      const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(fp);
+      return isImg
+        ? `<div class="bg-slate-50 rounded-xl p-2 border border-slate-100 text-center"><img src="${url}" class="max-h-32 rounded-lg mx-auto object-contain"></div>`
+        : `<a href="${url}" target="_blank" class="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-xl border border-blue-100 text-xs text-blue-700 font-bold"><i class="bi bi-file-earmark-pdf text-red-500 text-xl"></i><span>ไฟล์เดิม — คลิกดู</span></a>`;
+    }).join('') + `<p class="text-[10px] text-slate-400 text-center">เลือกไฟล์ใหม่เพื่อแทนที่</p>`;
   } else {
     preview.innerHTML = '';
   }
@@ -454,26 +462,36 @@ function openExercise(id, title, desc, maxScore, dueTs, existingText, existingFi
   setTimeout(() => document.getElementById('exModalAnswer').focus(), 100);
 }
 
-function previewExFile(input) {
+function previewExFiles(input) {
   const preview = document.getElementById('exFilePreview');
-  const file = input.files[0];
-  if (!file) { preview.innerHTML = ''; return; }
-  if (file.type.startsWith('image/')) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      preview.innerHTML = `<div class="bg-slate-50 rounded-xl p-2 border border-slate-100 text-center"><img src="${e.target.result}" class="max-h-48 rounded-lg mx-auto object-contain"><p class="text-xs text-emerald-600 font-bold mt-1">${file.name}</p></div>`;
-    };
-    reader.readAsDataURL(file);
-  } else {
-    preview.innerHTML = `<div class="flex items-center gap-3 px-3 py-2.5 bg-red-50 rounded-xl border border-red-100"><i class="bi bi-file-earmark-pdf text-red-500 text-2xl flex-shrink-0"></i><div><p class="text-xs font-bold text-slate-700">${file.name}</p><p class="text-[10px] text-slate-400">${(file.size/1024).toFixed(0)} KB</p></div></div>`;
-  }
+  const files = Array.from(input.files).slice(0, 3);
+  if (!files.length) { preview.innerHTML = ''; return; }
+  preview.innerHTML = '';
+  files.forEach(file => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      const div = document.createElement('div');
+      div.className = 'bg-slate-50 rounded-xl p-2 border border-slate-100 text-center';
+      preview.appendChild(div);
+      reader.onload = e => {
+        div.innerHTML = `<img src="${e.target.result}" class="max-h-32 rounded-lg mx-auto object-contain"><p class="text-[10px] text-emerald-600 font-bold mt-1 truncate">${file.name}</p>`;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      preview.insertAdjacentHTML('beforeend', `<div class="flex items-center gap-3 px-3 py-2 bg-red-50 rounded-xl border border-red-100"><i class="bi bi-file-earmark-pdf text-red-500 text-xl flex-shrink-0"></i><p class="text-xs font-bold text-slate-700 truncate">${file.name}</p></div>`);
+    }
+  });
 }
 
 function validateExForm() {
-  const text = (document.getElementById('exModalAnswer').value || '').trim();
-  const file = document.getElementById('exFileInput').files[0];
-  if (!text && !file) {
+  const text  = (document.getElementById('exModalAnswer').value || '').trim();
+  const files = document.getElementById('exFileInput').files;
+  if (!text && files.length === 0) {
     Swal.fire({icon:'warning', title:'กรุณาส่งงาน', text:'พิมพ์คำตอบหรือแนบไฟล์อย่างน้อย 1 อย่าง', confirmButtonColor:'#7C3AED'});
+    return false;
+  }
+  if (files.length > 3) {
+    Swal.fire({icon:'warning', title:'ไฟล์มากเกินไป', text:'แนบได้สูงสุด 3 ไฟล์', confirmButtonColor:'#7C3AED'});
     return false;
   }
   const btn = document.getElementById('exSubmitBtn');

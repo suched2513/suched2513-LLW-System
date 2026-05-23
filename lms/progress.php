@@ -14,7 +14,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'answers') {
     $sid  = (int)($_GET['subject_id'] ?? 0);
     $rows = $pdo->prepare("
         SELECT e.id AS exercise_id, e.exercise_title, e.max_score,
-               se.id AS sub_id, se.answer_text, se.file_path, se.grade, se.feedback, se.reviewed_at, se.submitted_at
+               se.id AS sub_id, se.answer_text, se.file_paths, se.grade, se.feedback, se.reviewed_at, se.submitted_at
         FROM lms_student_exercises se
         JOIN lms_unit_exercises e ON e.id = se.exercise_id
         WHERE se.student_uid=? AND se.unit_id=? AND se.subject_id=?
@@ -322,14 +322,19 @@ async function viewAnswers(unitId, uid, name, unitName) {
     const maxS     = d.max_score ? parseInt(d.max_score) : 100;
     const gradeVal = d.grade !== null ? d.grade : '';
     const fbVal    = d.feedback !== null ? d.feedback : '';
-    // File display
+    // File display (supports JSON array of multiple files)
     let fileHtml = '';
-    if (d.file_path) {
-      const url   = BASE_PATH + '/' + d.file_path;
-      const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(d.file_path);
-      fileHtml = isImg
-        ? `<img src="${url}" class="w-full rounded-xl max-h-48 object-contain bg-slate-100 mt-2">`
-        : `<a href="${url}" target="_blank" class="flex items-center gap-2 mt-2 px-3 py-2 bg-blue-50 rounded-xl border border-blue-100 text-xs text-blue-700 font-bold"><i class="fas fa-file-pdf text-red-500"></i><span>ดูไฟล์ที่แนบ</span></a>`;
+    if (d.file_paths) {
+      let fps = [];
+      try { fps = JSON.parse(d.file_paths); } catch(e) { fps = [d.file_paths]; }
+      if (!Array.isArray(fps)) fps = [fps];
+      fileHtml = fps.map(fp => {
+        const url   = BASE_PATH + '/' + fp;
+        const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(fp);
+        return isImg
+          ? `<img src="${url}" class="w-full rounded-xl max-h-48 object-contain bg-slate-100 mt-2">`
+          : `<a href="${url}" target="_blank" class="flex items-center gap-2 mt-2 px-3 py-2 bg-blue-50 rounded-xl border border-blue-100 text-xs text-blue-700 font-bold"><i class="fas fa-file-pdf text-red-500"></i><span>ดูไฟล์ที่แนบ</span></a>`;
+      }).join('');
     }
     html += `<div class="rounded-xl bg-slate-50 border border-slate-100 p-4">
       <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
