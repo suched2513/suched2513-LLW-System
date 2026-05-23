@@ -28,8 +28,7 @@ if ($llwPdo) {
         $llwStmt = $llwPdo->query("
             SELECT username, CONCAT(firstname, ' ', lastname) as fullname, role as llw_role
             FROM llw_users
-            WHERE role IN ('att_teacher','wfh_staff','super_admin','wfh_admin')
-              AND status = 'active'
+            WHERE status = 'active'
             ORDER BY firstname, lastname
         ");
         $allLlwUsers = $llwStmt->fetchAll();

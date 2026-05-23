@@ -162,7 +162,7 @@ function displayPrintMemberCard($title, $data) {
     <div class="member-card" style="border: 1.5px solid #000; border-radius: 8px; width: 190px; background: #fff; text-align: center; padding: 8px; font-family: 'Sarabun', sans-serif;">
         <div style="font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 3px; margin-bottom: 6px; font-size: 12px;"><?= esc($title) ?></div>
         <?php if ($data && $data['image_path']): ?>
-            <img src="<?= esc($data['image_path']) ?>" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 1px solid #ccc; margin-bottom: 6px;" alt="รูปผู้ปกครอง">
+            <img src="<?= esc(pm_url($data['image_path'])) ?>" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 1px solid #ccc; margin-bottom: 6px;" alt="รูปผู้ปกครอง">
         <?php else: ?>
             <div style="width: 70px; height: 70px; border-radius: 50%; background: #f1f5f9; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px auto; font-weight: bold; color: #94a3b8; font-size: 28px;">👤</div>
         <?php endif; ?>
@@ -1305,7 +1305,7 @@ function displayPrintMemberCard($title, $data) {
                 <?php foreach ($images as $img): ?>
                     <div class="col-6">
                         <div style="border: 1px solid #000; padding: 10px; background: #fff; text-align: center; height: 100%;">
-                            <img src="<?= esc($img['image_path']) ?>" style="max-width: 100%; max-height: 240px; object-fit: contain; margin-bottom: 8px;" alt="บรรยากาศการประชุม">
+                            <img src="<?= esc(pm_url($img['image_path'])) ?>" style="max-width: 100%; max-height: 240px; object-fit: contain; margin-bottom: 8px;" alt="บรรยากาศการประชุม">
                             <div style="border-bottom: 1px dotted #ccc; height: 20px; margin-top: 5px;"></div>
                         </div>
                     </div>

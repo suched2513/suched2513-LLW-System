@@ -389,7 +389,7 @@ function displayNetworkCard($position, $data, $meetingId, $index = '') {
             <!-- อวตาร -->
             <div class="mb-3">
                 <?php if ($data && $data['image_path']): ?>
-                    <img src="<?= esc($data['image_path']) ?>" class="rounded-circle border" style="width: 100px; height: 100px; object-fit: cover; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                    <img src="<?= esc(pm_url($data['image_path'])) ?>" class="rounded-circle border" style="width: 100px; height: 100px; object-fit: cover; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
                 <?php else: ?>
                     <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center text-muted" style="width: 100px; height: 100px; font-size: 3rem;">
                         <i class="bi bi-person-fill"></i>
