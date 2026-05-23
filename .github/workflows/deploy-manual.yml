@@ -201,7 +201,7 @@ jobs:
               --exclude ^uploads \
               --exclude school_project/uploads \
               --exclude parent_meeting/uploads \
-              --exclude lms/uploads/exercises \
+              --exclude ^lms/uploads/exercises/[^.] \
               --exclude ^assets/images/user_photos \
               ./ ${{ secrets.FTP_SERVER_DIR }};
             bye

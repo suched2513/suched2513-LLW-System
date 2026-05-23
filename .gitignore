@@ -25,6 +25,7 @@ assets/images/user_photos/
 !lms/uploads/.htaccess
 lms/uploads/exercises/*
 !lms/uploads/exercises/.gitkeep
+!lms/uploads/exercises/.htaccess
 
 # Configuration files with sensitive data (Optional but recommended)
 # config/database.php
