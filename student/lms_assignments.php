@@ -360,17 +360,50 @@ body { font-family: 'Prompt', sans-serif; }
     </div>
     <?php endif; ?>
 
-    <!-- Action button -->
-    <?php if (!$done): ?>
-    <button onclick="openExModal(<?=$ex['id']?>,<?=$g['unit']['id']?>,<?=json_encode($ex['exercise_title'])?>,<?=json_encode($ex['description']??'')?>,<?=(int)($ex['max_score']??0)?>,<?=$due_ts??0?>,'',[],'') "
-      class="ml-10 w-[calc(100%-2.5rem)] py-2 bg-violet-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-violet-200/50 active:scale-95 transition-transform">
-      <i class="bi bi-send-fill mr-1"></i> ส่งงาน
-    </button>
-    <?php elseif ($can_edit): ?>
-    <button onclick="openExModal(<?=$ex['id']?>,<?=$g['unit']['id']?>,<?=json_encode($ex['exercise_title'])?>,<?=json_encode($ex['description']??'')?>,<?=(int)($ex['max_score']??0)?>,<?=$due_ts??0?>,<?=json_encode($sub['answer_text']??'')?>,<?=json_encode(json_decode($sub['file_paths']??'[]',true)??[])?>,<?=json_encode($sub['link_url']??'')?>)"
-      class="ml-10 w-[calc(100%-2.5rem)] py-1.5 border border-slate-200 text-slate-500 font-bold text-xs rounded-xl active:opacity-70">
+    <!-- Inline submit form (always visible for pending / editable) -->
+    <?php if (!$done || $can_edit): ?>
+    <form method="POST" enctype="multipart/form-data"
+          class="mt-3 space-y-2 <?=$can_edit?'hidden':''?>"
+          id="form_<?=$ex['id']?>"
+          onsubmit="return validateInlineForm(this, <?=$ex['id']?>)">
+      <input type="hidden" name="exercise_id" value="<?=$ex['id']?>">
+      <input type="hidden" name="unit_id"     value="<?=$g['unit']['id']?>">
+      <!-- File upload button -->
+      <input type="file" name="exercise_files[]" id="fi_<?=$ex['id']?>"
+        accept="image/*,video/*,.pdf,.mp4,.mov,.avi,.3gp,.webm"
+        multiple class="hidden"
+        onchange="previewInlineFiles(this,<?=$ex['id']?>)">
+      <label for="fi_<?=$ex['id']?>"
+        class="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-violet-300 rounded-xl text-violet-500 font-bold text-sm cursor-pointer hover:bg-violet-50 active:opacity-70 transition-all">
+        <i class="bi bi-camera-fill text-lg"></i> ถ่ายรูป / แนบไฟล์ / วีดีโอ
+      </label>
+      <div id="fp_<?=$ex['id']?>" class="space-y-1.5"></div>
+      <!-- Link -->
+      <input type="url" name="link_url"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-400"
+        placeholder="🔗 ลิงค์ YouTube / Google Drive (ถ้ามี)">
+      <!-- Text answer -->
+      <textarea name="answer_text" rows="2"
+        class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-400 resize-none"
+        placeholder="✏️ พิมพ์คำตอบ (ถ้ามี)"><?=$can_edit?htmlspecialchars($sub['answer_text']??'',ENT_QUOTES,'UTF-8'):''?></textarea>
+      <!-- Buttons -->
+      <div class="flex gap-2">
+        <?php if ($can_edit): ?>
+        <button type="button" onclick="document.getElementById('form_<?=$ex['id']?>').classList.add('hidden')"
+          class="px-4 py-2 border border-slate-200 text-slate-500 font-bold text-xs rounded-xl active:opacity-70">ยกเลิก</button>
+        <?php endif; ?>
+        <button type="submit"
+          class="flex-1 py-2 bg-violet-600 text-white font-black text-sm rounded-xl shadow-md shadow-violet-200 active:scale-95 transition-transform">
+          <i class="bi bi-send-fill mr-1"></i> ส่งงาน
+        </button>
+      </div>
+    </form>
+    <?php if ($can_edit): ?>
+    <button onclick="document.getElementById('form_<?=$ex['id']?>').classList.toggle('hidden')"
+      class="mt-2 w-full py-1.5 border border-slate-200 text-slate-500 font-bold text-xs rounded-xl active:opacity-70">
       <i class="bi bi-pencil-fill mr-1"></i> แก้ไขงาน
     </button>
+    <?php endif; ?>
     <?php endif; ?>
   </div>
   <?php endforeach; ?>
@@ -378,80 +411,6 @@ body { font-family: 'Prompt', sans-serif; }
 </div>
 <?php endforeach; ?>
 
-</div>
-
-<!-- Exercise Submit Modal -->
-<div id="exModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="background:rgba(0,0,0,0.55)">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] flex flex-col">
-    <div class="flex items-start justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
-      <div class="flex-1 min-w-0 pr-3">
-        <div class="flex items-center gap-2 flex-wrap">
-          <p class="font-black text-slate-800 text-sm" id="exModalTitle">งาน</p>
-          <span id="exModalScore" class="hidden px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full"></span>
-        </div>
-        <p id="exModalDue" class="hidden text-[10px] font-bold mt-0.5"></p>
-      </div>
-      <button onclick="closeExModal()" class="text-slate-400 active:text-slate-600 flex-shrink-0">
-        <i class="bi bi-x-lg text-lg"></i>
-      </button>
-    </div>
-    <form id="exForm" method="POST" enctype="multipart/form-data"
-          class="p-5 space-y-3 overflow-y-auto flex-1" onsubmit="return validateExForm()">
-      <input type="hidden" name="exercise_id" id="exModalId">
-      <input type="hidden" name="unit_id"     id="exModalUnitId">
-      <!-- Description -->
-      <div id="exDescWrap" class="hidden bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
-        <p class="text-xs text-blue-700 leading-relaxed" id="exModalDesc"></p>
-      </div>
-      <!-- File upload (first — most visible on mobile) -->
-      <!-- File upload: photo / video / pdf -->
-      <div>
-        <label class="block text-xs font-black text-slate-500 mb-1.5">
-          <i class="bi bi-paperclip mr-1"></i>แนบไฟล์
-          <span class="text-slate-400 font-normal">(รูป / วีดีโอ / PDF — สูงสุด 3 ไฟล์)</span>
-        </label>
-        <input type="file" name="exercise_files[]" id="exFileInput"
-          accept="image/*,video/*,.pdf,.mp4,.mov,.avi,.3gp,.webm"
-          multiple class="hidden" onchange="previewExFiles(this)">
-        <label for="exFileInput"
-          class="flex items-center justify-center gap-3 w-full py-3.5 border-2 border-dashed border-violet-200 rounded-xl text-violet-400 cursor-pointer hover:border-violet-500 hover:text-violet-600 hover:bg-violet-50/50 transition-all font-bold text-sm active:opacity-70">
-          <i class="bi bi-camera-fill text-xl"></i>
-          <span>ถ่ายรูป / อัดวีดีโอ / เลือกไฟล์</span>
-        </label>
-        <p class="text-[10px] text-slate-400 mt-1 text-center">รูป·PDF 10MB/ไฟล์ · วีดีโอ 100MB/ไฟล์</p>
-        <div id="exFilePreview" class="mt-2 space-y-1.5"></div>
-      </div>
-      <!-- Link / URL -->
-      <div>
-        <label class="block text-xs font-black text-slate-500 mb-1.5">
-          <i class="bi bi-link-45deg mr-1"></i>ลิงค์ (YouTube / Google Drive / อื่นๆ)
-          <span class="text-slate-400 font-normal">(ไม่บังคับ)</span>
-        </label>
-        <input type="url" name="link_url" id="exModalLink"
-          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-400"
-          placeholder="https://youtube.com/...">
-      </div>
-      <!-- Text answer -->
-      <div>
-        <label class="block text-xs font-black text-slate-500 mb-1.5">
-          <i class="bi bi-pencil mr-1"></i>คำตอบ
-          <span class="text-slate-400 font-normal">(ไม่บังคับถ้ามีไฟล์หรือลิงค์)</span>
-        </label>
-        <textarea name="answer_text" id="exModalAnswer" rows="3"
-          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-400 resize-none"
-          placeholder="พิมพ์คำตอบที่นี่..."></textarea>
-      </div>
-      <!-- Buttons -->
-      <div class="flex gap-3 pt-1">
-        <button type="button" onclick="closeExModal()"
-          class="flex-1 py-2.5 border border-slate-200 text-slate-600 font-bold text-sm rounded-xl active:opacity-70">ยกเลิก</button>
-        <button type="submit" id="exSubmitBtn"
-          class="flex-1 py-2.5 bg-violet-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-violet-200/50 active:scale-95 transition-transform">
-          <i class="bi bi-send-fill mr-1"></i> ส่งงาน
-        </button>
-      </div>
-    </form>
-  </div>
 </div>
 
 <script>
@@ -492,48 +451,9 @@ function setFilter(f) {
   });
 }
 
-// ── Modal logic ────────────────────────────────────
-function openExModal(exId, unitId, title, desc, maxScore, dueTs, existingText, existingFiles, existingLink) {
-  document.getElementById('exModalId').value     = exId;
-  document.getElementById('exModalUnitId').value = unitId;
-  document.getElementById('exModalTitle').textContent = title;
-  document.getElementById('exModalAnswer').value = existingText || '';
-  document.getElementById('exModalLink').value   = existingLink || '';
-  const dw = document.getElementById('exDescWrap');
-  if (desc) { document.getElementById('exModalDesc').textContent = desc; dw.classList.remove('hidden'); }
-  else dw.classList.add('hidden');
-  const se = document.getElementById('exModalScore');
-  if (maxScore) { se.textContent = maxScore + ' คะแนน'; se.classList.remove('hidden'); }
-  else se.classList.add('hidden');
-  const de = document.getElementById('exModalDue');
-  if (dueTs) {
-    const overdue = Date.now() > dueTs * 1000;
-    de.innerHTML = '<i class="bi bi-clock mr-1"></i>หมดเขต: ' + new Date(dueTs*1000).toLocaleString('th-TH') + (overdue ? ' <span class="text-rose-600">(เลยกำหนด)</span>' : '');
-    de.className = 'text-[10px] font-bold mt-0.5 ' + (overdue ? 'text-rose-500' : 'text-amber-500');
-    de.classList.remove('hidden');
-  } else de.classList.add('hidden');
-  // Show existing files
-  document.getElementById('exFileInput').value = '';
-  const preview = document.getElementById('exFilePreview');
-  const files = Array.isArray(existingFiles) ? existingFiles : [];
-  if (files.length > 0) {
-    preview.innerHTML = files.map(fp => {
-      const url = BASE_PATH + '/' + fp;
-      const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(fp);
-      return isImg
-        ? `<div class="bg-slate-50 rounded-xl p-2 border text-center"><img src="${url}" class="max-h-32 rounded-lg mx-auto object-contain"></div>`
-        : `<a href="${url}" target="_blank" class="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-xl border border-blue-100 text-xs text-blue-700 font-bold"><i class="bi bi-file-earmark-pdf text-red-500 text-xl"></i><span>ไฟล์เดิม — คลิกดู</span></a>`;
-    }).join('') + `<p class="text-[10px] text-slate-400 text-center">เลือกไฟล์ใหม่เพื่อแทนที่</p>`;
-  } else {
-    preview.innerHTML = '';
-  }
-  const modal = document.getElementById('exModal');
-  modal.classList.remove('hidden'); modal.classList.add('flex');
-  setTimeout(() => document.getElementById('exForm').scrollTop = 0, 50);
-}
-
-function previewExFiles(input) {
-  const preview = document.getElementById('exFilePreview');
+// ── Inline file preview ────────────────────────────
+function previewInlineFiles(input, exId) {
+  const preview = document.getElementById('fp_' + exId);
   const files = Array.from(input.files).slice(0, 3);
   if (!files.length) { preview.innerHTML = ''; return; }
   preview.innerHTML = '';
@@ -544,14 +464,14 @@ function previewExFiles(input) {
       div.className = 'bg-slate-50 rounded-xl p-2 border text-center';
       preview.appendChild(div);
       reader.onload = e => {
-        div.innerHTML = `<img src="${e.target.result}" class="max-h-32 rounded-lg mx-auto object-contain"><p class="text-[10px] text-emerald-600 font-bold mt-1 truncate">${file.name}</p>`;
+        div.innerHTML = `<img src="${e.target.result}" class="max-h-40 rounded-lg mx-auto object-contain"><p class="text-[10px] text-emerald-600 font-bold mt-1 truncate">${file.name}</p>`;
       };
       reader.readAsDataURL(file);
     } else if (file.type.startsWith('video/')) {
       const url = URL.createObjectURL(file);
       preview.insertAdjacentHTML('beforeend',
         `<div class="rounded-xl overflow-hidden border border-slate-200 bg-black">
-          <video src="${url}" controls class="w-full max-h-36"></video>
+          <video src="${url}" controls class="w-full max-h-40"></video>
           <p class="text-[10px] text-slate-400 px-2 py-1 truncate">${file.name}</p>
         </div>`);
     } else {
@@ -565,31 +485,24 @@ function previewExFiles(input) {
   });
 }
 
-function validateExForm() {
-  const text  = (document.getElementById('exModalAnswer').value || '').trim();
-  const link  = (document.getElementById('exModalLink').value || '').trim();
-  const files = document.getElementById('exFileInput').files;
+// ── Validate inline form ───────────────────────────
+function validateInlineForm(form, exId) {
+  const text  = (form.querySelector('[name=answer_text]').value || '').trim();
+  const link  = (form.querySelector('[name=link_url]').value || '').trim();
+  const files = form.querySelector('[name="exercise_files[]"]').files;
   if (!text && !link && files.length === 0) {
-    Swal.fire({icon:'warning',title:'กรุณาส่งงาน',text:'แนบไฟล์ / ใส่ลิงค์ / หรือพิมพ์คำตอบอย่างน้อย 1 อย่าง',confirmButtonColor:'#7C3AED'});
+    Swal.fire({icon:'warning',title:'กรุณาส่งงาน',text:'ถ่ายรูป / ใส่ลิงค์ / หรือพิมพ์คำตอบอย่างน้อย 1 อย่าง',confirmButtonColor:'#7C3AED'});
     return false;
   }
   if (files.length > 3) {
     Swal.fire({icon:'warning',title:'ไฟล์มากเกินไป',text:'แนบได้สูงสุด 3 ไฟล์',confirmButtonColor:'#7C3AED'});
     return false;
   }
-  const btn = document.getElementById('exSubmitBtn');
+  const btn = form.querySelector('[type=submit]');
   btn.disabled = true;
   btn.innerHTML = '<i class="bi bi-hourglass-split mr-1"></i>กำลังส่ง...';
   return true;
 }
-
-function closeExModal() {
-  const m = document.getElementById('exModal');
-  m.classList.add('hidden'); m.classList.remove('flex');
-}
-document.getElementById('exModal').addEventListener('click', function(e) {
-  if (e.target === this) closeExModal();
-});
 </script>
 
 </body>
