@@ -378,20 +378,11 @@ body { font-family: 'Prompt', sans-serif; }
       <div id="exDescWrap" class="hidden bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
         <p class="text-xs text-blue-700 leading-relaxed" id="exModalDesc"></p>
       </div>
-      <!-- Text answer -->
-      <div>
-        <label class="block text-xs font-black text-slate-500 mb-1.5">
-          คำตอบ <span class="text-slate-400 font-normal">(ไม่บังคับถ้ามีไฟล์)</span>
-        </label>
-        <textarea name="answer_text" id="exModalAnswer" rows="4"
-          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-400 resize-none"
-          placeholder="พิมพ์คำตอบที่นี่..."></textarea>
-      </div>
-      <!-- File upload -->
+      <!-- File upload (first — most visible on mobile) -->
       <div>
         <label class="block text-xs font-black text-slate-500 mb-1.5">
           <i class="bi bi-camera mr-1"></i>ถ่ายรูปงาน / แนบไฟล์
-          <span class="text-slate-400 font-normal">(รูปหรือ PDF สูงสุด 10MB)</span>
+          <span class="text-slate-400 font-normal">(ไม่บังคับถ้ามีคำตอบ)</span>
         </label>
         <input type="file" name="exercise_files[]" id="exFileInput" accept="image/*,.pdf"
           multiple class="hidden" onchange="previewExFiles(this)">
@@ -401,6 +392,15 @@ body { font-family: 'Prompt', sans-serif; }
         </label>
         <p class="text-[10px] text-slate-400 mt-1 text-center">รูปหรือ PDF สูงสุด 3 ไฟล์ · 10MB/ไฟล์</p>
         <div id="exFilePreview" class="mt-2 space-y-1.5"></div>
+      </div>
+      <!-- Text answer -->
+      <div>
+        <label class="block text-xs font-black text-slate-500 mb-1.5">
+          คำตอบ <span class="text-slate-400 font-normal">(ไม่บังคับถ้ามีไฟล์)</span>
+        </label>
+        <textarea name="answer_text" id="exModalAnswer" rows="3"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-400 resize-none"
+          placeholder="พิมพ์คำตอบที่นี่..."></textarea>
       </div>
       <!-- Buttons -->
       <div class="flex gap-3 pt-1">
