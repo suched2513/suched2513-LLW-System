@@ -742,14 +742,26 @@ document.addEventListener("DOMContentLoaded", function() {
     const attendInput = document.getElementById('attend_count');
     const absentInput = document.getElementById('absent_count');
     
-    function calcAbsent() {
+    function updateCountsFromTables() {
         const total = parseInt(totalInput.value) || 0;
-        const attend = parseInt(attendInput.value) || 0;
-        absentInput.value = Math.max(0, total - attend);
+        let absentCount = 0;
+        document.querySelectorAll('#absentsTableBody tr').forEach(row => {
+            const nameInput = row.querySelector('.student_name');
+            if (nameInput && nameInput.value.trim() !== '') {
+                absentCount++;
+            }
+        });
+        absentInput.value = absentCount;
+        attendInput.value = Math.max(0, total - absentCount);
     }
     
-    totalInput.addEventListener('input', calcAbsent);
-    attendInput.addEventListener('input', calcAbsent);
+    totalInput.addEventListener('input', updateCountsFromTables);
+    attendInput.addEventListener('input', function() {
+        // หากผู้ใช้แก้ไขโดยตรง ให้ใช้ค่าที่ผู้ใช้ป้อนลบออกจากทั้งหมด
+        const total = parseInt(totalInput.value) || 0;
+        const attend = parseInt(this.value) || 0;
+        absentInput.value = Math.max(0, total - attend);
+    });
 
     // ซิงค์รายชื่อนักเรียนเมื่อเลือกห้องเรียน
     const classroomSelect = document.getElementById('classroom_id');
@@ -1089,10 +1101,21 @@ function addAbsentRow(data = {}) {
         <td><input type="text" class="form-control form-control-sm follow_up_status" value="${data.follow_up_status || ''}" placeholder="สถานะการตาม"></td>
         <td><input type="date" class="form-control form-control-sm follow_up_date" value="${data.follow_up_date || ''}"></td>
         <td class="text-center">
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove();"><i class="bi bi-trash"></i></button>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove(); if(typeof updateCountsFromTables === 'function') updateCountsFromTables();"><i class="bi bi-trash"></i></button>
         </td>
     `;
     tbody.appendChild(tr);
+
+    // ผูก event เมื่อผู้ใช้พิมพ์ชื่อเพื่อคำนวณจำนวนขาด
+    const nameInput = tr.querySelector('.student_name');
+    nameInput.addEventListener('input', function() {
+        if(typeof updateCountsFromTables === 'function') updateCountsFromTables();
+    });
+    
+    // เรียกคำนวณเบื้องต้นหากมีการโหลดข้อมูลเก่า
+    if (data.student_name && typeof updateCountsFromTables === 'function') {
+        updateCountsFromTables();
+    }
 }
 
 // ------------------------------------------

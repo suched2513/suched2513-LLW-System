@@ -87,6 +87,10 @@ try {
             $absStmt->execute([$meetingId]);
             $absents = $absStmt->fetchAll();
 
+            // ปรับยอดผู้เข้าประชุมและผู้ขาดประชุมให้ถูกต้องตามประวัติจริงใน pm_meeting_absents
+            $meeting['absent_count'] = count($absents);
+            $meeting['attend_count'] = max(0, (int)$meeting['total_parents'] - $meeting['absent_count']);
+
             // ดึงข้อมูลประสานสัมพันธ์ (ลลว.๐๔)
             $relStmt = $pdo->prepare("SELECT * FROM pm_student_relations WHERE meeting_id = ? ORDER BY id ASC");
             $relStmt->execute([$meetingId]);
@@ -416,6 +420,21 @@ try {
                         ]);
                     }
                 }
+            }
+            // บังคับคำนวณและปรับปรุงข้อมูลจำนวนผู้เข้าร่วม/ขาดประชุมในฐานข้อมูลจริงให้ตรงกับข้อมูลใน pm_meeting_absents
+            if ($meetingId > 0) {
+                $absCountStmt = $pdo->prepare("SELECT COUNT(*) FROM pm_meeting_absents WHERE meeting_id = ?");
+                $absCountStmt->execute([$meetingId]);
+                $realAbsentCount = (int)$absCountStmt->fetchColumn();
+                
+                $totalStmt = $pdo->prepare("SELECT total_parents FROM pm_meetings WHERE id = ?");
+                $totalStmt->execute([$meetingId]);
+                $totalParentsVal = (int)$totalStmt->fetchColumn();
+                
+                $realAttendCount = max(0, $totalParentsVal - $realAbsentCount);
+                
+                $updateStmt = $pdo->prepare("UPDATE pm_meetings SET absent_count = ?, attend_count = ? WHERE id = ?");
+                $updateStmt->execute([$realAbsentCount, $realAttendCount, $meetingId]);
             }
 
             $pdo->commit();

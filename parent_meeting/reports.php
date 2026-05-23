@@ -71,6 +71,14 @@ try {
         foreach ($allAbsents as $abs) {
             $absentsByMeeting[$abs['meeting_id']][] = $abs;
         }
+        // คำนวณและแก้ไขยอดผู้เข้าเรียน/ขาดเรียนใน $reports ให้ตรงกับประวัติจริงใน pm_meeting_absents เสมอ
+        foreach ($reports as &$r) {
+            $mId = $r['id'];
+            $actualAbsent = isset($absentsByMeeting[$mId]) ? count($absentsByMeeting[$mId]) : 0;
+            $r['absent_count'] = $actualAbsent;
+            $r['attend_count'] = max(0, (int)$r['total_parents'] - $actualAbsent);
+        }
+        unset($r);
     }
     
 } catch (Exception $e) {
