@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'save') 
 
 $subject_id  = (int)($_GET['subject_id'] ?? 0);
 $exercise_id = (int)($_GET['exercise_id'] ?? 0);
+$sel_class   = trim($_GET['class'] ?? '');
 
 $_has_tid = (bool)$pdo->query("SHOW COLUMNS FROM `lms_subjects` LIKE 'teacher_id'")->fetch();
 
@@ -44,25 +45,34 @@ if ($is_admin || !$_has_tid) {
     $subjects = $st->fetchAll();
 }
 
-$subject = null; $exercises = []; $exercise = null; $submissions = [];
+$subject = null; $exercises = []; $exercise = null; $submissions = []; $classes = [];
 
 if ($subject_id) {
     $ss = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $ss->execute([$subject_id]); $subject = $ss->fetch();
 
     if ($subject) {
-        // All exercises in this subject
+        // Classrooms enrolled in this subject
+        $cs = $pdo->prepare("SELECT classroom FROM lms_subject_classrooms WHERE subject_id=? ORDER BY classroom");
+        $cs->execute([$subject_id]); $classes = $cs->fetchAll(PDO::FETCH_COLUMN);
+
+        // All exercises in this subject (sub_count filtered by classroom if selected)
+        $class_join = $sel_class
+            ? "LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.subject_id = ? AND se.student_uid IN (SELECT id FROM att_students WHERE classroom=? AND status='active')"
+            : "LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.subject_id = ?";
+        $params = $sel_class ? [$subject_id, $subject_id, $sel_class] : [$subject_id, $subject_id];
+
         $exercises = $pdo->prepare("
             SELECT e.id, e.exercise_title, e.max_score, e.due_date, u.unit_name,
                    COUNT(se.id) AS sub_count,
                    SUM(CASE WHEN se.reviewed_at IS NOT NULL THEN 1 ELSE 0 END) AS reviewed_count
             FROM lms_unit_exercises e
             JOIN lms_units u ON u.id = e.unit_id
-            LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.subject_id = ?
+            {$class_join}
             WHERE u.subject_id = ?
             GROUP BY e.id
             ORDER BY u.order_no, e.id
         ");
-        $exercises->execute([$subject_id, $subject_id]);
+        $exercises->execute($params);
         $exercises = $exercises->fetchAll();
     }
 }
@@ -78,16 +88,18 @@ if ($subject_id && $exercise_id) {
     $ex_stmt->execute([$exercise_id, $subject_id]); $exercise = $ex_stmt->fetch();
 
     if ($exercise) {
+        $class_where = $sel_class ? "AND s.classroom = ?" : "";
         $q = $pdo->prepare("
             SELECT se.id AS sub_id, se.student_uid, se.answer_text, se.file_paths{$_lk_col}{$_grade_cols},
                    se.submitted_at,
                    s.name AS student_name, s.student_id AS student_no, s.classroom
             FROM lms_student_exercises se
             JOIN att_students s ON s.id = se.student_uid
-            WHERE se.exercise_id = ?
-            ORDER BY se.submitted_at DESC
+            WHERE se.exercise_id = ? {$class_where}
+            ORDER BY s.classroom, se.submitted_at DESC
         ");
-        $q->execute([$exercise_id]);
+        $params = $sel_class ? [$exercise_id, $sel_class] : [$exercise_id];
+        $q->execute($params);
         $submissions = $q->fetchAll();
     }
 }
@@ -110,7 +122,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-  <!-- Left: subject + exercise list -->
+  <!-- Left: subject + classroom + exercise list -->
   <div class="space-y-4">
     <!-- Subject selector -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
@@ -129,6 +141,25 @@ require_once __DIR__ . '/../components/layout_start.php';
       <?php endif; ?>
     </div>
 
+    <!-- Classroom filter -->
+    <?php if ($subject && !empty($classes)): ?>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+      <p class="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">กรองตามห้อง</p>
+      <div class="flex flex-wrap gap-1.5">
+        <a href="grade_exercises.php?subject_id=<?=$subject_id?><?=$exercise_id?'&exercise_id='.$exercise_id:''?>"
+           class="px-3 py-1 rounded-full text-xs font-bold transition-all <?=$sel_class===''?'bg-violet-600 text-white':'bg-slate-100 text-slate-600 hover:bg-slate-200'?>">
+          ทุกห้อง
+        </a>
+        <?php foreach ($classes as $cl): ?>
+        <a href="grade_exercises.php?subject_id=<?=$subject_id?>&class=<?=urlencode($cl)?><?=$exercise_id?'&exercise_id='.$exercise_id:''?>"
+           class="px-3 py-1 rounded-full text-xs font-bold transition-all <?=$sel_class===$cl?'bg-violet-600 text-white':'bg-slate-100 text-slate-600 hover:bg-slate-200'?>">
+          <?=htmlspecialchars($cl,ENT_QUOTES,'UTF-8')?>
+        </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Exercise list -->
     <?php if ($subject && !empty($exercises)): ?>
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
@@ -136,7 +167,7 @@ require_once __DIR__ . '/../components/layout_start.php';
       <div class="space-y-1.5">
         <?php foreach ($exercises as $e): ?>
         <?php $pending = $e['sub_count'] - $e['reviewed_count']; ?>
-        <a href="grade_exercises.php?subject_id=<?=$subject_id?>&exercise_id=<?=$e['id']?>"
+        <a href="grade_exercises.php?subject_id=<?=$subject_id?>&exercise_id=<?=$e['id']?><?=$sel_class?'&class='.urlencode($sel_class):''?>"
            class="flex items-center justify-between px-3 py-2.5 rounded-xl transition-all <?=$e['id']==$exercise_id?'bg-violet-600 text-white':'text-slate-700 hover:bg-slate-50 border border-slate-100'?>">
           <div class="flex-1 min-w-0">
             <p class="text-xs font-black truncate"><?=htmlspecialchars($e['exercise_title'],ENT_QUOTES,'UTF-8')?></p>
@@ -187,6 +218,11 @@ require_once __DIR__ . '/../components/layout_start.php';
           <?php if ($exercise['max_score']): ?>
           <span class="px-3 py-1 bg-amber-50 text-amber-700 text-xs font-black rounded-full border border-amber-100">
             <i class="bi bi-star-fill mr-1"></i><?=$exercise['max_score']?> คะแนน
+          </span>
+          <?php endif; ?>
+          <?php if ($sel_class): ?>
+          <span class="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-black rounded-full border border-indigo-100">
+            <i class="bi bi-door-open mr-1"></i><?=htmlspecialchars($sel_class,ENT_QUOTES,'UTF-8')?>
           </span>
           <?php endif; ?>
           <span class="px-3 py-1 bg-violet-50 text-violet-700 text-xs font-black rounded-full border border-violet-100">
