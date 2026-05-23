@@ -209,6 +209,14 @@ require_once __DIR__ . '/../components/layout_start.php';
       <i class="fas fa-pen-fancy mr-1"></i>ตรวจอัตนัย
     </a>
   </div>
+  <!-- Dashboard Entry -->
+  <div class="px-4 pb-3">
+    <a href="subject_dashboard.php?subject_id=<?=$s['id']?>"
+      class="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-white text-xs font-bold rounded-xl transition-all hover:opacity-90"
+      style="background:linear-gradient(135deg,#7C3AED,#4F46E5)">
+      <i class="fas fa-tachometer-alt"></i>เปิด Dashboard วิชานี้
+    </a>
+  </div>
 </div>
 <?php endforeach; ?>
 </div>
