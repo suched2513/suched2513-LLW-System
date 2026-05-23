@@ -198,8 +198,11 @@ jobs:
             mirror --reverse ${DELETE_FLAG} --verbose --parallel=4 \
               --exclude ^\.git/ \
               --exclude ^\.github/ \
-              --exclude (^|/)uploads/ \
-              --exclude ^assets/images/user_photos/ \
+              --exclude ^uploads \
+              --exclude school_project/uploads \
+              --exclude parent_meeting/uploads \
+              --exclude lms/uploads/exercises \
+              --exclude ^assets/images/user_photos \
               ./ ${{ secrets.FTP_SERVER_DIR }};
             bye
           "
