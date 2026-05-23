@@ -17,8 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'save') 
         $sub_id   = (int)$_POST['sub_id'];
         $grade    = $_POST['grade'] !== '' ? max(0, (float)$_POST['grade']) : null;
         $feedback = trim($_POST['feedback'] ?? '') ?: null;
-        $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, reviewed_at=NOW() WHERE id=?")
-            ->execute([$grade, $feedback, $sub_id]);
+        $_chk = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'grade'")->fetch();
+        if ($_chk) {
+            $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, reviewed_at=NOW() WHERE id=?")
+                ->execute([$grade, $feedback, $sub_id]);
+        }
         echo json_encode(['ok' => true]);
     } catch (Exception $e) {
         error_log($e->getMessage());
@@ -68,9 +71,11 @@ if ($subject_id) {
     }
 }
 
-// Check link_url column exists
-$_has_link = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'link_url'")->fetch();
-$_lk_col   = $_has_link ? ', se.link_url' : ", '' AS link_url";
+// Guard optional columns
+$_has_link    = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'link_url'")->fetch();
+$_lk_col      = $_has_link ? ', se.link_url' : ", '' AS link_url";
+$_has_grade   = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'grade'")->fetch();
+$_grade_cols  = $_has_grade ? ', se.grade, se.feedback, se.reviewed_at' : ", NULL AS grade, NULL AS feedback, NULL AS reviewed_at";
 
 if ($subject_id && $exercise_id) {
     $ex_stmt = $pdo->prepare("SELECT e.*, u.unit_name FROM lms_unit_exercises e JOIN lms_units u ON u.id=e.unit_id WHERE e.id=? AND u.subject_id=?");
@@ -78,8 +83,8 @@ if ($subject_id && $exercise_id) {
 
     if ($exercise) {
         $q = $pdo->prepare("
-            SELECT se.id AS sub_id, se.student_uid, se.answer_text, se.file_paths{$_lk_col},
-                   se.grade, se.feedback, se.reviewed_at, se.submitted_at,
+            SELECT se.id AS sub_id, se.student_uid, se.answer_text, se.file_paths{$_lk_col}{$_grade_cols},
+                   se.submitted_at,
                    s.name AS student_name, s.student_id AS student_no, s.classroom
             FROM lms_student_exercises se
             JOIN att_students s ON s.id = se.student_uid
@@ -233,7 +238,7 @@ require_once __DIR__ . '/../components/layout_start.php';
               <i class="bi bi-check-circle-fill mr-0.5"></i>ตรวจแล้ว
             </span>
             <?php if ($s['grade'] !== null): ?>
-            <p class="text-xs font-black text-emerald-700 mt-0.5"><?=$s['grade']?><?=$exercise['max_score']?' / '.$exercise['max_score']:'?> คะแนน</p>
+            <p class="text-xs font-black text-emerald-700 mt-0.5"><?=$s['grade']?><?=$exercise['max_score'] ? ' / '.$exercise['max_score'] : ''?> คะแนน</p>
             <?php endif; ?>
             <?php else: ?>
             <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full">รอตรวจ</span>
