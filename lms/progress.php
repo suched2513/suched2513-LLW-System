@@ -13,8 +13,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'answers') {
     $uid2 = (int)($_GET['unit_id'] ?? 0);
     $sid  = (int)($_GET['subject_id'] ?? 0);
     $rows = $pdo->prepare("
-        SELECT e.id AS exercise_id, e.exercise_title,
-               se.id AS sub_id, se.answer_text, se.grade, se.feedback, se.reviewed_at, se.submitted_at
+        SELECT e.id AS exercise_id, e.exercise_title, e.max_score,
+               se.id AS sub_id, se.answer_text, se.file_path, se.grade, se.feedback, se.reviewed_at, se.submitted_at
         FROM lms_student_exercises se
         JOIN lms_unit_exercises e ON e.id = se.exercise_id
         WHERE se.student_uid=? AND se.unit_id=? AND se.subject_id=?
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['aj
     header('Content-Type: application/json');
     try {
         $sub_id   = (int)$_POST['sub_id'];
-        $grade    = $_POST['grade'] !== '' ? max(0, min(100, (int)$_POST['grade'])) : null;
+        $grade    = $_POST['grade'] !== '' ? max(0, (int)$_POST['grade']) : null;
         $feedback = trim($_POST['feedback'] ?? '');
         $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, reviewed_at=NOW() WHERE id=?")
             ->execute([$grade, $feedback ?: null, $sub_id]);
@@ -299,6 +299,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 
 <script>
 const SUBJECT_ID = <?=$sel_subject?:0?>;
+const BASE_PATH  = '<?= $base_path ?>';
 
 function openModal(id){const el=document.getElementById(id);el.classList.remove('hidden');el.classList.add('flex');}
 function closeModal(id){const el=document.getElementById(id);el.classList.add('hidden');el.classList.remove('flex');}
@@ -315,27 +316,44 @@ async function viewAnswers(unitId, uid, name, unitName) {
   }
   let html = '';
   data.forEach(d => {
-    const dt  = new Date(d.submitted_at).toLocaleString('th-TH');
-    const ans = (d.answer_text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') || '<em class="text-slate-300">ไม่มีข้อความ</em>';
-    const gradeVal    = d.grade    !== null ? d.grade    : '';
-    const feedbackVal = d.feedback !== null ? d.feedback : '';
-    const reviewed    = d.reviewed_at !== null;
+    const dt       = new Date(d.submitted_at).toLocaleString('th-TH');
+    const ans      = (d.answer_text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') || '';
+    const reviewed = d.reviewed_at !== null;
+    const maxS     = d.max_score ? parseInt(d.max_score) : 100;
+    const gradeVal = d.grade !== null ? d.grade : '';
+    const fbVal    = d.feedback !== null ? d.feedback : '';
+    // File display
+    let fileHtml = '';
+    if (d.file_path) {
+      const url   = BASE_PATH + '/' + d.file_path;
+      const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(d.file_path);
+      fileHtml = isImg
+        ? `<img src="${url}" class="w-full rounded-xl max-h-48 object-contain bg-slate-100 mt-2">`
+        : `<a href="${url}" target="_blank" class="flex items-center gap-2 mt-2 px-3 py-2 bg-blue-50 rounded-xl border border-blue-100 text-xs text-blue-700 font-bold"><i class="fas fa-file-pdf text-red-500"></i><span>ดูไฟล์ที่แนบ</span></a>`;
+    }
     html += `<div class="rounded-xl bg-slate-50 border border-slate-100 p-4">
-      <div class="flex justify-between items-center mb-2">
+      <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
         <span class="text-xs font-black text-slate-700"><i class="fas fa-tasks text-teal-500 mr-1"></i>${d.exercise_title}</span>
-        <span class="text-xs text-slate-400">${dt}</span>
+        <div class="flex items-center gap-2">
+          ${d.max_score ? `<span class="px-2 py-0.5 bg-amber-50 text-amber-600 text-[10px] font-black rounded-full border border-amber-100">${d.max_score} คะแนน</span>` : ''}
+          <span class="text-xs text-slate-400">${dt}</span>
+        </div>
       </div>
-      <div class="text-xs text-slate-600 bg-white p-3 rounded-lg border-l-4 border-teal-400 leading-relaxed mb-3">${ans}</div>
-      <div class="flex gap-2 items-end flex-wrap">
-        <div>
-          <label class="block text-[10px] font-black text-slate-400 mb-1">คะแนน</label>
-          <input type="number" min="0" max="100" value="${gradeVal}" placeholder="—"
-            class="w-20 border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold text-center focus:ring-2 focus:ring-violet-400 outline-none"
-            id="sg_${d.sub_id}">
+      ${ans ? `<div class="text-xs text-slate-600 bg-white p-3 rounded-lg border-l-4 border-teal-400 leading-relaxed">${ans}</div>` : ''}
+      ${fileHtml}
+      <div class="flex gap-2 items-end flex-wrap mt-3">
+        <div class="flex items-end gap-1">
+          <div>
+            <label class="block text-[10px] font-black text-slate-400 mb-1">คะแนน</label>
+            <input type="number" min="0" max="${maxS}" value="${gradeVal}" placeholder="—"
+              class="w-20 border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold text-center focus:ring-2 focus:ring-violet-400 outline-none"
+              id="sg_${d.sub_id}">
+          </div>
+          <span class="text-xs text-slate-400 pb-2">/ ${maxS}</span>
         </div>
         <div class="flex-1 min-w-36">
           <label class="block text-[10px] font-black text-slate-400 mb-1">ความคิดเห็น</label>
-          <input type="text" value="${feedbackVal}" placeholder="พิมพ์ความคิดเห็น..."
+          <input type="text" value="${fbVal}" placeholder="พิมพ์ความคิดเห็น..."
             class="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-violet-400 outline-none"
             id="sf_${d.sub_id}">
         </div>

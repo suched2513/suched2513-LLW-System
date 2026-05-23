@@ -16,9 +16,15 @@ Thumbs.db
 *.tar.gz
 *.rar
 
-# Uploaded files
+# Uploaded files (exclude .gitkeep placeholders so directories are tracked)
 uploads/
+!uploads/.gitkeep
 assets/images/user_photos/
+# LMS exercise uploads — keep placeholder, ignore actual files
+!lms/uploads/
+!lms/uploads/.htaccess
+lms/uploads/exercises/*
+!lms/uploads/exercises/.gitkeep
 
 # Configuration files with sensitive data (Optional but recommended)
 # config/database.php
