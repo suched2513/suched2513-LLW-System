@@ -90,6 +90,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete_file') {
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
 $topics = $pdo->prepare("SELECT * FROM lms_topics WHERE unit_id=? ORDER BY order_no"); $topics->execute([$unit_id]); $topics=$topics->fetchAll();
+$next_order = empty($topics) ? 1 : max(array_column($topics, 'order_no')) + 1;
 
 $pageTitle    = 'จัดการเรื่อง';
 $pageSubtitle = htmlspecialchars($unit['unit_name'],ENT_QUOTES,'UTF-8');
@@ -221,7 +222,7 @@ require_once __DIR__ . '/../components/layout_start.php';
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-black text-slate-500 mb-1">ลำดับ</label>
-          <input type="number" name="order_no" <?=$mid==='edit'?'id="e_order"':''?> class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-violet-400 outline-none" value="1" min="1">
+          <input type="number" name="order_no" <?=$mid==='edit'?'id="e_order"':'id="a_order"'?> class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-violet-400 outline-none" value="<?=$mid==='add'?$next_order:1?>" min="1">
         </div>
         <div class="col-span-2">
           <label class="block text-xs font-black text-slate-500 mb-1">ชื่อเรื่อง <span class="text-rose-500">*</span></label>
