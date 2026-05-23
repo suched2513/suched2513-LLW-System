@@ -105,6 +105,9 @@ require_once __DIR__ . '/components/layout_start.php';
                     <option value="ม.1" <?= $selLevel === 'ม.1' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 1</option>
                     <option value="ม.2" <?= $selLevel === 'ม.2' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 2</option>
                     <option value="ม.3" <?= $selLevel === 'ม.3' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 3</option>
+                    <option value="ม.4" <?= $selLevel === 'ม.4' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 4</option>
+                    <option value="ม.5" <?= $selLevel === 'ม.5' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 5</option>
+                    <option value="ม.6" <?= $selLevel === 'ม.6' ? 'selected' : '' ?>>มัธยมศึกษาปีที่ 6</option>
                 </select>
             </div>
             
