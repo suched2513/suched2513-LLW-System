@@ -1,0 +1,346 @@
+<?php
+session_start();
+require_once __DIR__ . '/../config.php';
+if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
+if (!in_array($_SESSION['llw_role'], ['super_admin','att_teacher'])) {
+    header('Location: ' . $base_path . '/login.php'); exit();
+}
+
+$pdo        = getPdo();
+$is_admin   = $_SESSION['llw_role'] === 'super_admin';
+$teacher_id = $_SESSION['teacher_id'] ?? 0;
+
+// AJAX: save grade + feedback
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'save') {
+    header('Content-Type: application/json');
+    try {
+        $sub_id   = (int)$_POST['sub_id'];
+        $grade    = $_POST['grade'] !== '' ? max(0, (float)$_POST['grade']) : null;
+        $feedback = trim($_POST['feedback'] ?? '') ?: null;
+        $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, reviewed_at=NOW() WHERE id=?")
+            ->execute([$grade, $feedback, $sub_id]);
+        echo json_encode(['ok' => true]);
+    } catch (Exception $e) {
+        error_log($e->getMessage());
+        echo json_encode(['ok' => false]);
+    }
+    exit();
+}
+
+$subject_id  = (int)($_GET['subject_id'] ?? 0);
+$exercise_id = (int)($_GET['exercise_id'] ?? 0);
+
+// Subjects accessible to this teacher
+if ($is_admin) {
+    $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
+} else {
+    $subjects = $pdo->prepare("
+        SELECT DISTINCT s.* FROM lms_subjects s
+        JOIN lms_units u ON u.subject_id = s.id
+        JOIN lms_unit_exercises e ON e.unit_id = u.id
+        WHERE s.teacher_id = ?
+        ORDER BY s.subject_name
+    ");
+    $subjects->execute([$teacher_id]);
+    $subjects = $subjects->fetchAll();
+}
+
+$subject = null; $exercises = []; $exercise = null; $submissions = [];
+
+if ($subject_id) {
+    $ss = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $ss->execute([$subject_id]); $subject = $ss->fetch();
+
+    if ($subject) {
+        // All exercises in this subject
+        $exercises = $pdo->prepare("
+            SELECT e.id, e.exercise_title, e.max_score, e.due_date, u.unit_name,
+                   COUNT(se.id) AS sub_count,
+                   SUM(CASE WHEN se.reviewed_at IS NOT NULL THEN 1 ELSE 0 END) AS reviewed_count
+            FROM lms_unit_exercises e
+            JOIN lms_units u ON u.id = e.unit_id
+            LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.subject_id = ?
+            WHERE u.subject_id = ?
+            GROUP BY e.id
+            ORDER BY u.order_no, e.id
+        ");
+        $exercises->execute([$subject_id, $subject_id]);
+        $exercises = $exercises->fetchAll();
+    }
+}
+
+// Check link_url column exists
+$_has_link = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'link_url'")->fetch();
+$_lk_col   = $_has_link ? ', se.link_url' : ", '' AS link_url";
+
+if ($subject_id && $exercise_id) {
+    $ex_stmt = $pdo->prepare("SELECT e.*, u.unit_name FROM lms_unit_exercises e JOIN lms_units u ON u.id=e.unit_id WHERE e.id=? AND u.subject_id=?");
+    $ex_stmt->execute([$exercise_id, $subject_id]); $exercise = $ex_stmt->fetch();
+
+    if ($exercise) {
+        $q = $pdo->prepare("
+            SELECT se.id AS sub_id, se.student_uid, se.answer_text, se.file_paths{$_lk_col},
+                   se.grade, se.feedback, se.reviewed_at, se.submitted_at,
+                   s.name AS student_name, s.student_id AS student_no, s.classroom
+            FROM lms_student_exercises se
+            JOIN att_students s ON s.id = se.student_uid
+            WHERE se.exercise_id = ?
+            ORDER BY se.submitted_at DESC
+        ");
+        $q->execute([$exercise_id]);
+        $submissions = $q->fetchAll();
+    }
+}
+
+$pageTitle    = 'ตรวจงานนักเรียน';
+$pageSubtitle = 'ตรวจและให้คะแนนชิ้นงาน';
+$activeSystem = 'lms';
+require_once __DIR__ . '/../components/layout_start.php';
+?>
+
+<div class="flex flex-wrap items-center gap-3 mb-6">
+  <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-violet-500 to-purple-600">
+    <i class="bi bi-check2-square text-white text-lg"></i>
+  </div>
+  <div>
+    <h2 class="text-lg font-black text-slate-800">ตรวจงานนักเรียน</h2>
+    <p class="text-xs text-slate-400">ดูงานที่ส่ง · ให้คะแนน · แสดงความคิดเห็น</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Left: subject + exercise list -->
+  <div class="space-y-4">
+    <!-- Subject selector -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+      <p class="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">เลือกวิชา</p>
+      <?php if (empty($subjects)): ?>
+      <p class="text-sm text-slate-400">ไม่มีวิชาที่จัดการได้</p>
+      <?php else: ?>
+      <div class="space-y-1">
+        <?php foreach ($subjects as $s): ?>
+        <a href="grade_exercises.php?subject_id=<?=$s['id']?>"
+           class="block px-3 py-2 rounded-xl text-sm font-bold transition-all <?=$s['id']==$subject_id?'bg-violet-600 text-white':'text-slate-700 hover:bg-slate-50'?>">
+          <?=htmlspecialchars($s['subject_name'],ENT_QUOTES,'UTF-8')?>
+        </a>
+        <?php endforeach; ?>
+      </div>
+      <?php endif; ?>
+    </div>
+
+    <!-- Exercise list -->
+    <?php if ($subject && !empty($exercises)): ?>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+      <p class="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">ชิ้นงาน</p>
+      <div class="space-y-1.5">
+        <?php foreach ($exercises as $e): ?>
+        <?php $pending = $e['sub_count'] - $e['reviewed_count']; ?>
+        <a href="grade_exercises.php?subject_id=<?=$subject_id?>&exercise_id=<?=$e['id']?>"
+           class="flex items-center justify-between px-3 py-2.5 rounded-xl transition-all <?=$e['id']==$exercise_id?'bg-violet-600 text-white':'text-slate-700 hover:bg-slate-50 border border-slate-100'?>">
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-black truncate"><?=htmlspecialchars($e['exercise_title'],ENT_QUOTES,'UTF-8')?></p>
+            <p class="text-[10px] opacity-70 truncate"><?=htmlspecialchars($e['unit_name'],ENT_QUOTES,'UTF-8')?></p>
+          </div>
+          <div class="flex items-center gap-1.5 ml-2 flex-shrink-0">
+            <?php if ($pending > 0): ?>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px] font-black <?=$e['id']==$exercise_id?'bg-white/30 text-white':'bg-amber-100 text-amber-700'?>">
+              <?=$pending?> รอ
+            </span>
+            <?php endif; ?>
+            <span class="text-[10px] opacity-70"><?=$e['sub_count']?>/<?php
+              // count enrolled
+              $enrolled = $pdo->prepare("SELECT COUNT(*) FROM lms_subject_classrooms sc JOIN att_students st ON st.classroom=sc.classroom WHERE sc.subject_id=? AND st.status='active'");
+              $enrolled->execute([$subject_id]); echo (int)$enrolled->fetchColumn();
+            ?></span>
+          </div>
+        </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+  </div>
+
+  <!-- Right: submissions -->
+  <div class="lg:col-span-2">
+    <?php if (!$subject): ?>
+    <div class="bg-white rounded-2xl border border-slate-100 p-16 text-center text-slate-300 shadow-sm">
+      <i class="bi bi-journal-check text-5xl block mb-3"></i>
+      <p class="font-bold">เลือกวิชาก่อน</p>
+    </div>
+
+    <?php elseif (!$exercise_id || !$exercise): ?>
+    <div class="bg-white rounded-2xl border border-slate-100 p-16 text-center text-slate-300 shadow-sm">
+      <i class="bi bi-list-task text-5xl block mb-3"></i>
+      <p class="font-bold">เลือกชิ้นงานจากรายการทางซ้าย</p>
+    </div>
+
+    <?php else: ?>
+    <!-- Exercise header -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h3 class="font-black text-slate-800"><?=htmlspecialchars($exercise['exercise_title'],ENT_QUOTES,'UTF-8')?></h3>
+          <p class="text-xs text-slate-400 mt-0.5"><?=htmlspecialchars($exercise['unit_name'],ENT_QUOTES,'UTF-8')?></p>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+          <?php if ($exercise['max_score']): ?>
+          <span class="px-3 py-1 bg-amber-50 text-amber-700 text-xs font-black rounded-full border border-amber-100">
+            <i class="bi bi-star-fill mr-1"></i><?=$exercise['max_score']?> คะแนน
+          </span>
+          <?php endif; ?>
+          <span class="px-3 py-1 bg-violet-50 text-violet-700 text-xs font-black rounded-full border border-violet-100">
+            <?=count($submissions)?> งานที่ส่ง
+          </span>
+        </div>
+      </div>
+      <?php if (!empty($exercise['description'])): ?>
+      <div class="mt-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+        <p class="text-xs text-blue-700"><?=nl2br(htmlspecialchars($exercise['description'],ENT_QUOTES,'UTF-8'))?></p>
+      </div>
+      <?php endif; ?>
+    </div>
+
+    <?php if (empty($submissions)): ?>
+    <div class="bg-white rounded-2xl border border-slate-100 p-12 text-center text-slate-300 shadow-sm">
+      <i class="bi bi-inbox text-4xl block mb-2"></i>
+      <p class="font-bold text-sm">ยังไม่มีนักเรียนส่งงาน</p>
+    </div>
+    <?php else: ?>
+    <div class="space-y-4" id="submissionList">
+      <?php foreach ($submissions as $s): ?>
+      <?php
+        $sub_files = [];
+        if (!empty($s['file_paths'])) {
+            $sub_files = json_decode($s['file_paths'], true) ?: [$s['file_paths']];
+        }
+        $reviewed = !empty($s['reviewed_at']);
+      ?>
+      <div class="bg-white rounded-2xl border <?=$reviewed?'border-emerald-200':'border-amber-200'?> shadow-sm overflow-hidden">
+        <!-- Student header -->
+        <div class="flex items-center justify-between px-5 py-3 <?=$reviewed?'bg-emerald-50':'bg-amber-50'?> border-b <?=$reviewed?'border-emerald-100':'border-amber-100'?>">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-white flex items-center justify-center border <?=$reviewed?'border-emerald-200':'border-amber-200'?>">
+              <i class="bi bi-person-fill text-sm <?=$reviewed?'text-emerald-600':'text-amber-600'?>"></i>
+            </div>
+            <div>
+              <p class="text-sm font-black text-slate-800"><?=htmlspecialchars($s['student_name'],ENT_QUOTES,'UTF-8')?></p>
+              <p class="text-[10px] text-slate-400"><?=htmlspecialchars($s['student_no'],ENT_QUOTES,'UTF-8')?> · <?=htmlspecialchars($s['classroom'],ENT_QUOTES,'UTF-8')?></p>
+            </div>
+          </div>
+          <div class="text-right">
+            <?php if ($reviewed): ?>
+            <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full">
+              <i class="bi bi-check-circle-fill mr-0.5"></i>ตรวจแล้ว
+            </span>
+            <?php if ($s['grade'] !== null): ?>
+            <p class="text-xs font-black text-emerald-700 mt-0.5"><?=$s['grade']?><?=$exercise['max_score']?' / '.$exercise['max_score']:'?> คะแนน</p>
+            <?php endif; ?>
+            <?php else: ?>
+            <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full">รอตรวจ</span>
+            <?php endif; ?>
+            <p class="text-[10px] text-slate-400 mt-0.5"><?=date('d/m H:i', strtotime($s['submitted_at']))?></p>
+          </div>
+        </div>
+
+        <!-- Submission content -->
+        <div class="px-5 py-4 space-y-3">
+          <!-- Files -->
+          <?php if (!empty($sub_files)): ?>
+          <div class="flex flex-wrap gap-2">
+            <?php foreach ($sub_files as $fp):
+              $fext = strtolower(pathinfo($fp, PATHINFO_EXTENSION));
+              $is_img = in_array($fext, ['jpg','jpeg','png','gif','webp']);
+              $is_vid = in_array($fext, ['mp4','mov','avi','3gp','webm']);
+            ?>
+            <?php if ($is_img): ?>
+            <a href="<?=$base_path.'/'.htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>" target="_blank">
+              <img src="<?=$base_path.'/'.htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>"
+                   class="h-32 w-auto rounded-xl border border-slate-200 object-cover hover:opacity-80 transition-all" alt="">
+            </a>
+            <?php elseif ($is_vid): ?>
+            <video src="<?=$base_path.'/'.htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>"
+                   controls class="w-full rounded-xl border border-slate-200 max-h-48"></video>
+            <?php else: ?>
+            <a href="<?=$base_path.'/'.htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>" target="_blank"
+               class="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700 font-bold hover:bg-red-100 transition-all">
+              <i class="bi bi-file-earmark-pdf text-xl"></i><span>ดู PDF</span>
+            </a>
+            <?php endif; ?>
+            <?php endforeach; ?>
+          </div>
+          <?php endif; ?>
+
+          <!-- Link -->
+          <?php if (!empty($s['link_url'])): ?>
+          <a href="<?=htmlspecialchars($s['link_url'],ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
+             class="flex items-center gap-2 px-3 py-2.5 bg-violet-50 border border-violet-100 rounded-xl text-sm text-violet-700 font-bold hover:bg-violet-100 transition-all">
+            <i class="bi bi-link-45deg text-xl flex-shrink-0"></i>
+            <span class="truncate"><?=htmlspecialchars($s['link_url'],ENT_QUOTES,'UTF-8')?></span>
+            <i class="bi bi-box-arrow-up-right text-xs ml-auto flex-shrink-0"></i>
+          </a>
+          <?php endif; ?>
+
+          <!-- Text answer -->
+          <?php if (!empty($s['answer_text'])): ?>
+          <div class="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+            <p class="text-[10px] font-black text-slate-400 mb-1">คำตอบ</p>
+            <p class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap"><?=htmlspecialchars($s['answer_text'],ENT_QUOTES,'UTF-8')?></p>
+          </div>
+          <?php endif; ?>
+
+          <!-- Grade form -->
+          <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2">
+            <p class="text-xs font-black text-slate-500">ให้คะแนน / แสดงความคิดเห็น</p>
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
+                <input type="number" min="0" max="<?=$exercise['max_score']??100?>"
+                  value="<?=$s['grade']??''?>" placeholder="—"
+                  class="w-20 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-violet-400 outline-none"
+                  id="g_<?=$s['sub_id']?>">
+                <?php if ($exercise['max_score']): ?>
+                <span class="text-xs text-slate-400 font-bold">/ <?=$exercise['max_score']?></span>
+                <?php endif; ?>
+              </div>
+              <input type="text" value="<?=htmlspecialchars($s['feedback']??'',ENT_QUOTES,'UTF-8')?>"
+                placeholder="ความคิดเห็น..."
+                class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-violet-400 outline-none"
+                id="f_<?=$s['sub_id']?>">
+              <button onclick="saveFeedback(<?=$s['sub_id']?>)"
+                class="px-4 py-2 <?=$reviewed?'bg-emerald-500 hover:bg-emerald-600':'bg-violet-600 hover:bg-violet-700'?> text-white font-bold text-xs rounded-xl transition-all flex-shrink-0"
+                id="btn_<?=$s['sub_id']?>">
+                <i class="bi bi-save mr-1"></i><?=$reviewed?'อัปเดต':'บันทึก'?>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+    <?php endif; ?>
+  </div>
+</div>
+
+<script>
+async function saveFeedback(subId) {
+  const grade    = document.getElementById('g_' + subId).value;
+  const feedback = document.getElementById('f_' + subId).value;
+  const btn      = document.getElementById('btn_' + subId);
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split mr-1"></i>';
+  const fd = new FormData();
+  fd.append('ajax','save'); fd.append('sub_id', subId);
+  fd.append('grade', grade); fd.append('feedback', feedback);
+  const res = await fetch('grade_exercises.php?subject_id=<?=$subject_id?>', {method:'POST', body:fd}).then(r=>r.json());
+  if (res.ok) {
+    btn.innerHTML = '<i class="bi bi-check-lg mr-1"></i>บันทึกแล้ว';
+    btn.className = btn.className.replace('bg-violet-600 hover:bg-violet-700','bg-emerald-500 hover:bg-emerald-600');
+    setTimeout(() => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-save mr-1"></i>อัปเดต'; }, 2000);
+  } else {
+    btn.disabled = false; btn.innerHTML = '<i class="bi bi-save mr-1"></i>ลองใหม่';
+    Swal.fire({icon:'error', title:'เกิดข้อผิดพลาด', confirmButtonColor:'#7C3AED'});
+  }
+}
+</script>
+
+<?php require_once __DIR__ . '/../components/layout_end.php'; ?>
