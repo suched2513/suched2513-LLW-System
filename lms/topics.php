@@ -107,7 +107,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 
 <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
   <div>
-    <a href="<?=$base_path?>/lms/units.php" class="inline-flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 mb-1">
+    <a href="<?=$base_path?>/lms/units.php?subject_id=<?=$unit['subject_id']?>" class="inline-flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 mb-1">
       <i class="fas fa-arrow-left"></i> กลับหน่วยการเรียนรู้
     </a>
     <div class="flex items-center gap-3">

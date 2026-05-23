@@ -137,9 +137,9 @@ $subMenus = [
     'lms' => [
         ['icon' => 'fas fa-tachometer-alt',    'label' => 'Dashboard LMS',       'url' => $base_path . '/lms/dashboard.php'],
         ['icon' => 'fas fa-chalkboard',        'label' => 'วิชาของฉัน',           'url' => $base_path . '/lms/subjects.php'],
-        ['icon' => 'fas fa-tasks',             'label' => 'ตรวจงานนักเรียน',      'url' => $base_path . '/lms/grade_exercises.php', 'roles' => ['super_admin','att_teacher']],
+        ['icon' => 'fas fa-tasks',             'label' => 'ตรวจงานนักเรียน',      'url' => $base_path . '/lms/grade_exercises.php', 'roles' => ['super_admin','att_teacher'], 'badge' => 'lms_pending'],
         ['icon' => 'fas fa-chart-line',        'label' => 'ความคืบหน้านักเรียน',  'url' => $base_path . '/lms/progress.php'],
-        ['icon' => 'fas fa-pen-fancy',         'label' => 'ตรวจข้อสอบอัตนัย',    'url' => $base_path . '/lms/exam_answers.php', 'roles' => ['super_admin','att_teacher']],
+        ['icon' => 'fas fa-pen-fancy',         'label' => 'ตรวจข้อสอบอัตนัย',    'url' => $base_path . '/lms/exam_answers.php', 'roles' => ['super_admin','att_teacher'], 'badge' => 'lms_essay_pending'],
     ],
     'duty' => [
         ['icon' => 'fas fa-camera',              'label' => 'ส่งรายงานเวร (ครู)', 'url' => $base_path . '/duty/index.php',          'roles' => ['att_teacher','super_admin','wfh_admin']],
@@ -159,6 +159,22 @@ $subMenus = [
     ],
 
 ];
+
+// Badge counts (only for roles that access LMS)
+$_sidebar_badges = ['lms_pending' => 0, 'lms_essay_pending' => 0];
+if (in_array($userRole, ['super_admin', 'att_teacher'])) {
+    try {
+        $_spdo = getPdo();
+        $_chk_grade = (bool)$_spdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'reviewed_at'")->fetch();
+        if ($_chk_grade) {
+            $_sidebar_badges['lms_pending'] = (int)$_spdo->query("SELECT COUNT(*) FROM lms_student_exercises WHERE reviewed_at IS NULL")->fetchColumn();
+        }
+        $_chk_essay = (bool)$_spdo->query("SHOW COLUMNS FROM `lms_student_exam_answers` LIKE 'reviewed_at'")->fetch();
+        if ($_chk_essay) {
+            $_sidebar_badges['lms_essay_pending'] = (int)$_spdo->query("SELECT COUNT(*) FROM lms_student_exam_answers WHERE reviewed_at IS NULL")->fetchColumn();
+        }
+    } catch (Exception $e) { /* ไม่แสดง error ใน sidebar */ }
+}
 
 ?>
 
@@ -225,10 +241,19 @@ $subMenus = [
                     </a>
                     <ul class="nav nav-treeview">
                         <?php foreach ($subMenus['lms'] as $sub): ?>
+                        <?php if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue; ?>
+                        <?php
+                            $_badge_count = 0;
+                            if (isset($sub['badge']) && isset($_sidebar_badges[$sub['badge']])) {
+                                $_badge_count = $_sidebar_badges[$sub['badge']];
+                            }
+                        ?>
                         <li class="nav-item">
                             <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
                                 <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
+                                <p><?= $sub['label'] ?><?php if ($_badge_count > 0): ?>
+                                    <span class="badge badge-danger right" style="background:#ef4444;font-size:10px;min-width:18px"><?= $_badge_count ?></span>
+                                <?php endif; ?></p>
                             </a>
                         </li>
                         <?php endforeach; ?>
