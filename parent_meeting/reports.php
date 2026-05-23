@@ -669,4 +669,86 @@ function escapeHtml(string) {
 }
 </style>
 
+<?php if (isset($_GET['debug']) && $_GET['debug'] == '1'): ?>
+    <div class="card m-4 border-danger shadow-sm no-print">
+        <div class="card-header bg-danger text-white">
+            <h6 class="m-0 font-bold"><i class="bi bi-bug-fill me-2"></i> ระบบวินิจฉัยปัญหา (Image & Path Diagnostics)</h6>
+        </div>
+        <div class="card-body bg-light text-dark text-xs font-monospace">
+            <p><strong>Detected Base Path ($base_path):</strong> "<?= htmlspecialchars($base_path) ?>"</p>
+            <p><strong>DOCUMENT_ROOT:</strong> "<?= htmlspecialchars($_SERVER['DOCUMENT_ROOT']) ?>"</p>
+            <p><strong>__DIR__:</strong> "<?= htmlspecialchars(__DIR__) ?>"</p>
+            <p><strong>Upload Directory Path:</strong> "<?= htmlspecialchars(__DIR__ . '/uploads/') ?>"</p>
+            <p><strong>Upload Dir Exists?</strong> <?= is_dir(__DIR__ . '/uploads/') ? '<span class="text-success font-bold">YES</span>' : '<span class="text-danger font-bold">NO</span>' ?></p>
+            <p><strong>Upload Dir Writable?</strong> <?= is_writable(__DIR__ . '/uploads/') ? '<span class="text-success font-bold">YES</span>' : '<span class="text-danger font-bold">NO</span>' ?></p>
+            
+            <hr>
+            <h6><i class="bi bi-folder-fill me-1 text-warning"></i> ไฟล์ในโฟลเดอร์ uploads/ (10 ไฟล์ล่าสุด):</h6>
+            <ul>
+                <?php
+                $uploadPath = __DIR__ . '/uploads/';
+                if (is_dir($uploadPath)) {
+                    $files = array_diff(scandir($uploadPath), array('.', '..'));
+                    $file_count = count($files);
+                    echo "<li>จำนวนไฟล์ทั้งหมด: $file_count ไฟล์</li>";
+                    $shown = 0;
+                    foreach ($files as $file) {
+                        if ($shown++ >= 10) break;
+                        $full_file_path = $uploadPath . $file;
+                        $file_size = number_format(filesize($full_file_path) / 1024, 1) . ' KB';
+                        echo "<li>- $file ($file_size)</li>";
+                    }
+                } else {
+                    echo "<li class=\"text-danger\">ไม่พบโฟลเดอร์ uploads</li>";
+                }
+                ?>
+            </ul>
+            
+            <hr>
+            <h6><i class="bi bi-database-fill me-1 text-primary"></i> ข้อมูลรูปภาพจากตาราง pm_meeting_images (10 รายการล่าสุด):</h6>
+            <ul>
+                <?php
+                try {
+                    $testStmt = $pdo->query("SELECT * FROM pm_meeting_images ORDER BY id DESC LIMIT 10");
+                    $testImgs = $testStmt->fetchAll();
+                    if (empty($testImgs)) {
+                        echo "<li>ไม่มีข้อมูลรูปกิจกรรมในตาราง pm_meeting_images</li>";
+                    } else {
+                        foreach ($testImgs as $timg) {
+                            $full_path = __DIR__ . '/' . $timg['image_path'];
+                            $exists = file_exists($full_path) ? '<span class="text-success">มีไฟล์อยู่จริง</span>' : '<span class="text-danger">ไฟล์สูญหาย</span>';
+                            echo "<li>ID: {$timg['id']}, Meeting ID: {$timg['meeting_id']}, Path: " . htmlspecialchars($timg['image_path']) . " ($exists)</li>";
+                        }
+                    }
+                } catch (Exception $ex) {
+                    echo "<li class=\"text-danger\">Error: " . htmlspecialchars($ex->getMessage()) . "</li>";
+                }
+                ?>
+            </ul>
+
+            <hr>
+            <h6><i class="bi bi-database-fill me-1 text-primary"></i> ข้อมูลรูปภาพจากตาราง pm_network_parents (10 รายการล่าสุดที่มีรูป):</h6>
+            <ul>
+                <?php
+                try {
+                    $testStmt2 = $pdo->query("SELECT id, position_name, parent_name, image_path FROM pm_network_parents WHERE image_path IS NOT NULL AND image_path != '' ORDER BY id DESC LIMIT 10");
+                    $testNets = $testStmt2->fetchAll();
+                    if (empty($testNets)) {
+                        echo "<li>ไม่มีข้อมูลรูปเครือข่ายผู้ปกครองในตาราง pm_network_parents</li>";
+                    } else {
+                        foreach ($testNets as $tnet) {
+                            $full_path = __DIR__ . '/' . $tnet['image_path'];
+                            $exists = file_exists($full_path) ? '<span class="text-success">มีไฟล์อยู่จริง</span>' : '<span class="text-danger">ไฟล์สูญหาย</span>';
+                            echo "<li>ID: {$tnet['id']}, Name: " . htmlspecialchars($tnet['parent_name']) . " ({$tnet['position_name']}), Path: " . htmlspecialchars($tnet['image_path']) . " ($exists)</li>";
+                        }
+                    }
+                } catch (Exception $ex) {
+                    echo "<li class=\"text-danger\">Error: " . htmlspecialchars($ex->getMessage()) . "</li>";
+                }
+                ?>
+            </ul>
+        </div>
+    </div>
+<?php endif; ?>
+
 <?php require_once __DIR__ . '/components/layout_end.php'; ?>
