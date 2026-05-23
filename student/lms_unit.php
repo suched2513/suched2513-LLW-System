@@ -460,7 +460,7 @@ function openExercise(id, title, desc, maxScore, dueTs, existingText, existingFi
   }
   const modal = document.getElementById('exModal');
   modal.classList.remove('hidden'); modal.classList.add('flex');
-  setTimeout(() => document.getElementById('exModalAnswer').focus(), 100);
+  setTimeout(() => document.getElementById('exForm').scrollTop = 0, 50);
 }
 
 function previewExFiles(input) {
