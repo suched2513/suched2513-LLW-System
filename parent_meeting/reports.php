@@ -235,6 +235,22 @@ require_once __DIR__ . '/components/layout_start.php';
                     $overallAttendRate = $sumStudents > 0 ? round(($sumAttend / $sumStudents) * 100, 1) : 0;
                     ?>
                     
+                    <!-- แถบปุ่มพิมพ์รายงาน/PDF สรุปภาพรวม -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3 bg-light p-3 rounded-3 border border-slate-100">
+                        <div>
+                            <span class="text-xs text-muted font-bold uppercase tracking-wide"><i class="bi bi-printer me-1"></i> เมนูการพิมพ์และส่งออกเอกสาร</span>
+                            <div class="text-sm font-bold text-dark-blue mt-0.5">พิมพ์ข้อมูลสรุปและรายชื่อตามตัวกรองปัจจุบัน</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="print_summary.php?type=absents&level=<?= urlencode($selLevel) ?>&academic_year=<?= urlencode($selYear) ?>&semester=<?= urlencode($selSemester) ?>" target="_blank" class="btn btn-outline-danger btn-sm font-bold rounded px-3 py-2">
+                                <i class="bi bi-person-x-fill me-1"></i> พิมพ์รายชื่อผู้ขาดประชุม (ปิดประกาศ)
+                            </a>
+                            <a href="print_summary.php?type=summary&level=<?= urlencode($selLevel) ?>&academic_year=<?= urlencode($selYear) ?>&semester=<?= urlencode($selSemester) ?>" target="_blank" class="btn btn-primary btn-sm font-bold rounded px-3 py-2 text-white">
+                                <i class="bi bi-file-earmark-pdf-fill me-1"></i> พิมพ์รายงานสรุปภาพรวม
+                            </a>
+                        </div>
+                    </div>
+                    
                     <!-- สถิติแบบการ์ดภาพรวม -->
                     <div class="row g-3 mb-4">
                         <div class="col-12 col-sm-6 col-md-3">
