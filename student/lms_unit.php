@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exercise_id'])) {
             finfo_close($finfo);
             $ext = strtolower(pathinfo($_FILES['exercise_files']['name'][$fi], PATHINFO_EXTENSION));
             if (!in_array($mime, $allowed_mime) || !in_array($ext, $allowed_ext)) continue;
-            $is_video = str_starts_with($mime, 'video/');
+            $is_video = strpos($mime, 'video/') === 0;
             $max_size = $is_video ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
             if ($_FILES['exercise_files']['size'][$fi] > $max_size) continue;
             $fname = $uid . '_' . $ex_id . '_' . time() . '_' . $fi . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
@@ -53,6 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exercise_id'])) {
         }
     }
     $file_paths_json = !empty($file_paths_arr) ? json_encode($file_paths_arr) : null;
+
+    $_post_has_link = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'link_url'")->fetch();
 
     if ($answer !== '' || !empty($file_paths_arr) || $link_url !== '') {
         $exists_q = $pdo->prepare("SELECT id, file_paths FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
@@ -66,11 +68,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exercise_id'])) {
                     if (file_exists($op)) @unlink($op);
                 }
             }
-            $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?, file_paths=COALESCE(?,file_paths), link_url=?, submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
-                ->execute([$answer, $file_paths_json, $link_url ?: null, $uid, $ex_id]);
+            if ($_post_has_link) {
+                $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?, file_paths=COALESCE(?,file_paths), link_url=?, submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
+                    ->execute([$answer, $file_paths_json, $link_url ?: null, $uid, $ex_id]);
+            } else {
+                $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?, file_paths=COALESCE(?,file_paths), submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
+                    ->execute([$answer, $file_paths_json, $uid, $ex_id]);
+            }
         } else {
-            $pdo->prepare("INSERT INTO lms_student_exercises (student_uid, exercise_id, unit_id, subject_id, answer_text, file_paths, link_url) VALUES (?,?,?,?,?,?,?)")
-                ->execute([$uid, $ex_id, $unit_id, $subject_id, $answer, $file_paths_json, $link_url ?: null]);
+            if ($_post_has_link) {
+                $pdo->prepare("INSERT INTO lms_student_exercises (student_uid, exercise_id, unit_id, subject_id, answer_text, file_paths, link_url) VALUES (?,?,?,?,?,?,?)")
+                    ->execute([$uid, $ex_id, $unit_id, $subject_id, $answer, $file_paths_json, $link_url ?: null]);
+            } else {
+                $pdo->prepare("INSERT INTO lms_student_exercises (student_uid, exercise_id, unit_id, subject_id, answer_text, file_paths) VALUES (?,?,?,?,?,?)")
+                    ->execute([$uid, $ex_id, $unit_id, $subject_id, $answer, $file_paths_json]);
+            }
         }
         header('Location: /student/lms_unit.php?unit_id=' . $unit_id . '&ex_done=1'); exit();
     }
@@ -88,9 +100,11 @@ $exercises_stmt->execute([$unit_id]);
 $exercises = $exercises_stmt->fetchAll();
 
 // Student submissions + feedback for this unit
+$_has_lk = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'link_url'")->fetch();
+$_lk_col  = $_has_lk ? ', link_url' : ", '' AS link_url";
 $submitted_map = [];
 foreach ($exercises as $ex) {
-    $sub = $pdo->prepare("SELECT answer_text, file_paths, link_url, grade, feedback, reviewed_at FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
+    $sub = $pdo->prepare("SELECT answer_text, file_paths{$_lk_col}, grade, feedback, reviewed_at FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
     $sub->execute([$uid, $ex['id']]);
     $row = $sub->fetch();
     if ($row) $submitted_map[$ex['id']] = $row;
