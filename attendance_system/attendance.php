@@ -68,7 +68,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
 
             $settings  = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
             $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
-            $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
+
+            // Chat ID: ใช้ per-subject ก่อน → fallback global att_chat_id → fallback admin_chat_id
+            $_has_sub_chat = (bool)$pdo->query("SHOW COLUMNS FROM `att_subjects` LIKE 'telegram_chat_id'")->fetch();
+            if ($_has_sub_chat && !empty($subject_info['telegram_chat_id'])) {
+                $attChatId = $subject_info['telegram_chat_id'];
+            } else {
+                $attChatId = !empty($settings['att_chat_id']) ? $settings['att_chat_id'] : ($settings['admin_chat_id'] ?? '');
+            }
 
             if ($attToken && $attChatId) {
                 $counts = ['มา' => 0, 'ขาด' => 0, 'ลา' => 0, 'โดด' => 0, 'สาย' => 0];

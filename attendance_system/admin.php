@@ -145,7 +145,13 @@ if ($action === 'add_subject') {
     $name = trim($_POST['subject_name'] ?? '');
     $cls  = trim($_POST['classroom'] ?? '');
     if ($sid && $tid && $code && $name && $cls) {
-        $pdo->prepare("UPDATE att_subjects SET teacher_id=?, subject_code=?, subject_name=?, classroom=? WHERE id=?")->execute([$tid, $code, $name, $cls, $sid]);
+        $_chk_tg = (bool)$pdo->query("SHOW COLUMNS FROM `att_subjects` LIKE 'telegram_chat_id'")->fetch();
+        if ($_chk_tg) {
+            $chat = trim($_POST['telegram_chat_id'] ?? '');
+            $pdo->prepare("UPDATE att_subjects SET teacher_id=?, subject_code=?, subject_name=?, classroom=?, telegram_chat_id=? WHERE id=?")->execute([$tid, $code, $name, $cls, $chat ?: null, $sid]);
+        } else {
+            $pdo->prepare("UPDATE att_subjects SET teacher_id=?, subject_code=?, subject_name=?, classroom=? WHERE id=?")->execute([$tid, $code, $name, $cls, $sid]);
+        }
         $msg = "แก้ไขวิชา '$code' สำเร็จ";
     } else {
         $msg = 'ข้อมูลไม่ครบ'; $msgType = 'error';
@@ -579,6 +585,9 @@ require_once '../components/layout_start.php';
                             <td class="px-6 py-4 text-slate-600"><?= $s['t_name'] ?></td>
                             <td class="px-6 py-4 text-center">
                                 <span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-xs"><?= $s['classroom'] ?></span>
+                                <?php if (!empty($s['telegram_chat_id'] ?? '')): ?>
+                                <span class="px-2 py-1 rounded-lg bg-blue-50 text-blue-500 font-bold text-xs ms-1" title="มี Telegram Chat ID ตั้งค่าไว้"><i class="bi bi-telegram"></i></span>
+                                <?php endif; ?>
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <?php if (!$migration_ready): ?>
@@ -597,7 +606,7 @@ require_once '../components/layout_start.php';
                                 <?php endif; ?>
                             </td>
                             <td class="px-6 py-4 text-right text-nowrap">
-                                <button onclick="editSubject(<?= $s['id'] ?>, '<?= addslashes($s['subject_code']) ?>', '<?= addslashes($s['subject_name']) ?>', '<?= addslashes($s['classroom']) ?>', <?= (int)$s['teacher_id'] ?>)"
+                                <button onclick="editSubject(<?= $s['id'] ?>, '<?= addslashes($s['subject_code']) ?>', '<?= addslashes($s['subject_name']) ?>', '<?= addslashes($s['classroom']) ?>', <?= (int)$s['teacher_id'] ?>, '<?= addslashes($s['telegram_chat_id'] ?? '') ?>')"
                                         class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition me-1" title="แก้ไข"><i class="bi bi-pencil-fill"></i></button>
                                 <button onclick="deleteSubject(<?= $s['id'] ?>, '<?= addslashes($s['subject_name']) ?>')" class="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition"><i class="bi bi-trash3"></i></button>
                             </td>
@@ -942,7 +951,7 @@ async function toggleElective(id, btn) {
     btn.disabled = false;
 }
 
-function editSubject(id, code, name, classroom, teacherId) {
+function editSubject(id, code, name, classroom, teacherId, chatId) {
     const teacherOptions = <?= json_encode(array_map(fn($t) => ['id' => $t['id'], 'name' => $t['name']], $teachers)) ?>;
     const opts = teacherOptions.map(t =>
         `<option value="${t.id}" ${t.id == teacherId ? 'selected' : ''}>${t.name.replace(/"/g,'&quot;')}</option>`
@@ -969,6 +978,12 @@ function editSubject(id, code, name, classroom, teacherId) {
                 <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">ชื่อวิชา</label>
                 <input id="es_name" class="swal2-input mt-1" value="${name}">
             </div>
+            <div>
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    <i class="bi bi-telegram me-1 text-blue-400"></i>Telegram Chat ID (กลุ่มรับแจ้งเตือนเช็คชื่อ)
+                </label>
+                <input id="es_chat" class="swal2-input mt-1" value="${chatId || ''}" placeholder="-1001234567890 (ว่าง = ใช้ค่ากลางจากระบบ)">
+            </div>
         </div>`,
         confirmButtonText: 'บันทึก',
         confirmButtonColor: '#2563eb',
@@ -976,19 +991,21 @@ function editSubject(id, code, name, classroom, teacherId) {
         cancelButtonText: 'ยกเลิก',
         focusConfirm: false,
         preConfirm: () => {
-            const tid = document.getElementById('es_teacher').value;
-            const c   = document.getElementById('es_code').value.trim();
-            const n   = document.getElementById('es_name').value.trim();
-            const cls = document.getElementById('es_classroom').value.trim();
+            const tid  = document.getElementById('es_teacher').value;
+            const c    = document.getElementById('es_code').value.trim();
+            const n    = document.getElementById('es_name').value.trim();
+            const cls  = document.getElementById('es_classroom').value.trim();
+            const chat = document.getElementById('es_chat').value.trim();
             if (!tid || !c || !n || !cls) { Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบ'); return false; }
-            return { tid, c, n, cls };
+            return { tid, c, n, cls, chat };
         }
     }).then(r => {
         if (r.isConfirmed) {
             submitForm({
                 action: 'edit_subject', subject_id: id,
                 teacher_id: r.value.tid, subject_code: r.value.c,
-                subject_name: r.value.n, classroom: r.value.cls
+                subject_name: r.value.n, classroom: r.value.cls,
+                telegram_chat_id: r.value.chat
             });
         }
     });

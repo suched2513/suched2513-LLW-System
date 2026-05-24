@@ -10,16 +10,28 @@
  * Cron: 0 6 * * * php /path/llw/duty/cron/notify_duty.php >> /var/log/duty_notify.log 2>&1
  */
 
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../includes/telegram_bot.php';
+
 if (php_sapi_name() !== 'cli' && !defined('DUTY_CRON_INTERNAL')) {
     $ip = $_SERVER['REMOTE_ADDR'] ?? '';
     if (!in_array($ip, ['127.0.0.1', '::1'])) {
-        http_response_code(403);
-        exit('CLI or localhost only');
+        // ยอมรับ HTTP จาก GitHub Actions ถ้ามี ?key= ตรงกับ duty_notify_key ใน DB
+        $providedKey = trim($_GET['key'] ?? '');
+        $valid = false;
+        if ($providedKey) {
+            try {
+                $_kpdo = getPdo();
+                $storedKey = $_kpdo->query("SELECT svalue FROM duty_settings WHERE skey='duty_notify_key' LIMIT 1")->fetchColumn();
+                $valid = $storedKey && hash_equals((string)$storedKey, $providedKey);
+            } catch (\Throwable $_ke) { /* DB error → reject */ }
+        }
+        if (!$valid) {
+            http_response_code(403);
+            exit('Forbidden');
+        }
     }
 }
-
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../includes/telegram_bot.php';
 
 $pdo = getPdo();
 
