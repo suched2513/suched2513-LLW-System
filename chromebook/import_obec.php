@@ -20,8 +20,7 @@ $hasBorrower = in_array('borrower_type', $cbCols);
 
 $migrationReady = $hasMac && $hasImei;
 
-// ── CSV column mapping ──
-// type,box_no,serial_no,mac_address,imei,keyboard_box,keyboard_sn,sim_type,mobile_no,brand,model,firstname,lastname
+// ── CSV column mapping (positions in our normalised mapped row) ──
 define('COL_TYPE',    0);
 define('COL_BOX',     1);
 define('COL_SERIAL',  2);
@@ -35,7 +34,6 @@ define('COL_BRAND',   9);
 define('COL_MODEL',   10);
 define('COL_FN',      11);
 define('COL_LN',      12);
-define('EXPECTED_COLS', 13);
 
 $result = null;
 $preview = [];
@@ -51,26 +49,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($_FILES['csv_file']['tmp_name'])) {
             $errors[] = 'กรุณาเลือกไฟล์ CSV';
         } else {
-            $handle = fopen($_FILES['csv_file']['tmp_name'], 'r');
-            // detect BOM
-            $bom = fread($handle, 3);
-            if ($bom !== "\xEF\xBB\xBF") rewind($handle);
-            $header = fgetcsv($handle);
-            $rowNum = 1;
-            while (($row = fgetcsv($handle)) !== false) {
-                $rowNum++;
-                if (count($row) < EXPECTED_COLS) {
-                    $errors[] = "แถว $rowNum: คอลัมน์ไม่ครบ (" . count($row) . "/" . EXPECTED_COLS . ")";
-                    continue;
-                }
-                $preview[] = $row;
+            $content = file_get_contents($_FILES['csv_file']['tmp_name']);
+
+            // Detect BOM and convert encoding (PowerShell 5.1 often writes UTF-16 LE)
+            // UTF-16 LE: Thai char ย (U+0E22) → \x22\x0E → fgetcsv sees \x22 as quote → wrong field count
+            if (substr($content, 0, 3) === "\xEF\xBB\xBF") {
+                $content = substr($content, 3); // strip UTF-8 BOM
+            } elseif (substr($content, 0, 2) === "\xFF\xFE") {
+                $content = mb_convert_encoding(substr($content, 2), 'UTF-8', 'UTF-16LE');
+            } elseif (substr($content, 0, 2) === "\xFE\xFF") {
+                $content = mb_convert_encoding(substr($content, 2), 'UTF-8', 'UTF-16BE');
             }
-            fclose($handle);
-            if (!empty($preview)) {
-                $_SESSION['obec_import_data'] = $preview;
-                $step = 'preview';
+
+            $lines = preg_split('/\r\n|\r|\n/', $content);
+            $lines = array_values(array_filter($lines, fn($l) => trim($l) !== ''));
+
+            if (count($lines) < 2) {
+                $errors[] = 'ไฟล์ต้องมีอย่างน้อย 1 แถวข้อมูล';
             } else {
-                $errors[] = 'ไม่พบข้อมูลในไฟล์';
+                // Map headers by name (tolerates different column order)
+                $rawHeader = str_getcsv(array_shift($lines));
+                $colMap = [];
+                foreach ($rawHeader as $i => $h) {
+                    $colMap[trim(strtolower($h))] = $i;
+                }
+
+                $reqCols = ['type', 'box_no', 'serial_no'];
+                foreach ($reqCols as $req) {
+                    if (!array_key_exists($req, $colMap)) {
+                        $found = implode(', ', array_keys($colMap));
+                        $errors[] = "ไม่พบคอลัมน์ '{$req}' ในไฟล์ (คอลัมน์ที่พบ: {$found})";
+                    }
+                }
+
+                if (empty($errors)) {
+                    $get = fn($row, $name) => isset($colMap[$name]) ? trim($row[$colMap[$name]] ?? '') : '';
+                    foreach ($lines as $line) {
+                        $row = str_getcsv($line);
+                        $preview[] = [
+                            $get($row, 'type'),
+                            $get($row, 'box_no'),
+                            $get($row, 'serial_no'),
+                            $get($row, 'mac_address'),
+                            $get($row, 'imei'),
+                            $get($row, 'keyboard_box'),
+                            $get($row, 'keyboard_sn'),
+                            $get($row, 'sim_type'),
+                            $get($row, 'mobile_no'),
+                            $get($row, 'brand'),
+                            $get($row, 'model'),
+                            $get($row, 'firstname'),
+                            $get($row, 'lastname'),
+                        ];
+                    }
+
+                    if (!empty($preview)) {
+                        $_SESSION['obec_import_data'] = $preview;
+                        $step = 'preview';
+                    } else {
+                        $errors[] = 'ไม่พบข้อมูลในไฟล์';
+                    }
+                }
             }
         }
     }
