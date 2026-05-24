@@ -93,6 +93,7 @@ $subMenus = [
         ['icon' => 'fas fa-users-cog',      'label' => 'จัดการบุคลากร',     'url' => $base_path . '/admin/manage_users.php', 'roles' => ['super_admin','wfh_admin']],
     ],
     'teacher_leave' => [
+        ['icon' => 'fas fa-chart-pie',      'label' => 'ภาพรวมการลา', 'url' => $base_path . '/teacher_leave/admin_overview.php', 'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-tachometer-alt', 'label' => 'สรุปการลา', 'url' => $base_path . '/teacher_leave/index.php'],
         ['icon' => 'fas fa-plus-circle',    'label' => 'ยื่นใบลาใหม่', 'url' => $base_path . '/teacher_leave/form.php'],
     ],
@@ -560,7 +561,8 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
                             </a>
                         </li>
                         <?php endforeach; ?>
-                        <?php foreach ($subMenus['teacher_leave'] as $sub): ?>
+                        <?php foreach ($subMenus['teacher_leave'] as $sub):
+                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue; ?>
                         <li class="nav-item">
                             <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
                                 <i class="nav-icon <?= $sub['icon'] ?>"></i>
