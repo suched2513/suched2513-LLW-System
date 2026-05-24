@@ -1,8 +1,8 @@
 ﻿<?php
 session_start();
-// Auth: super_admin or cb_admin
+require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'cb_admin'])) {
-    header('Location: ../index.php'); exit();
+    header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
 
 $pageTitle = 'Dashboard Chromebook';
