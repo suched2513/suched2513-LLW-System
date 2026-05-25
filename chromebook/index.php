@@ -298,6 +298,42 @@ require_once '../components/layout_start.php';
   </div>
 </div>
 
+<!-- Reassign Borrower -->
+<div id="modal-reassign" class="modal-bg">
+  <div class="modal-box max-w-md">
+    <div class="flex items-center justify-between mb-5">
+        <h3 class="font-black text-slate-800 text-lg"><i class="bi bi-person-fill-gear text-amber-500 mr-2"></i>เปลี่ยนผู้ถือเครื่อง</h3>
+        <button onclick="closeModal('modal-reassign')" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition"><i class="bi bi-x-lg text-sm"></i></button>
+    </div>
+    <form id="reassign-form" class="space-y-4">
+        <input type="hidden" id="reassign-id">
+        <div class="bg-amber-50 rounded-xl p-4 border border-amber-100">
+            <p class="text-xs font-black text-amber-600 uppercase tracking-wider mb-1.5">เครื่องที่ต้องการเปลี่ยน</p>
+            <p class="font-black text-slate-700 text-sm" id="reassign-show-cb">–</p>
+            <p class="text-slate-500 text-xs font-bold mt-1" id="reassign-show-current">–</p>
+        </div>
+        <div>
+            <label class="form-label">ประเภทผู้ถือใหม่</label>
+            <select id="reassign-type" class="inp" required onchange="toggleReassignClass()">
+                <option value="Student">🎓 นักเรียน</option>
+                <option value="Teacher">👤 ครู/บุคลากร</option>
+            </select>
+        </div>
+        <div id="reassign-class-wrap">
+            <label class="form-label">ห้องเรียน</label>
+            <input id="reassign-class" placeholder="เช่น ม.4/1" class="inp">
+        </div>
+        <div>
+            <label class="form-label">ชื่อ-สกุล ผู้ถือใหม่</label>
+            <input id="reassign-name" placeholder="กรอกชื่อ-สกุล" class="inp" required autocomplete="off">
+        </div>
+        <button type="submit" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3.5 rounded-xl font-black hover:opacity-90 hover:scale-[1.01] transition-all flex items-center justify-center gap-2">
+            <i class="bi bi-person-check-fill"></i> บันทึกการเปลี่ยนผู้ถือ
+        </button>
+    </form>
+  </div>
+</div>
+
 <!-- Image Viewer -->
 <div id="modal-img" class="modal-bg z-[1300]" onclick="closeModal('modal-img')">
   <div class="relative max-w-4xl mx-4" onclick="event.stopPropagation()">
@@ -425,7 +461,8 @@ function renderTable() {
                 <div class="flex items-center justify-end gap-1">
                     <button onclick="openEdit('${r[0]}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition" title="แก้ไข/เพิ่มรูป"><i class="bi bi-pencil-square"></i></button>
                     ${isBorrowed
-                        ? `<button onclick="openInspectReturn('${r[0]}')" class="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition" title="ตรวจสภาพ &amp; คืนเครื่อง"><i class="bi bi-shield-check"></i></button>
+                        ? `<button onclick="openReassign('${r[0]}')" class="p-2 text-amber-500 hover:bg-amber-50 rounded-xl transition" title="เปลี่ยนผู้ถือเครื่อง"><i class="bi bi-person-fill-gear"></i></button>
+                    <button onclick="openInspectReturn('${r[0]}')" class="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition" title="ตรวจสภาพ &amp; คืนเครื่อง"><i class="bi bi-shield-check"></i></button>
                     <button onclick="doReturn('${r[0]}')" class="p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition" title="คืนเครื่อง (ข้ามการตรวจ)"><i class="bi bi-box-arrow-in-left"></i></button>`
                         : `<button onclick="openInspect('${r[0]}')" class="p-2 text-indigo-400 hover:bg-indigo-50 rounded-xl transition" title="เพิ่มบันทึกตรวจสภาพ"><i class="bi bi-shield-plus"></i></button>`
                     }
@@ -694,6 +731,42 @@ function previewImgs(inp, cId) {
     Array.from(inp.files).slice(0,3).forEach(f=>{ const r=new FileReader(); r.onload=e=>{const img=document.createElement('img');img.src=e.target.result;img.className='w-16 h-16 object-cover rounded-xl border border-slate-200 shadow-sm';c.appendChild(img);}; r.readAsDataURL(f); });
 }
 document.getElementById('search-inp').addEventListener('input',()=>{ clearTimeout(window._st); window._st=setTimeout(()=>{S.page=1;renderTable();},250); });
+
+// ── Reassign Borrower ──────────────────────────────────────────────
+function openReassign(id) {
+    const row = S.logs.find(r=>String(r[0])===String(id)); if(!row) return;
+    document.getElementById('reassign-id').value = id;
+    document.getElementById('reassign-show-cb').textContent = `${row[4]} (${row[5]})`;
+    document.getElementById('reassign-show-current').textContent = `ผู้ถือปัจจุบัน: ${getName(row)}${row[3]?' ('+row[3]+')':''}`;
+    document.getElementById('reassign-type').value = row[1] || 'Student';
+    document.getElementById('reassign-name').value = '';
+    document.getElementById('reassign-class').value = row[3] || '';
+    toggleReassignClass();
+    openModal('modal-reassign');
+}
+function toggleReassignClass() {
+    document.getElementById('reassign-class-wrap').classList.toggle('hidden', document.getElementById('reassign-type').value !== 'Student');
+}
+document.getElementById('reassign-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type=submit]');
+    btn.disabled = true;
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat spin mr-1"></i>กำลังบันทึก...';
+    const res = await api('reassignBorrow', {
+        entryId:      document.getElementById('reassign-id').value,
+        borrowerType: document.getElementById('reassign-type').value,
+        name:         document.getElementById('reassign-name').value,
+        className:    document.getElementById('reassign-class').value,
+    });
+    if (res.success) {
+        Swal.fire({icon:'success', title:'เปลี่ยนผู้ถือแล้ว', timer:1400, showConfirmButton:false});
+        closeModal('modal-reassign');
+        loadAll();
+    } else Swal.fire('ผิดพลาด', res.error, 'error');
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+});
 
 // Init tab style
 document.querySelector('.master-tab').classList.add('bg-white','text-slate-800','shadow-sm');
