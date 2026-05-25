@@ -123,7 +123,7 @@ require_once '../components/layout_start.php';
             <!-- Table -->
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm">
+                    <table class="min-w-[860px] w-full text-sm">
                         <thead class="bg-slate-50 text-xs font-black text-slate-400 uppercase tracking-widest">
                             <tr>
                                 <th class="px-5 py-4 text-left">สถานะ</th>
