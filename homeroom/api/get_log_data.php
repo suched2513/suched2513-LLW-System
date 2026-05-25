@@ -38,6 +38,7 @@ try {
     $stmt = $pdo->prepare("
         SELECT student_id, name FROM att_students
         WHERE classroom = ?
+          AND (status = 'active' OR status IS NULL)
           AND student_id REGEXP '^[0-9]+$'
           AND student_id NOT IN (SELECT subject_code FROM att_subjects)
         ORDER BY student_id
