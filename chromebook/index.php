@@ -30,6 +30,7 @@ require_once '../components/layout_start.php';
     .tbl-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 99px; }
     .tbl-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 99px; }
     .tbl-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    .tbl-scroll.dragging { cursor: grabbing; user-select: none; }
 </style>
 
 <div class="flex flex-col gap-6">
@@ -829,7 +830,24 @@ async function importCSV(input, type) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', loadAll);
+document.addEventListener('DOMContentLoaded', () => {
+    loadAll();
+    // Drag-to-scroll on table
+    const el = document.querySelector('.tbl-scroll');
+    let isDown = false, startX, scrollLeft;
+    el.addEventListener('mousedown', e => {
+        if (e.target.closest('button,a,input,select')) return;
+        isDown = true; startX = e.pageX - el.offsetLeft; scrollLeft = el.scrollLeft;
+        el.classList.add('dragging');
+    });
+    el.addEventListener('mouseleave', () => { isDown = false; el.classList.remove('dragging'); });
+    el.addEventListener('mouseup',    () => { isDown = false; el.classList.remove('dragging'); });
+    el.addEventListener('mousemove',  e => {
+        if (!isDown) return;
+        e.preventDefault();
+        el.scrollLeft = scrollLeft - (e.pageX - el.offsetLeft - startX);
+    });
+});
 </script>
 
 <?php require_once '../components/layout_end.php'; ?>
