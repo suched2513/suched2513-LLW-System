@@ -46,7 +46,6 @@ try {
     die('เกิดข้อผิดพลาด');
 }
 
-// แปลงวันที่เป็น พ.ศ.
 function thaiDateFull($dateStr) {
     if (!$dateStr) return '...............';
     $ts = strtotime($dateStr);
@@ -55,21 +54,15 @@ function thaiDateFull($dateStr) {
     return date('j', $ts) . ' ' . $months[(int)date('n', $ts)] . ' ' . (date('Y', $ts) + 543);
 }
 
-$fullName = $request['firstname'] . ' ' . $request['lastname'];
+$fullName  = $request['firstname'] . ' ' . $request['lastname'];
 $leaveType = $request['leave_type'];
+$vacQuota  = $stats['vacation_quota'] ?? 10;
 
-// สถิติ: ลามาแล้วก่อนครั้งนี้
-function statBefore($stats, $type, $currentDays) {
-    $map = ['sick'=>'sick_taken','personal'=>'personal_taken','vacation'=>'vacation_taken','other'=>'other_taken'];
-    $key = $map[$type] ?? 'other_taken';
-    return max(0, (float)($stats[$key] ?? 0) - (float)$currentDays);
+function stat($stats, $type, $currentDays, $col) {
+    $taken = (float)($stats[$col] ?? 0);
+    $before = max(0, $taken - (float)$currentDays);
+    return [$before, (float)$currentDays, $taken];
 }
-
-$statBefore = statBefore($stats, $leaveType, $request['days_count']);
-$statTotal  = $statBefore + $request['days_count'];
-
-// quota ลาพักผ่อน
-$vacQuota = $stats['vacation_quota'] ?? 10;
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -78,7 +71,10 @@ $vacQuota = $stats['vacation_quota'] ?? 10;
     <title>ใบลา - <?= htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        @page { size: A4 portrait; margin: 15mm 18mm 15mm 18mm; }
+        @page {
+            size: A4 portrait;
+            margin: 12mm 15mm 12mm 20mm;
+        }
         @media print {
             .no-print { display: none !important; }
             body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -89,19 +85,18 @@ $vacQuota = $stats['vacation_quota'] ?? 10;
 
         body {
             font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
-            font-size: 15pt;
-            line-height: 1.7;
+            font-size: 14pt;
+            line-height: 1.55;
             color: #000;
             background: #e5e7eb;
         }
 
-        /* ── Print Button ── */
         .btn-print {
             position: fixed; bottom: 24px; right: 24px;
-            padding: 14px 28px;
+            padding: 12px 24px;
             background: #1d4ed8; color: white; border: none;
             border-radius: 50px; font-family: 'Sarabun', sans-serif;
-            font-size: 15pt; font-weight: 700;
+            font-size: 14pt; font-weight: 700;
             box-shadow: 0 8px 24px rgba(29,78,216,.35);
             cursor: pointer; z-index: 999;
             display: flex; align-items: center; gap: 8px;
@@ -109,121 +104,132 @@ $vacQuota = $stats['vacation_quota'] ?? 10;
         }
         .btn-print:hover { background: #1e40af; }
 
-        /* ── Page ── */
         .page {
-            width: 210mm; min-height: 297mm;
-            padding: 14mm 18mm 14mm 18mm;
-            margin: 12mm auto;
+            width: 210mm;
+            min-height: 297mm;
+            max-height: 297mm;
+            padding: 12mm 15mm 12mm 20mm;
+            margin: 10mm auto;
             background: white;
             box-shadow: 0 4px 24px rgba(0,0,0,.13);
-            position: relative;
+            overflow: hidden;
         }
 
-        /* ── Header ── */
         .form-title {
             text-align: center;
-            font-size: 18pt;
+            font-size: 16pt;
             font-weight: 800;
-            margin-bottom: 10pt;
-            letter-spacing: .5px;
+            margin-bottom: 6pt;
+            letter-spacing: .3px;
         }
 
-        /* ── Meta (เขียนที่ / วันที่) ── */
         .meta-row {
             display: flex;
             justify-content: flex-end;
-            margin-bottom: 10pt;
-            font-size: 14.5pt;
+            margin-bottom: 5pt;
+            font-size: 13.5pt;
         }
-        .meta-row .field { display: inline-block; border-bottom: 1px dotted #555; min-width: 140pt; padding: 0 6px; font-weight: 600; }
+        .meta-row .field {
+            display: inline-block;
+            border-bottom: 1px dotted #555;
+            min-width: 120pt;
+            padding: 0 5px;
+            font-weight: 600;
+        }
 
-        /* ── Field Rows ── */
-        .row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 6pt; font-size: 14.5pt; }
+        .row {
+            display: flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 4pt;
+            font-size: 13.5pt;
+        }
         .label { white-space: nowrap; font-weight: 700; }
-        .field { border-bottom: 1px dotted #555; flex: 1; padding: 0 6px; font-weight: 600; min-width: 60pt; }
-        .field-sm { border-bottom: 1px dotted #555; min-width: 80pt; padding: 0 6px; font-weight: 600; display: inline-block; }
+        .field {
+            border-bottom: 1px dotted #555;
+            flex: 1;
+            padding: 0 5px;
+            font-weight: 600;
+            min-width: 50pt;
+        }
 
-        /* ── Body paragraph ── */
-        .body-para { font-size: 14.5pt; text-indent: 36pt; line-height: 1.9; margin-bottom: 4pt; }
+        .ul { border-bottom: 1px dotted #555; display: inline-block; padding: 0 5px; font-weight: 600; }
 
-        /* ── Checkbox line ── */
-        .cb-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10pt 18pt; font-size: 14pt; margin: 6pt 0 6pt 36pt; }
-        .cb-item { display: flex; align-items: center; gap: 4px; }
+        .cb-line {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8pt 16pt;
+            font-size: 13.5pt;
+            margin: 3pt 0 3pt 30pt;
+        }
+        .cb-item { display: flex; align-items: center; gap: 3px; }
         .cb-box {
-            width: 14pt; height: 14pt; border: 1.5px solid #333;
+            width: 13pt; height: 13pt; border: 1.5px solid #333;
             display: inline-flex; align-items: center; justify-content: center;
-            font-size: 13pt; font-weight: 900; flex-shrink: 0;
+            font-size: 12pt; font-weight: 900; flex-shrink: 0;
         }
         .cb-box.checked::after { content: '✓'; }
 
-        /* ── Dotted underline span ── */
-        .ul { border-bottom: 1px dotted #555; display: inline-block; padding: 0 6px; font-weight: 600; }
-        .ul-lg { border-bottom: 1px dotted #555; display: inline-block; padding: 0 6px; font-weight: 600; min-width: 200pt; }
+        hr.dotted { border: none; border-top: 1px dotted #999; margin: 5pt 0; }
 
-        /* ── Stats Table ── */
+        /* Stats table */
         .stats-table {
             width: 100%; border-collapse: collapse;
-            font-size: 13pt; margin: 10pt 0;
+            font-size: 12pt; margin: 5pt 0;
         }
         .stats-table th, .stats-table td {
             border: 1px solid #555;
-            padding: 4pt 6pt; text-align: center;
+            padding: 2.5pt 5pt; text-align: center;
         }
         .stats-table th { background: #f3f4f6; font-weight: 700; }
         .stats-table td:first-child { text-align: left; }
 
-        /* ── Signature Grid ── */
+        /* Requester sig */
+        .requester-sig {
+            margin-top: 8pt;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            padding-right: 10pt;
+        }
+        .requester-sig-box { text-align: center; min-width: 200pt; }
+        .sig-img { max-height: 40pt; max-width: 130pt; object-fit: contain; margin: 2pt auto; display: block; }
+
+        /* Approval grid */
         .sig-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20pt;
-            margin-top: 12pt;
+            gap: 12pt;
+            margin-top: 6pt;
         }
         .sig-box {
             border: 1px solid #888;
-            padding: 8pt;
-            font-size: 12.5pt;
+            padding: 6pt;
+            font-size: 12pt;
             text-align: center;
-            min-height: 110pt;
+            min-height: 95pt;
         }
         .sig-box .sig-title {
-            font-weight: 700; font-size: 13pt;
+            font-weight: 700; font-size: 12.5pt;
             border-bottom: 1px solid #ccc;
-            padding-bottom: 4pt; margin-bottom: 8pt;
-            text-align: center;
+            padding-bottom: 3pt; margin-bottom: 5pt;
         }
-        .sig-img { max-height: 50pt; max-width: 140pt; object-fit: contain; margin: 4pt auto 2pt; display: block; }
-        .sig-line { border-bottom: 1px dotted #555; margin: 4pt 10pt 2pt; min-height: 40pt; }
-        .sig-name { font-size: 12pt; font-weight: 600; }
+        .sig-img-box { max-height: 40pt; max-width: 120pt; object-fit: contain; margin: 2pt auto; display: block; }
+        .sig-line { border-bottom: 1px dotted #555; margin: 3pt 8pt 2pt; min-height: 34pt; }
+        .sig-name { font-size: 11.5pt; font-weight: 600; }
         .sig-date { font-size: 11pt; color: #444; }
 
         .stamp {
             display: inline-block; border: 2px solid;
-            padding: 2pt 8pt; font-weight: 800;
-            border-radius: 4pt; margin: 4pt auto;
-            transform: rotate(-4deg); font-size: 13pt;
+            padding: 1.5pt 7pt; font-weight: 800;
+            border-radius: 4pt; margin: 3pt auto;
+            transform: rotate(-4deg); font-size: 12.5pt;
         }
         .stamp-approved { color: #059669; border-color: #059669; }
         .stamp-pending   { color: #d97706; border-color: #d97706; }
         .stamp-rejected  { color: #dc2626; border-color: #dc2626; }
-
-        /* ── Requester Signature (right-aligned) ── */
-        .requester-sig {
-            margin-top: 20pt;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            padding-right: 20pt;
-        }
-        .requester-sig-box {
-            text-align: center;
-            min-width: 220pt;
-        }
-        .requester-sig img.sig-img { margin: 0 auto; }
-
-        hr.dotted { border: none; border-top: 1px dotted #999; margin: 10pt 0; }
-
-        .section-note { font-size: 13pt; color: #333; margin-bottom: 6pt; }
     </style>
 </head>
 <body>
@@ -232,49 +238,12 @@ $vacQuota = $stats['vacation_quota'] ?? 10;
     <div class="page">
 
         <!-- ══ TITLE ══ -->
-        <div class="form-title">ใบลาป่วย  ลาคลอดบุตร  ลากิจส่วนตัว  ลาพักผ่อน</div>
+        <div class="form-title">ใบลาป่วย &nbsp; ลาคลอดบุตร &nbsp; ลากิจส่วนตัว &nbsp; ลาพักผ่อน</div>
 
         <!-- ══ เขียนที่ / วันที่ ══ -->
         <div class="meta-row">
-            เขียนที่&nbsp;<span class="field" style="min-width:130pt;">โรงเรียนละลมวิทยา</span>&nbsp;&nbsp;
-            วันที่&nbsp;<span class="field" style="min-width:110pt;"><?= thaiDateFull($request['created_at']) ?></span>
-        </div>
-
-        <!-- ══ ชื่อ / ตำแหน่ง ══ -->
-        <div class="row">
-            <span class="label">ชื่อ</span>
-            <span class="field"><?= htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') ?></span>
-            <span class="label">ตำแหน่ง</span>
-            <p><strong>เนื่องจาก:</strong> <?= htmlspecialchars($request['reason'], ENT_QUOTES, 'UTF-8') ?></p>
-            <?php if (!empty($request['attachment_path'])): ?>
-                <p style="color: #64748b; font-size: 10pt; font-weight: bold; margin-top: 4pt;">
-                    📎 มีเอกสารหลักฐานแนบประกอบ (ใบรับรองแพทย์/อื่นๆ)
-                </p>
-            <?php endif; ?>
-        </div>
-        <div class="row">
-            <span class="label">สังกัด (กลุ่มสาระฯ / งาน)</span>
-            <span class="field"><?= htmlspecialchars($request['subject_group'] ?: 'โรงเรียนละลมวิทยา', ENT_QUOTES, 'UTF-8') ?></span>
-        </div>
-
-        <hr class="dotted">
-
-        <!-- ══ เรื่อง / ประเภทลา (Checkbox) ══ -->
-        <div class="row" style="margin-bottom:2pt;">
-            <span class="label">มีความประสงค์ขอลา</span>
-        </div>
-        <div class="cb-line">
-            <span class="cb-item"><span class="cb-box <?= $leaveType === 'sick' ? 'checked' : '' ?>"></span> ป่วย</span>
-            <span class="cb-item"><span class="cb-box <?= $leaveType === 'maternity' ? 'checked' : '' ?>"></span> คลอดบุตร</span>
-            <span class="cb-item"><span class="cb-box <?= $leaveType === 'personal' ? 'checked' : '' ?>"></span> กิจส่วนตัว</span>
-            <span class="cb-item"><span class="cb-box <?= $leaveType === 'vacation' ? 'checked' : '' ?>"></span> พักผ่อน</span>
-            <span class="cb-item"><span class="cb-box <?= $leaveType === 'other' ? 'checked' : '' ?>"></span> อื่นๆ</span>
-        </div>
-
-        <!-- ══ เหตุผล ══ -->
-        <div class="row">
-            <span class="label">เนื่องจาก</span>
-            <span class="field" style="min-width:300pt;"><?= htmlspecialchars($request['reason'] ?: '—', ENT_QUOTES, 'UTF-8') ?></span>
+            เขียนที่&nbsp;<span class="field" style="min-width:120pt;">โรงเรียนละลมวิทยา</span>&nbsp;&nbsp;
+            วันที่&nbsp;<span class="field" style="min-width:105pt;"><?= thaiDateFull($request['created_at']) ?></span>
         </div>
 
         <!-- ══ เรียน ══ -->
@@ -283,25 +252,47 @@ $vacQuota = $stats['vacation_quota'] ?? 10;
             <span class="field">ผู้อำนวยการโรงเรียนละลมวิทยา</span>
         </div>
 
+        <!-- ══ ชื่อ / ตำแหน่ง ══ -->
+        <div class="row">
+            <span class="label">ข้าพเจ้า</span>
+            <span class="field" style="max-width:180pt;"><?= htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="label">ตำแหน่ง</span>
+            <span class="field"><?= htmlspecialchars($request['position'] ?: 'ครู', ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+
+        <!-- ══ สังกัด ══ -->
+        <div class="row">
+            <span class="label">สังกัด (กลุ่มสาระฯ / งาน)</span>
+            <span class="field"><?= htmlspecialchars($request['subject_group'] ?: 'โรงเรียนละลมวิทยา', ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+
+        <!-- ══ ประเภทการลา (Checkbox) ══ -->
+        <div class="row" style="margin-bottom:2pt;">
+            <span class="label">มีความประสงค์ขอลา</span>
+        </div>
+        <div class="cb-line">
+            <span class="cb-item"><span class="cb-box <?= $leaveType === 'sick' ? 'checked' : '' ?>"></span>&nbsp;ป่วย</span>
+            <span class="cb-item"><span class="cb-box <?= $leaveType === 'maternity' ? 'checked' : '' ?>"></span>&nbsp;คลอดบุตร</span>
+            <span class="cb-item"><span class="cb-box <?= $leaveType === 'personal' ? 'checked' : '' ?>"></span>&nbsp;กิจส่วนตัว</span>
+            <span class="cb-item"><span class="cb-box <?= $leaveType === 'vacation' ? 'checked' : '' ?>"></span>&nbsp;พักผ่อน</span>
+            <span class="cb-item"><span class="cb-box <?= $leaveType === 'other' ? 'checked' : '' ?>"></span>&nbsp;อื่นๆ</span>
+        </div>
+
+        <!-- ══ เหตุผล ══ -->
+        <div class="row">
+            <span class="label">เนื่องจาก</span>
+            <span class="field"><?= htmlspecialchars($request['reason'] ?: '—', ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+
         <!-- ══ ตั้งแต่วันที่ / ถึงวันที่ ══ -->
         <div class="row">
             <span class="label">ตั้งแต่วันที่</span>
-            <span class="field" style="min-width:130pt;"><?= thaiDateFull($request['date_start']) ?></span>
-            &nbsp;
+            <span class="field" style="min-width:120pt;"><?= thaiDateFull($request['date_start']) ?></span>
             <span class="label">ถึงวันที่</span>
-            <span class="field" style="min-width:130pt;"><?= thaiDateFull($request['date_end']) ?></span>
-            &nbsp;
+            <span class="field" style="min-width:120pt;"><?= thaiDateFull($request['date_end']) ?></span>
             <span class="label">มีกำหนด</span>
-            <span class="ul" style="min-width:30pt; text-align:center; font-size:16pt;"><?= (float)$request['days_count'] ?></span>
+            <span class="ul" style="min-width:28pt; text-align:center; font-size:15pt; font-weight:700;"><?= (float)$request['days_count'] ?></span>
             <span class="label">วัน</span>
-        </div>
-
-        <!-- ══ ช่วงเวลาที่ลา ══ -->
-        <div class="row" style="font-size:14pt;">
-            <span class="label">ช่วงที่ลา</span>
-            <span class="cb-item"><span class="cb-box"></span>&nbsp;เช้า</span>
-            <span class="cb-item"><span class="cb-box"></span>&nbsp;บ่าย</span>
-            <span class="cb-item"><span class="cb-box checked"></span>&nbsp;ทั้งวัน</span>
         </div>
 
         <!-- ══ ที่อยู่ระหว่างลา ══ -->
@@ -310,49 +301,54 @@ $vacQuota = $stats['vacation_quota'] ?? 10;
             <span class="field"><?= htmlspecialchars($request['contact_info'] ?: '—', ENT_QUOTES, 'UTF-8') ?></span>
         </div>
 
+        <?php if (!empty($request['attachment_path'])): ?>
+        <div style="font-size:11.5pt; color:#475569; margin-bottom:3pt; font-weight:600;">
+            📎 มีเอกสารหลักฐานแนบประกอบ (ใบรับรองแพทย์/อื่นๆ)
+        </div>
+        <?php endif; ?>
+
         <hr class="dotted">
 
         <!-- ══ สถิติการลา ══ -->
-        <div class="section-note"><strong>สถิติการลาในปีงบประมาณ <?= $request['fiscal_year'] > 2500 ? $request['fiscal_year'] : ($request['fiscal_year'] + 543) ?></strong></div>
+        <div style="font-size:12.5pt; font-weight:700; margin-bottom:3pt;">
+            สถิติการลาในปีงบประมาณ <?= $request['fiscal_year'] > 2500 ? $request['fiscal_year'] : ($request['fiscal_year'] + 543) ?>
+        </div>
         <table class="stats-table">
             <thead>
                 <tr>
-                    <th width="34%">ประเภทการลา</th>
-                    <th width="22%">ลามาแล้ว (วัน)</th>
-                    <th width="22%">ลาครั้งนี้ (วัน)</th>
+                    <th width="36%">ประเภทการลา</th>
+                    <th width="21%">ลามาแล้ว (วัน)</th>
+                    <th width="21%">ลาครั้งนี้ (วัน)</th>
                     <th width="22%">รวมเป็น (วัน)</th>
                 </tr>
             </thead>
             <tbody>
+                <?php
+                $rows = [
+                    ['ลาป่วย',                               'sick',     'sick_taken'],
+                    ['ลากิจส่วนตัว',                         'personal', 'personal_taken'],
+                    ['ลาพักผ่อน (โควตา ' . $vacQuota . ' วัน)', 'vacation', 'vacation_taken'],
+                    ['ลาคลอดบุตร / อื่นๆ',                  'other',    'other_taken'],
+                ];
+                foreach ($rows as [$label, $type, $col]):
+                    $isCurrent = ($leaveType === $type) || ($type === 'other' && in_array($leaveType, ['maternity','other']));
+                    $taken  = (float)($stats[$col] ?? 0);
+                    $before = $isCurrent ? max(0, $taken - (float)$request['days_count']) : $taken;
+                    $curr   = $isCurrent ? (float)$request['days_count'] : '—';
+                    $total  = $isCurrent ? $taken : $taken;
+                ?>
                 <tr>
-                    <td>ลาป่วย</td>
-                    <td><?= ($leaveType === 'sick') ? max(0, (float)$stats['sick_taken'] - (float)$request['days_count']) : (float)($stats['sick_taken'] ?? 0) ?></td>
-                    <td><?= ($leaveType === 'sick') ? (float)$request['days_count'] : '—' ?></td>
-                    <td><?= ($leaveType === 'sick') ? (float)$stats['sick_taken'] : (float)($stats['sick_taken'] ?? 0) ?></td>
+                    <td><?= $label ?></td>
+                    <td><?= $before ?></td>
+                    <td><?= $curr ?></td>
+                    <td><?= $total ?></td>
                 </tr>
-                <tr>
-                    <td>ลากิจส่วนตัว</td>
-                    <td><?= ($leaveType === 'personal') ? max(0, (float)$stats['personal_taken'] - (float)$request['days_count']) : (float)($stats['personal_taken'] ?? 0) ?></td>
-                    <td><?= ($leaveType === 'personal') ? (float)$request['days_count'] : '—' ?></td>
-                    <td><?= ($leaveType === 'personal') ? (float)$stats['personal_taken'] : (float)($stats['personal_taken'] ?? 0) ?></td>
-                </tr>
-                <tr>
-                    <td>ลาพักผ่อน (โควตา <?= $vacQuota ?> วัน)</td>
-                    <td><?= ($leaveType === 'vacation') ? max(0, (float)$stats['vacation_taken'] - (float)$request['days_count']) : (float)($stats['vacation_taken'] ?? 0) ?></td>
-                    <td><?= ($leaveType === 'vacation') ? (float)$request['days_count'] : '—' ?></td>
-                    <td><?= ($leaveType === 'vacation') ? (float)$stats['vacation_taken'] : (float)($stats['vacation_taken'] ?? 0) ?></td>
-                </tr>
-                <tr>
-                    <td>ลาคลอดบุตร / อื่นๆ</td>
-                    <td><?= in_array($leaveType, ['maternity','other']) ? max(0, (float)$stats['other_taken'] - (float)$request['days_count']) : (float)($stats['other_taken'] ?? 0) ?></td>
-                    <td><?= in_array($leaveType, ['maternity','other']) ? (float)$request['days_count'] : '—' ?></td>
-                    <td><?= in_array($leaveType, ['maternity','other']) ? (float)$stats['other_taken'] : (float)($stats['other_taken'] ?? 0) ?></td>
-                </tr>
+                <?php endforeach; ?>
             </tbody>
         </table>
 
-        <!-- ══ จึงเรียนมาเพื่อโปรดพิจารณาอนุญาต ══ -->
-        <p class="body-para" style="margin-top:8pt;">จึงเรียนมาเพื่อโปรดพิจารณาอนุญาต</p>
+        <!-- ══ จึงเรียนมาเพื่อโปรดพิจารณา ══ -->
+        <p style="font-size:13.5pt; text-indent:30pt; margin: 5pt 0 4pt;">จึงเรียนมาเพื่อโปรดพิจารณาอนุญาต</p>
 
         <!-- ══ ลายเซ็นผู้ขอลา ══ -->
         <div class="requester-sig">
@@ -360,74 +356,66 @@ $vacQuota = $stats['vacation_quota'] ?? 10;
                 <?php if ($request['signature_path']): ?>
                 <img src="<?= $base_path ?>/<?= htmlspecialchars($request['signature_path'], ENT_QUOTES, 'UTF-8') ?>" class="sig-img" alt="ลายเซ็น">
                 <?php else: ?>
-                    <div style="height:44pt;"></div>
+                <div style="height:36pt;"></div>
                 <?php endif; ?>
-                <p style="margin-top:4pt;">(ลงชื่อ).......................................................... ผู้ขอลา</p>
-                <p style="margin-top:6pt;">( <?= htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') ?> )</p>
-                <p style="font-size:13pt; color:#333; margin-top:4pt;">วันที่ <?= thaiDateFull($request['created_at']) ?></p>
+                <p style="font-size:13pt;">(ลงชื่อ)...................................................ผู้ขอลา</p>
+                <p style="margin-top:3pt; font-size:13pt;">( <?= htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') ?> )</p>
+                <p style="font-size:12pt; color:#333; margin-top:3pt;">วันที่ <?= thaiDateFull($request['created_at']) ?></p>
             </div>
         </div>
 
-        <hr class="dotted" style="margin-top:12pt;">
+        <hr class="dotted" style="margin-top:6pt;">
 
         <!-- ══ กล่องอนุมัติ 2 ช่อง ══ -->
-        <div class="sig-grid" style="margin-top:10pt;">
+        <div class="sig-grid">
 
             <!-- Lv.1 เจ้าหน้าที่ -->
             <div class="sig-box">
                 <div class="sig-title">ความเห็นเจ้าหน้าที่<br><small style="font-weight:400; font-size:11pt;">(ตรวจสอบเอกสาร)</small></div>
                 <?php if (isset($approvalMap[1]) && $approvalMap[1]['status'] != 0): ?>
-                    <div style="text-align:center;">
-                        <span class="stamp <?= $approvalMap[1]['status'] == 1 ? 'stamp-approved' : 'stamp-rejected' ?>">
-                            <?= $approvalMap[1]['status'] == 1 ? '✓ ตรวจสอบแล้วถูกต้อง' : '✗ ไม่ถูกต้อง' ?>
-                        </span>
-                    </div>
+                    <div><span class="stamp <?= $approvalMap[1]['status'] == 1 ? 'stamp-approved' : 'stamp-rejected' ?>">
+                        <?= $approvalMap[1]['status'] == 1 ? '✓ ตรวจสอบแล้วถูกต้อง' : '✗ ไม่ถูกต้อง' ?>
+                    </span></div>
                     <?php if (!empty($approvalMap[1]['comment'])): ?>
-                        <p style="font-size:11pt; font-style:italic; margin-top:4pt;"><?= htmlspecialchars($approvalMap[1]['comment'], ENT_QUOTES, 'UTF-8') ?></p>
+                    <p style="font-size:10.5pt; font-style:italic; margin-top:3pt;"><?= htmlspecialchars($approvalMap[1]['comment'], ENT_QUOTES, 'UTF-8') ?></p>
                     <?php endif; ?>
                     <?php if (!empty($approvalMap[1]['signature_path'])): ?>
-                        <img src="<?= $base_path ?>/<?= htmlspecialchars($approvalMap[1]['signature_path'], ENT_QUOTES, 'UTF-8') ?>" class="sig-img" alt="ลายเซ็นเจ้าหน้าที่">
+                    <img src="<?= $base_path ?>/<?= htmlspecialchars($approvalMap[1]['signature_path'], ENT_QUOTES, 'UTF-8') ?>" class="sig-img-box" alt="ลายเซ็นเจ้าหน้าที่">
                     <?php else: ?>
-                        <div class="sig-line"></div>
+                    <div class="sig-line"></div>
                     <?php endif; ?>
-                    <p class="sig-name" style="margin-top:8pt;">(<?= htmlspecialchars(($approvalMap[1]['firstname'] ?? '') . ' ' . ($approvalMap[1]['lastname'] ?? ''), ENT_QUOTES, 'UTF-8') ?>)</p>
-                    <p class="sig-date" style="margin-top:4pt;">วันที่ <?= !empty($approvalMap[1]['approved_at']) ? thaiDateFull($approvalMap[1]['approved_at']) : '......./......./ .......' ?></p>
+                    <p class="sig-name" style="margin-top:5pt;">(<?= htmlspecialchars(($approvalMap[1]['firstname'] ?? '') . ' ' . ($approvalMap[1]['lastname'] ?? ''), ENT_QUOTES, 'UTF-8') ?>)</p>
+                    <p class="sig-date" style="margin-top:2pt;">วันที่ <?= !empty($approvalMap[1]['approved_at']) ? thaiDateFull($approvalMap[1]['approved_at']) : '......./......./ .......' ?></p>
                 <?php else: ?>
-                    <div style="text-align:center; margin:10pt 0;">
-                        <span class="stamp stamp-pending">รอตรวจสอบ</span>
-                    </div>
+                    <div><span class="stamp stamp-pending">รอตรวจสอบ</span></div>
                     <div class="sig-line"></div>
                     <p class="sig-name">(..................................................)</p>
-                    <p class="sig-date" style="margin-top:4pt;">วันที่ ......./......./ .......</p>
+                    <p class="sig-date" style="margin-top:2pt;">วันที่ ......./......./ .......</p>
                 <?php endif; ?>
             </div>
 
             <!-- Lv.2 ผู้อำนวยการ -->
             <div class="sig-box">
-                <div class="sig-title">คำสั่ง<br>ผู้อำนวยการ/รองผู้อำนวยการ</div>
+                <div class="sig-title">คำสั่ง<br>ผู้อำนวยการ / รองผู้อำนวยการ</div>
                 <?php if (isset($approvalMap[2]) && $approvalMap[2]['status'] != 0): ?>
-                    <div style="text-align:center;">
-                        <span class="stamp <?= $approvalMap[2]['status'] == 1 ? 'stamp-approved' : 'stamp-rejected' ?>">
-                            <?= $approvalMap[2]['status'] == 1 ? '✓ อนุญาต' : '✗ ไม่อนุญาต' ?>
-                        </span>
-                    </div>
+                    <div><span class="stamp <?= $approvalMap[2]['status'] == 1 ? 'stamp-approved' : 'stamp-rejected' ?>">
+                        <?= $approvalMap[2]['status'] == 1 ? '✓ อนุญาต' : '✗ ไม่อนุญาต' ?>
+                    </span></div>
                     <?php if ($approvalMap[2]['status'] == 1 && !empty($approvalMap[2]['signature_path'])): ?>
-                        <img src="<?= $base_path ?>/<?= htmlspecialchars($approvalMap[2]['signature_path'], ENT_QUOTES, 'UTF-8') ?>" class="sig-img" alt="ลายเซ็น ผอ./รองฯ">
+                    <img src="<?= $base_path ?>/<?= htmlspecialchars($approvalMap[2]['signature_path'], ENT_QUOTES, 'UTF-8') ?>" class="sig-img-box" alt="ลายเซ็น ผอ./รองฯ">
                     <?php else: ?>
-                        <div style="height:36pt;"></div>
+                    <div style="height:30pt;"></div>
                     <?php endif; ?>
                     <?php if (!empty($approvalMap[2]['comment'])): ?>
-                        <p style="font-size:11pt; font-style:italic;"><?= htmlspecialchars($approvalMap[2]['comment'], ENT_QUOTES, 'UTF-8') ?></p>
+                    <p style="font-size:10.5pt; font-style:italic;"><?= htmlspecialchars($approvalMap[2]['comment'], ENT_QUOTES, 'UTF-8') ?></p>
                     <?php endif; ?>
-                    <p class="sig-name" style="margin-top:8pt;">(<?= htmlspecialchars(($approvalMap[2]['firstname'] ?? '') . ' ' . ($approvalMap[2]['lastname'] ?? ''), ENT_QUOTES, 'UTF-8') ?>)</p>
-                    <p class="sig-date" style="margin-top:4pt;">วันที่ <?= !empty($approvalMap[2]['approved_at']) ? thaiDateFull($approvalMap[2]['approved_at']) : '......./......./ .......' ?></p>
+                    <p class="sig-name" style="margin-top:5pt;">(<?= htmlspecialchars(($approvalMap[2]['firstname'] ?? '') . ' ' . ($approvalMap[2]['lastname'] ?? ''), ENT_QUOTES, 'UTF-8') ?>)</p>
+                    <p class="sig-date" style="margin-top:2pt;">วันที่ <?= !empty($approvalMap[2]['approved_at']) ? thaiDateFull($approvalMap[2]['approved_at']) : '......./......./ .......' ?></p>
                 <?php else: ?>
-                    <div style="text-align:center; margin:10pt 0;">
-                        <span class="stamp stamp-pending">รออนุมัติ ผอ./รองฯ</span>
-                    </div>
+                    <div><span class="stamp stamp-pending">รออนุมัติ ผอ./รองฯ</span></div>
                     <div class="sig-line"></div>
                     <p class="sig-name">(..................................................)</p>
-                    <p class="sig-date" style="margin-top:4pt;">วันที่ ......./......./ .......</p>
+                    <p class="sig-date" style="margin-top:2pt;">วันที่ ......./......./ .......</p>
                 <?php endif; ?>
             </div>
 
