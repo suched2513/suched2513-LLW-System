@@ -66,32 +66,43 @@ require_once __DIR__ . '/../components/layout_start.php';
 
   <!-- Student Selector (new record only) -->
   <?php if (!$rec): ?>
-  <?php if ($prefill_stu): ?>
-  <div class="mb-5 p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-3">
-    <i class="fas fa-user-circle text-emerald-500 text-2xl"></i>
-    <div>
-      <p class="font-black text-slate-800 text-sm"><?=htmlspecialchars($prefill_stu['name'],ENT_QUOTES,'UTF-8')?></p>
-      <p class="text-xs text-slate-400"><?=htmlspecialchars($prefill_stu['classroom'],ENT_QUOTES,'UTF-8')?></p>
+  <div class="mb-5">
+    <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-wider">นักเรียน <span class="text-rose-500">*</span></label>
+    <?php if ($prefill_stu): ?>
+    <!-- Pre-filled from students list -->
+    <div id="selected_student_box" class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <i class="fas fa-user-circle text-emerald-500 text-xl"></i>
+        <div>
+          <p class="font-black text-slate-800 text-sm" id="selected_name"><?=htmlspecialchars($prefill_stu['name'],ENT_QUOTES,'UTF-8')?></p>
+          <p class="text-xs text-slate-400" id="selected_info"><?=htmlspecialchars($prefill_stu['classroom'],ENT_QUOTES,'UTF-8')?></p>
+        </div>
+      </div>
+      <button type="button" onclick="clearStudent()" class="text-slate-400 hover:text-rose-500 transition-colors text-xs"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="search_box" style="display:none">
+    <?php else: ?>
+    <div id="selected_student_box" class="hidden p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between mb-2">
+      <div class="flex items-center gap-3">
+        <i class="fas fa-user-circle text-emerald-500 text-xl"></i>
+        <div>
+          <p class="font-black text-slate-800 text-sm" id="selected_name"></p>
+          <p class="text-xs text-slate-400" id="selected_info"></p>
+        </div>
+      </div>
+      <button type="button" onclick="clearStudent()" class="text-slate-400 hover:text-rose-500 transition-colors text-xs"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="search_box">
+    <?php endif; ?>
+      <div class="relative">
+        <input type="text" id="student_search" placeholder="พิมพ์ชื่อหรือห้องเรียน..." autocomplete="off"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pl-10 text-sm focus:ring-2 focus:ring-emerald-400 outline-none">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+        <i id="search_spinner" class="fas fa-spinner fa-spin absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs hidden"></i>
+      </div>
+      <div id="student_dropdown" class="hidden mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto z-50 relative"></div>
     </div>
   </div>
-  <?php else: ?>
-  <div class="mb-5">
-    <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-wider">ห้องเรียน</label>
-    <select id="sel_classroom" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-400 outline-none">
-      <option value="">— เลือกห้องเรียน —</option>
-      <?php foreach ($classrooms as $cl): ?>
-      <option><?=htmlspecialchars($cl,ENT_QUOTES,'UTF-8')?></option>
-      <?php endforeach; ?>
-    </select>
-  </div>
-  <div class="mb-5" id="student_wrap" style="display:none">
-    <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-wider">นักเรียน</label>
-    <select id="sel_student" name="student_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-400 outline-none">
-      <option value="">— กำลังโหลด... —</option>
-    </select>
-    <p id="student_info" class="text-xs text-slate-400 mt-1 hidden"></p>
-  </div>
-  <?php endif; ?>
   <?php else: ?>
   <input type="hidden" id="sel_student" value="<?=$rec['student_id']?>">
   <?php endif; ?>
@@ -184,37 +195,85 @@ require_once __DIR__ . '/../components/layout_start.php';
 </div>
 
 <script>
-const studentData = {};  // cache: student_id → {birthdate, gender, name}
+const studentData = {};  // cache: student_id → student object
+let searchTimer = null;
 
-// Classroom → students loader
-document.getElementById('sel_classroom')?.addEventListener('change', function() {
-    const cl = this.value;
-    if (!cl) return;
-    fetch('/health/api.php?action=students_by_class&classroom=' + encodeURIComponent(cl))
-        .then(r => r.json())
-        .then(d => {
-            const sel = document.getElementById('sel_student');
-            sel.innerHTML = '<option value="">— เลือกนักเรียน —</option>';
-            d.forEach(s => {
-                studentData[s.id] = s;
-                sel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
-            });
-            document.getElementById('student_wrap').style.display = '';
-            document.getElementById('hidden_student_id').value = '';
-        });
+// Autocomplete search
+const searchInput = document.getElementById('student_search');
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimer);
+        const q = this.value.trim();
+        if (q.length < 2) {
+            document.getElementById('student_dropdown').classList.add('hidden');
+            return;
+        }
+        document.getElementById('search_spinner').classList.remove('hidden');
+        searchTimer = setTimeout(() => {
+            fetch('/health/api.php?action=search_students&q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(renderDropdown)
+                .finally(() => document.getElementById('search_spinner').classList.add('hidden'));
+        }, 250);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeDropdown();
+    });
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#search_box')) closeDropdown();
 });
 
-document.getElementById('sel_student')?.addEventListener('change', function() {
-    const id = this.value;
-    document.getElementById('hidden_student_id').value = id;
-    const s = studentData[id];
-    if (s) {
-        const info = document.getElementById('student_info');
-        info.textContent = `เพศ: ${s.gender === 'male' ? 'ชาย' : 'หญิง'} · วันเกิด: ${s.birthdate || '—'}`;
-        info.classList.remove('hidden');
+function renderDropdown(results) {
+    const dd = document.getElementById('student_dropdown');
+    if (!results.length) {
+        dd.innerHTML = '<div class="px-4 py-3 text-xs text-slate-400">ไม่พบนักเรียน</div>';
+        dd.classList.remove('hidden');
+        return;
     }
+    dd.innerHTML = results.map(s => {
+        studentData[s.id] = s;
+        const gender = s.gender === 'หญิง' ? '♀' : '♂';
+        return `<div class="px-4 py-2.5 hover:bg-emerald-50 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between"
+                     onclick="selectStudent(${s.id})">
+            <div>
+                <p class="text-sm font-bold text-slate-700">${s.name}</p>
+                <p class="text-xs text-slate-400">${s.classroom}</p>
+            </div>
+            <span class="text-xs text-slate-400 ml-2">${gender}</span>
+        </div>`;
+    }).join('');
+    dd.classList.remove('hidden');
+}
+
+function selectStudent(id) {
+    const s = studentData[id];
+    if (!s) return;
+    document.getElementById('hidden_student_id').value = id;
+    // Show selected box
+    document.getElementById('selected_name').textContent = s.name;
+    document.getElementById('selected_info').textContent = s.classroom + (s.birthdate ? ' · เกิด ' + s.birthdate : '');
+    document.getElementById('selected_student_box').classList.remove('hidden');
+    // Hide search
+    document.getElementById('search_box').style.display = 'none';
+    closeDropdown();
     calcBmi();
-});
+}
+
+function clearStudent() {
+    document.getElementById('hidden_student_id').value = '';
+    document.getElementById('selected_student_box').classList.add('hidden');
+    document.getElementById('search_box').style.display = '';
+    if (searchInput) { searchInput.value = ''; searchInput.focus(); }
+    document.getElementById('bmi_display').textContent = '—';
+    document.getElementById('status_preview').classList.add('hidden');
+}
+
+function closeDropdown() {
+    document.getElementById('student_dropdown')?.classList.add('hidden');
+}
 
 function calcBmi() {
     const w = parseFloat(document.getElementById('weight_kg').value);

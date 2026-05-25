@@ -20,6 +20,24 @@ $action = $_GET['action'] ?? '';
 try {
     switch ($action) {
 
+        case 'search_students':
+            $q = trim($_GET['q'] ?? '');
+            if (strlen($q) < 2) { echo json_encode([]); exit; }
+            $st = $pdo->prepare("
+                SELECT id, name, classroom, gender, birthdate
+                FROM att_students
+                WHERE status='active'
+                  AND student_id REGEXP '^[0-9]+$'
+                  AND student_id NOT IN (SELECT subject_code FROM att_subjects)
+                  AND (name LIKE ? OR classroom LIKE ?)
+                ORDER BY classroom, name
+                LIMIT 20
+            ");
+            $like = "%$q%";
+            $st->execute([$like, $like]);
+            echo json_encode($st->fetchAll());
+            break;
+
         case 'students_by_class':
             $classroom = trim($_GET['classroom'] ?? '');
             if (!$classroom) { echo json_encode([]); exit; }
