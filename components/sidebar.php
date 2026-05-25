@@ -153,10 +153,12 @@ $subMenus = [
         ['icon' => 'fas fa-cog',                  'label' => 'ตั้งค่าระบบเวร',    'url' => $base_path . '/duty/admin/settings.php', 'roles' => ['super_admin']],
     ],
     'health' => [
-        ['icon' => 'fas fa-heartbeat',       'label' => 'Dashboard สุขภาวะ',    'url' => $base_path . '/health/dashboard.php',  'roles' => ['super_admin']],
-        ['icon' => 'fas fa-plus-circle',     'label' => 'บันทึกข้อมูลสุขภาพ',  'url' => $base_path . '/health/record.php',     'roles' => ['super_admin']],
-        ['icon' => 'fas fa-users',           'label' => 'รายชื่อนักเรียน',      'url' => $base_path . '/health/students.php',   'roles' => ['super_admin']],
-        ['icon' => 'fas fa-table',           'label' => 'เกณฑ์มาตรฐาน',         'url' => $base_path . '/health/standards.php',  'roles' => ['super_admin']],
+        ['icon' => 'fas fa-heartbeat',       'label' => 'Dashboard สุขภาวะ',     'url' => $base_path . '/health/dashboard.php',     'roles' => ['super_admin']],
+        ['icon' => 'fas fa-plus-circle',     'label' => 'บันทึกข้อมูลสุขภาพ',   'url' => $base_path . '/health/record.php',        'roles' => ['super_admin']],
+        ['icon' => 'fas fa-users',           'label' => 'รายชื่อนักเรียน',       'url' => $base_path . '/health/students.php',      'roles' => ['super_admin']],
+        ['icon' => 'fas fa-chalkboard',      'label' => 'รายงานระดับห้องเรียน',  'url' => $base_path . '/health/report_class.php',  'roles' => ['super_admin']],
+        ['icon' => 'fas fa-school',          'label' => 'ภาพรวมโรงเรียน',        'url' => $base_path . '/health/report_school.php', 'roles' => ['super_admin']],
+        ['icon' => 'fas fa-table',           'label' => 'เกณฑ์มาตรฐาน',          'url' => $base_path . '/health/standards.php',     'roles' => ['super_admin']],
     ],
     'parent_meeting' => [
         ['icon' => 'fas fa-tachometer-alt',  'label' => 'Dashboard',         'url' => $base_path . '/parent_meeting/dashboard.php'],
