@@ -110,7 +110,7 @@ require_once '../components/layout_start.php';
                 <div class="px-10 py-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
                     <h3 class="font-black text-slate-800 flex items-center gap-3">
                         <i class="bi bi-clock-history text-blue-600"></i> 
-                        <?= $isAdmin ? 'รายการรอดำเนินการ (Admin)' : 'ประวัติการลาของฉัน' ?>
+                        <?= $isAdmin ? 'รายการใบลาทั้งหมด' : 'ประวัติการลาของฉัน' ?>
                     </h3>
                 </div>
                 

@@ -22,13 +22,11 @@ try {
     // Logic: If Admin, show all pending or all? 
     // Usually admin wants to see pending first. But for history let's show all latest.
     if ($isAdmin) {
-        // Admin view: show only pending leaves so table matches the pending counters
         $stmt = $pdo->query("
             SELECT r.*, u.firstname, u.lastname
             FROM tl_requests r
             JOIN llw_users u ON r.user_id = u.user_id
-            WHERE r.status = 'pending'
-            ORDER BY r.created_at DESC
+            ORDER BY FIELD(r.status,'pending','approved','rejected'), r.created_at DESC
         ");
     } else {
         $stmt = $pdo->prepare("
