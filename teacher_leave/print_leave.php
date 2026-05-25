@@ -58,11 +58,6 @@ $fullName  = $request['firstname'] . ' ' . $request['lastname'];
 $leaveType = $request['leave_type'];
 $vacQuota  = $stats['vacation_quota'] ?? 10;
 
-function stat($stats, $currentDays, $col) {
-    $taken = (float)($stats[$col] ?? 0);
-    $before = max(0, $taken - (float)$currentDays);
-    return [$before, (float)$currentDays, $taken];
-}
 ?>
 <!DOCTYPE html>
 <html lang="th">
