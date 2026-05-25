@@ -58,7 +58,7 @@ $fullName  = $request['firstname'] . ' ' . $request['lastname'];
 $leaveType = $request['leave_type'];
 $vacQuota  = $stats['vacation_quota'] ?? 10;
 
-function stat($stats, $type, $currentDays, $col) {
+function stat($stats, $currentDays, $col) {
     $taken = (float)($stats[$col] ?? 0);
     $before = max(0, $taken - (float)$currentDays);
     return [$before, (float)$currentDays, $taken];
@@ -73,7 +73,7 @@ function stat($stats, $type, $currentDays, $col) {
     <style>
         @page {
             size: A4 portrait;
-            margin: 12mm 15mm 12mm 20mm;
+            margin: 8mm 15mm 8mm 20mm;
         }
         @media print {
             .no-print { display: none !important; }
@@ -85,8 +85,8 @@ function stat($stats, $type, $currentDays, $col) {
 
         body {
             font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
-            font-size: 14pt;
-            line-height: 1.55;
+            font-size: 13.5pt;
+            line-height: 1.45;
             color: #000;
             background: #e5e7eb;
         }
@@ -108,8 +108,8 @@ function stat($stats, $type, $currentDays, $col) {
             width: 210mm;
             min-height: 297mm;
             max-height: 297mm;
-            padding: 12mm 15mm 12mm 20mm;
-            margin: 10mm auto;
+            padding: 8mm 15mm 8mm 20mm;
+            margin: 8mm auto;
             background: white;
             box-shadow: 0 4px 24px rgba(0,0,0,.13);
             overflow: hidden;
@@ -141,8 +141,8 @@ function stat($stats, $type, $currentDays, $col) {
             display: flex;
             align-items: baseline;
             flex-wrap: wrap;
-            gap: 4px;
-            margin-bottom: 4pt;
+            gap: 3px;
+            margin-bottom: 3pt;
             font-size: 13.5pt;
         }
         .label { white-space: nowrap; font-weight: 700; }
@@ -181,45 +181,45 @@ function stat($stats, $type, $currentDays, $col) {
         }
         .stats-table th, .stats-table td {
             border: 1px solid #555;
-            padding: 2.5pt 5pt; text-align: center;
+            padding: 1.5pt 4pt; text-align: center;
         }
         .stats-table th { background: #f3f4f6; font-weight: 700; }
         .stats-table td:first-child { text-align: left; }
 
         /* Requester sig */
         .requester-sig {
-            margin-top: 8pt;
+            margin-top: 5pt;
             display: flex;
             flex-direction: column;
             align-items: flex-end;
             padding-right: 10pt;
         }
         .requester-sig-box { text-align: center; min-width: 200pt; }
-        .sig-img { max-height: 40pt; max-width: 130pt; object-fit: contain; margin: 2pt auto; display: block; }
+        .sig-img { max-height: 34pt; max-width: 120pt; object-fit: contain; margin: 1pt auto; display: block; }
 
         /* Approval grid */
         .sig-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12pt;
-            margin-top: 6pt;
+            gap: 10pt;
+            margin-top: 4pt;
         }
         .sig-box {
             border: 1px solid #888;
-            padding: 6pt;
-            font-size: 12pt;
+            padding: 5pt;
+            font-size: 11.5pt;
             text-align: center;
-            min-height: 95pt;
+            min-height: 80pt;
         }
         .sig-box .sig-title {
-            font-weight: 700; font-size: 12.5pt;
+            font-weight: 700; font-size: 12pt;
             border-bottom: 1px solid #ccc;
-            padding-bottom: 3pt; margin-bottom: 5pt;
+            padding-bottom: 2pt; margin-bottom: 4pt;
         }
-        .sig-img-box { max-height: 40pt; max-width: 120pt; object-fit: contain; margin: 2pt auto; display: block; }
-        .sig-line { border-bottom: 1px dotted #555; margin: 3pt 8pt 2pt; min-height: 34pt; }
-        .sig-name { font-size: 11.5pt; font-weight: 600; }
-        .sig-date { font-size: 11pt; color: #444; }
+        .sig-img-box { max-height: 34pt; max-width: 110pt; object-fit: contain; margin: 1pt auto; display: block; }
+        .sig-line { border-bottom: 1px dotted #555; margin: 2pt 8pt 2pt; min-height: 28pt; }
+        .sig-name { font-size: 11pt; font-weight: 600; }
+        .sig-date { font-size: 10.5pt; color: #444; }
 
         .stamp {
             display: inline-block; border: 2px solid;
@@ -296,7 +296,7 @@ function stat($stats, $type, $currentDays, $col) {
         </div>
 
         <!-- ══ ที่อยู่ระหว่างลา ══ -->
-        <div class="row">
+        <div class="row" style="margin-bottom:3pt;">
             <span class="label">ที่อยู่ระหว่างลา / เบอร์โทร</span>
             <span class="field"><?= htmlspecialchars($request['contact_info'] ?: '—', ENT_QUOTES, 'UTF-8') ?></span>
         </div>
@@ -327,11 +327,11 @@ function stat($stats, $type, $currentDays, $col) {
                 $rows = [
                     ['ลาป่วย',                               'sick',     'sick_taken'],
                     ['ลากิจส่วนตัว',                         'personal', 'personal_taken'],
-                    ['ลาพักผ่อน (โควตา ' . $vacQuota . ' วัน)', 'vacation', 'vacation_taken'],
+                    ["ลาพักผ่อน (โควตา {$vacQuota} วัน)", 'vacation', 'vacation_taken'],
                     ['ลาคลอดบุตร / อื่นๆ',                  'other',    'other_taken'],
                 ];
                 foreach ($rows as [$label, $type, $col]):
-                    $isCurrent = ($leaveType === $type) || ($type === 'other' && in_array($leaveType, ['maternity','other']));
+                    $isCurrent = $leaveType === $type || $type === 'other' && in_array($leaveType, ['maternity','other']);
                     $taken  = (float)($stats[$col] ?? 0);
                     $before = $isCurrent ? max(0, $taken - (float)$request['days_count']) : $taken;
                     $curr   = $isCurrent ? (float)$request['days_count'] : '—';
@@ -356,7 +356,7 @@ function stat($stats, $type, $currentDays, $col) {
                 <?php if ($request['signature_path']): ?>
                 <img src="<?= $base_path ?>/<?= htmlspecialchars($request['signature_path'], ENT_QUOTES, 'UTF-8') ?>" class="sig-img" alt="ลายเซ็น">
                 <?php else: ?>
-                <div style="height:36pt;"></div>
+                <div style="height:24pt;"></div>
                 <?php endif; ?>
                 <p style="font-size:13pt;">(ลงชื่อ)...................................................ผู้ขอลา</p>
                 <p style="margin-top:3pt; font-size:13pt;">( <?= htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') ?> )</p>
@@ -404,7 +404,7 @@ function stat($stats, $type, $currentDays, $col) {
                     <?php if ($approvalMap[2]['status'] == 1 && !empty($approvalMap[2]['signature_path'])): ?>
                     <img src="<?= $base_path ?>/<?= htmlspecialchars($approvalMap[2]['signature_path'], ENT_QUOTES, 'UTF-8') ?>" class="sig-img-box" alt="ลายเซ็น ผอ./รองฯ">
                     <?php else: ?>
-                    <div style="height:30pt;"></div>
+                    <div style="height:20pt;"></div>
                     <?php endif; ?>
                     <?php if (!empty($approvalMap[2]['comment'])): ?>
                     <p style="font-size:10.5pt; font-style:italic;"><?= htmlspecialchars($approvalMap[2]['comment'], ENT_QUOTES, 'UTF-8') ?></p>
