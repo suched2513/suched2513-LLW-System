@@ -97,7 +97,7 @@ $total_pending = array_sum(array_column($subject_stats, 'pending_ex'));
       <?=count($subjects)?> วิชา
     </div>
     <?php if ($total_pending > 0): ?>
-    <div class="bg-amber-400/30 rounded-2xl px-4 py-2.5 border border-amber-200/30 text-sm font-bold">
+    <div class="bg-amber-400/30 rounded-2xl px-4 py-2.5 border border-amber-200/30 text-sm font-bold animate-pulse">
       <i class="bi bi-exclamation-circle-fill mr-1"></i><?=$total_pending?> งานค้าง
     </div>
     <?php endif; ?>
@@ -135,7 +135,7 @@ $total_pending = array_sum(array_column($subject_stats, 'pending_ex'));
         <span class="px-2.5 py-1 bg-violet-100 text-violet-700 text-xs font-black rounded-full">ยังไม่เริ่ม</span>
         <?php endif; ?>
         <?php if ($stat['pending_ex'] > 0): ?>
-        <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full">
+        <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full animate-pulse">
           <i class="bi bi-exclamation-circle-fill mr-0.5"></i><?=$stat['pending_ex']?> งานค้าง
         </span>
         <?php endif; ?>

@@ -158,6 +158,9 @@ require_once __DIR__ . '/../components/layout_start.php';
     <a href="post_exam.php?subject_id=<?=$sid?>" class="px-2.5 py-1 bg-rose-50 text-rose-700 text-[10px] font-bold rounded-lg hover:bg-rose-100 transition-all">
       <i class="fas fa-clipboard-check mr-1"></i>หลังเรียน
     </a>
+    <a href="grade_book.php?subject_id=<?=$sid?>" class="px-2.5 py-1 bg-violet-50 text-violet-700 text-[10px] font-bold rounded-lg hover:bg-violet-100 transition-all">
+      <i class="fas fa-table mr-1"></i>สมุดคะแนน
+    </a>
     <a href="progress.php?subject_id=<?=$sid?>" class="px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-lg hover:bg-amber-100 transition-all">
       <i class="fas fa-chart-line mr-1"></i>ความคืบหน้า
     </a>

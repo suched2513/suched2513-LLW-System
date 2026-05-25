@@ -64,26 +64,57 @@ if (!$post_passed && $total_post === 0) {
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_post_exam WHERE student_uid=? AND subject_id=?");
 $stmt->execute([$uid,$subject_id]); $post_attempt_count = (int)$stmt->fetchColumn();
 
-// Units with progress
+// Units with progress (batch queries — no N+1)
 $units_stmt = $pdo->prepare("SELECT * FROM lms_units WHERE subject_id=? ORDER BY order_no");
 $units_stmt->execute([$subject_id]); $units = $units_stmt->fetchAll();
 
 $unit_progress = [];
 $total_all_ex  = 0;
 $total_all_sub = 0;
-foreach ($units as $u) {
-    $exs = $pdo->prepare("SELECT id FROM lms_unit_exercises WHERE unit_id=?"); $exs->execute([$u['id']]); $exs=$exs->fetchAll();
-    $ex_total = count($exs); $submitted = 0;
-    foreach ($exs as $ex) {
-        $chk = $pdo->prepare("SELECT id FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? AND subject_id=? LIMIT 1");
-        $chk->execute([$uid,$ex['id'],$subject_id]);
-        if ($chk->fetch()) $submitted++;
+if (!empty($units)) {
+    $uids = array_column($units, 'id');
+    $uph  = implode(',', array_fill(0, count($uids), '?'));
+
+    $exr = $pdo->prepare("SELECT id, unit_id FROM lms_unit_exercises WHERE unit_id IN ($uph) ORDER BY id");
+    $exr->execute($uids); $all_exs = $exr->fetchAll(); $exs_by_unit = [];
+    foreach ($all_exs as $ex) $exs_by_unit[$ex['unit_id']][] = $ex;
+
+    $sub_ids = [];
+    if (!empty($all_exs)) {
+        $eids = array_column($all_exs, 'id');
+        $eph  = implode(',', array_fill(0, count($eids), '?'));
+        $sr   = $pdo->prepare("SELECT exercise_id FROM lms_student_exercises WHERE student_uid=? AND exercise_id IN ($eph) AND subject_id=?");
+        $sr->execute(array_merge([$uid], $eids, [$subject_id]));
+        $sub_ids = array_flip($sr->fetchAll(PDO::FETCH_COLUMN));
     }
-    $tc = $pdo->prepare("SELECT COUNT(*) FROM lms_topics WHERE unit_id=?"); $tc->execute([$u['id']]); $topics_count=(int)$tc->fetchColumn();
-    $unit_progress[$u['id']] = ['ex_total'=>$ex_total,'submitted'=>$submitted,'topics_count'=>$topics_count];
-    $total_all_ex  += $ex_total;
-    $total_all_sub += $submitted;
+
+    $tcr = $pdo->prepare("SELECT unit_id, COUNT(*) cnt FROM lms_topics WHERE unit_id IN ($uph) GROUP BY unit_id");
+    $tcr->execute($uids); $topics_map = array_column($tcr->fetchAll(), 'cnt', 'unit_id');
+
+    foreach ($units as $u) {
+        $exs      = $exs_by_unit[$u['id']] ?? [];
+        $ex_total = count($exs); $submitted = 0;
+        foreach ($exs as $ex) { if (isset($sub_ids[$ex['id']])) $submitted++; }
+        $topics_count = (int)($topics_map[$u['id']] ?? 0);
+        $unit_progress[$u['id']] = ['ex_total'=>$ex_total,'submitted'=>$submitted,'topics_count'=>$topics_count];
+        $total_all_ex  += $ex_total;
+        $total_all_sub += $submitted;
+    }
 }
+
+// Total score for this student in graded exercises
+$sc = $pdo->prepare("
+    SELECT COALESCE(SUM(se.grade),0) AS earned,
+           COALESCE(SUM(e.max_score),0) AS possible
+    FROM lms_unit_exercises e
+    JOIN lms_units u ON u.id = e.unit_id
+    LEFT JOIN lms_student_exercises se
+           ON se.exercise_id = e.id AND se.student_uid = ? AND se.subject_id = ? AND se.reviewed_at IS NOT NULL
+    WHERE u.subject_id = ? AND e.max_score > 0
+");
+$sc->execute([$uid, $subject_id, $subject_id]); $sc = $sc->fetch();
+$score_earned   = (float)($sc['earned']   ?? 0);
+$score_possible = (int)($sc['possible'] ?? 0);
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
@@ -139,6 +170,20 @@ window.addEventListener('load',()=>{
       <p class="text-xs opacity-80 font-bold">หลังเรียน</p>
     </div>
   </div>
+  <?php if ($score_possible > 0): ?>
+  <?php $spct = min(100, round($score_earned / $score_possible * 100)); ?>
+  <div class="mt-3 bg-white/15 rounded-2xl px-4 py-2.5 border border-white/20">
+    <div class="flex items-center justify-between mb-1.5">
+      <span class="text-xs font-bold opacity-80">คะแนนรวม</span>
+      <span class="text-sm font-black"><?=rtrim(rtrim(number_format($score_earned,1),'0'),'.') ?> / <?=$score_possible?> คะแนน
+        <span class="text-xs opacity-70">(<?=$spct?>%)</span>
+      </span>
+    </div>
+    <div class="w-full bg-white/20 rounded-full h-1.5">
+      <div class="h-1.5 rounded-full bg-white transition-all" style="width:<?=$spct?>%"></div>
+    </div>
+  </div>
+  <?php endif; ?>
   <?php if ($pre_passed && $total_all_ex > 0): ?>
   <a href="/student/lms_assignments.php?subject_id=<?=$subject_id?>"
      class="mt-3 flex items-center justify-between px-4 py-3 bg-white/15 rounded-2xl border border-white/25 active:bg-white/25 transition-all">

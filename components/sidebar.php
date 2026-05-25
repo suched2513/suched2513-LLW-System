@@ -139,6 +139,7 @@ $subMenus = [
         ['icon' => 'fas fa-tachometer-alt',    'label' => 'Dashboard LMS',       'url' => $base_path . '/lms/dashboard.php'],
         ['icon' => 'fas fa-chalkboard',        'label' => 'วิชาของฉัน',           'url' => $base_path . '/lms/subjects.php'],
         ['icon' => 'fas fa-tasks',             'label' => 'ตรวจงานนักเรียน',      'url' => $base_path . '/lms/grade_exercises.php', 'roles' => ['super_admin','att_teacher'], 'badge' => 'lms_pending'],
+        ['icon' => 'fas fa-table',             'label' => 'สมุดคะแนน',            'url' => $base_path . '/lms/grade_book.php', 'roles' => ['super_admin','att_teacher']],
         ['icon' => 'fas fa-chart-line',        'label' => 'ความคืบหน้านักเรียน',  'url' => $base_path . '/lms/progress.php'],
         ['icon' => 'fas fa-pen-fancy',         'label' => 'ตรวจข้อสอบอัตนัย',    'url' => $base_path . '/lms/exam_answers.php', 'roles' => ['super_admin','att_teacher'], 'badge' => 'lms_essay_pending'],
     ],
@@ -166,14 +167,8 @@ $_sidebar_badges = ['lms_pending' => 0, 'lms_essay_pending' => 0];
 if (in_array($userRole, ['super_admin', 'att_teacher'])) {
     try {
         $_spdo = getPdo();
-        $_chk_grade = (bool)$_spdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'reviewed_at'")->fetch();
-        if ($_chk_grade) {
-            $_sidebar_badges['lms_pending'] = (int)$_spdo->query("SELECT COUNT(*) FROM lms_student_exercises WHERE reviewed_at IS NULL")->fetchColumn();
-        }
-        $_chk_essay = (bool)$_spdo->query("SHOW COLUMNS FROM `lms_student_exam_answers` LIKE 'reviewed_at'")->fetch();
-        if ($_chk_essay) {
-            $_sidebar_badges['lms_essay_pending'] = (int)$_spdo->query("SELECT COUNT(*) FROM lms_student_exam_answers WHERE reviewed_at IS NULL")->fetchColumn();
-        }
+        $_sidebar_badges['lms_pending'] = (int)$_spdo->query("SELECT COUNT(*) FROM lms_student_exercises WHERE reviewed_at IS NULL")->fetchColumn();
+        $_sidebar_badges['lms_essay_pending'] = (int)$_spdo->query("SELECT COUNT(*) FROM lms_student_exam_answers WHERE reviewed_at IS NULL")->fetchColumn();
     } catch (Exception $e) { /* ไม่แสดง error ใน sidebar */ }
 }
 
