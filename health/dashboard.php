@@ -9,77 +9,89 @@ $year = (int)($_GET['year'] ?? 2569);
 $sem  = (int)($_GET['semester'] ?? 1);
 if (!in_array($sem, [1, 2])) $sem = 1;
 
-// KPI: total students with records this semester
-$kpi = $pdo->prepare("
-    SELECT
-        COUNT(DISTINCT hr.student_id)                                      AS total,
-        SUM(hr.bfa_status = 'สมส่วน')                                      AS normal,
-        SUM(hr.bfa_status IN ('ผอม','ผอมมาก'))                             AS thin,
-        SUM(hr.bfa_status IN ('น้ำหนักเกิน','อ้วน'))                        AS fat,
-        SUM(hr.hfa_status IN ('เตี้ย','เตี้ยมาก'))                          AS short_st
-    FROM health_records hr
-    JOIN (
-        SELECT student_id, MAX(record_date) AS latest
-        FROM health_records
-        WHERE academic_year=? AND semester=?
-        GROUP BY student_id
-    ) latest_row ON latest_row.student_id = hr.student_id AND latest_row.latest = hr.record_date
-    WHERE hr.academic_year=? AND hr.semester=?
-");
-$kpi->execute([$year, $sem, $year, $sem]);
-$k = $kpi->fetch() ?: ['total'=>0,'normal'=>0,'thin'=>0,'fat'=>0,'short_st'=>0];
+// Check tables exist (migration may not have run on production yet)
+$health_table_exists = (bool)$pdo->query("SHOW TABLES LIKE 'health_records'")->fetch();
+
+$k          = ['total'=>0,'normal'=>0,'thin'=>0,'fat'=>0,'short_st'=>0];
+$cls_data   = [];
+$recent     = [];
+$years_list = [2569];
+
+if ($health_table_exists) {
+    // KPI
+    $kpi = $pdo->prepare("
+        SELECT
+            COUNT(DISTINCT hr.student_id)                                      AS total,
+            SUM(hr.bfa_status = 'สมส่วน')                                      AS normal,
+            SUM(hr.bfa_status IN ('ผอม','ผอมมาก'))                             AS thin,
+            SUM(hr.bfa_status IN ('น้ำหนักเกิน','อ้วน'))                        AS fat,
+            SUM(hr.hfa_status IN ('เตี้ย','เตี้ยมาก'))                          AS short_st
+        FROM health_records hr
+        JOIN (
+            SELECT student_id, MAX(record_date) AS latest
+            FROM health_records WHERE academic_year=? AND semester=?
+            GROUP BY student_id
+        ) latest_row ON latest_row.student_id = hr.student_id AND latest_row.latest = hr.record_date
+        WHERE hr.academic_year=? AND hr.semester=?
+    ");
+    $kpi->execute([$year, $sem, $year, $sem]);
+    $k = $kpi->fetch() ?: $k;
+
+    // Per-classroom breakdown
+    $cls_rows = $pdo->prepare("
+        SELECT s.classroom,
+               COUNT(DISTINCT hr.student_id)             AS cnt,
+               SUM(hr.bfa_status = 'สมส่วน')             AS normal,
+               SUM(hr.bfa_status IN ('ผอม','ผอมมาก'))    AS thin,
+               SUM(hr.bfa_status IN ('น้ำหนักเกิน','อ้วน')) AS fat
+        FROM health_records hr
+        JOIN att_students s ON s.id = hr.student_id
+        JOIN (
+            SELECT student_id, MAX(record_date) latest
+            FROM health_records WHERE academic_year=? AND semester=?
+            GROUP BY student_id
+        ) lr ON lr.student_id=hr.student_id AND lr.latest=hr.record_date
+        WHERE hr.academic_year=? AND hr.semester=?
+        GROUP BY s.classroom ORDER BY s.classroom
+    ");
+    $cls_rows->execute([$year, $sem, $year, $sem]);
+    $cls_data = $cls_rows->fetchAll();
+
+    // Recent 10 records
+    $r = $pdo->prepare("
+        SELECT hr.*, s.name AS student_name, s.classroom, s.gender
+        FROM health_records hr
+        JOIN att_students s ON s.id = hr.student_id
+        WHERE hr.academic_year=? AND hr.semester=?
+        ORDER BY hr.created_at DESC LIMIT 10
+    ");
+    $r->execute([$year, $sem]);
+    $recent = $r->fetchAll();
+
+    // Available years
+    $yl = $pdo->query("SELECT DISTINCT academic_year FROM health_records ORDER BY academic_year DESC")->fetchAll(PDO::FETCH_COLUMN);
+    if (!empty($yl)) $years_list = $yl;
+}
+if (empty($years_list)) $years_list = [2569];
 
 $total = max(1, (int)$k['total']);
-$pct = fn($v) => $total > 1 ? round($v / $total * 100, 1) : 0;
-
-// Per-classroom breakdown for bar chart
-$cls_rows = $pdo->prepare("
-    SELECT s.classroom,
-           COUNT(DISTINCT hr.student_id)             AS cnt,
-           SUM(hr.bfa_status = 'สมส่วน')             AS normal,
-           SUM(hr.bfa_status IN ('ผอม','ผอมมาก'))    AS thin,
-           SUM(hr.bfa_status IN ('น้ำหนักเกิน','อ้วน')) AS fat
-    FROM health_records hr
-    JOIN att_students s ON s.id = hr.student_id
-    JOIN (
-        SELECT student_id, MAX(record_date) latest
-        FROM health_records WHERE academic_year=? AND semester=?
-        GROUP BY student_id
-    ) lr ON lr.student_id=hr.student_id AND lr.latest=hr.record_date
-    WHERE hr.academic_year=? AND hr.semester=?
-    GROUP BY s.classroom ORDER BY s.classroom
-");
-$cls_rows->execute([$year, $sem, $year, $sem]);
-$cls_data = $cls_rows->fetchAll();
-
-// Trend: avg BMI per semester across years
-$trend = $pdo->query("
-    SELECT academic_year, semester, ROUND(AVG(bmi),2) AS avg_bmi, COUNT(*) AS cnt
-    FROM health_records
-    GROUP BY academic_year, semester
-    ORDER BY academic_year, semester
-")->fetchAll();
-
-// Recent 10 records
-$recent = $pdo->prepare("
-    SELECT hr.*, s.name AS student_name, s.classroom, s.gender
-    FROM health_records hr
-    JOIN att_students s ON s.id = hr.student_id
-    WHERE hr.academic_year=? AND hr.semester=?
-    ORDER BY hr.created_at DESC LIMIT 10
-");
-$recent->execute([$year, $sem]);
-$recent = $recent->fetchAll();
-
-// Available years
-$years_list = $pdo->query("SELECT DISTINCT academic_year FROM health_records ORDER BY academic_year DESC")->fetchAll(PDO::FETCH_COLUMN);
-if (empty($years_list)) $years_list = [2569];
+$pct   = fn($v) => $total > 1 ? round($v / $total * 100, 1) : 0;
 
 $pageTitle    = 'สุขภาวะนักเรียน';
 $pageSubtitle = 'ระบบบันทึกน้ำหนัก ส่วนสูง และภาวะโภชนาการ';
 $activeSystem = 'health';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
+
+<?php if (!$health_table_exists): ?>
+<div class="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3">
+  <i class="fas fa-exclamation-triangle text-amber-500 text-xl flex-shrink-0"></i>
+  <div>
+    <p class="font-black text-amber-800 text-sm">ยังไม่ได้รัน Migration</p>
+    <p class="text-xs text-amber-600 mt-0.5">ตารางฐานข้อมูลยังไม่ถูกสร้าง — SSH เข้า production แล้วรัน: <code class="bg-amber-100 px-1 rounded font-mono">php database/migrate.php</code></p>
+  </div>
+</div>
+<?php endif; ?>
 
 <!-- Header -->
 <div class="flex items-center justify-between mb-6 flex-wrap gap-3">

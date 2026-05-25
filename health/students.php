@@ -31,25 +31,43 @@ if ($search)    { $where[] = 's.name LIKE ?';  $params[] = "%$search%"; }
 
 $where_sql = implode(' AND ', $where);
 
-$rows = $pdo->prepare("
-    SELECT s.id, s.name, s.classroom, s.gender, s.birthdate,
-           hr.id AS rec_id, hr.weight_kg, hr.height_cm, hr.bmi, hr.bfa_status, hr.hfa_status,
-           hr.record_date, hr.semester, hr.academic_year
-    FROM att_students s
-    LEFT JOIN (
-        SELECT hr1.*
-        FROM health_records hr1
-        JOIN (
-            SELECT student_id, MAX(record_date) latest
-            FROM health_records WHERE academic_year=? AND semester=?
-            GROUP BY student_id
-        ) lr ON lr.student_id=hr1.student_id AND lr.latest=hr1.record_date
-        WHERE hr1.academic_year=? AND hr1.semester=?
-    ) hr ON hr.student_id = s.id
-    WHERE $where_sql
-    ORDER BY s.classroom, s.name
-");
-$rows->execute(array_merge([$year, $sem, $year, $sem], $params));
+// Check if health_records table exists (migration may not have run yet)
+$health_table_exists = (bool)$pdo->query("SHOW TABLES LIKE 'health_records'")->fetch();
+
+if ($health_table_exists) {
+    $rows = $pdo->prepare("
+        SELECT s.id, s.name, s.classroom, s.gender, s.birthdate,
+               hr.id AS rec_id, hr.weight_kg, hr.height_cm, hr.bmi, hr.bfa_status, hr.hfa_status,
+               hr.record_date, hr.semester, hr.academic_year
+        FROM att_students s
+        LEFT JOIN (
+            SELECT hr1.*
+            FROM health_records hr1
+            JOIN (
+                SELECT student_id, MAX(record_date) latest
+                FROM health_records WHERE academic_year=? AND semester=?
+                GROUP BY student_id
+            ) lr ON lr.student_id=hr1.student_id AND lr.latest=hr1.record_date
+            WHERE hr1.academic_year=? AND hr1.semester=?
+        ) hr ON hr.student_id = s.id
+        WHERE $where_sql
+        ORDER BY s.classroom, s.name
+    ");
+    $rows->execute(array_merge([$year, $sem, $year, $sem], $params));
+} else {
+    // Tables not yet created — show students without health data
+    $rows = $pdo->prepare("
+        SELECT s.id, s.name, s.classroom, s.gender,
+               NULL AS birthdate, NULL AS rec_id,
+               NULL AS weight_kg, NULL AS height_cm, NULL AS bmi,
+               NULL AS bfa_status, NULL AS hfa_status,
+               NULL AS record_date, NULL AS semester, NULL AS academic_year
+        FROM att_students s
+        WHERE $where_sql
+        ORDER BY s.classroom, s.name
+    ");
+    $rows->execute($params);
+}
 $students = $rows->fetchAll();
 
 // Export CSV
