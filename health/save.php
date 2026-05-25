@@ -42,23 +42,30 @@ $stu = $stu->fetch();
 $bfa_status = null;
 $hfa_status = null;
 
-if ($stu && $stu['birthdate']) {
-    $born      = new DateTime($stu['birthdate']);
-    $measure   = new DateTime($record_date);
-    $diff      = $born->diff($measure);
-    $age_m     = (int)($diff->y * 12 + $diff->m);
-    $gender    = $stu['gender'] === 'female' ? 'female' : 'male';
-    $bmi       = $weight / (($height / 100) ** 2);
+$bmi = $weight / (($height / 100) ** 2);
 
-    $std = $pdo->prepare("SELECT * FROM health_growth_standards WHERE gender=? AND age_month=?");
-    $std->execute([$gender, $age_m]);
-    $row = $std->fetch();
+if ($stu) {
+    // att_students.gender uses Thai values: ชาย/หญิง
+    $gender = ($stu['gender'] === 'หญิง') ? 'female' : 'male';
 
-    if ($row) {
-        $bfa_status = classifySD($bmi,    $row['bfa_neg3'], $row['bfa_neg2'], $row['bfa_neg1'], $row['bfa_median'], $row['bfa_pos1'], $row['bfa_pos2'], 'bfa');
-        $hfa_status = classifySD($height, $row['hfa_neg3'], $row['hfa_neg2'], $row['hfa_neg1'], $row['hfa_median'], $row['hfa_pos1'], $row['hfa_pos2'], 'hfa');
+    if ($stu['birthdate']) {
+        $born    = new DateTime($stu['birthdate']);
+        $measure = new DateTime($record_date);
+        $diff    = $born->diff($measure);
+        $age_m   = (int)($diff->y * 12 + $diff->m);
+
+        $std = $pdo->prepare("SELECT * FROM health_growth_standards WHERE gender=? AND age_month=?");
+        $std->execute([$gender, $age_m]);
+        $row = $std->fetch();
+
+        if ($row) {
+            $bfa_status = classifySD($bmi,    $row['bfa_neg3'], $row['bfa_neg2'], $row['bfa_pos1'], $row['bfa_pos2'], 'bfa');
+            $hfa_status = classifySD($height, $row['hfa_neg3'], $row['hfa_neg2'], $row['hfa_pos1'], $row['hfa_pos2'], 'hfa');
+        } else {
+            $bfa_status = simpleBfaStatus($bmi, $age_m);
+        }
     } else {
-        $bfa_status = simpleBfaStatus($bmi, $age_m);
+        $bfa_status = simpleBfaStatus($bmi, 0);
     }
 }
 
@@ -94,8 +101,8 @@ try {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function classifySD(float $val, $n3, $n2, $n1, $med, $p1, $p2, string $type): string {
-    if ($n3 === null || $med === null) return '—';
+function classifySD(float $val, $n3, $n2, $p1, $p2, string $type): string {
+    if ($n3 === null) return '—';
     if ($type === 'bfa') {
         if ($val < $n3) return 'ผอมมาก';
         if ($val < $n2) return 'ผอม';

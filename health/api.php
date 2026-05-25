@@ -47,12 +47,20 @@ try {
             $st->execute([$sid]);
             $stu = $st->fetch();
             if (!$stu || !$stu['birthdate']) {
-                echo json_encode(['bfa_status' => null, 'hfa_status' => null]);
+                // No birthdate — still return simple BMI estimate without age
+                $bmi = $weight / (($height / 100) ** 2);
+                echo json_encode([
+                    'bfa_status' => simpleBfaStatus($bmi, 0),
+                    'hfa_status' => null,
+                    'bmi'        => round($bmi, 2),
+                    'age_months' => null,
+                ]);
                 exit;
             }
-            $bmi       = $weight / (($height / 100) ** 2);
+            $bmi        = $weight / (($height / 100) ** 2);
             $age_months = ageInMonths($stu['birthdate']);
-            $gender     = $stu['gender'] === 'female' ? 'female' : 'male';
+            // att_students.gender uses Thai values: ชาย/หญิง
+            $gender     = ($stu['gender'] === 'หญิง') ? 'female' : 'male';
 
             $std = $pdo->prepare("SELECT * FROM health_growth_standards WHERE gender=? AND age_month=?");
             $std->execute([$gender, $age_months]);
@@ -62,8 +70,8 @@ try {
             $hfa_status = null;
 
             if ($row) {
-                $bfa_status = classifySD($bmi, $row['bfa_neg3'], $row['bfa_neg2'], $row['bfa_neg1'], $row['bfa_median'], $row['bfa_pos1'], $row['bfa_pos2'], 'bfa');
-                $hfa_status = classifySD($height, $row['hfa_neg3'], $row['hfa_neg2'], $row['hfa_neg1'], $row['hfa_median'], $row['hfa_pos1'], $row['hfa_pos2'], 'hfa');
+                $bfa_status = classifySD($bmi,    $row['bfa_neg3'], $row['bfa_neg2'], $row['bfa_pos1'], $row['bfa_pos2'], 'bfa');
+                $hfa_status = classifySD($height, $row['hfa_neg3'], $row['hfa_neg2'], $row['hfa_pos1'], $row['hfa_pos2'], 'hfa');
             } else {
                 // Fallback: simple WHO/DOH cutoffs for school-age
                 $bfa_status = simpleBfaStatus($bmi, $age_months);
@@ -101,8 +109,8 @@ function ageInMonths(string $birthdate): int {
     }
 }
 
-function classifySD(float $val, $n3, $n2, $n1, $med, $p1, $p2, string $type): string {
-    if ($n3 === null || $med === null) return '—';
+function classifySD(float $val, $n3, $n2, $p1, $p2, string $type): string {
+    if ($n3 === null) return '—';
     if ($type === 'bfa') {
         if ($val < $n3) return 'ผอมมาก';
         if ($val < $n2) return 'ผอม';

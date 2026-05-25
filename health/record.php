@@ -4,16 +4,24 @@ require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 if (!in_array($_SESSION['llw_role'], ['super_admin'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 
-$pdo     = getPdo();
-$user_id = (int)$_SESSION['user_id'];
-$edit_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-$rec     = null;
+$pdo         = getPdo();
+$user_id     = (int)$_SESSION['user_id'];
+$edit_id     = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$prefill_sid = isset($_GET['prefill_student']) ? (int)$_GET['prefill_student'] : 0;
+$rec         = null;
+$prefill_stu = null;
 
 if ($edit_id) {
     $st = $pdo->prepare("SELECT hr.*, s.name student_name, s.classroom, s.gender, s.birthdate FROM health_records hr JOIN att_students s ON s.id=hr.student_id WHERE hr.id=?");
     $st->execute([$edit_id]);
     $rec = $st->fetch();
     if (!$rec) { header('Location: /health/dashboard.php'); exit(); }
+}
+
+if ($prefill_sid && !$edit_id) {
+    $st = $pdo->prepare("SELECT id, name, classroom, gender, birthdate FROM att_students WHERE id=?");
+    $st->execute([$prefill_sid]);
+    $prefill_stu = $st->fetch();
 }
 
 // Classrooms
@@ -58,6 +66,15 @@ require_once __DIR__ . '/../components/layout_start.php';
 
   <!-- Student Selector (new record only) -->
   <?php if (!$rec): ?>
+  <?php if ($prefill_stu): ?>
+  <div class="mb-5 p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-3">
+    <i class="fas fa-user-circle text-emerald-500 text-2xl"></i>
+    <div>
+      <p class="font-black text-slate-800 text-sm"><?=htmlspecialchars($prefill_stu['name'],ENT_QUOTES,'UTF-8')?></p>
+      <p class="text-xs text-slate-400"><?=htmlspecialchars($prefill_stu['classroom'],ENT_QUOTES,'UTF-8')?></p>
+    </div>
+  </div>
+  <?php else: ?>
   <div class="mb-5">
     <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-wider">ห้องเรียน</label>
     <select id="sel_classroom" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-400 outline-none">
@@ -74,6 +91,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     </select>
     <p id="student_info" class="text-xs text-slate-400 mt-1 hidden"></p>
   </div>
+  <?php endif; ?>
   <?php else: ?>
   <input type="hidden" id="sel_student" value="<?=$rec['student_id']?>">
   <?php endif; ?>
@@ -82,7 +100,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     <?php if ($edit_id): ?>
     <input type="hidden" name="id" value="<?=$edit_id?>">
     <?php endif; ?>
-    <input type="hidden" name="student_id" id="hidden_student_id" value="<?=$rec['student_id']??''?>">
+    <input type="hidden" name="student_id" id="hidden_student_id" value="<?=$rec['student_id'] ?? ($prefill_stu['id'] ?? '')?>">
 
     <div class="grid grid-cols-2 gap-4 mb-4">
       <div>
@@ -225,13 +243,20 @@ function calcBmi() {
         });
 }
 
-// For edit mode — trigger calc on load
+// Inject known student data for edit mode or prefill mode
 <?php if ($rec && $rec['birthdate']): ?>
 studentData[<?=$rec['student_id']?>] = {
     id: <?=$rec['student_id']?>,
     name: <?=json_encode($rec['student_name'])?>,
     gender: <?=json_encode($rec['gender'])?>,
     birthdate: <?=json_encode($rec['birthdate'])?>
+};
+<?php elseif ($prefill_stu): ?>
+studentData[<?=$prefill_stu['id']?>] = {
+    id: <?=$prefill_stu['id']?>,
+    name: <?=json_encode($prefill_stu['name'])?>,
+    gender: <?=json_encode($prefill_stu['gender'] ?? '')?>,
+    birthdate: <?=json_encode($prefill_stu['birthdate'] ?? '')?>
 };
 <?php endif; ?>
 
@@ -243,13 +268,14 @@ window.addEventListener('load', calcBmi);
 // Form submit guard
 document.getElementById('health_form').addEventListener('submit', function(e) {
     const sid = document.getElementById('hidden_student_id').value;
-    if (!sid) {
+    if (!sid || sid === '0') {
         e.preventDefault();
         Swal.fire({ icon:'warning', title:'กรุณาเลือกนักเรียน', confirmButtonColor:'#10B981' });
         return;
     }
-    document.getElementById('btn_save').disabled = true;
-    document.getElementById('btn_save').textContent = 'กำลังบันทึก...';
+    const btn = document.getElementById('btn_save');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>กำลังบันทึก...';
 });
 
 function confirmDelete(id) {
