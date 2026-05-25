@@ -192,25 +192,12 @@ $all_students = [];
 $filter_cls = $_GET['cls'] ?? '';
 
 try {
-    // ── Auto-migrate: Student Status & Major ──
-    $chkStatus = $pdo->query("SHOW COLUMNS FROM att_students LIKE 'status'")->fetch();
-    if (!$chkStatus) {
-        $pdo->exec("ALTER TABLE att_students ADD COLUMN status ENUM('active', 'moved', 'resigned', 'suspended') DEFAULT 'active' AFTER classroom");
-        $pdo->exec("ALTER TABLE att_students ADD COLUMN status_note VARCHAR(255) NULL AFTER status");
-        $pdo->exec("CREATE INDEX idx_student_status ON att_students(status)");
-    }
-    
-    $chkMajor = $pdo->query("SHOW COLUMNS FROM att_students LIKE 'major'")->fetch();
-    if (!$chkMajor) {
-        $pdo->exec("ALTER TABLE att_students ADD COLUMN major VARCHAR(100) NULL AFTER classroom");
-    }
-
     $teachers   = $pdo->query("SELECT t.*, lu.username, lu.status as user_status, lu.last_login, COUNT(DISTINCT s.id) as s_count FROM att_teachers t LEFT JOIN llw_users lu ON lu.user_id = t.llw_user_id LEFT JOIN att_subjects s ON s.teacher_id = t.id GROUP BY t.id ORDER BY t.name")->fetchAll();
-    
+
     // Available users for linking (only those not already in att_teachers)
     $available_users = $pdo->query("
-        SELECT user_id, username, firstname, lastname 
-        FROM llw_users 
+        SELECT user_id, username, firstname, lastname
+        FROM llw_users
         WHERE user_id NOT IN (SELECT llw_user_id FROM att_teachers WHERE llw_user_id IS NOT NULL)
         ORDER BY firstname
     ")->fetchAll();
@@ -220,54 +207,66 @@ try {
 
     if (!$filter_cls) $filter_cls = $classrooms[0] ?? '';
 
-    // Students (filter by classroom and show only active by default)
-    $show_all = isset($_GET['show_all']) && $_GET['show_all'] == 1;
-    $status_filter = $show_all ? "" : " AND status='active'";
+    // Pre-fetch subject_codes once to avoid correlated subquery on every student row
+    $subjectCodes = $pdo->query("SELECT subject_code FROM att_subjects")->fetchAll(PDO::FETCH_COLUMN);
+    $excludeSql = empty($subjectCodes)
+        ? "1=1"
+        : "student_id NOT IN (" . implode(',', array_map(fn($c) => $pdo->quote($c), $subjectCodes)) . ")";
 
+    $show_all = isset($_GET['show_all']) && $_GET['show_all'] == 1;
     $filter_major = $_GET['major'] ?? '';
     $status_filter = $show_all ? "" : " AND status='active'";
     $major_filter = $filter_major === 'none' ? " AND (major IS NULL OR major = '')" : ($filter_major ? " AND major = " . $pdo->quote($filter_major) : "");
 
     if ($filter_cls) {
-        $sq = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) $status_filter $major_filter ORDER BY student_id");
+        $sq = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? AND student_id REGEXP '^[0-9]+$' AND $excludeSql $status_filter $major_filter ORDER BY student_id");
         $sq->execute([$filter_cls]);
         $all_students = $sq->fetchAll();
     } else {
-        $all_students = $pdo->query("SELECT * FROM att_students WHERE student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) $status_filter $major_filter ORDER BY classroom, student_id LIMIT 1000")->fetchAll();
+        $all_students = $pdo->query("SELECT * FROM att_students WHERE student_id REGEXP '^[0-9]+$' AND $excludeSql $status_filter $major_filter ORDER BY classroom, student_id LIMIT 1000")->fetchAll();
     }
 } catch (Exception $e) {
     $msg = "ระบบยังไม่พร้อมใช้งาน: กรุณารัน Migration ตาราง Attendance (" . $e->getMessage() . ")";
     $msgType = 'error';
 }
 
-// --- ส่วน Elective (ต้องการ migration ก่อน) ---
+// --- ส่วน Elective ---
 $migration_ready    = false;
 $elective_subjects  = [];
 $enrollments        = [];
 $all_students_by_class = [];
 try {
-    // ทดสอบว่า column is_elective มีอยู่แล้วไหม
-    $check_col = $pdo->query("SHOW COLUMNS FROM att_subjects LIKE 'is_elective'")->fetch();
-    if ($check_col) {
-        $migration_ready = true;
+    // Detect is_elective without SHOW COLUMNS: check the already-fetched subjects array,
+    // fall back to a lightweight column probe only when subjects table is empty.
+    if (!empty($subjects)) {
+        $migration_ready = array_key_exists('is_elective', $subjects[0]);
+    } else {
+        $colCheck = $pdo->query("SHOW COLUMNS FROM att_subjects LIKE 'is_elective'")->fetch();
+        $migration_ready = !empty($colCheck);
+    }
+
+    if ($migration_ready) {
         $elective_subjects = array_filter($subjects, function($s) {
             return !empty($s['is_elective']);
         });
 
-        // Enrollment per elective subject
-        foreach ($elective_subjects as $es) {
-            $e = $pdo->prepare("SELECT student_id FROM att_subject_students WHERE subject_id=?");
-            $e->execute([$es['id']]);
-            $enrollments[$es['id']] = $e->fetchAll(PDO::FETCH_COLUMN);
+        // Single query for all enrollments instead of N+1 loop
+        if (!empty($elective_subjects)) {
+            $eIds = array_values(array_column($elective_subjects, 'id'));
+            $ph   = implode(',', array_fill(0, count($eIds), '?'));
+            $eStmt = $pdo->prepare("SELECT subject_id, student_id FROM att_subject_students WHERE subject_id IN ($ph)");
+            $eStmt->execute($eIds);
+            foreach ($eStmt->fetchAll() as $row) {
+                $enrollments[$row['subject_id']][] = $row['student_id'];
+            }
         }
 
-        // นักเรียนทุกคน จัดกลุ่มตามห้อง
-        $all_rows = $pdo->query("SELECT * FROM att_students WHERE student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) ORDER BY classroom, student_id")->fetchAll();
+        // นักเรียน active จัดกลุ่มตามห้อง (reuse pre-fetched excludeSql)
+        $excludeSqlE = $excludeSql ?? "1=1";
+        $all_rows = $pdo->query("SELECT * FROM att_students WHERE student_id REGEXP '^[0-9]+$' AND $excludeSqlE AND status='active' ORDER BY classroom, student_id")->fetchAll();
         foreach ($all_rows as $row) {
             $all_students_by_class[$row['classroom']][] = $row;
         }
-    } else {
-        $migration_ready = false;
     }
 } catch (Exception $e) {
     $migration_ready = false;
