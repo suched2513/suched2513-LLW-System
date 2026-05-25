@@ -17,11 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'save') 
         $sub_id   = (int)$_POST['sub_id'];
         $grade    = $_POST['grade'] !== '' ? max(0, (float)$_POST['grade']) : null;
         $feedback = trim($_POST['feedback'] ?? '') ?: null;
-        $_chk = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'grade'")->fetch();
-        if ($_chk) {
-            $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, reviewed_at=NOW() WHERE id=?")
-                ->execute([$grade, $feedback, $sub_id]);
-        }
+        $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, reviewed_at=NOW() WHERE id=?")
+            ->execute([$grade, $feedback, $sub_id]);
         echo json_encode(['ok' => true]);
     } catch (Exception $e) {
         error_log($e->getMessage());
@@ -34,10 +31,8 @@ $subject_id  = (int)($_GET['subject_id'] ?? 0);
 $exercise_id = (int)($_GET['exercise_id'] ?? 0);
 $sel_class   = trim($_GET['class'] ?? '');
 
-$_has_tid = (bool)$pdo->query("SHOW COLUMNS FROM `lms_subjects` LIKE 'teacher_id'")->fetch();
-
 // Subjects accessible to this teacher
-if ($is_admin || !$_has_tid) {
+if ($is_admin) {
     $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
 } else {
     $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
@@ -77,11 +72,16 @@ if ($subject_id) {
     }
 }
 
-// Guard optional columns
-$_has_link    = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'link_url'")->fetch();
-$_lk_col      = $_has_link ? ', se.link_url' : ", '' AS link_url";
-$_has_grade   = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'grade'")->fetch();
-$_grade_cols  = $_has_grade ? ', se.grade, se.feedback, se.reviewed_at' : ", NULL AS grade, NULL AS feedback, NULL AS reviewed_at";
+$_lk_col     = ', se.link_url';
+$_grade_cols = ', se.grade, se.feedback, se.reviewed_at';
+
+// Pre-fetch enrolled count once to avoid N+1 in exercise list
+$enrolled_count = 0;
+if ($subject_id && $subject) {
+    $ec = $pdo->prepare("SELECT COUNT(*) FROM lms_subject_classrooms sc JOIN att_students st ON st.classroom=sc.classroom WHERE sc.subject_id=? AND st.status='active'");
+    $ec->execute([$subject_id]);
+    $enrolled_count = (int)$ec->fetchColumn();
+}
 
 if ($subject_id && $exercise_id) {
     $ex_stmt = $pdo->prepare("SELECT e.*, u.unit_name FROM lms_unit_exercises e JOIN lms_units u ON u.id=e.unit_id WHERE e.id=? AND u.subject_id=?");
@@ -179,11 +179,7 @@ require_once __DIR__ . '/../components/layout_start.php';
               <?=$pending?> รอ
             </span>
             <?php endif; ?>
-            <span class="text-[10px] opacity-70"><?=$e['sub_count']?>/<?php
-              // count enrolled
-              $enrolled = $pdo->prepare("SELECT COUNT(*) FROM lms_subject_classrooms sc JOIN att_students st ON st.classroom=sc.classroom WHERE sc.subject_id=? AND st.status='active'");
-              $enrolled->execute([$subject_id]); echo (int)$enrolled->fetchColumn();
-            ?></span>
+            <span class="text-[10px] opacity-70"><?=$e['sub_count']?>/<?=$enrolled_count?></span>
           </div>
         </a>
         <?php endforeach; ?>

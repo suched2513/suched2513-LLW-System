@@ -23,17 +23,51 @@ $st = $pdo->prepare("
 $st->execute([$class]);
 $subjects = $st->fetchAll();
 
-// Per-subject quick stats for each subject
+// Per-subject stats — batch queries instead of N+1 loop
 $subject_stats = [];
-foreach ($subjects as $subj) {
-    $sid = $subj['id'];
-    $pre = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
-    $pre->execute([$uid,$sid]); $pre_passed = $pre->fetch();
-    $post = $pdo->prepare("SELECT id FROM lms_student_post_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
-    $post->execute([$uid,$sid]); $post_passed = $post->fetch();
-    $uc = $pdo->prepare("SELECT COUNT(*) FROM lms_units WHERE subject_id=?"); $uc->execute([$sid]); $unit_count = (int)$uc->fetchColumn();
-    $subject_stats[$sid] = ['pre_passed'=>$pre_passed, 'post_passed'=>$post_passed, 'unit_count'=>$unit_count];
+$sids = array_column($subjects, 'id');
+if (!empty($sids)) {
+    $ph = implode(',', array_fill(0, count($sids), '?'));
+
+    $r = $pdo->prepare("SELECT DISTINCT subject_id FROM lms_student_pre_exam WHERE student_uid=? AND subject_id IN ($ph) AND passed=1");
+    $r->execute(array_merge([$uid], $sids));
+    $pre_done = array_flip($r->fetchAll(PDO::FETCH_COLUMN));
+
+    $r = $pdo->prepare("SELECT DISTINCT subject_id FROM lms_student_post_exam WHERE student_uid=? AND subject_id IN ($ph) AND passed=1");
+    $r->execute(array_merge([$uid], $sids));
+    $post_done = array_flip($r->fetchAll(PDO::FETCH_COLUMN));
+
+    $r = $pdo->prepare("SELECT subject_id, COUNT(*) cnt FROM lms_units WHERE subject_id IN ($ph) GROUP BY subject_id");
+    $r->execute($sids); $unit_map = array_column($r->fetchAll(), 'cnt', 'subject_id');
+
+    $r = $pdo->prepare("
+        SELECT u.subject_id, COUNT(e.id) total_ex,
+               SUM(CASE WHEN se.id IS NOT NULL THEN 1 ELSE 0 END) submitted_ex
+        FROM lms_units u
+        JOIN lms_unit_exercises e ON e.unit_id = u.id
+        LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.student_uid = ?
+        WHERE u.subject_id IN ($ph)
+        GROUP BY u.subject_id
+    ");
+    $r->execute(array_merge([$uid], $sids));
+    $ex_map = array_column($r->fetchAll(), null, 'subject_id');
+
+    foreach ($subjects as $subj) {
+        $sid = $subj['id'];
+        $ex  = $ex_map[$sid] ?? null;
+        $tot = (int)($ex['total_ex']    ?? 0);
+        $sub = (int)($ex['submitted_ex'] ?? 0);
+        $subject_stats[$sid] = [
+            'pre_passed'   => isset($pre_done[$sid]),
+            'post_passed'  => isset($post_done[$sid]),
+            'unit_count'   => (int)($unit_map[$sid] ?? 0),
+            'total_ex'     => $tot,
+            'pending_ex'   => max(0, $tot - $sub),
+            'progress_pct' => $tot > 0 ? round($sub / $tot * 100) : 0,
+        ];
+    }
 }
+$total_pending = array_sum(array_column($subject_stats, 'pending_ex'));
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
@@ -58,8 +92,15 @@ foreach ($subjects as $subj) {
       <p class="text-violet-200 text-xs font-bold"><?=htmlspecialchars($name,ENT_QUOTES,'UTF-8')?> · <?=htmlspecialchars($class,ENT_QUOTES,'UTF-8')?></p>
     </div>
   </div>
-  <div class="bg-white/15 rounded-2xl px-4 py-2.5 border border-white/20 text-sm font-bold">
-    <?=count($subjects)?> วิชา
+  <div class="flex gap-2">
+    <div class="bg-white/15 rounded-2xl px-4 py-2.5 border border-white/20 text-sm font-bold">
+      <?=count($subjects)?> วิชา
+    </div>
+    <?php if ($total_pending > 0): ?>
+    <div class="bg-amber-400/30 rounded-2xl px-4 py-2.5 border border-amber-200/30 text-sm font-bold">
+      <i class="bi bi-exclamation-circle-fill mr-1"></i><?=$total_pending?> งานค้าง
+    </div>
+    <?php endif; ?>
   </div>
 </div>
 
@@ -85,14 +126,33 @@ foreach ($subjects as $subj) {
         <?php endif; ?>
         <p class="text-xs text-slate-400 mt-1"><?=$stat['unit_count']?> หน่วยการเรียน</p>
       </div>
-      <?php if ($done): ?>
-      <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full flex-shrink-0"><i class="bi bi-check-circle-fill mr-1"></i>สำเร็จ</span>
-      <?php elseif ($stat['pre_passed']): ?>
-      <span class="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-black rounded-full flex-shrink-0">กำลังเรียน</span>
-      <?php else: ?>
-      <span class="px-2.5 py-1 bg-violet-100 text-violet-700 text-xs font-black rounded-full flex-shrink-0">ยังไม่เริ่ม</span>
-      <?php endif; ?>
+      <div class="flex flex-col items-end gap-1 flex-shrink-0">
+        <?php if ($done): ?>
+        <span class="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full"><i class="bi bi-check-circle-fill mr-1"></i>สำเร็จ</span>
+        <?php elseif ($stat['pre_passed']): ?>
+        <span class="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-black rounded-full">กำลังเรียน</span>
+        <?php else: ?>
+        <span class="px-2.5 py-1 bg-violet-100 text-violet-700 text-xs font-black rounded-full">ยังไม่เริ่ม</span>
+        <?php endif; ?>
+        <?php if ($stat['pending_ex'] > 0): ?>
+        <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full">
+          <i class="bi bi-exclamation-circle-fill mr-0.5"></i><?=$stat['pending_ex']?> งานค้าง
+        </span>
+        <?php endif; ?>
+      </div>
     </div>
+    <?php if ($stat['total_ex'] > 0): ?>
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-[10px] text-slate-400 font-bold">ส่งงานแล้ว</span>
+        <span class="text-[10px] font-black <?=$stat['progress_pct']>=100?'text-emerald-600':'text-violet-600'?>"><?=$stat['progress_pct']?>%</span>
+      </div>
+      <div class="w-full bg-slate-100 rounded-full h-1.5">
+        <div class="h-1.5 rounded-full <?=$stat['progress_pct']>=100?'bg-emerald-500':'bg-violet-500'?> transition-all"
+             style="width:<?=$stat['progress_pct']?>%"></div>
+      </div>
+    </div>
+    <?php endif; ?>
     <div class="flex gap-3 mt-3">
       <div class="flex items-center gap-1.5 text-xs <?=$stat['pre_passed']?'text-emerald-600':'text-slate-400'?>">
         <i class="bi bi-<?=$stat['pre_passed']?'check-circle-fill':'circle'?>"></i> ก่อนเรียน

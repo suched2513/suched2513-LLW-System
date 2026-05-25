@@ -8,9 +8,7 @@ $pdo        = getPdo();
 $is_admin   = $_SESSION['llw_role'] === 'super_admin';
 $teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
 
-$_has_tid = (bool)$pdo->query("SHOW COLUMNS FROM `lms_subjects` LIKE 'teacher_id'")->fetch();
-
-if ($_has_tid && !$is_admin) {
+if (!$is_admin) {
     $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
     $st->execute([$teacher_id]);
     $subjects = $st->fetchAll();
@@ -19,16 +17,43 @@ if ($_has_tid && !$is_admin) {
 }
 
 $subject_stats = [];
-foreach ($subjects as $subj) {
-    $sid = $subj['id'];
-    $st_units = $pdo->prepare("SELECT COUNT(*) FROM lms_units WHERE subject_id=?"); $st_units->execute([$sid]); $units = (int)$st_units->fetchColumn();
-    $st_preq  = $pdo->prepare("SELECT COUNT(*) FROM lms_pre_questions WHERE subject_id=?"); $st_preq->execute([$sid]); $pre_q = (int)$st_preq->fetchColumn();
-    $st_postq = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE subject_id=?"); $st_postq->execute([$sid]); $post_q = (int)$st_postq->fetchColumn();
-    $st_pre_pass = $pdo->prepare("SELECT COUNT(DISTINCT student_uid) FROM lms_student_pre_exam WHERE subject_id=? AND passed=1"); $st_pre_pass->execute([$sid]); $pre_pass = (int)$st_pre_pass->fetchColumn();
-    $st_post_pass = $pdo->prepare("SELECT COUNT(DISTINCT student_uid) FROM lms_student_post_exam WHERE subject_id=? AND passed=1"); $st_post_pass->execute([$sid]); $post_pass = (int)$st_post_pass->fetchColumn();
-    $st_cls = $pdo->prepare("SELECT GROUP_CONCAT(classroom ORDER BY classroom SEPARATOR ', ') FROM lms_subject_classrooms WHERE subject_id=?"); $st_cls->execute([$sid]); $classrooms = $st_cls->fetchColumn() ?: '—';
-    $st_cfg = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE subject_id=?"); $st_cfg->execute([$sid]); $cfg = $st_cfg->fetch();
-    $subject_stats[$sid] = compact('units','pre_q','post_q','pre_pass','post_pass','classrooms','cfg');
+$sids = array_column($subjects, 'id');
+if (!empty($sids)) {
+    $ph = implode(',', array_fill(0, count($sids), '?'));
+
+    $r = $pdo->prepare("SELECT subject_id, COUNT(*) cnt FROM lms_units WHERE subject_id IN ($ph) GROUP BY subject_id");
+    $r->execute($sids); $units_map = array_column($r->fetchAll(), 'cnt', 'subject_id');
+
+    $r = $pdo->prepare("SELECT subject_id, COUNT(*) cnt FROM lms_pre_questions WHERE subject_id IN ($ph) GROUP BY subject_id");
+    $r->execute($sids); $preq_map = array_column($r->fetchAll(), 'cnt', 'subject_id');
+
+    $r = $pdo->prepare("SELECT subject_id, COUNT(*) cnt FROM lms_post_questions WHERE subject_id IN ($ph) GROUP BY subject_id");
+    $r->execute($sids); $postq_map = array_column($r->fetchAll(), 'cnt', 'subject_id');
+
+    $r = $pdo->prepare("SELECT subject_id, COUNT(DISTINCT student_uid) cnt FROM lms_student_pre_exam WHERE subject_id IN ($ph) AND passed=1 GROUP BY subject_id");
+    $r->execute($sids); $pre_pass_map = array_column($r->fetchAll(), 'cnt', 'subject_id');
+
+    $r = $pdo->prepare("SELECT subject_id, COUNT(DISTINCT student_uid) cnt FROM lms_student_post_exam WHERE subject_id IN ($ph) AND passed=1 GROUP BY subject_id");
+    $r->execute($sids); $post_pass_map = array_column($r->fetchAll(), 'cnt', 'subject_id');
+
+    $r = $pdo->prepare("SELECT subject_id, GROUP_CONCAT(classroom ORDER BY classroom SEPARATOR ', ') cls FROM lms_subject_classrooms WHERE subject_id IN ($ph) GROUP BY subject_id");
+    $r->execute($sids); $cls_map = array_column($r->fetchAll(), 'cls', 'subject_id');
+
+    $r = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE subject_id IN ($ph)");
+    $r->execute($sids); $cfg_map = array_column($r->fetchAll(), null, 'subject_id');
+
+    foreach ($subjects as $subj) {
+        $sid = $subj['id'];
+        $subject_stats[$sid] = [
+            'units'      => (int)($units_map[$sid]     ?? 0),
+            'pre_q'      => (int)($preq_map[$sid]      ?? 0),
+            'post_q'     => (int)($postq_map[$sid]     ?? 0),
+            'pre_pass'   => (int)($pre_pass_map[$sid]  ?? 0),
+            'post_pass'  => (int)($post_pass_map[$sid] ?? 0),
+            'classrooms' => $cls_map[$sid] ?? '—',
+            'cfg'        => $cfg_map[$sid] ?? null,
+        ];
+    }
 }
 
 // students per classroom (across all active students for chart context)
