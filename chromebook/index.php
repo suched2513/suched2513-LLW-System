@@ -26,6 +26,10 @@ require_once '../components/layout_start.php';
     .inp:focus { border-color:#06b6d4; box-shadow:0 0 0 3px rgba(6,182,212,0.15); background:#fff; }
     .form-label { display:block; font-size:0.625rem; font-weight:900; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem; }
     tr.row-item:hover td { background:rgba(6,182,212,0.04); }
+    .tbl-scroll::-webkit-scrollbar { height: 6px; }
+    .tbl-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 99px; }
+    .tbl-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 99px; }
+    .tbl-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
 </style>
 
 <div class="flex flex-col gap-6">
@@ -122,17 +126,17 @@ require_once '../components/layout_start.php';
 
             <!-- Table -->
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto tbl-scroll pb-1">
                     <table class="min-w-[860px] w-full text-sm">
                         <thead class="bg-slate-50 text-xs font-black text-slate-400 uppercase tracking-widest">
                             <tr>
-                                <th class="px-5 py-4 text-left">สถานะ</th>
-                                <th class="px-5 py-4 text-left">ผู้ยืม / ห้อง</th>
-                                <th class="px-5 py-4 text-left">เครื่อง</th>
-                                <th class="px-5 py-4 text-left">วันที่</th>
-                                <th class="px-5 py-4 text-center">ตรวจสภาพ</th>
-                                <th class="px-5 py-4 text-center">รูป</th>
-                                <th class="px-5 py-4 text-right"></th>
+                                <th class="px-4 py-3 text-left">สถานะ</th>
+                                <th class="px-4 py-3 text-left">ผู้ยืม / ห้อง</th>
+                                <th class="px-4 py-3 text-left">เครื่อง</th>
+                                <th class="px-4 py-3 text-left">วันที่</th>
+                                <th class="px-4 py-3 text-center">ตรวจสภาพ</th>
+                                <th class="px-4 py-3 text-center">รูป</th>
+                                <th class="px-3 py-3 text-right"></th>
                             </tr>
                         </thead>
                         <tbody id="table-body" class="divide-y divide-slate-50">
@@ -448,16 +452,16 @@ function renderTable() {
                 ? `<span class="text-xs text-amber-500 font-black"><i class="bi bi-shield-exclamation"></i> ยังไม่ตรวจ</span>`
                 : `<span class="text-xs text-slate-300 font-bold">—</span>`);
         return `<tr class="hover:bg-slate-50/50 transition ${overdue?'bg-rose-50/30':''}">
-            <td class="px-5 py-4">
+            <td class="px-4 py-3">
                 <span class="px-2.5 py-1 rounded-full text-xs font-black ${isBorrowed?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700'}">${isBorrowed?'ยืมอยู่':'คืนแล้ว'}</span>
                 ${overdue?`<div class="text-xs font-black text-rose-500 mt-0.5"><i class="bi bi-exclamation-triangle-fill"></i> ค้าง ${Math.floor(daysAgo)} วัน</div>`:''}
             </td>
-            <td class="px-5 py-4"><p class="font-bold text-slate-700">${name}</p><p class="text-xs text-slate-400 font-bold">${r[3]||r[1]}</p></td>
-            <td class="px-5 py-4"><p class="font-mono font-black text-xs text-cyan-600">${r[4]}</p><p class="text-xs text-slate-300 font-bold">${r[5]}</p></td>
-            <td class="px-5 py-4 text-xs text-slate-400 font-bold">${dateStr}</td>
-            <td class="px-5 py-4 text-center">${inspectBadge}</td>
-            <td class="px-5 py-4 text-center">${imgHtml}</td>
-            <td class="px-5 py-4 text-right">
+            <td class="px-4 py-3"><p class="font-bold text-slate-700 text-sm">${name}</p><p class="text-xs text-slate-400 font-bold">${r[3]||r[1]}</p></td>
+            <td class="px-4 py-3"><p class="font-mono font-black text-xs text-cyan-600">${r[4]}</p><p class="text-xs text-slate-300 font-bold">${r[5]}</p></td>
+            <td class="px-4 py-3 text-xs text-slate-400 font-bold whitespace-nowrap">${dateStr}</td>
+            <td class="px-4 py-3 text-center">${inspectBadge}</td>
+            <td class="px-4 py-3 text-center">${imgHtml}</td>
+            <td class="px-3 py-3 text-right">
                 <div class="flex items-center justify-end gap-1">
                     <button onclick="openEdit('${r[0]}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition" title="แก้ไข/เพิ่มรูป"><i class="bi bi-pencil-square"></i></button>
                     ${isBorrowed
