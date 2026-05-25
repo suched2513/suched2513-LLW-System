@@ -26,6 +26,7 @@ elseif (strpos($full_url, '/student_leave/') !== false)   $activeSystem = 'stude
 elseif (strpos($full_url, '/duty/') !== false)            $activeSystem = 'duty';
 elseif (strpos($full_url, '/club/') !== false || strpos($full_url, '/student_club/') !== false) $activeSystem = 'club';
 elseif (strpos($full_url, '/lms/') !== false)             $activeSystem = 'lms';
+elseif (strpos($full_url, '/health/') !== false)           $activeSystem = 'health';
 elseif (strpos($full_url, '/parent_meeting/') !== false)   $activeSystem = 'parent_meeting';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
 
@@ -151,6 +152,12 @@ $subMenus = [
         ['icon' => 'fas fa-chalkboard-teacher',   'label' => 'จัดการรายชื่อครู', 'url' => $base_path . '/duty/admin/teachers.php', 'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-cog',                  'label' => 'ตั้งค่าระบบเวร',    'url' => $base_path . '/duty/admin/settings.php', 'roles' => ['super_admin']],
     ],
+    'health' => [
+        ['icon' => 'fas fa-heartbeat',       'label' => 'Dashboard สุขภาวะ',    'url' => $base_path . '/health/dashboard.php',  'roles' => ['super_admin']],
+        ['icon' => 'fas fa-plus-circle',     'label' => 'บันทึกข้อมูลสุขภาพ',  'url' => $base_path . '/health/record.php',     'roles' => ['super_admin']],
+        ['icon' => 'fas fa-users',           'label' => 'รายชื่อนักเรียน',      'url' => $base_path . '/health/students.php',   'roles' => ['super_admin']],
+        ['icon' => 'fas fa-table',           'label' => 'เกณฑ์มาตรฐาน',         'url' => $base_path . '/health/standards.php',  'roles' => ['super_admin']],
+    ],
     'parent_meeting' => [
         ['icon' => 'fas fa-tachometer-alt',  'label' => 'Dashboard',         'url' => $base_path . '/parent_meeting/dashboard.php'],
         ['icon' => 'fas fa-handshake',        'label' => 'บันทึกการประชุม (ลลว.)', 'url' => $base_path . '/parent_meeting/meetings.php', 'roles' => ['super_admin','att_teacher','wfh_staff','cb_admin','club_admin','bus_admin','bus_finance']],
@@ -260,6 +267,25 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
                         <i class="nav-icon fas fa-user-cog"></i>
                         <p>จัดการครูที่ปรึกษา</p>
                     </a>
+                </li>
+                <!-- Health -->
+                <li class="nav-item <?= $activeSystem === 'health' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'health' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-heartbeat" style="color:#10B981"></i>
+                        <p style="color:<?= $activeSystem === 'health' ? '#fff' : '#6ee7b7' ?>">สุขภาวะนักเรียน <i class="nav-arrow fas fa-angle-left"></i></p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <?php foreach ($subMenus['health'] as $sub):
+                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                        ?>
+                        <li class="nav-item">
+                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
+                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
+                                <p><?= $sub['label'] ?></p>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
                 </li>
                 <?php endif; ?>
 
