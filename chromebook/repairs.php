@@ -15,9 +15,11 @@ $repairs = [];
 $stats   = ['total' => 0, 'รับแจ้ง' => 0, 'ส่งซ่อม' => 0, 'ซ่อมเสร็จ' => 0, 'รับกลับ' => 0];
 
 if ($tableExists) {
+    $hasImgCol = !empty($pdo->query("SHOW COLUMNS FROM cb_repairs LIKE 'images'")->fetchAll());
+    $imgSql    = $hasImgCol ? 'r.images,' : "'' AS images,";
     $stmt = $pdo->query("
         SELECT r.id, r.borrow_log_id, r.chromebook_id, r.chromebook_serial,
-               r.description, r.images, r.status, r.repair_notes, r.reported_by,
+               r.description, {$imgSql} r.status, r.repair_notes, r.reported_by,
                r.created_at, r.updated_at,
                b.borrower_type, b.borrower_id, b.class_name,
                COALESCE(t.name, s.name, b.borrower_id) AS borrower_name

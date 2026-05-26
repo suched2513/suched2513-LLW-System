@@ -494,6 +494,7 @@ function renderRepairsTable() {
         <th class="px-4 py-3 text-left">Chromebook</th>
         <th class="px-4 py-3 text-left">ผู้ยืม</th>
         <th class="px-4 py-3 text-left">รายละเอียด</th>
+        <th class="px-4 py-3 text-center">รูป</th>
         <th class="px-4 py-3 text-left">วันที่แจ้ง</th>
         <th class="px-3 py-3 text-right"></th>
     `;
@@ -515,7 +516,12 @@ function renderRepairsTable() {
                 <p class="text-xs text-slate-300 font-bold">${r.chromebook_serial}</p>
             </td>
             <td class="px-4 py-3 text-sm font-bold text-slate-700">${borrowerName}${cls?`<span class="text-xs text-slate-400 font-bold ml-1">${cls}</span>`:''}</td>
-            <td class="px-4 py-3 text-xs text-slate-500 font-bold max-w-[200px] truncate" title="${r.description||''}">${r.description||'—'}</td>
+            <td class="px-4 py-3 text-xs text-slate-500 font-bold max-w-[160px] truncate" title="${r.description||''}">${r.description||'—'}</td>
+            <td class="px-4 py-3 text-center">${(()=>{
+                const imgs = r.images ? r.images.split(',').filter(Boolean) : [];
+                if (!imgs.length) return `<span class="text-slate-300 text-xs font-bold">—</span>`;
+                return `<div class="flex -space-x-2 justify-center">${imgs.slice(0,3).map(i=>`<img src="uploads/${i}" class="w-9 h-9 rounded-xl ring-2 ring-white object-cover cursor-pointer hover:z-10 hover:scale-110 transition" onclick="viewImg('uploads/${i}')">`).join('')}${imgs.length>3?`<div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 text-xs font-black flex items-center justify-center ring-2 ring-white">+${imgs.length-3}</div>`:''}</div>`;
+            })()}</td>
             <td class="px-4 py-3 text-xs text-slate-400 font-bold whitespace-nowrap">${fmtDate(r.created_at)}</td>
             <td class="px-3 py-3 text-right">
                 <div class="flex items-center justify-end gap-1">
@@ -525,7 +531,7 @@ function renderRepairsTable() {
                 </div>
             </td>
         </tr>`;
-    }).join('') : `<tr><td colspan="6" class="text-center py-16 text-slate-400 font-bold">ไม่มีรายการซ่อม</td></tr>`;
+    }).join('') : `<tr><td colspan="7" class="text-center py-16 text-slate-400 font-bold">ไม่มีรายการซ่อม</td></tr>`;
 
     // Pagination
     let pg = '';
