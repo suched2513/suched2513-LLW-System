@@ -84,8 +84,9 @@ $subMenus = [
         ['icon' => 'fas fa-id-card',        'label' => 'จัดการเลขบัตรประชาชน', 'url' => $base_path . '/student/admin/manage_nid.php', 'roles' => ['super_admin','wfh_admin']],
     ],
     'chromebook' => [
-        ['icon' => 'fas fa-tachometer-alt',  'label' => 'Dashboard',  'url' => $base_path . '/chromebook/index.php'],
-        ['icon' => 'fas fa-exchange-alt',    'label' => 'ยืม-คืนอุปกรณ์',   'url' => $base_path . '/chromebook/dashboard.php'],
+        ['icon' => 'fas fa-tachometer-alt',  'label' => 'Dashboard',       'url' => $base_path . '/chromebook/index.php'],
+        ['icon' => 'fas fa-exchange-alt',    'label' => 'ยืม-คืนอุปกรณ์',  'url' => $base_path . '/chromebook/dashboard.php'],
+        ['icon' => 'fas fa-tools',           'label' => 'ติดตามการซ่อม',  'url' => $base_path . '/chromebook/repairs.php'],
     ],
     'wfh' => [
         ['icon' => 'fas fa-tachometer-alt', 'label' => 'Admin Dashboard',  'url' => $base_path . '/admin/dashboard.php',  'roles' => ['super_admin','wfh_admin']],

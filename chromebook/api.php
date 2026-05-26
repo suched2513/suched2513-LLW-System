@@ -222,6 +222,56 @@ try {
             ok();
             break;
 
+        // ── REPAIRS ──────────────────────────────────────────
+        case 'getRepairs':
+            $stmt = $pdo->query("
+                SELECT r.id, r.borrow_log_id, r.chromebook_id, r.chromebook_serial,
+                       r.description, r.status, r.repair_notes, r.reported_by,
+                       r.created_at, r.updated_at,
+                       b.borrower_type, b.borrower_id, b.class_name
+                FROM cb_repairs r
+                LEFT JOIN cb_borrow_logs b ON b.entry_id = r.borrow_log_id
+                ORDER BY FIELD(r.status,'รับแจ้ง','ส่งซ่อม','ซ่อมเสร็จ','รับกลับ'), r.created_at DESC
+            ");
+            ok($stmt->fetchAll(PDO::FETCH_ASSOC));
+            break;
+
+        case 'addRepair':
+            $borrowLogId = (int)($payload['borrowLogId'] ?? 0);
+            $desc        = trim($payload['description']  ?? '');
+            if (!$borrowLogId) err('ข้อมูลไม่ครบ');
+
+            $stmt = $pdo->prepare("SELECT chromebook_id, chromebook_serial FROM cb_borrow_logs WHERE entry_id=?");
+            $stmt->execute([$borrowLogId]);
+            $log = $stmt->fetch();
+            if (!$log) err('ไม่พบรายการยืม');
+
+            $reporter = $_SESSION['fullname'] ?? $_SESSION['username'] ?? '';
+            $pdo->prepare("
+                INSERT INTO cb_repairs (borrow_log_id, chromebook_id, chromebook_serial, description, reported_by)
+                VALUES (?,?,?,?,?)
+            ")->execute([$borrowLogId, $log['chromebook_id'], $log['chromebook_serial'], $desc, $reporter]);
+            ok(['repair_id' => (int)$pdo->lastInsertId()]);
+            break;
+
+        case 'updateRepairStatus':
+            $id     = (int)($payload['repairId'] ?? 0);
+            $status = $payload['status']      ?? '';
+            $notes  = trim($payload['notes']  ?? '');
+            $allowed = ['รับแจ้ง','ส่งซ่อม','ซ่อมเสร็จ','รับกลับ'];
+            if (!$id || !in_array($status, $allowed)) err('ข้อมูลไม่ถูกต้อง');
+            $pdo->prepare("UPDATE cb_repairs SET status=?, repair_notes=? WHERE id=?")
+                ->execute([$status, $notes, $id]);
+            ok();
+            break;
+
+        case 'deleteRepair':
+            $id = (int)($payload['repairId'] ?? 0);
+            if (!$id) err('ข้อมูลไม่ครบ');
+            $pdo->prepare("DELETE FROM cb_repairs WHERE id=?")->execute([$id]);
+            ok();
+            break;
+
         // ── CSV IMPORT ────────────────────────────────────────
         case 'importCSV':
             $type = $payload['type'] ?? '';

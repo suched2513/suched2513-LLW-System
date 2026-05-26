@@ -36,7 +36,7 @@ require_once '../components/layout_start.php';
 <div class="flex flex-col gap-6">
 
     <!-- KPI Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4" id="kpi-cards">
+    <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4" id="kpi-cards">
         <div class="col-span-full">
             <div class="bg-gradient-to-r from-cyan-600 to-blue-600 rounded-2xl p-8 flex items-center justify-center gap-3">
                 <i class="bi bi-arrow-repeat spin text-white text-xl"></i>
@@ -352,7 +352,7 @@ require_once '../components/layout_start.php';
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 // ── State ───────────────────────────────────────────────────────
-const S = { logs:[], teachers:[], students:[], chromebooks:[], page:1, limit:15, tab:'all' };
+const S = { logs:[], teachers:[], students:[], chromebooks:[], repairs:[], page:1, limit:15, tab:'all' };
 let qrScanner = null;
 
 // ── API ─────────────────────────────────────────────────────────
@@ -365,16 +365,18 @@ async function api(action, payload={}) {
 }
 
 async function loadAll() {
-    const [logs, teachers, students, chromebooks] = await Promise.all([
+    const [logs, teachers, students, chromebooks, repairs] = await Promise.all([
         api('getData',{sheetName:'BorrowLog'}),
         api('getData',{sheetName:'Teachers'}),
         api('getData',{sheetName:'Students'}),
-        api('getData',{sheetName:'Chromebooks'})
+        api('getData',{sheetName:'Chromebooks'}),
+        api('getRepairs',{})
     ]);
     if (logs.success)        S.logs        = logs.data;
     if (teachers.success)    S.teachers    = teachers.data;
     if (students.success)    S.students    = students.data;
     if (chromebooks.success) S.chromebooks = chromebooks.data;
+    if (repairs.success)     S.repairs     = repairs.data;
     renderKPI(); renderTabs(); renderTable(); renderDropdowns();
 }
 
@@ -401,16 +403,18 @@ function renderKPI() {
     const borrowed  = S.logs.filter(r=>r[7]==='Borrowed').length;
     const available = S.chromebooks.length - borrowed;
     const now = new Date();
-    const overdue = S.logs.filter(r=>r[7]==='Borrowed'&&(now-new Date(r[8]))/(864e5)>2).length;
+    const overdue   = S.logs.filter(r=>r[7]==='Borrowed'&&(now-new Date(r[8]))/(864e5)>2).length;
+    const inRepair  = S.repairs.filter(r=>r.status!=='รับกลับ').length;
     const cards = [
-        {label:'อุปกรณ์ทั้งหมด', val:S.chromebooks.length, icon:'bi-laptop',                  grad:'from-cyan-500 to-blue-600',    shadow:'shadow-cyan-200/50'},
-        {label:'กำลังยืมอยู่',   val:borrowed,              icon:'bi-hand-index-thumb-fill',   grad:'from-amber-400 to-orange-500', shadow:'shadow-amber-200/50'},
-        {label:'ว่างพร้อมใช้',   val:available,             icon:'bi-check-circle-fill',        grad:'from-emerald-500 to-teal-500', shadow:'shadow-emerald-200/50'},
-        {label:'ค้างคืน >2 วัน', val:overdue,               icon:'bi-exclamation-triangle-fill', grad:'from-rose-500 to-pink-600',    shadow:'shadow-rose-200/50'},
-        {label:'ครูในระบบ',      val:S.teachers.length,     icon:'bi-person-badge-fill',        grad:'from-violet-500 to-purple-600',shadow:'shadow-violet-200/50'},
+        {label:'อุปกรณ์ทั้งหมด',  val:S.chromebooks.length, icon:'bi-laptop',                   grad:'from-cyan-500 to-blue-600',    shadow:'shadow-cyan-200/50'},
+        {label:'กำลังยืมอยู่',    val:borrowed,              icon:'bi-hand-index-thumb-fill',    grad:'from-amber-400 to-orange-500', shadow:'shadow-amber-200/50'},
+        {label:'ว่างพร้อมใช้',    val:available,             icon:'bi-check-circle-fill',         grad:'from-emerald-500 to-teal-500', shadow:'shadow-emerald-200/50'},
+        {label:'ค้างคืน >2 วัน',  val:overdue,               icon:'bi-exclamation-triangle-fill', grad:'from-rose-500 to-pink-600',    shadow:'shadow-rose-200/50'},
+        {label:'อยู่ระหว่างซ่อม', val:inRepair,              icon:'bi-tools',                    grad:'from-orange-500 to-red-600',   shadow:'shadow-orange-200/50', clickable:true},
+        {label:'ครูในระบบ',       val:S.teachers.length,     icon:'bi-person-badge-fill',         grad:'from-violet-500 to-purple-600',shadow:'shadow-violet-200/50'},
     ];
     document.getElementById('kpi-cards').innerHTML = cards.map(c=>`
-        <div class="kpi-card bg-gradient-to-br ${c.grad} shadow-xl ${c.shadow}">
+        <div class="kpi-card bg-gradient-to-br ${c.grad} shadow-xl ${c.shadow}${c.clickable?' cursor-pointer':''}"${c.clickable?' onclick="setTab(\'repairs\')"':''}>
             <p class="text-xs font-black uppercase tracking-widest opacity-80 mb-1">${c.label}</p>
             <p class="text-4xl font-black tracking-tight">${c.val}</p>
             <i class="bi ${c.icon} kpi-icon"></i>
@@ -420,20 +424,162 @@ function renderKPI() {
 // ── Tabs ─────────────────────────────────────────────────────────
 function renderTabs() {
     const classes = [...new Set(S.logs.filter(r=>r[1]==='Student').map(r=>r[3]).filter(Boolean))].sort();
-    const tabs = [{key:'all',label:'🗂 ทั้งหมด'},{key:'Teacher',label:'👤 ครู'},...classes.map(c=>({key:c,label:c}))];
+    const inRepair = S.repairs.filter(r=>r.status!=='รับกลับ').length;
+    const tabs = [
+        {key:'all',label:'🗂 ทั้งหมด'},
+        {key:'Teacher',label:'👤 ครู'},
+        ...classes.map(c=>({key:c,label:c})),
+        {key:'repairs', label:`🔧 ซ่อม${inRepair>0?` <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-white/30 text-xs font-black">${inRepair}</span>`:''}`, isRepairs:true},
+    ];
     document.getElementById('tabs-row').innerHTML = tabs.map(t=>`
         <button onclick="setTab('${t.key}')" data-tab="${t.key}"
             class="tab-btn px-3 py-1.5 rounded-xl text-sm font-black transition-all ${
                 S.tab===t.key
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-200/50 scale-105'
+                    ? (t.isRepairs ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-md shadow-orange-200/50 scale-105'
+                                   : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-200/50 scale-105')
                     : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
             }">${t.label}</button>
     `).join('');
 }
 function setTab(t) { S.tab=t; S.page=1; renderTabs(); renderTable(); }
 
+// ── Repairs Table ─────────────────────────────────────────────────
+function renderRepairsTable() {
+    const statusColors = {
+        'รับแจ้ง':   'bg-amber-100 text-amber-700',
+        'ส่งซ่อม':   'bg-blue-100 text-blue-700',
+        'ซ่อมเสร็จ': 'bg-emerald-100 text-emerald-700',
+        'รับกลับ':   'bg-slate-100 text-slate-500',
+    };
+    const data = S.repairs;
+    const total = data.length;
+    const totalPages = Math.max(1, Math.ceil(total / S.limit));
+    S.page = Math.min(S.page, totalPages);
+    const slice = data.slice((S.page-1)*S.limit, S.page*S.limit);
+
+    document.getElementById('page-info').textContent = `${total} รายการซ่อม`;
+
+    // Swap thead
+    document.querySelector('#table-body').closest('table').querySelector('thead tr').innerHTML = `
+        <th class="px-4 py-3 text-left">สถานะ</th>
+        <th class="px-4 py-3 text-left">Chromebook</th>
+        <th class="px-4 py-3 text-left">ผู้ยืม</th>
+        <th class="px-4 py-3 text-left">รายละเอียด</th>
+        <th class="px-4 py-3 text-left">วันที่แจ้ง</th>
+        <th class="px-3 py-3 text-right"></th>
+    `;
+
+    document.getElementById('table-body').innerHTML = slice.length ? slice.map(r => {
+        const color = statusColors[r.status] || 'bg-slate-100 text-slate-500';
+        const borrowerName = getBorrowerName(r.borrower_type, r.borrower_id);
+        const cls = r.class_name ? ` (${r.class_name})` : '';
+        const statusFlow = ['รับแจ้ง','ส่งซ่อม','ซ่อมเสร็จ','รับกลับ'];
+        const curIdx = statusFlow.indexOf(r.status);
+        const nextStatus = curIdx < statusFlow.length-1 ? statusFlow[curIdx+1] : null;
+        const isDone = r.status === 'รับกลับ';
+        return `<tr class="hover:bg-slate-50/50 transition ${isDone?'opacity-60':''}">
+            <td class="px-4 py-3">
+                <span class="px-2.5 py-1 rounded-full text-xs font-black ${color}">${r.status}</span>
+            </td>
+            <td class="px-4 py-3">
+                <p class="font-mono font-black text-xs text-cyan-600">${r.chromebook_id}</p>
+                <p class="text-xs text-slate-300 font-bold">${r.chromebook_serial}</p>
+            </td>
+            <td class="px-4 py-3 text-sm font-bold text-slate-700">${borrowerName}${cls?`<span class="text-xs text-slate-400 font-bold ml-1">${cls}</span>`:''}</td>
+            <td class="px-4 py-3 text-xs text-slate-500 font-bold max-w-[200px] truncate" title="${r.description||''}">${r.description||'—'}</td>
+            <td class="px-4 py-3 text-xs text-slate-400 font-bold whitespace-nowrap">${fmtDate(r.created_at)}</td>
+            <td class="px-3 py-3 text-right">
+                <div class="flex items-center justify-end gap-1">
+                    ${nextStatus ? `<button onclick="advanceRepair(${r.id},'${nextStatus}')" class="px-2.5 py-1.5 text-xs font-black bg-cyan-50 text-cyan-700 hover:bg-cyan-100 rounded-xl transition flex items-center gap-1"><i class="bi bi-arrow-right-circle"></i> ${nextStatus}</button>` : ''}
+                    <button onclick="openRepairDetail(${r.id})" class="p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition" title="แก้ไขหมายเหตุ"><i class="bi bi-pencil-square"></i></button>
+                    <button onclick="doDeleteRepair(${r.id})" class="p-2 text-rose-400 hover:bg-rose-50 rounded-xl transition" title="ลบ"><i class="bi bi-trash3"></i></button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('') : `<tr><td colspan="6" class="text-center py-16 text-slate-400 font-bold">ไม่มีรายการซ่อม</td></tr>`;
+
+    // Pagination
+    let pg = '';
+    const tp = Math.ceil(total / S.limit);
+    for(let i=1;i<=tp;i++){
+        if(tp>8&&i!==1&&i!==tp&&Math.abs(i-S.page)>2){if(!pg.endsWith('</span>'))pg+=`<span class="px-1 text-slate-200">…</span>`;continue;}
+        pg+=`<button onclick="S.page=${i};renderTable()" class="w-8 h-8 rounded-xl text-xs font-black transition-all ${i===S.page?'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-md':'bg-slate-100 text-slate-500 hover:bg-slate-200'}">${i}</button>`;
+    }
+    document.getElementById('pagination').innerHTML = pg;
+}
+
+function getBorrowerName(type, id) {
+    if (!type || !id) return '—';
+    if (type === 'Teacher') { const t = S.teachers.find(x=>normId(x[0])===normId(id)); return t?t[1]:id; }
+    const s = S.students.find(x=>normId(x[0])===normId(id)); return s?s[1]:id;
+}
+
+async function advanceRepair(id, nextStatus) {
+    const { isConfirmed, value } = await Swal.fire({
+        title: `เปลี่ยนสถานะเป็น "${nextStatus}"?`,
+        input: 'textarea',
+        inputLabel: 'หมายเหตุ (ถ้ามี)',
+        inputPlaceholder: 'เช่น ส่งร้านซ่อมแล้ว, ได้รับเครื่องคืนแล้ว...',
+        showCancelButton: true,
+        confirmButtonColor: '#0891b2',
+        confirmButtonText: 'ยืนยัน',
+        cancelButtonText: 'ยกเลิก'
+    });
+    if (!isConfirmed) return;
+    const res = await api('updateRepairStatus', {repairId: id, status: nextStatus, notes: value||''});
+    if (res.success) {
+        Swal.fire({icon:'success', title:'อัปเดตสถานะแล้ว', timer:1400, showConfirmButton:false});
+        loadAll();
+    } else Swal.fire('ผิดพลาด', res.error, 'error');
+}
+
+async function openRepairDetail(id) {
+    const rep = S.repairs.find(r=>r.id===id); if (!rep) return;
+    const statusFlow = ['รับแจ้ง','ส่งซ่อม','ซ่อมเสร็จ','รับกลับ'];
+    const { isConfirmed, value } = await Swal.fire({
+        title: `แก้ไขรายการซ่อม #${id}`,
+        html: `<select id="swal-status" class="swal2-input" style="display:block;width:calc(100% - 2em);margin:.4em auto">
+            ${statusFlow.map(s=>`<option value="${s}"${rep.status===s?' selected':''}>${s}</option>`).join('')}
+        </select>
+        <textarea id="swal-notes" class="swal2-textarea" placeholder="หมายเหตุการซ่อม...">${rep.repair_notes||''}</textarea>`,
+        showCancelButton: true,
+        confirmButtonColor: '#0891b2',
+        confirmButtonText: 'บันทึก',
+        cancelButtonText: 'ยกเลิก',
+        preConfirm: () => ({
+            status: document.getElementById('swal-status').value,
+            notes:  document.getElementById('swal-notes').value
+        })
+    });
+    if (!isConfirmed) return;
+    const res = await api('updateRepairStatus', {repairId: id, status: value.status, notes: value.notes});
+    if (res.success) {
+        Swal.fire({icon:'success', title:'บันทึกแล้ว', timer:1200, showConfirmButton:false});
+        loadAll();
+    } else Swal.fire('ผิดพลาด', res.error, 'error');
+}
+
+async function doDeleteRepair(id) {
+    const r = await Swal.fire({title:'ลบรายการซ่อมนี้?', icon:'warning', showCancelButton:true, confirmButtonColor:'#e11d48', confirmButtonText:'ลบ', cancelButtonText:'ยกเลิก'});
+    if (!r.isConfirmed) return;
+    const res = await api('deleteRepair', {repairId: id});
+    if (res.success) { Swal.fire({icon:'success', title:'ลบแล้ว', timer:1200, showConfirmButton:false}); loadAll(); }
+    else Swal.fire('ผิดพลาด', res.error, 'error');
+}
+
 // ── Table ────────────────────────────────────────────────────────
 function renderTable() {
+    if (S.tab === 'repairs') { renderRepairsTable(); return; }
+    // Restore normal table header if we were in repairs mode
+    document.querySelector('#table-body').closest('table').querySelector('thead tr').innerHTML = `
+        <th class="px-4 py-3 text-left">สถานะ</th>
+        <th class="px-4 py-3 text-left">ผู้ยืม / ห้อง</th>
+        <th class="px-4 py-3 text-left">เครื่อง</th>
+        <th class="px-4 py-3 text-left">วันที่</th>
+        <th class="px-4 py-3 text-center">ตรวจสภาพ</th>
+        <th class="px-4 py-3 text-center">รูป</th>
+        <th class="px-3 py-3 text-right"></th>
+    `;
     const q = document.getElementById('search-inp').value.toLowerCase();
     const data = S.logs.filter(r=>{
         const matchTab = S.tab==='all'||r[1]==='Teacher'&&S.tab==='Teacher'||r[3]===S.tab;
@@ -475,6 +621,7 @@ function renderTable() {
             <td class="px-4 py-3 text-center">${imgHtml}</td>
             <td class="px-3 py-3 text-right">
                 <div class="flex items-center justify-end gap-1">
+                    ${(()=>{ const hasRepair = S.repairs.some(rep=>String(rep.borrow_log_id)===String(r[0])&&rep.status!=='รับกลับ'); return hasRepair?`<span class="px-2 py-1 rounded-lg bg-orange-100 text-orange-600 text-xs font-black flex items-center gap-1"><i class="bi bi-tools"></i>ซ่อม</span>`:''; })()}
                     <button onclick="openEdit('${r[0]}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition" title="แก้ไข/เพิ่มรูป"><i class="bi bi-pencil-square"></i></button>
                     ${isBorrowed
                         ? `<button onclick="openReassign('${r[0]}')" class="p-2 text-amber-500 hover:bg-amber-50 rounded-xl transition" title="เปลี่ยนผู้ถือเครื่อง"><i class="bi bi-person-fill-gear"></i></button>
@@ -482,6 +629,7 @@ function renderTable() {
                     <button onclick="doReturn('${r[0]}')" class="p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition" title="คืนเครื่อง (ข้ามการตรวจ)"><i class="bi bi-box-arrow-in-left"></i></button>`
                         : `<button onclick="openInspect('${r[0]}')" class="p-2 text-indigo-400 hover:bg-indigo-50 rounded-xl transition" title="เพิ่มบันทึกตรวจสภาพ"><i class="bi bi-shield-plus"></i></button>`
                     }
+                    <button onclick="quickAddRepair('${r[0]}')" class="p-2 text-orange-400 hover:bg-orange-50 rounded-xl transition" title="แจ้งซ่อม"><i class="bi bi-tools"></i></button>
                     <button onclick="doDelete('${r[0]}')" class="p-2 text-rose-400 hover:bg-rose-50 rounded-xl transition" title="ลบ"><i class="bi bi-trash3"></i></button>
                 </div>
             </td>
@@ -496,6 +644,26 @@ function renderTable() {
         pg+=`<button onclick="S.page=${i};renderTable()" class="w-8 h-8 rounded-xl text-xs font-black transition-all ${i===S.page?'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md':'bg-slate-100 text-slate-500 hover:bg-slate-200'}">${i}</button>`;
     }
     document.getElementById('pagination').innerHTML = pg;
+}
+
+async function quickAddRepair(entryId) {
+    const { isConfirmed, value } = await Swal.fire({
+        title: 'แจ้งซ่อม Chromebook',
+        input: 'textarea',
+        inputLabel: 'รายละเอียดความเสียหาย',
+        inputPlaceholder: 'เช่น หน้าจอร้าว, คีย์บอร์ดหลุด, แบตเสื่อม...',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: '<i class="bi bi-tools mr-1"></i> แจ้งซ่อม',
+        cancelButtonText: 'ยกเลิก'
+    });
+    if (!isConfirmed) return;
+    const res = await api('addRepair', {borrowLogId: entryId, description: value||''});
+    if (res.success) {
+        Swal.fire({icon:'success', title:'แจ้งซ่อมแล้ว', timer:1400, showConfirmButton:false});
+        loadAll();
+    } else Swal.fire('ผิดพลาด', res.error, 'error');
 }
 
 // ── Borrow Form ───────────────────────────────────────────────────
@@ -636,6 +804,8 @@ document.getElementById('inspect-form').addEventListener('submit', async e=>{
         imageBlobs: blobs
     });
     if(res.success){
+        const condition = document.getElementById('inspect-cond').value;
+        const inspectNotes = document.getElementById('inspect-notes').value;
         if(_inspectReturnMode){
             const retRes = await api('returnBorrow',{entryId});
             Swal.fire({
@@ -647,7 +817,31 @@ document.getElementById('inspect-form').addEventListener('submit', async e=>{
         } else {
             Swal.fire({icon:'success',title:'บันทึกการตรวจสอบแล้ว',timer:1400,showConfirmButton:false});
         }
-        closeModal('modal-inspect'); loadAll();
+        closeModal('modal-inspect');
+        // Prompt repair if damaged
+        if (condition === 'Damaged') {
+            const alreadyHasRepair = S.repairs.some(r => String(r.borrow_log_id) === String(entryId) && r.status !== 'รับกลับ');
+            if (!alreadyHasRepair) {
+                const { isConfirmed, value } = await Swal.fire({
+                    title: '⚠️ เครื่องชำรุด',
+                    html: 'ต้องการ<b>แจ้งซ่อม</b>เครื่องนี้ด้วยหรือไม่?',
+                    input: 'textarea',
+                    inputLabel: 'รายละเอียดความเสียหาย',
+                    inputValue: inspectNotes,
+                    inputPlaceholder: 'เช่น หน้าจอร้าว, คีย์บอร์ดหลุด...',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc2626',
+                    confirmButtonText: '<i class="bi bi-tools mr-1"></i> แจ้งซ่อม',
+                    cancelButtonText: 'ไม่ต้องการ'
+                });
+                if (isConfirmed) {
+                    await api('addRepair', {borrowLogId: entryId, description: value||''});
+                    Swal.fire({icon:'success', title:'แจ้งซ่อมแล้ว', timer:1400, showConfirmButton:false});
+                }
+            }
+        }
+        loadAll();
     } else Swal.fire('ผิดพลาด',res.error,'error');
     btn.disabled=false; btn.innerHTML=origHtml;
 });
