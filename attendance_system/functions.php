@@ -98,7 +98,7 @@ function checkLogin() {
 function checkAdmin() {
     global $base_path;
     checkLogin();
-    if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+    if ($_SESSION['llw_role'] !== 'super_admin') {
         header('Location: ' . $base_path . '/attendance_system/dashboard.php');
         exit();
     }

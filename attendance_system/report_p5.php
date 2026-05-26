@@ -6,7 +6,7 @@ $teacher_id = $_SESSION['teacher_id'];
 $pageTitle   = 'รายงาน ปพ.5';
 $pageSubtitle = 'บันทึกเวลาเรียนรายคาบ';
 
-$isAdmin  = in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin']);
+$isAdmin  = $_SESSION['llw_role'] === 'super_admin';
 $subjects = getTeacherSubjects($isAdmin ? 0 : (int)$teacher_id, $pdo);
 
 $sid         = (int)($_GET['subject_id'] ?? 0);

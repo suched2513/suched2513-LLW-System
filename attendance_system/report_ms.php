@@ -6,7 +6,7 @@
 session_start();
 require_once 'functions.php';
 
-if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+if (($_SESSION['llw_role'] ?? '') !== 'super_admin') {
     header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI'])); exit();
 }
 

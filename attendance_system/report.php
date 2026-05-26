@@ -7,7 +7,7 @@ $pageTitle = 'สรุปภาพรวมรายวิชา';
 $pageSubtitle = 'สรุปยอดรวมสถานะการเช็คชื่อแยกตามนักเรียน';
 
 // Admin เห็นทุกวิชา
-$subject_filter_tid = in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin']) ? 0 : (int)$teacher_id;
+$subject_filter_tid = $_SESSION['llw_role'] === 'super_admin' ? 0 : (int)$teacher_id;
 $subjects = getTeacherSubjects($subject_filter_tid, $pdo);
 $selected_subject_id = $_GET['subject_id'] ?? '';
 $start_date = $_GET['start_date'] ?? date('Y-m-01');

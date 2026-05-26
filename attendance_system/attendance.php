@@ -9,7 +9,7 @@ $teacher_id = $_SESSION['teacher_id'];
 // 1. $save_teacher_id → teacher_id จริงจาก session ใช้ตอน save (ต้อง exist ใน att_teachers)
 // 2. $subject_filter_tid → 0 สำหรับ admin เพื่อ bypass filter ใน getTeacherSubjects
 $save_teacher_id = (int)$_SESSION['teacher_id'];
-$subject_filter_tid = in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])
+$subject_filter_tid = $_SESSION['llw_role'] === 'super_admin'
     ? 0
     : $save_teacher_id;
 
