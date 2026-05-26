@@ -307,6 +307,18 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
         </div>
     </a>
 
+    <!-- Chromebook -->
+    <a href="/student/chromebook.php"
+       class="bg-white rounded-3xl p-4 shadow-sm border border-cyan-100 active:scale-95 transition-transform flex flex-col gap-3">
+        <div class="w-12 h-12 bg-cyan-50 rounded-2xl flex items-center justify-center">
+            <i class="bi bi-laptop text-cyan-500 text-2xl"></i>
+        </div>
+        <div>
+            <p class="font-black text-slate-700 text-sm leading-tight">Chromebook</p>
+            <p class="text-cyan-500 text-sm font-bold mt-0.5">สถานะเครื่อง</p>
+        </div>
+    </a>
+
 </div>
 
 <!-- ── Second row: ใบลา + ชุมนุม (coming soon) ─────────────────── -->
