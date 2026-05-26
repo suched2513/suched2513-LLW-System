@@ -45,119 +45,148 @@ require_once '../components/layout_start.php';
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- Borrow Form -->
-        <div class="lg:col-span-1">
-            <div class="rounded-2xl overflow-hidden shadow-xl shadow-cyan-100/50 sticky top-28">
-                <!-- Card Header Gradient -->
-                <div class="bg-gradient-to-br from-cyan-500 to-blue-600 px-6 pt-6 pb-10 relative overflow-hidden">
-                    <div class="absolute inset-0 opacity-10" style="background-image:radial-gradient(circle at 80% 20%, white 1px, transparent 1px); background-size:20px 20px;"></div>
-                    <div class="relative z-10">
-                        <div class="w-11 h-11 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-white text-xl mb-3">
-                            <i class="bi bi-laptop"></i>
-                        </div>
-                        <h3 class="font-black text-white text-lg leading-tight">บันทึกการยืม</h3>
-                        <p class="text-cyan-100 text-xs font-bold mt-0.5">กรอกข้อมูลผู้ยืม Chromebook</p>
-                    </div>
-                </div>
-                <!-- Form Body -->
-                <div class="bg-white px-6 pb-6 -mt-4 rounded-t-3xl relative z-10">
-                    <form id="borrow-form" class="space-y-4 pt-5">
-                        <div>
-                            <label class="form-label">ประเภทผู้ยืม</label>
-                            <select id="borrower-type" class="inp" required>
-                                <option value="" disabled selected>— เลือก —</option>
-                                <option value="Teacher">👤 ครู</option>
-                                <option value="Student">🎓 นักเรียน</option>
-                            </select>
-                        </div>
-                        <div id="cls-wrap" class="hidden">
-                            <label class="form-label">ชั้นเรียน</label>
-                            <select id="class-select" class="inp"></select>
-                        </div>
-                        <div id="borrower-wrap" class="hidden">
-                            <label class="form-label" id="borrower-label">ชื่อผู้ยืม</label>
-                            <select id="borrower-id" class="inp" required></select>
-                        </div>
-                        <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <label class="form-label mb-0">Chromebook</label>
-                                <button type="button" onclick="openScanner()" class="text-xs font-black text-cyan-600 bg-cyan-50 border border-cyan-100 px-3 py-1.5 rounded-lg hover:bg-cyan-100 transition flex items-center gap-1.5">
-                                    <i class="bi bi-qr-code-scan"></i> สแกน QR
-                                </button>
-                            </div>
-                            <select id="chromebook-id" class="inp" required>
-                                <option>รอข้อมูล...</option>
-                            </select>
-                        </div>
-                        <div class="border-2 border-dashed border-cyan-200 bg-cyan-50/50 rounded-2xl p-5 text-center cursor-pointer hover:bg-cyan-50 transition-all group" onclick="document.getElementById('borrow-imgs').click()">
-                            <input type="file" id="borrow-imgs" accept="image/*" multiple class="hidden" onchange="previewImgs(this,'borrow-preview')">
-                            <i class="bi bi-camera-fill text-cyan-300 text-2xl group-hover:text-cyan-400 transition"></i>
-                            <p class="text-xs text-cyan-500 font-black mt-1">ถ่ายรูปหลักฐาน <span class="opacity-60">(Max 3)</span></p>
-                            <div id="borrow-preview" class="flex flex-wrap gap-2 justify-center mt-2"></div>
-                        </div>
-                        <button type="submit" id="btn-borrow" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg shadow-cyan-200/50 hover:shadow-cyan-300/50 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2">
-                            <i class="bi bi-check-circle-fill"></i> บันทึกข้อมูล
-                        </button>
-                    </form>
-                </div>
+    <!-- Toolbar -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex flex-wrap gap-3 items-center justify-between">
+        <div class="flex gap-1.5 flex-wrap" id="tabs-row"></div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <div class="relative">
+                <i class="bi bi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm"></i>
+                <input type="text" id="search-inp" placeholder="ค้นหา Serial, ชื่อ..." class="w-44 bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2 text-sm font-bold outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 transition">
             </div>
+            <button onclick="openModal('modal-borrow')" class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black hover:opacity-90 hover:scale-[1.02] transition-all flex items-center gap-1.5 shadow-md shadow-cyan-200/50">
+                <i class="bi bi-plus-circle-fill"></i> บันทึกการยืม
+            </button>
+            <button onclick="openMaster()" class="bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-black hover:bg-slate-900 transition flex items-center gap-1.5 shadow-sm">
+                <i class="bi bi-database-gear"></i> ข้อมูลพื้นฐาน
+            </button>
+            <button onclick="printReport()" class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-3.5 py-2 rounded-xl text-xs font-black hover:opacity-90 transition flex items-center gap-1.5 shadow-sm shadow-amber-200">
+                <i class="bi bi-printer"></i> พิมพ์ตามห้อง
+            </button>
+            <a href="dashboard.php" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-black hover:opacity-90 transition flex items-center gap-1.5 shadow-sm shadow-blue-200">
+                <i class="bi bi-bar-chart-fill"></i> รายงาน
+            </a>
         </div>
+    </div>
 
-        <!-- Borrow Log Table -->
-        <div class="lg:col-span-2 space-y-4">
-
-            <!-- Toolbar -->
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex flex-wrap gap-3 items-center justify-between">
-                <div class="flex gap-1.5 flex-wrap" id="tabs-row"></div>
-                <div class="flex items-center gap-2">
-                    <div class="relative">
-                        <i class="bi bi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 text-sm"></i>
-                        <input type="text" id="search-inp" placeholder="ค้นหา Serial, ชื่อ..." class="w-44 bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2 text-sm font-bold outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 transition">
-                    </div>
-                    <button onclick="openMaster()" class="bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-black hover:bg-slate-900 transition flex items-center gap-1.5 shadow-sm">
-                        <i class="bi bi-database-gear"></i> ข้อมูลพื้นฐาน
-                    </button>
-                    <button onclick="printReport()" class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-3.5 py-2 rounded-xl text-xs font-black hover:opacity-90 transition flex items-center gap-1.5 shadow-sm shadow-amber-200">
-                        <i class="bi bi-printer"></i> พิมพ์ตามห้อง
-                    </button>
-                    <a href="dashboard.php" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-black hover:opacity-90 transition flex items-center gap-1.5 shadow-sm shadow-blue-200">
-                        <i class="bi bi-bar-chart-fill"></i> รายงาน
-                    </a>
-                </div>
-            </div>
-
-            <!-- Table -->
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div class="overflow-x-auto tbl-scroll pb-1">
-                    <table class="min-w-[860px] w-full text-sm">
-                        <thead class="bg-slate-50 text-xs font-black text-slate-400 uppercase tracking-widest">
-                            <tr>
-                                <th class="px-4 py-3 text-left">สถานะ</th>
-                                <th class="px-4 py-3 text-left">ผู้ยืม / ห้อง</th>
-                                <th class="px-4 py-3 text-left">เครื่อง</th>
-                                <th class="px-4 py-3 text-left">วันที่</th>
-                                <th class="px-4 py-3 text-center">ตรวจสภาพ</th>
-                                <th class="px-4 py-3 text-center">รูป</th>
-                                <th class="px-3 py-3 text-right"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-body" class="divide-y divide-slate-50">
-                            <tr><td colspan="7" class="text-center py-16 text-slate-400 font-bold"><i class="bi bi-arrow-repeat spin mr-1"></i> กำลังโหลด...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="px-5 py-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-                    <span class="text-xs font-black text-slate-400 uppercase tracking-widest" id="page-info">–</span>
-                    <div class="flex gap-1" id="pagination"></div>
-                </div>
-            </div>
+    <!-- Table -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto tbl-scroll pb-1">
+            <table class="min-w-[860px] w-full text-sm">
+                <thead class="bg-slate-50 text-xs font-black text-slate-400 uppercase tracking-widest">
+                    <tr>
+                        <th class="px-4 py-3 text-left">สถานะ</th>
+                        <th class="px-4 py-3 text-left">ผู้ยืม / ห้อง</th>
+                        <th class="px-4 py-3 text-left">เครื่อง</th>
+                        <th class="px-4 py-3 text-left">วันที่</th>
+                        <th class="px-4 py-3 text-center">ตรวจสภาพ</th>
+                        <th class="px-4 py-3 text-center">รูป</th>
+                        <th class="px-3 py-3 text-right"></th>
+                    </tr>
+                </thead>
+                <tbody id="table-body" class="divide-y divide-slate-50">
+                    <tr><td colspan="7" class="text-center py-16 text-slate-400 font-bold"><i class="bi bi-arrow-repeat spin mr-1"></i> กำลังโหลด...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="px-5 py-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-xs font-black text-slate-400 uppercase tracking-widest" id="page-info">–</span>
+            <div class="flex gap-1" id="pagination"></div>
         </div>
     </div>
 </div>
 
 <!-- ═══ MODALS ═══════════════════════════════════════════════ -->
+
+<!-- Borrow Form Modal -->
+<div id="modal-borrow" class="modal-bg">
+  <div class="modal-box max-w-lg p-0 overflow-hidden">
+    <div class="bg-gradient-to-br from-cyan-500 to-blue-600 px-6 pt-6 pb-10 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-10" style="background-image:radial-gradient(circle at 80% 20%, white 1px, transparent 1px); background-size:20px 20px;"></div>
+        <div class="relative z-10 flex items-start justify-between">
+            <div>
+                <div class="w-10 h-10 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-white text-lg mb-3">
+                    <i class="bi bi-laptop"></i>
+                </div>
+                <h3 class="font-black text-white text-lg leading-tight">บันทึกการยืม</h3>
+                <p class="text-cyan-100 text-xs font-bold mt-0.5">กรอกข้อมูลผู้ยืม Chromebook</p>
+            </div>
+            <button onclick="closeModal('modal-borrow')" class="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center text-white transition mt-1">
+                <i class="bi bi-x-lg text-sm"></i>
+            </button>
+        </div>
+    </div>
+    <div class="bg-white px-6 pb-6 -mt-4 rounded-t-3xl relative z-10">
+        <form id="borrow-form" class="space-y-4 pt-5">
+            <div>
+                <label class="form-label">ประเภทผู้ยืม</label>
+                <select id="borrower-type" class="inp" required>
+                    <option value="" disabled selected>— เลือก —</option>
+                    <option value="Teacher">👤 ครู</option>
+                    <option value="Student">🎓 นักเรียน</option>
+                </select>
+            </div>
+            <div id="cls-wrap" class="hidden">
+                <label class="form-label">ชั้นเรียน</label>
+                <select id="class-select" class="inp"></select>
+            </div>
+            <div id="borrower-wrap" class="hidden">
+                <label class="form-label" id="borrower-label">ชื่อผู้ยืม</label>
+                <select id="borrower-id" class="inp" required></select>
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <label class="form-label mb-0">Chromebook</label>
+                    <button type="button" onclick="openScanner()" class="text-xs font-black text-cyan-600 bg-cyan-50 border border-cyan-100 px-3 py-1.5 rounded-lg hover:bg-cyan-100 transition flex items-center gap-1.5">
+                        <i class="bi bi-qr-code-scan"></i> สแกน QR
+                    </button>
+                </div>
+                <select id="chromebook-id" class="inp" required>
+                    <option>รอข้อมูล...</option>
+                </select>
+            </div>
+            <div class="border-2 border-dashed border-cyan-200 bg-cyan-50/50 rounded-2xl p-4 text-center cursor-pointer hover:bg-cyan-50 transition-all group" onclick="document.getElementById('borrow-imgs').click()">
+                <input type="file" id="borrow-imgs" accept="image/*" multiple class="hidden" onchange="previewImgs(this,'borrow-preview')">
+                <i class="bi bi-camera-fill text-cyan-300 text-2xl group-hover:text-cyan-400 transition"></i>
+                <p class="text-xs text-cyan-500 font-black mt-1">ถ่ายรูปหลักฐาน <span class="opacity-60">(Max 3)</span></p>
+                <div id="borrow-preview" class="flex flex-wrap gap-2 justify-center mt-2"></div>
+            </div>
+            <button type="submit" id="btn-borrow" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg shadow-cyan-200/50 hover:shadow-cyan-300/50 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+                <i class="bi bi-check-circle-fill"></i> บันทึกข้อมูล
+            </button>
+        </form>
+    </div>
+  </div>
+</div>
+
+<!-- Repair Modal -->
+<div id="modal-repair" class="modal-bg">
+  <div class="modal-box max-w-md">
+    <div class="flex items-center justify-between mb-5">
+        <h3 class="font-black text-slate-800 text-lg"><i class="bi bi-tools text-orange-500 mr-2"></i>แจ้งซ่อม Chromebook</h3>
+        <button onclick="closeModal('modal-repair')" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition"><i class="bi bi-x-lg text-sm"></i></button>
+    </div>
+    <form id="repair-form" class="space-y-4">
+        <input type="hidden" id="repair-entry-id">
+        <div class="bg-orange-50 rounded-xl p-4 border border-orange-100">
+            <p class="font-black text-slate-700 text-sm" id="repair-show-name">–</p>
+            <p class="text-orange-500 text-xs font-bold mt-1" id="repair-show-cb">–</p>
+        </div>
+        <div>
+            <label class="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2">รายละเอียดความเสียหาย</label>
+            <textarea id="repair-desc" rows="3" placeholder="เช่น หน้าจอร้าว, คีย์บอร์ดหลุด, แบตเสื่อม..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-400 transition"></textarea>
+        </div>
+        <div class="border-2 border-dashed border-orange-200 bg-orange-50/50 rounded-2xl p-4 text-center cursor-pointer hover:bg-orange-50 transition-all group" onclick="document.getElementById('repair-imgs').click()">
+            <input type="file" id="repair-imgs" accept="image/*" multiple class="hidden" onchange="previewImgs(this,'repair-preview')">
+            <i class="bi bi-camera text-orange-300 text-2xl group-hover:text-orange-400 transition"></i>
+            <p class="text-xs text-orange-400 font-black mt-1">ถ่ายรูปความเสียหาย <span class="opacity-60">(Max 3)</span></p>
+            <div id="repair-preview" class="flex flex-wrap gap-2 justify-center mt-2"></div>
+        </div>
+        <button type="submit" id="btn-repair" class="w-full bg-gradient-to-r from-orange-500 to-red-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg shadow-orange-200/50 hover:opacity-90 hover:scale-[1.01] transition-all flex items-center justify-center gap-2">
+            <i class="bi bi-tools"></i> แจ้งซ่อม
+        </button>
+    </form>
+  </div>
+</div>
 
 <!-- Master Data -->
 <div id="modal-master" class="modal-bg">
@@ -646,25 +675,40 @@ function renderTable() {
     document.getElementById('pagination').innerHTML = pg;
 }
 
-async function quickAddRepair(entryId) {
-    const { isConfirmed, value } = await Swal.fire({
-        title: 'แจ้งซ่อม Chromebook',
-        input: 'textarea',
-        inputLabel: 'รายละเอียดความเสียหาย',
-        inputPlaceholder: 'เช่น หน้าจอร้าว, คีย์บอร์ดหลุด, แบตเสื่อม...',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        confirmButtonText: '<i class="bi bi-tools mr-1"></i> แจ้งซ่อม',
-        cancelButtonText: 'ยกเลิก'
+function openRepairModal(entryId, prefillDesc = '') {
+    const row = S.logs.find(r => String(r[0]) === String(entryId));
+    document.getElementById('repair-entry-id').value = entryId;
+    document.getElementById('repair-show-name').textContent = row ? getName(row) + (row[3] ? ` (${row[3]})` : '') : '–';
+    document.getElementById('repair-show-cb').textContent   = row ? `${row[4]} (${row[5]})` : '–';
+    document.getElementById('repair-desc').value     = prefillDesc;
+    document.getElementById('repair-preview').innerHTML = '';
+    document.getElementById('repair-imgs').value     = '';
+    openModal('modal-repair');
+}
+
+function quickAddRepair(entryId) {
+    openRepairModal(entryId);
+}
+
+document.getElementById('repair-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('btn-repair');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat spin mr-1"></i>กำลังบันทึก...';
+    const blobs = await blobsFrom(document.getElementById('repair-imgs'));
+    const res = await api('addRepair', {
+        borrowLogId:  document.getElementById('repair-entry-id').value,
+        description:  document.getElementById('repair-desc').value,
+        imageBlobs:   blobs
     });
-    if (!isConfirmed) return;
-    const res = await api('addRepair', {borrowLogId: entryId, description: value||''});
     if (res.success) {
         Swal.fire({icon:'success', title:'แจ้งซ่อมแล้ว', timer:1400, showConfirmButton:false});
+        closeModal('modal-repair');
         loadAll();
     } else Swal.fire('ผิดพลาด', res.error, 'error');
-}
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-tools"></i> แจ้งซ่อม';
+});
 
 // ── Borrow Form ───────────────────────────────────────────────────
 function renderDropdowns() {
@@ -715,9 +759,10 @@ document.getElementById('borrow-form').addEventListener('submit', async e=>{
         document.getElementById('cls-wrap').classList.add('hidden');
         document.getElementById('borrower-wrap').classList.add('hidden');
         document.getElementById('borrow-preview').innerHTML='';
+        closeModal('modal-borrow');
         await loadAll();
     } else Swal.fire('ผิดพลาด', res.error, 'error');
-    btn.disabled=false; btn.innerHTML='<i class="bi bi-check-lg"></i> บันทึกข้อมูล';
+    btn.disabled=false; btn.innerHTML='<i class="bi bi-check-circle-fill"></i> บันทึกข้อมูล';
 });
 
 // ── Actions ───────────────────────────────────────────────────────
@@ -822,13 +867,9 @@ document.getElementById('inspect-form').addEventListener('submit', async e=>{
         if (condition === 'Damaged') {
             const alreadyHasRepair = S.repairs.some(r => String(r.borrow_log_id) === String(entryId) && r.status !== 'รับกลับ');
             if (!alreadyHasRepair) {
-                const { isConfirmed, value } = await Swal.fire({
+                const { isConfirmed } = await Swal.fire({
                     title: '⚠️ เครื่องชำรุด',
                     html: 'ต้องการ<b>แจ้งซ่อม</b>เครื่องนี้ด้วยหรือไม่?',
-                    input: 'textarea',
-                    inputLabel: 'รายละเอียดความเสียหาย',
-                    inputValue: inspectNotes,
-                    inputPlaceholder: 'เช่น หน้าจอร้าว, คีย์บอร์ดหลุด...',
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#dc2626',
@@ -836,8 +877,9 @@ document.getElementById('inspect-form').addEventListener('submit', async e=>{
                     cancelButtonText: 'ไม่ต้องการ'
                 });
                 if (isConfirmed) {
-                    await api('addRepair', {borrowLogId: entryId, description: value||''});
-                    Swal.fire({icon:'success', title:'แจ้งซ่อมแล้ว', timer:1400, showConfirmButton:false});
+                    await loadAll();
+                    openRepairModal(entryId, inspectNotes);
+                    return;
                 }
             }
         }

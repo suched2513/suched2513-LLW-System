@@ -17,7 +17,7 @@ $stats   = ['total' => 0, 'รับแจ้ง' => 0, 'ส่งซ่อม' 
 if ($tableExists) {
     $stmt = $pdo->query("
         SELECT r.id, r.borrow_log_id, r.chromebook_id, r.chromebook_serial,
-               r.description, r.status, r.repair_notes, r.reported_by,
+               r.description, r.images, r.status, r.repair_notes, r.reported_by,
                r.created_at, r.updated_at,
                b.borrower_type, b.borrower_id, b.class_name,
                COALESCE(t.name, s.name, b.borrower_id) AS borrower_name
@@ -106,9 +106,9 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <th class="px-5 py-3 text-left">Chromebook</th>
                         <th class="px-5 py-3 text-left">ผู้ยืม</th>
                         <th class="px-5 py-3 text-left">รายละเอียด</th>
+                        <th class="px-5 py-3 text-center">รูป</th>
                         <th class="px-5 py-3 text-left">หมายเหตุ</th>
                         <th class="px-5 py-3 text-left">วันที่แจ้ง</th>
-                        <th class="px-5 py-3 text-left">อัปเดตล่าสุด</th>
                         <th class="px-4 py-3 text-right"></th>
                     </tr>
                 </thead>
@@ -144,14 +144,31 @@ require_once __DIR__ . '/../components/layout_start.php';
                             <p class="text-xs text-slate-400 font-bold"><?= htmlspecialchars($rep['class_name'], ENT_QUOTES, 'UTF-8') ?></p>
                             <?php endif; ?>
                         </td>
-                        <td class="px-5 py-3 text-xs text-slate-500 font-bold max-w-[200px]">
-                            <span title="<?= htmlspecialchars($rep['description'] ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(mb_strimwidth($rep['description'] ?? '—', 0, 60, '…'), ENT_QUOTES, 'UTF-8') ?></span>
+                        <td class="px-5 py-3 text-xs text-slate-500 font-bold max-w-[180px]">
+                            <span title="<?= htmlspecialchars($rep['description'] ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(mb_strimwidth($rep['description'] ?? '—', 0, 55, '…'), ENT_QUOTES, 'UTF-8') ?></span>
                         </td>
-                        <td class="px-5 py-3 text-xs text-slate-400 font-bold max-w-[160px]">
-                            <span title="<?= htmlspecialchars($rep['repair_notes'] ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(mb_strimwidth($rep['repair_notes'] ?? '—', 0, 50, '…'), ENT_QUOTES, 'UTF-8') ?></span>
+                        <td class="px-5 py-3 text-center">
+                            <?php
+                            $imgs = array_filter(explode(',', $rep['images'] ?? ''));
+                            if ($imgs): ?>
+                            <div class="flex -space-x-2 justify-center">
+                                <?php foreach (array_slice($imgs, 0, 3) as $img): ?>
+                                <img src="uploads/<?= htmlspecialchars($img, ENT_QUOTES, 'UTF-8') ?>"
+                                     class="w-9 h-9 rounded-xl ring-2 ring-white object-cover cursor-pointer hover:z-10 hover:scale-110 transition"
+                                     onclick="viewImg('uploads/<?= htmlspecialchars($img, ENT_QUOTES, 'UTF-8') ?>')">
+                                <?php endforeach; ?>
+                                <?php if (count($imgs) > 3): ?>
+                                <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 text-xs font-black flex items-center justify-center ring-2 ring-white">+<?= count($imgs)-3 ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <?php else: ?>
+                            <span class="text-slate-300 text-xs font-bold">—</span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="px-5 py-3 text-xs text-slate-400 font-bold max-w-[150px]">
+                            <span title="<?= htmlspecialchars($rep['repair_notes'] ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(mb_strimwidth($rep['repair_notes'] ?? '—', 0, 45, '…'), ENT_QUOTES, 'UTF-8') ?></span>
                         </td>
                         <td class="px-5 py-3 text-xs text-slate-400 font-bold whitespace-nowrap"><?= (new DateTime($rep['created_at']))->format('d/m/y H:i') ?></td>
-                        <td class="px-5 py-3 text-xs text-slate-400 font-bold whitespace-nowrap"><?= (new DateTime($rep['updated_at']))->format('d/m/y H:i') ?></td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex items-center justify-end gap-1">
                                 <?php if ($nextStatus): ?>
@@ -176,6 +193,13 @@ require_once __DIR__ . '/../components/layout_start.php';
             </table>
         </div>
     </div>
+</div>
+
+<!-- Image Viewer -->
+<div id="modal-img" class="modal-bg z-[1300]" onclick="closeModal('modal-img')">
+  <div class="relative max-w-4xl mx-4" onclick="event.stopPropagation()">
+    <img id="modal-img-src" src="" class="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl">
+  </div>
 </div>
 
 <!-- Edit Modal -->
@@ -206,6 +230,8 @@ require_once __DIR__ . '/../components/layout_start.php';
 </div>
 
 <script>
+function viewImg(url) { document.getElementById('modal-img-src').src = url; openModal('modal-img'); }
+
 function filterRepairs(status) {
     document.querySelectorAll('.filter-btn').forEach(b => {
         const active = b.dataset.filter === status;

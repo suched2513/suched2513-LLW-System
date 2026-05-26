@@ -226,7 +226,7 @@ try {
         case 'getRepairs':
             $stmt = $pdo->query("
                 SELECT r.id, r.borrow_log_id, r.chromebook_id, r.chromebook_serial,
-                       r.description, r.status, r.repair_notes, r.reported_by,
+                       r.description, r.images, r.status, r.repair_notes, r.reported_by,
                        r.created_at, r.updated_at,
                        b.borrower_type, b.borrower_id, b.class_name
                 FROM cb_repairs r
@@ -246,11 +246,12 @@ try {
             $log = $stmt->fetch();
             if (!$log) err('ไม่พบรายการยืม');
 
+            $imgs     = implode(',', saveBlobs($payload['imageBlobs'] ?? []));
             $reporter = $_SESSION['fullname'] ?? $_SESSION['username'] ?? '';
             $pdo->prepare("
-                INSERT INTO cb_repairs (borrow_log_id, chromebook_id, chromebook_serial, description, reported_by)
-                VALUES (?,?,?,?,?)
-            ")->execute([$borrowLogId, $log['chromebook_id'], $log['chromebook_serial'], $desc, $reporter]);
+                INSERT INTO cb_repairs (borrow_log_id, chromebook_id, chromebook_serial, description, images, reported_by)
+                VALUES (?,?,?,?,?,?)
+            ")->execute([$borrowLogId, $log['chromebook_id'], $log['chromebook_serial'], $desc, $imgs, $reporter]);
             ok(['repair_id' => (int)$pdo->lastInsertId()]);
             break;
 
