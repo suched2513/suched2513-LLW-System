@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -118,6 +118,9 @@ require_once '../components/layout_start.php';
                     </div>
                     <button onclick="openMaster()" class="bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-black hover:bg-slate-900 transition flex items-center gap-1.5 shadow-sm">
                         <i class="bi bi-database-gear"></i> ข้อมูลพื้นฐาน
+                    </button>
+                    <button onclick="printReport()" class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-3.5 py-2 rounded-xl text-xs font-black hover:opacity-90 transition flex items-center gap-1.5 shadow-sm shadow-amber-200">
+                        <i class="bi bi-printer"></i> พิมพ์ตามห้อง
                     </button>
                     <a href="dashboard.php" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-black hover:opacity-90 transition flex items-center gap-1.5 shadow-sm shadow-blue-200">
                         <i class="bi bi-bar-chart-fill"></i> รายงาน
@@ -326,11 +329,11 @@ require_once '../components/layout_start.php';
         </div>
         <div id="reassign-class-wrap">
             <label class="form-label">ห้องเรียน</label>
-            <input id="reassign-class" placeholder="เช่น ม.4/1" class="inp">
+            <select id="reassign-class" class="inp"></select>
         </div>
-        <div>
-            <label class="form-label">ชื่อ-สกุล ผู้ถือใหม่</label>
-            <input id="reassign-name" placeholder="กรอกชื่อ-สกุล" class="inp" required autocomplete="off">
+        <div id="reassign-borrower-wrap">
+            <label class="form-label" id="reassign-borrower-label">ชื่อ-สกุล ผู้ถือใหม่</label>
+            <select id="reassign-borrower-id" class="inp" required></select>
         </div>
         <button type="submit" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3.5 rounded-xl font-black hover:opacity-90 hover:scale-[1.01] transition-all flex items-center justify-center gap-2">
             <i class="bi bi-person-check-fill"></i> บันทึกการเปลี่ยนผู้ถือ
@@ -376,9 +379,17 @@ async function loadAll() {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────
+function normId(id) {
+    id = String(id).trim();
+    if (/^\d+$/.test(id)) {
+        return id.padStart(5, '0');
+    }
+    return id;
+}
 function getName(row) {
-    if (row[1]==='Teacher') { const t=S.teachers.find(x=>String(x[0])===String(row[2])); return t?t[1]:row[2]; }
-    const s=S.students.find(x=>String(x[0])===String(row[2])); return s?s[1]:row[2];
+    const bId = normId(row[2]);
+    if (row[1]==='Teacher') { const t=S.teachers.find(x=>normId(x[0])===bId); return t?t[1]:row[2]; }
+    const s=S.students.find(x=>normId(x[0])===bId); return s?s[1]:row[2];
 }
 function fmtDate(d) { try{ return new Date(d).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch{return d||'–'; } }
 async function blobsFrom(fileInput) {
@@ -498,13 +509,13 @@ function renderDropdowns() {
 
 document.getElementById('borrower-type').addEventListener('change', function(){
     const type = this.value;
-    const activeIds = S.logs.filter(r=>r[7]==='Borrowed').map(r=>String(r[2]));
+    const activeIds = S.logs.filter(r=>r[7]==='Borrowed').map(r=>normId(r[2]));
     document.getElementById('cls-wrap').classList.toggle('hidden', type==='Teacher');
     document.getElementById('borrower-wrap').classList.remove('hidden');
     document.getElementById('borrower-label').textContent = type==='Teacher'?'เลือกครู':'เลือกนักเรียน';
     const sel = document.getElementById('borrower-id');
     if (type==='Teacher') {
-        const avail = S.teachers.filter(t=>!activeIds.includes(String(t[0])));
+        const avail = S.teachers.filter(t=>!activeIds.includes(normId(t[0])));
         sel.innerHTML = `<option value="" disabled selected>— เลือกครู —</option>`+avail.map(t=>`<option value="${t[0]}">${t[1]}</option>`).join('');
     } else {
         const classes = [...new Set(S.students.map(s=>s[2]))].sort();
@@ -512,7 +523,7 @@ document.getElementById('borrower-type').addEventListener('change', function(){
         sel.innerHTML = `<option value="" disabled selected>— เลือกชั้นก่อน —</option>`;
         document.getElementById('class-select').onchange = function(){
             const cls = this.value;
-            const avail = S.students.filter(s=>s[2]===cls&&!activeIds.includes(String(s[0])));
+            const avail = S.students.filter(s=>s[2]===cls&&!activeIds.includes(normId(s[0])));
             sel.innerHTML = `<option value="" disabled selected>— เลือกนักเรียน —</option>`+avail.map(s=>`<option value="${s[0]}">${s[1]}</option>`).join('');
         };
     }
@@ -744,13 +755,61 @@ function openReassign(id) {
     document.getElementById('reassign-show-cb').textContent = `${row[4]} (${row[5]})`;
     document.getElementById('reassign-show-current').textContent = `ผู้ถือปัจจุบัน: ${getName(row)}${row[3]?' ('+row[3]+')':''}`;
     document.getElementById('reassign-type').value = row[1] || 'Student';
-    document.getElementById('reassign-name').value = '';
-    document.getElementById('reassign-class').value = row[3] || '';
-    toggleReassignClass();
+    setupReassignDropdowns(row[1] || 'Student', row[2], row[3]);
     openModal('modal-reassign');
 }
 function toggleReassignClass() {
-    document.getElementById('reassign-class-wrap').classList.toggle('hidden', document.getElementById('reassign-type').value !== 'Student');
+    const type = document.getElementById('reassign-type').value;
+    setupReassignDropdowns(type);
+}
+function setupReassignDropdowns(type, currentBorrowerId, currentClass) {
+    const activeIds = S.logs.filter(r=>r[7]==='Borrowed').map(r=>normId(r[2]));
+    const classWrap = document.getElementById('reassign-class-wrap');
+    const classSelect = document.getElementById('reassign-class');
+    const borrowerSelect = document.getElementById('reassign-borrower-id');
+    const label = document.getElementById('reassign-borrower-label');
+    
+    label.textContent = type==='Teacher'?'เลือกครู/บุคลากร':'ชื่อ-สกุล ผู้ถือใหม่';
+    
+    if (type === 'Teacher') {
+        classWrap.classList.add('hidden');
+        classSelect.removeAttribute('required');
+        
+        const avail = S.teachers.filter(t=>!activeIds.includes(normId(t[0])) || normId(t[0])===normId(currentBorrowerId));
+        borrowerSelect.innerHTML = `<option value="" disabled selected>— เลือกครู —</option>`+
+            avail.map(t=>`<option value="${t[0]}">${t[1]}</option>`).join('');
+            
+        if (currentBorrowerId && type === 'Teacher') {
+            borrowerSelect.value = currentBorrowerId;
+        }
+    } else {
+        classWrap.classList.remove('hidden');
+        classSelect.setAttribute('required', 'required');
+        
+        const classes = [...new Set(S.students.map(s=>s[2]))].sort();
+        classSelect.innerHTML = `<option value="" disabled selected>— เลือกชั้น —</option>`+
+            classes.map(c=>`<option value="${c}">${c}</option>`).join('');
+            
+        borrowerSelect.innerHTML = `<option value="" disabled selected>— เลือกชั้นก่อน —</option>`;
+        
+        const updateStudents = (cls, selectedId) => {
+            const avail = S.students.filter(s=>s[2]===cls&&(!activeIds.includes(normId(s[0])) || normId(s[0])===normId(currentBorrowerId)));
+            borrowerSelect.innerHTML = `<option value="" disabled selected>— เลือกนักเรียน —</option>`+
+                avail.map(s=>`<option value="${s[0]}">${s[1]}</option>`).join('');
+            if (selectedId) {
+                borrowerSelect.value = selectedId;
+            }
+        };
+        
+        classSelect.onchange = function() {
+            updateStudents(this.value);
+        };
+        
+        if (currentClass && type === 'Student') {
+            classSelect.value = currentClass;
+            updateStudents(currentClass, currentBorrowerId);
+        }
+    }
 }
 document.getElementById('reassign-form').addEventListener('submit', async e => {
     e.preventDefault();
@@ -758,11 +817,20 @@ document.getElementById('reassign-form').addEventListener('submit', async e => {
     btn.disabled = true;
     const origHtml = btn.innerHTML;
     btn.innerHTML = '<i class="bi bi-arrow-repeat spin mr-1"></i>กำลังบันทึก...';
+    
+    const borrowerId = document.getElementById('reassign-borrower-id').value;
+    const borrowerType = document.getElementById('reassign-type').value;
+    
+    const borrowerSelect = document.getElementById('reassign-borrower-id');
+    const selectedOpt = borrowerSelect.options[borrowerSelect.selectedIndex];
+    const name = selectedOpt ? selectedOpt.text : '';
+    
     const res = await api('reassignBorrow', {
         entryId:      document.getElementById('reassign-id').value,
-        borrowerType: document.getElementById('reassign-type').value,
-        name:         document.getElementById('reassign-name').value,
-        className:    document.getElementById('reassign-class').value,
+        borrowerType: borrowerType,
+        borrowerId:   borrowerId,
+        name:         name,
+        className:    borrowerType === 'Student' ? document.getElementById('reassign-class').value : null,
     });
     if (res.success) {
         Swal.fire({icon:'success', title:'เปลี่ยนผู้ถือแล้ว', timer:1400, showConfirmButton:false});
@@ -772,6 +840,51 @@ document.getElementById('reassign-form').addEventListener('submit', async e => {
     btn.disabled = false;
     btn.innerHTML = origHtml;
 });
+
+function printReport() {
+    const classes = [...new Set(S.students.map(s => s[2]).filter(Boolean))].sort();
+    const logClasses = [...new Set(S.logs.filter(r => r[1] === 'Student').map(r => r[3]).filter(Boolean))];
+    logClasses.forEach(c => {
+        if (!classes.includes(c)) classes.push(c);
+    });
+    classes.sort();
+
+    if (classes.length === 0) {
+        Swal.fire('ไม่มีข้อมูล', 'ไม่พบข้อมูลห้องเรียนในระบบ', 'warning');
+        return;
+    }
+
+    const inputOptions = {};
+    inputOptions['Teacher'] = '👤 ครู/บุคลากร';
+    classes.forEach(c => {
+        inputOptions[c] = `🎓 ห้อง ${c}`;
+    });
+
+    Swal.fire({
+        title: 'เลือกห้องเรียนที่ต้องการพิมพ์รายงาน',
+        input: 'select',
+        inputOptions: inputOptions,
+        inputPlaceholder: '— เลือกห้องเรียน —',
+        showCancelButton: true,
+        confirmButtonText: 'พิมพ์รายงาน',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#0891b2',
+        inputValidator: (value) => {
+            if (!value) {
+                return 'กรุณาเลือกห้องเรียน';
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const selected = result.value;
+            if (selected === 'Teacher') {
+                window.open('print_classroom.php?type=Teacher', '_blank');
+            } else {
+                window.open('print_classroom.php?classroom=' + encodeURIComponent(selected), '_blank');
+            }
+        }
+    });
+}
 
 // Init tab style
 document.querySelector('.master-tab').classList.add('bg-white','text-slate-800','shadow-sm');

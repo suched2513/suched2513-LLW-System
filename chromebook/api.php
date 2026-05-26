@@ -186,29 +186,34 @@ try {
         case 'reassignBorrow':
             $entryId  = (int)($payload['entryId']     ?? 0);
             $newType  = trim($payload['borrowerType'] ?? '');
+            $newBorrowerId = trim($payload['borrowerId'] ?? '');
             $newName  = trim($payload['name']         ?? '');
             $newClass = trim($payload['className']    ?? '');
-            if (!$entryId || !$newType || !$newName) err('ข้อมูลไม่ครบ');
+            if (!$entryId || !$newType || !$newName || !$newBorrowerId) err('ข้อมูลไม่ครบ');
             if (!in_array($newType, ['Teacher', 'Student'])) err('ประเภทไม่ถูกต้อง');
 
-            $stmt = $pdo->prepare("SELECT borrower_id, chromebook_id FROM cb_borrow_logs WHERE entry_id=?");
+            // Normalize student ID if borrower is a student
+            if ($newType === 'Student' && preg_match('/^\d+$/', $newBorrowerId)) {
+                $newBorrowerId = str_pad($newBorrowerId, 5, '0', STR_PAD_LEFT);
+            }
+
+            $stmt = $pdo->prepare("SELECT chromebook_id FROM cb_borrow_logs WHERE entry_id=?");
             $stmt->execute([$entryId]);
             $log = $stmt->fetch();
             if (!$log) err('ไม่พบรายการ');
 
-            $borrowerId   = $log['borrower_id'];
             $chromebookId = $log['chromebook_id'];
 
             $pdo->beginTransaction();
-            $pdo->prepare("UPDATE cb_borrow_logs SET borrower_type=?, class_name=? WHERE entry_id=?")
-                ->execute([$newType, $newClass ?: null, $entryId]);
+            $pdo->prepare("UPDATE cb_borrow_logs SET borrower_id=?, borrower_type=?, class_name=? WHERE entry_id=?")
+                ->execute([$newBorrowerId, $newType, $newClass ?: null, $entryId]);
 
             if ($newType === 'Student') {
                 $pdo->prepare("INSERT INTO cb_students (student_id, name, class_name) VALUES (?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name), class_name=VALUES(class_name)")
-                    ->execute([$borrowerId, $newName, $newClass]);
+                    ->execute([$newBorrowerId, $newName, $newClass]);
             } else {
                 $pdo->prepare("INSERT INTO cb_teachers (teacher_id, name) VALUES (?,?) ON DUPLICATE KEY UPDATE name=VALUES(name)")
-                    ->execute([$borrowerId, $newName]);
+                    ->execute([$newBorrowerId, $newName]);
             }
 
             $pdo->prepare("UPDATE cb_chromebooks SET borrower_type=?, borrower_name=? WHERE chromebook_id=?")
