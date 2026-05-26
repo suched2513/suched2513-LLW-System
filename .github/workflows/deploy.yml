@@ -150,6 +150,12 @@ jobs:
               --exclude ^lms/uploads/exercises/[^.] \
               --exclude ^assets/images/user_photos \
               ./ ${{ secrets.FTP_SERVER_DIR }};
+            cd ${{ secrets.FTP_SERVER_DIR }};
+            -mkdir chromebook/uploads;
+            -mkdir behavior/uploads;
+            -mkdir bus/uploads;
+            -mkdir school_project/uploads;
+            -mkdir parent_meeting/uploads;
             bye
           "
           echo "✅ Deploy completed successfully!"

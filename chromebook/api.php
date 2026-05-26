@@ -23,6 +23,10 @@ function err($msg)        { echo json_encode(['success' => false, 'error' => $ms
 
 // ── Image save helper ──────────────────────────────────────────
 function saveBlobs(array $blobs): array {
+    $uploadDir = __DIR__ . '/uploads/';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
     $saved = [];
     foreach ($blobs as $blob) {
         if (!preg_match('/^data:image\/(\w+);base64,/', $blob, $m)) continue;
@@ -30,8 +34,9 @@ function saveBlobs(array $blobs): array {
         if (!in_array($ext, ['jpg','jpeg','png','gif','webp'])) continue;
         $data = base64_decode(substr($blob, strpos($blob, ',') + 1));
         $filename = uniqid('cb_', true) . '.' . $ext;
-        file_put_contents(__DIR__ . '/uploads/' . $filename, $data);
-        $saved[] = $filename;
+        if (file_put_contents($uploadDir . $filename, $data) !== false) {
+            $saved[] = $filename;
+        }
     }
     return $saved;
 }
