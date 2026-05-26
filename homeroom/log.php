@@ -19,7 +19,7 @@ $stmt = $pdo->prepare("SELECT classroom FROM llw_class_advisors WHERE user_id = 
 $stmt->execute([$userId]);
 $myClasses = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-$isAdmin = in_array($userRole, ['super_admin', 'wfh_admin']);
+$isAdmin = $userRole === 'super_admin';
 $targetClass = $_GET['classroom'] ?? ($myClasses[0] ?? '');
 
 $pageTitle = 'สมุดบันทึกโฮมรูม';
@@ -427,3 +427,4 @@ function esc(str) {
 </script>
 
 <?php require_once __DIR__ . '/../components/layout_end.php'; ?>
+

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * duty/admin/remind.php — ส่งการเตือนครูด้วยตนเอง
  * รองรับ ?report_id=X หรือ ?schedule_id=X
@@ -7,7 +7,7 @@ session_start();
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/telegram_bot.php';
 
-if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin','wfh_admin'])) {
+if (($_SESSION['llw_role'] ?? '') !== 'super_admin') {
     http_response_code(403); exit();
 }
 

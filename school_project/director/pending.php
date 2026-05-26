@@ -10,7 +10,6 @@ $db = getDB();
 
 $roleStepMap = [
     'budget_officer'   => 'submitted',
-    'wfh_admin'        => 'submitted',
     'procurement_head' => 'budget_approved',
     'finance_head'     => 'procurement_approved',
     'deputy_director'  => 'finance_approved',

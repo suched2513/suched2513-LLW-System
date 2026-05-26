@@ -17,7 +17,7 @@ function renderSidebar($activePage = '') {
     $u = getCurrentUser(); $role = $u['role'];
     // Map platform role to local functional role for sidebar display
     $displayRole = $role;
-    if ($role === 'wfh_admin') $displayRole = 'budget_officer';
+    // wfh_admin no longer maps to budget_officer
     if (in_array($role, ['procurement_head', 'finance_head', 'deputy_director'])) $displayRole = 'approver';
     
     echo '<div class="sidebar" id="sidebar">';
@@ -51,14 +51,14 @@ function renderSidebar($activePage = '') {
         echo navLink('/teacher/request_list.php','bi-list-check','ประวัติคำขอ',$activePage);
     }
 
-    if (in_array($role, ['admin','super_admin','budget_officer','wfh_admin','director','procurement_head','finance_head','deputy_director'])) {
+    if (in_array($role, ['admin','super_admin','budget_officer','director','procurement_head','finance_head','deputy_director'])) {
         echo '<div class="nav-section">รายงาน</div>';
         echo navLink('/reports/budget_overview.php','bi-bar-chart','ภาพรวมงบประมาณ',$activePage);
         echo navLink('/admin/budget_list.php','bi-table','สถานะรายโครงการ',$activePage);
         echo navLink('/reports/project_progress.php','bi-clipboard-data','ความคืบหน้า',$activePage);
         echo navLink('/reports/annual_summary.php','bi-file-earmark-bar-graph','สรุปประจำปี',$activePage);
     }
-    if (in_array($role, ['admin','super_admin','director','budget_officer','wfh_admin'])) {
+    if (in_array($role, ['admin','super_admin','director','budget_officer'])) {
         echo navLink('/admin/budget_amendment.php','bi-arrow-left-right','ขอโอน/เพิ่มวงเงิน',$activePage);
     }
 

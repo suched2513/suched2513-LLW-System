@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'super_admin'      => BASE_URL.'/admin/dashboard.php',
                 'director'         => BASE_URL.'/dashboard/director.php',
                 'budget_officer'   => BASE_URL.'/dashboard/budget_officer.php',
-                'wfh_admin'        => BASE_URL.'/dashboard/budget_officer.php',
+                'wfh_admin'        => BASE_URL.'/teacher/my_projects.php',
                 'procurement_head' => BASE_URL.'/director/pending.php',
                 'finance_head'     => BASE_URL.'/director/pending.php',
                 'deputy_director'  => BASE_URL.'/director/pending.php',

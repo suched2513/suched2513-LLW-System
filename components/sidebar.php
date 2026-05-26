@@ -59,7 +59,7 @@ $roleName = [
 $subMenus = [
     'assembly' => [
         ['icon' => 'fas fa-check-double',   'label' => 'เช็คชื่อเข้าแถว',   'url' => $base_path . '/assembly/dashboard.php'],
-        ['icon' => 'fas fa-chart-line',     'label' => 'รายงานผู้บริหาร',   'url' => $base_path . '/assembly/admin.php',            'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-chart-line',     'label' => 'รายงานผู้บริหาร',   'url' => $base_path . '/assembly/admin.php',            'roles' => ['super_admin']],
         ['icon' => 'fas fa-users-cog',      'label' => 'จัดการนักเรียน',    'url' => $base_path . '/assembly/manage_students.php',  'roles' => ['super_admin']],
     ],
     'student_leave' => [
@@ -77,11 +77,11 @@ $subMenus = [
         ['icon' => 'fas fa-user-check',     'label' => 'เช็คชื่อวิชาเรียน',    'url' => $base_path . '/attendance_system/attendance.php'],
         ['icon' => 'fas fa-chart-bar',      'label' => 'รายงานการเข้าเรียน',  'url' => $base_path . '/attendance_system/report.php'],
         ['icon' => 'fas fa-file-alt',       'label' => 'รายงาน ปพ.5',          'url' => $base_path . '/attendance_system/report_p5.php'],
-        ['icon' => 'fas fa-users',          'label' => 'จัดการข้อมูลวิชา',    'url' => $base_path . '/attendance_system/admin.php', 'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-user-friends',   'label' => 'จัดการข้อมูลนักเรียน', 'url' => $base_path . '/attendance_system/import_students.php', 'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-file-csv',       'label' => 'นำเข้ารายวิชา CSV',   'url' => $base_path . '/attendance_system/import_subjects.php', 'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-chart-pie',      'label' => 'รายงานผู้บริหาร',   'url' => $base_path . '/attendance_system/report_admin.php', 'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-id-card',        'label' => 'จัดการเลขบัตรประชาชน', 'url' => $base_path . '/student/admin/manage_nid.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-users',          'label' => 'จัดการข้อมูลวิชา',    'url' => $base_path . '/attendance_system/admin.php', 'roles' => ['super_admin']],
+        ['icon' => 'fas fa-user-friends',   'label' => 'จัดการข้อมูลนักเรียน', 'url' => $base_path . '/attendance_system/import_students.php', 'roles' => ['super_admin']],
+        ['icon' => 'fas fa-file-csv',       'label' => 'นำเข้ารายวิชา CSV',   'url' => $base_path . '/attendance_system/import_subjects.php', 'roles' => ['super_admin']],
+        ['icon' => 'fas fa-chart-pie',      'label' => 'รายงานผู้บริหาร',   'url' => $base_path . '/attendance_system/report_admin.php', 'roles' => ['super_admin']],
+        ['icon' => 'fas fa-id-card',        'label' => 'จัดการเลขบัตรประชาชน', 'url' => $base_path . '/student/admin/manage_nid.php', 'roles' => ['super_admin']],
     ],
     'chromebook' => [
         ['icon' => 'fas fa-tachometer-alt',  'label' => 'Dashboard',       'url' => $base_path . '/chromebook/index.php'],
@@ -107,29 +107,29 @@ $subMenus = [
     'supervision' => [
         ['icon' => 'fas fa-edit',           'label' => 'บันทึกการนิเทศ', 'url' => $base_path . '/supervision.php?tab=record'],
         ['icon' => 'fas fa-id-card',        'label' => 'รายงานรายบุคคล', 'url' => $base_path . '/supervision.php?tab=individual'],
-        ['icon' => 'fas fa-chart-pie',      'label' => 'รายงานภาพรวม', 'url' => $base_path . '/supervision.php?tab=summary', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-chart-pie',      'label' => 'รายงานภาพรวม', 'url' => $base_path . '/supervision.php?tab=summary', 'roles' => ['super_admin']],
     ],
     'behavior' => [
         ['icon' => 'fas fa-user-edit',          'label' => 'บันทึกพฤติกรรม',  'url' => $base_path . '/behavior/dashboard.php'],
-        ['icon' => 'fas fa-chalkboard-teacher', 'label' => 'จัดการที่ปรึกษา', 'url' => $base_path . '/behavior/manage_advisors_ui.php', 'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-tachometer-alt',     'label' => 'Admin Dashboard',  'url' => $base_path . '/behavior/admin.php',              'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-chalkboard-teacher', 'label' => 'จัดการที่ปรึกษา', 'url' => $base_path . '/behavior/manage_advisors_ui.php', 'roles' => ['super_admin']],
+        ['icon' => 'fas fa-tachometer-alt',     'label' => 'Admin Dashboard',  'url' => $base_path . '/behavior/admin.php',              'roles' => ['super_admin']],
     ],
     'homeroom' => [
         ['icon' => 'fas fa-tachometer-alt', 'label' => 'ระบบที่ปรึกษา', 'url' => $base_path . '/homeroom/index.php'],
     ],
     'info' => [
-        ['icon' => 'fas fa-users',          'label' => 'ข้อมูลนักเรียน',      'url' => $base_path . '/student_info.php',  'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-address-card',   'label' => 'ข้อมูลครูและบุคลากร', 'url' => $base_path . '/teacher_info.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-users',          'label' => 'ข้อมูลนักเรียน',      'url' => $base_path . '/student_info.php',  'roles' => ['super_admin']],
+        ['icon' => 'fas fa-address-card',   'label' => 'ข้อมูลครูและบุคลากร', 'url' => $base_path . '/teacher_info.php', 'roles' => ['super_admin']],
     ],
     'bus' => [
         ['icon' => 'fas fa-tachometer-alt',       'label' => 'ภาพรวมระบบ',       'url' => $base_path . '/bus/admin/dashboard.php'],
-        ['icon' => 'fas fa-bus',                  'label' => 'จัดการสายรถ',       'url' => $base_path . '/bus/admin/routes.php',   'roles' => ['super_admin','bus_admin','wfh_admin']],
-        ['icon' => 'fas fa-user-graduate',        'label' => 'รายชื่อนักเรียน',   'url' => $base_path . '/bus/admin/students.php', 'roles' => ['super_admin','bus_admin','wfh_admin']],
+        ['icon' => 'fas fa-bus',                  'label' => 'จัดการสายรถ',       'url' => $base_path . '/bus/admin/routes.php',   'roles' => ['super_admin','bus_admin']],
+        ['icon' => 'fas fa-user-graduate',        'label' => 'รายชื่อนักเรียน',   'url' => $base_path . '/bus/admin/students.php', 'roles' => ['super_admin','bus_admin']],
         ['icon' => 'fas fa-chart-bar',            'label' => 'รายงาน',             'url' => $base_path . '/bus/admin/reports.php'],
-        ['icon' => 'fas fa-file-invoice-dollar',  'label' => 'บันทึกการชำระเงิน', 'url' => $base_path . '/bus/finance/payments.php',       'roles' => ['super_admin','bus_admin','bus_finance','wfh_admin']],
-        ['icon' => 'fas fa-image',                'label' => 'ตรวจสอบสลิปโอนเงิน','url' => $base_path . '/bus/finance/slips.php',           'roles' => ['super_admin','bus_admin','bus_finance','wfh_admin']],
-        ['icon' => 'fas fa-times-circle',         'label' => 'คำขอยกเลิก',        'url' => $base_path . '/bus/finance/cancellations.php',  'roles' => ['super_admin','bus_admin','bus_finance','wfh_admin']],
-        ['icon' => 'fas fa-poll',                 'label' => 'สำรวจการเดินทาง',   'url' => $base_path . '/student/admin/survey_report.php', 'roles' => ['super_admin','bus_admin','wfh_admin','att_teacher']],
+        ['icon' => 'fas fa-file-invoice-dollar',  'label' => 'บันทึกการชำระเงิน', 'url' => $base_path . '/bus/finance/payments.php',       'roles' => ['super_admin','bus_admin','bus_finance']],
+        ['icon' => 'fas fa-image',                'label' => 'ตรวจสอบสลิปโอนเงิน','url' => $base_path . '/bus/finance/slips.php',           'roles' => ['super_admin','bus_admin','bus_finance']],
+        ['icon' => 'fas fa-times-circle',         'label' => 'คำขอยกเลิก',        'url' => $base_path . '/bus/finance/cancellations.php',  'roles' => ['super_admin','bus_admin','bus_finance']],
+        ['icon' => 'fas fa-poll',                 'label' => 'สำรวจการเดินทาง',   'url' => $base_path . '/student/admin/survey_report.php', 'roles' => ['super_admin','bus_admin','att_teacher']],
     ],
     'edoc' => [
         ['icon' => 'fas fa-inbox',                'label' => 'หนังสือรับ',       'url' => $base_path . '/edocument/incoming.php'],
@@ -148,9 +148,9 @@ $subMenus = [
     'duty' => [
         ['icon' => 'fas fa-camera',              'label' => 'ส่งรายงานเวร (ครู)', 'url' => $base_path . '/duty/index.php',          'roles' => ['att_teacher','super_admin','wfh_admin']],
         ['icon' => 'fas fa-chart-line',          'label' => 'รายงานเวรประจำวัน', 'url' => $base_path . '/duty/admin/reports.php',  'roles' => ['att_teacher','super_admin','wfh_admin']],
-        ['icon' => 'fas fa-calendar-week',        'label' => 'จัดการตารางเวร',   'url' => $base_path . '/duty/admin/schedule.php', 'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-layer-group',          'label' => 'จัดการกลุ่มเวร',   'url' => $base_path . '/duty/admin/groups.php',   'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-chalkboard-teacher',   'label' => 'จัดการรายชื่อครู', 'url' => $base_path . '/duty/admin/teachers.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-calendar-week',        'label' => 'จัดการตารางเวร',   'url' => $base_path . '/duty/admin/schedule.php', 'roles' => ['super_admin']],
+        ['icon' => 'fas fa-layer-group',          'label' => 'จัดการกลุ่มเวร',   'url' => $base_path . '/duty/admin/groups.php',   'roles' => ['super_admin']],
+        ['icon' => 'fas fa-chalkboard-teacher',   'label' => 'จัดการรายชื่อครู', 'url' => $base_path . '/duty/admin/teachers.php', 'roles' => ['super_admin']],
         ['icon' => 'fas fa-cog',                  'label' => 'ตั้งค่าระบบเวร',    'url' => $base_path . '/duty/admin/settings.php', 'roles' => ['super_admin']],
     ],
     'health' => [
@@ -165,7 +165,7 @@ $subMenus = [
         ['icon' => 'fas fa-tachometer-alt',  'label' => 'Dashboard',         'url' => $base_path . '/parent_meeting/dashboard.php'],
         ['icon' => 'fas fa-handshake',        'label' => 'บันทึกการประชุม (ลลว.)', 'url' => $base_path . '/parent_meeting/meetings.php', 'roles' => ['super_admin','att_teacher','wfh_staff','cb_admin','club_admin','bus_admin','bus_finance']],
         ['icon' => 'fas fa-users-cog',        'label' => 'เครือข่ายผู้ปกครอง',     'url' => $base_path . '/parent_meeting/network.php', 'roles' => ['super_admin','att_teacher','wfh_staff','cb_admin','club_admin','bus_admin','bus_finance']],
-        ['icon' => 'fas fa-file-invoice',     'label' => 'รายงานทั้งหมด',       'url' => $base_path . '/parent_meeting/reports.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-file-invoice',     'label' => 'รายงานทั้งหมด',       'url' => $base_path . '/parent_meeting/reports.php', 'roles' => ['super_admin']],
         ['icon' => 'fas fa-users',            'label' => 'จัดการผู้ใช้งาน',        'url' => $base_path . '/parent_meeting/users.php', 'roles' => ['super_admin']],
         ['icon' => 'fas fa-cog',              'label' => 'ตั้งค่าระบบ (ห้องเรียน)', 'url' => $base_path . '/parent_meeting/settings.php', 'roles' => ['super_admin']],
     ],
@@ -210,7 +210,7 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
                         <p>แดชบอร์ดกลาง</p>
                     </a>
                 </li>
-                <?php if (in_array($userRole, ['super_admin','bus_admin','bus_finance','wfh_admin','att_teacher'])): ?>
+                <?php if (in_array($userRole, ['super_admin','bus_admin','bus_finance','att_teacher'])): ?>
                 <li class="nav-item <?= $activeSystem === 'bus' ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= $activeSystem === 'bus' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-bus text-warning"></i>
@@ -230,7 +230,7 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
                     </ul>
                 </li>
                 <?php endif; ?>
-                <?php if (in_array($userRole, ['super_admin', 'wfh_admin'])): ?>
+                <?php if ($userRole === 'super_admin'): ?>
                 <li class="nav-item">
                     <a href="<?= $base_path ?>/manage_users.php" class="nav-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-user-shield"></i>
@@ -403,7 +403,7 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
                 </li>
 
                 <!-- Student Info (admin only) -->
-                <?php if (in_array($userRole, ['super_admin','wfh_admin'])): ?>
+                <?php if ($userRole === 'super_admin'): ?>
                 <li class="nav-item <?= $activeSystem === 'info' ? 'menu-open' : '' ?>">
                     <a href="#" class="nav-link <?= $activeSystem === 'info' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-address-book"></i>

@@ -4,7 +4,7 @@ session_start();
 require_once __DIR__ . '/../../../config.php';
 require_once __DIR__ . '/../../config.php';
 
-busRequireStaff(['bus_admin', 'bus_finance', 'super_admin', 'wfh_admin']);
+busRequireStaff(['bus_admin', 'bus_finance', 'super_admin']);
 
 $regId = (int)($_GET['reg_id'] ?? 0);
 if ($regId <= 0) {

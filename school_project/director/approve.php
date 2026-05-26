@@ -66,7 +66,6 @@ $currentIndex = array_search($req['current_step'], $steps);
 // Role mapping to steps
 $roleStepMap = [
     'budget_officer' => 'submitted',
-    'wfh_admin' => 'submitted',
     'procurement_head' => 'budget_approved',
     'finance_head' => 'procurement_approved',
     'deputy_director' => 'finance_approved',

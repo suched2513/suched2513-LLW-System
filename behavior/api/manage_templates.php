@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * API: Manage behavior templates (CRUD)
  * POST JSON: { action: 'save'|'delete'|'list', ... }
@@ -27,7 +27,7 @@ try {
     }
 
     // Need admin for save/delete
-    if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+    if ($_SESSION['llw_role'] !== 'super_admin') {
         http_response_code(403);
         echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์']);
         exit;

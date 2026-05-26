@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * manage_users.php — จัดการผู้ใช้งานระบบ LLW (llw_users)
  * เข้าถึงได้: super_admin เท่านั้น
@@ -6,7 +6,31 @@
 session_start();
 require_once __DIR__ . '/config.php';
 
-if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+if (!isset($_SESSION['llw_role']) || <?php
+/**
+ * manage_users.php — จัดการผู้ใช้งานระบบ LLW (llw_users)
+ * เข้าถึงได้: super_admin เท่านั้น
+ */
+session_start();
+require_once __DIR__ . '/config.php';
+
+if (!isset($_SESSION['llw_role']) || !<?php
+/**
+ * manage_users.php — จัดการผู้ใช้งานระบบ LLW (llw_users)
+ * เข้าถึงได้: super_admin เท่านั้น
+ */
+session_start();
+require_once __DIR__ . '/config.php';
+
+if (!isset($_SESSION['llw_role']) || <?php
+/**
+ * manage_users.php — จัดการผู้ใช้งานระบบ LLW (llw_users)
+ * เข้าถึงได้: super_admin เท่านั้น
+ */
+session_start();
+require_once __DIR__ . '/config.php';
+
+if (($_SESSION['llw_role'] ?? '') !== 'super_admin') {
     header('Location: login.php'); exit();
 }
 
@@ -967,3 +991,2887 @@ async function handleImport() {
 
 </body>
 </html>
+SESSION['llw_role'] !== 'super_admin') {
+    header('Location: login.php'); exit();
+}
+
+$pdo = getPdo();
+$msg = '';
+$msgType = 'success';
+
+// ─── Role Catalog ─── (label, description, color class, group)
+$ROLE_CATALOG = [
+    'super_admin'      => ['label' => 'Super Admin',       'desc' => 'สิทธิ์สูงสุดทุกระบบ',         'color' => 'bg-purple-100 text-purple-700 border-purple-200',     'group' => 'admin'],
+    'director'         => ['label' => 'Director',          'desc' => 'ผู้อำนวยการ — ลงนามขั้นสุดท้าย',   'color' => 'bg-violet-100 text-violet-700 border-violet-200',     'group' => 'exec'],
+    'deputy_director'  => ['label' => 'Deputy Director',   'desc' => 'รองผู้อำนวยการ',                 'color' => 'bg-indigo-100 text-indigo-700 border-indigo-200',     'group' => 'exec'],
+    'wfh_admin'        => ['label' => 'WFH Admin',         'desc' => 'ตรวจสอบใบลา / WFH',              'color' => 'bg-blue-100 text-blue-700 border-blue-200',           'group' => 'admin'],
+    'finance_head'     => ['label' => 'Finance Head',      'desc' => 'หัวหน้าการเงิน — ลงนาม',          'color' => 'bg-emerald-100 text-emerald-700 border-emerald-200', 'group' => 'finance'],
+    'procurement_head' => ['label' => 'Procurement Head',  'desc' => 'หัวหน้าพัสดุ — ลงนาม',             'color' => 'bg-teal-100 text-teal-700 border-teal-200',           'group' => 'finance'],
+    'cb_admin'         => ['label' => 'CB Admin',          'desc' => 'จัดการ Chromebook',                'color' => 'bg-cyan-100 text-cyan-700 border-cyan-200',           'group' => 'module'],
+    'bus_admin'        => ['label' => 'Bus Admin',         'desc' => 'จัดการระบบรถรับส่ง',                'color' => 'bg-orange-100 text-orange-700 border-orange-200',     'group' => 'module'],
+    'bus_finance'      => ['label' => 'Bus Finance',       'desc' => 'การเงินรถรับส่ง',                  'color' => 'bg-amber-100 text-amber-700 border-amber-200',        'group' => 'module'],
+    'club_admin'       => ['label' => 'Club Admin',        'desc' => 'แอดมินจัดการชุมนุม',                'color' => 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200', 'group' => 'module'],
+    'att_teacher'      => ['label' => 'ครูผู้สอน',          'desc' => 'ระบบครูทั่วไป (เช็คชื่อ)',           'color' => 'bg-rose-100 text-rose-700 border-rose-200',           'group' => 'staff'],
+    'wfh_staff'        => ['label' => 'WFH Staff',         'desc' => 'บุคลากรทั่วไป (ลงเวลา)',            'color' => 'bg-slate-100 text-slate-700 border-slate-200',        'group' => 'staff'],
+];
+$ALLOWED_ROLES = array_keys($ROLE_CATALOG);
+
+// บันทึก role-set ของผู้ใช้ลง pivot (เปลี่ยน roles ทั้งชุดและ set primary)
+$syncUserRoles = function (int $uid, array $roles, string $primary) use ($pdo): void {
+    // ข้ามการ sync หากตาราง pivot ยังไม่ถูก migrate (legacy mode)
+    try {
+        $chk = $pdo->query("SHOW TABLES LIKE 'llw_user_roles'")->fetchColumn();
+        if (!$chk) return;
+    } catch (Throwable $e) { return; }
+
+    $roles = array_values(array_unique(array_filter($roles)));
+    if (!in_array($primary, $roles, true)) {
+        $primary = $roles[0] ?? '';
+    }
+    $del = $pdo->prepare("DELETE FROM llw_user_roles WHERE user_id = ?");
+    $del->execute([$uid]);
+    $ins = $pdo->prepare("INSERT INTO llw_user_roles (user_id, role, is_primary) VALUES (?, ?, ?)");
+    foreach ($roles as $r) {
+        $ins->execute([$uid, $r, $r === $primary ? 1 : 0]);
+    }
+};
+
+// ─── POST Actions ────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'create') {
+        $username  = trim($_POST['username']);
+        $firstname = trim($_POST['firstname']);
+        $lastname  = trim($_POST['lastname']);
+        $roles     = array_values(array_intersect((array)($_POST['roles'] ?? []), $ALLOWED_ROLES));
+        $primary   = $_POST['primary_role'] ?? '';
+
+        if (empty($roles)) {
+            $msg = 'กรุณาเลือกอย่างน้อย 1 สิทธิ์การใช้งาน'; $msgType = 'error';
+        } elseif (!in_array($primary, $roles, true)) {
+            $primary = $roles[0];
+        }
+
+        if ($msgType !== 'error') {
+            try {
+                $pdo->beginTransaction();
+                $hash = password_hash('123456', PASSWORD_BCRYPT);
+                $stmt = $pdo->prepare("INSERT INTO llw_users (username,firstname,lastname,password,role,status,force_password_change) VALUES (?,?,?,?,?,'active',1)");
+                $stmt->execute([$username, $firstname, $lastname, $hash, $primary]);
+                $newUserId = (int)$pdo->lastInsertId();
+
+                $syncUserRoles($newUserId, $roles, $primary);
+
+                // Auto sync to att_teachers (ทุกคนสามารถเป็นครูได้)
+                $name = trim($firstname . ' ' . $lastname);
+                $ins = $pdo->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, ?, ?)");
+                $ins->execute([$name, $username, $hash, $newUserId]);
+
+                $pdo->commit();
+                $msg = "เพิ่มผู้ใช้ {$firstname} {$lastname} สำเร็จแล้ว (รหัสผ่านเริ่มต้น: 123456) — กำหนด " . count($roles) . " สิทธิ์";
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                if ($e->getCode() == 23000) {
+                    $msg = 'Username นี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น'; $msgType = 'error';
+                } else {
+                    error_log($e->getMessage());
+                    $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+                }
+            }
+        }
+    }
+
+    if ($action === 'toggle_status') {
+        $uid = (int)$_POST['user_id'];
+        $newStatus = $_POST['new_status'];
+        if (in_array($newStatus, ['active','inactive'])) {
+            $stmt = $pdo->prepare("UPDATE llw_users SET status = ? WHERE user_id = ?");
+            $stmt->execute([$newStatus, $uid]);
+            $msg = 'อัปเดตสถานะเรียบร้อย';
+        }
+    }
+
+    if ($action === 'reset_password') {
+        $uid  = (int)$_POST['user_id'];
+        $newp = trim($_POST['new_password']);
+        if (strlen($newp) < 6) {
+            $msg = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'; $msgType = 'error';
+        } else {
+            $hash = password_hash($newp, PASSWORD_BCRYPT);
+            $stmt = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 1 WHERE user_id = ?");
+            $stmt->execute([$hash, $uid]);
+            $msg = 'รีเซ็ตรหัสผ่านเรียบร้อย (ผู้ใช้ต้องเปลี่ยนรหัสผ่านในครั้งถัดไป)';
+        }
+    }
+
+    if ($action === 'reset_default') {
+        $uid  = (int)$_POST['user_id'];
+        $hash = password_hash('123456', PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 1 WHERE user_id = ?");
+        $stmt->execute([$hash, $uid]);
+        $msg = 'รีเซ็ตเป็นรหัสผ่านเริ่มต้น (123456) เรียบร้อย';
+    }
+
+    if ($action === 'reset_all_default') {
+        $myId = (int)$_SESSION['user_id'];
+        $hash = password_hash('123456', PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 1 WHERE user_id != ?");
+        $stmt->execute([$hash, $myId]);
+        $msg = 'รีเซ็ตรหัสผ่านทุกบัญชี (ยกเว้นคุณ) เป็น 123456 เรียบร้อย';
+    }
+
+    if ($action === 'delete') {
+        $uid = (int)$_POST['user_id'];
+        if ($uid === (int)$_SESSION['user_id']) {
+            $msg = 'ไม่สามารถลบบัญชีของตัวเองได้'; $msgType = 'error';
+        } else {
+            $stmt = $pdo->prepare("DELETE FROM llw_users WHERE user_id = ?");
+            $stmt->execute([$uid]);
+            $msg = 'ลบผู้ใช้เรียบร้อยแล้ว';
+        }
+    }
+
+    if ($action === 'reset_all_roles') {
+        if ($_SESSION['llw_role'] !== 'super_admin') {
+            $msg = 'ไม่มีสิทธิ์'; $msgType = 'error';
+        } else {
+            $myId = (int)$_SESSION['user_id'];
+            try {
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare("UPDATE llw_users SET role = 'att_teacher' WHERE role != 'super_admin' AND user_id != ?");
+                $stmt->execute([$myId]);
+                $affected = $stmt->rowCount();
+                // sync pivot: ลบทุก role ของผู้ใช้ที่ถูก reset แล้วใส่ att_teacher
+                $pdo->prepare("DELETE lur FROM llw_user_roles lur INNER JOIN llw_users u ON u.user_id = lur.user_id WHERE u.role != 'super_admin' AND u.user_id != ?")->execute([$myId]);
+                $pdo->prepare("INSERT IGNORE INTO llw_user_roles (user_id, role, is_primary) SELECT user_id, 'att_teacher', 1 FROM llw_users WHERE role = 'att_teacher' AND user_id != ?")->execute([$myId]);
+                $pdo->commit();
+                $msg = "Reset สำเร็จ — อัปเดต {$affected} บัญชีเป็น att_teacher (ยกเว้น super_admin)";
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                error_log($e->getMessage());
+                $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+            }
+        }
+    }
+
+    if ($action === 'clear_users') {
+        $myId = (int)$_SESSION['user_id'];
+        try {
+            $stmt = $pdo->prepare("DELETE FROM llw_users WHERE user_id != ?");
+            $stmt->execute([$myId]);
+            $msg = 'ล้างข้อมูลผู้ใช้อื่นทั้งหมดเรียบร้อยแล้ว (ยกเว้นคุณ)';
+        } catch (Exception $e) {
+            $msg = 'ไม่สามารถล้างข้อมูลได้'; $msgType = 'error';
+        }
+    }
+
+    if ($action === 'edit_user') {
+        $uid       = (int)$_POST['user_id'];
+        $firstname = trim($_POST['firstname'] ?? '');
+        $lastname  = trim($_POST['lastname'] ?? '');
+        $roles     = array_values(array_intersect((array)($_POST['roles'] ?? []), $ALLOWED_ROLES));
+        $primary   = $_POST['primary_role'] ?? '';
+
+        if ($uid <= 0 || empty($firstname)) {
+            $msg = 'ข้อมูลไม่ถูกต้อง'; $msgType = 'error';
+        } elseif (empty($roles)) {
+            $msg = 'กรุณาเลือกอย่างน้อย 1 สิทธิ์การใช้งาน'; $msgType = 'error';
+        } else {
+            if (!in_array($primary, $roles, true)) $primary = $roles[0];
+            try {
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare("UPDATE llw_users SET firstname=?, lastname=?, role=? WHERE user_id=?");
+                $stmt->execute([$firstname, $lastname, $primary, $uid]);
+
+                $syncUserRoles($uid, $roles, $primary);
+                $pdo->commit();
+                
+                // Auto update att_teachers
+                $name = trim($firstname . ' ' . $lastname);
+                $upd = $pdo->prepare("UPDATE att_teachers SET name=? WHERE llw_user_id=?");
+                $upd->execute([$name, $uid]);
+                
+                // If not in att_teachers yet, insert them
+                $chk = $pdo->prepare("SELECT id FROM att_teachers WHERE llw_user_id=?");
+                $chk->execute([$uid]);
+                if (!$chk->fetch()) {
+                    $uInfo = $pdo->prepare("SELECT username, password FROM llw_users WHERE user_id=?");
+                    $uInfo->execute([$uid]);
+                    $uRow = $uInfo->fetch();
+                    if ($uRow) {
+                        $ins = $pdo->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, ?, ?)");
+                        $ins->execute([$name, $uRow['username'], $uRow['password'], $uid]);
+                    }
+                }
+                
+                $msg = "อัปเดตข้อมูล {$firstname} {$lastname} เรียบร้อยแล้ว";
+            } catch (Exception $e) {
+                error_log($e->getMessage());
+                $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+            }
+        }
+    }
+}
+
+// ─── Fetch Users + roles (1:M) ─────────────────────────────────
+// ตรวจว่าตาราง pivot ถูก migrate แล้วหรือยัง — ถ้ายัง fallback ที่ llw_users.role
+$hasPivot = false;
+try {
+    $chk = $pdo->query("SHOW TABLES LIKE 'llw_user_roles'")->fetchColumn();
+    $hasPivot = (bool)$chk;
+} catch (Throwable $e) { $hasPivot = false; }
+
+if ($hasPivot) {
+    $users = $pdo->query("
+        SELECT u.*,
+            COALESCE(
+                (SELECT GROUP_CONCAT(role ORDER BY is_primary DESC, role ASC SEPARATOR ',')
+                 FROM llw_user_roles WHERE user_id = u.user_id),
+                u.role
+            ) AS all_roles
+        FROM llw_users u
+        ORDER BY u.role, u.firstname
+    ")->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $users = $pdo->query("SELECT u.*, u.role AS all_roles FROM llw_users u ORDER BY u.role, u.firstname")->fetchAll(PDO::FETCH_ASSOC);
+}
+
+foreach ($users as &$u) {
+    $u['roles_list'] = !empty($u['all_roles']) ? explode(',', $u['all_roles']) : [$u['role']];
+}
+unset($u);
+
+$totalUsers    = count($users);
+$activeUsers   = count(array_filter($users, fn($u) => $u['status'] === 'active'));
+$pendingChange = count(array_filter($users, fn($u) => !empty($u['force_password_change'])));
+?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>จัดการผู้ใช้ | LLW Platinum</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+    body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
+    .sidebar-item-active { background-color: #1d4ed8; color: white; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.2); }
+</style>
+</head>
+<body class="flex min-h-screen">
+
+<!-- Sidebar (เหมือนกับ central_dashboard.php) -->
+<aside class="w-72 bg-white border-r border-slate-100 flex flex-col fixed h-full z-20">
+    <div class="p-8 flex items-center gap-4">
+        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white text-xl">
+            <i class="bi bi-rocket-takeoff-fill"></i>
+        </div>
+        <span class="text-xl font-black text-slate-800 tracking-tight">LLW Platinum</span>
+    </div>
+    <nav class="flex-1 px-6 space-y-2">
+        <a href="central_dashboard.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <i class="bi bi-grid-fill text-lg"></i> แดชบอร์ด
+        </a>
+        <a href="manage_users.php" class="sidebar-item-active flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all">
+            <i class="bi bi-people text-lg"></i> จัดการผู้ใช้
+        </a>
+        <a href="attendance_system/admin.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <i class="bi bi-building text-lg"></i> ห้องเรียน / นักเรียน
+        </a>
+        <a href="attendance_system/admin.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <i class="bi bi-book text-lg"></i> รายวิชา
+        </a>
+        <a href="admin/reports.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <i class="bi bi-file-earmark-bar-graph text-lg"></i> รายงาน
+        </a>
+    </nav>
+    <div class="p-8 mt-auto space-y-4">
+        <a href="change_password.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-indigo-500 hover:bg-indigo-50 transition-all">
+            <i class="bi bi-key-fill text-lg"></i> เปลี่ยนรหัสผ่าน
+        </a>
+        <a href="logout.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-rose-500 hover:bg-rose-50 transition-all">
+            <i class="bi bi-box-arrow-left text-lg"></i> ออกจากระบบ
+        </a>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<main class="ml-72 flex-1 p-10">
+
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                <i class="bi bi-people-fill text-blue-600"></i> จัดการผู้ใช้งาน
+            </h1>
+            <p class="text-slate-400 font-medium mt-1">เพิ่ม / แก้ไข / ปิดใช้งานบัญชีผู้ใช้ทั้งหมด</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <?php if ($msg): ?>
+            <div class="px-5 py-3 rounded-2xl text-sm font-bold <?= $msgType === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600' ?>">
+                <i class="bi bi-<?= $msgType === 'error' ? 'exclamation-triangle' : 'check-circle' ?>-fill mr-1"></i>
+                <?= htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') ?>
+            </div>
+            <?php endif; ?>
+            <button onclick="confirmResetAll()"
+                class="flex items-center gap-2 bg-amber-100 text-amber-600 px-6 py-3 rounded-2xl font-bold hover:bg-amber-500 hover:text-white transition-all">
+                <i class="bi bi-arrow-repeat text-lg"></i> Reset รหัสทั้งหมด
+            </button>
+            <button onclick="confirmResetAllRoles()"
+                class="flex items-center gap-2 bg-indigo-100 text-indigo-600 px-6 py-3 rounded-2xl font-bold hover:bg-indigo-500 hover:text-white transition-all">
+                <i class="bi bi-person-fill-slash text-lg"></i> Reset Role ทั้งหมด
+            </button>
+            <button onclick="confirmClear()"
+                class="flex items-center gap-2 bg-rose-100 text-rose-500 px-6 py-3 rounded-2xl font-bold hover:bg-rose-500 hover:text-white transition-all">
+                <i class="bi bi-trash3 text-lg"></i> ล้างทั้งหมด
+            </button>
+            <button onclick="document.getElementById('modal-import').classList.remove('hidden')"
+                class="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-600 hover:scale-[1.02] transition-all">
+                <i class="bi bi-file-earmark-spreadsheet text-lg"></i> นำเข้า CSV
+            </button>
+            <button onclick="document.getElementById('modal-add').classList.remove('hidden')"
+                class="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] transition-all">
+                <i class="bi bi-plus-lg text-lg"></i> เพิ่มผู้ใช้ใหม่
+            </button>
+        </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-3 gap-4 mb-8 max-w-xl">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest">ผู้ใช้ทั้งหมด</p>
+            <p class="text-4xl font-black text-slate-800 mt-1"><?= $totalUsers ?></p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest">ใช้งานอยู่</p>
+            <p class="text-4xl font-black text-emerald-600 mt-1"><?= $activeUsers ?></p>
+        </div>
+        <div class="bg-amber-50 rounded-2xl shadow-sm border border-amber-100 p-5">
+            <p class="text-xs font-black text-amber-500 uppercase tracking-widest">รอเปลี่ยนรหัส</p>
+            <p class="text-4xl font-black text-amber-600 mt-1"><?= $pendingChange ?></p>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-8 py-6 border-b border-slate-100 flex items-center gap-3">
+            <i class="bi bi-person-lines-fill text-blue-600"></i>
+            <span class="font-black text-slate-700">รายชื่อผู้ใช้งานทั้งหมด</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">#</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ชื่อ-สกุล / Username</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Role</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">สถานะ</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">เข้าสู่ระบบล่าสุด</th>
+                        <th class="px-6 py-5 text-center text-xs font-black text-slate-400 uppercase tracking-widest">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                <?php foreach ($users as $i => $u):
+                    $isMe = ((int)$u['user_id'] === (int)$_SESSION['user_id']);
+                    $primaryRole = $u['role'];
+                ?>
+                <tr class="hover:bg-slate-50/50 transition-all group">
+                    <td class="px-6 py-5 text-xs font-bold text-slate-400"><?= $i + 1 ?></td>
+                    <td class="px-6 py-5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-black text-sm">
+                                <?= mb_substr($u['firstname'], 0, 1) ?>
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-800 text-sm"><?= htmlspecialchars($u['firstname'].' '.$u['lastname'], ENT_QUOTES, 'UTF-8') ?></p>
+                                <p class="text-xs text-slate-400 font-medium">@<?= htmlspecialchars($u['username'], ENT_QUOTES, 'UTF-8') ?></p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex flex-wrap gap-1.5 max-w-xs">
+                            <?php foreach ($u['roles_list'] as $rk):
+                                $rm = $ROLE_CATALOG[$rk] ?? ['label' => $rk, 'color' => 'bg-slate-100 text-slate-600 border-slate-200'];
+                                $isPrimary = ($rk === $primaryRole);
+                            ?>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black border <?= $rm['color'] ?>" title="<?= htmlspecialchars($rm['desc'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                                <?php if ($isPrimary): ?><i class="bi bi-star-fill text-amber-500 text-[9px]"></i><?php endif; ?>
+                                <?= htmlspecialchars($rm['label'], ENT_QUOTES, 'UTF-8') ?>
+                            </span>
+                            <?php endforeach; ?>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <?php if ($u['status'] === 'active'): ?>
+                        <span class="flex items-center gap-1.5 text-emerald-600 text-xs font-bold">
+                            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> ใช้งาน
+                        </span>
+                        <?php else: ?>
+                        <span class="flex items-center gap-1.5 text-slate-400 text-xs font-bold">
+                            <span class="w-2 h-2 bg-slate-300 rounded-full"></span> ปิดใช้งาน
+                        </span>
+                        <?php endif; ?>
+                        <?php if (!empty($u['force_password_change'])): ?>
+                        <span class="mt-1 flex items-center gap-1 text-amber-500 text-xs font-black">
+                            <i class="bi bi-exclamation-triangle-fill"></i> รอเปลี่ยนรหัส
+                        </span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="px-6 py-5 text-xs text-slate-500 font-medium">
+                        <?= $u['last_login'] ? date('d/m/').((int)date('Y')+543).' '.date('H:i', strtotime($u['last_login'])) : '—' ?>
+                    </td>
+                    <td class="px-6 py-5 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <!-- Edit Role / Name -->
+                            <button onclick='openEdit(<?= (int)$u['user_id'] ?>, <?= json_encode($u['firstname'], JSON_HEX_APOS|JSON_HEX_QUOT) ?>, <?= json_encode($u['lastname'], JSON_HEX_APOS|JSON_HEX_QUOT) ?>, <?= json_encode($u['roles_list']) ?>, <?= json_encode($u['role']) ?>)'
+                                class="w-8 h-8 bg-indigo-50 text-indigo-500 rounded-xl flex items-center justify-center hover:bg-indigo-500 hover:text-white transition-all" title="แก้ไขชื่อ / Role">
+                                <i class="bi bi-pencil-fill text-xs"></i>
+                            </button>
+                            <!-- Reset to Default 123456 -->
+                            <?php if (!$isMe): ?>
+                            <form method="POST" class="inline">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="reset_default">
+                                <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
+                                <button type="submit"
+                                    class="w-8 h-8 bg-slate-100 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-500 hover:text-white transition-all" title="Reset รหัสเป็น 123456">
+                                    <i class="bi bi-arrow-repeat text-xs"></i>
+                                </button>
+                            </form>
+                            <?php endif; ?>
+                            <!-- Reset Password (custom) -->
+                            <button onclick="openReset(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['firstname'], ENT_QUOTES) ?>')"
+                                class="w-8 h-8 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center hover:bg-amber-500 hover:text-white transition-all" title="ตั้งรหัสผ่านเอง">
+                                <i class="bi bi-key-fill text-xs"></i>
+                            </button>
+                            <!-- Toggle Status -->
+                            <?php if (!$isMe): ?>
+                            <form method="POST" class="inline">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="toggle_status">
+                                <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
+                                <input type="hidden" name="new_status" value="<?= $u['status'] === 'active' ? 'inactive' : 'active' ?>">
+                                <button type="submit"
+                                    class="w-8 h-8 rounded-xl flex items-center justify-center transition-all <?= $u['status'] === 'active' ? 'bg-slate-100 text-slate-400 hover:bg-slate-500 hover:text-white' : 'bg-emerald-50 text-emerald-500 hover:bg-emerald-500 hover:text-white' ?>"
+                                    title="<?= $u['status'] === 'active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน' ?>">
+                                    <i class="bi bi-<?= $u['status'] === 'active' ? 'pause-fill' : 'play-fill' ?> text-xs"></i>
+                                </button>
+                            </form>
+                            <!-- Delete -->
+                            <button onclick="confirmDelete(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['firstname'].' '.$u['lastname'], ENT_QUOTES) ?>')"
+                                class="w-8 h-8 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all" title="ลบผู้ใช้">
+                                <i class="bi bi-trash3-fill text-xs"></i>
+                            </button>
+                            <?php else: ?>
+                            <span class="text-xs text-slate-300 font-bold">บัญชีของคุณ</span>
+                            <?php endif; ?>
+                        </div>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- Modal: เพิ่มผู้ใช้ -->
+<div id="modal-add" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-person-plus-fill"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">เพิ่มผู้ใช้งานใหม่</h5>
+                    <p class="text-xs font-bold text-blue-100 uppercase tracking-widest">กรอกข้อมูลให้ครบถ้วน</p>
+                </div>
+            </div>
+        </div>
+        <form method="POST" class="p-8 space-y-4">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="create">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">ชื่อ</label>
+                    <input type="text" name="firstname" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="ชื่อจริง">
+                </div>
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">นามสกุล</label>
+                    <input type="text" name="lastname" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="นามสกุล">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Username</label>
+                <input type="text" name="username" required autocomplete="off" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="ตัวอักษรภาษาอังกฤษ ไม่มีช่องว่าง">
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">สิทธิ์การใช้งาน <span class="text-rose-500">*</span></label>
+                    <span class="text-[10px] text-slate-400 font-medium">เลือกได้หลายรายการ · <i class="bi bi-star-fill text-amber-500"></i> = สิทธิ์หลัก</span>
+                </div>
+                <div data-role-grid="add" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto p-1">
+                    <?php foreach ($ROLE_CATALOG as $rk => $rm): ?>
+                    <label class="role-card relative cursor-pointer flex items-start gap-2.5 p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40 transition-all">
+                        <input type="checkbox" name="roles[]" value="<?= $rk ?>" class="role-cb mt-0.5 accent-blue-600 w-4 h-4 flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-black text-sm text-slate-700"><?= htmlspecialchars($rm['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <button type="button" class="primary-btn opacity-0 pointer-events-none text-[10px] font-bold text-slate-400 hover:text-amber-500 transition-all">
+                                    <i class="bi bi-star"></i>
+                                </button>
+                            </div>
+                            <p class="text-[10.5px] text-slate-400 font-medium mt-0.5 leading-tight"><?= htmlspecialchars($rm['desc'], ENT_QUOTES, 'UTF-8') ?></p>
+                        </div>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+                <input type="hidden" name="primary_role" value="">
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                <i class="bi bi-info-circle-fill text-amber-500 flex-shrink-0 mt-0.5"></i>
+                <div>
+                    <p class="text-amber-800 font-black text-xs">รหัสผ่านเริ่มต้น: <span class="font-mono bg-amber-100 px-1.5 py-0.5 rounded-lg">123456</span></p>
+                    <p class="text-amber-600 text-xs mt-0.5">ผู้ใช้จะถูกบังคับให้เปลี่ยนรหัสผ่านเมื่อ Login ครั้งแรก</p>
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="document.getElementById('modal-add').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="submit"
+                    class="flex-[2] py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-200 hover:opacity-90 transition-all">
+                    <i class="bi bi-person-plus-fill mr-1"></i> สร้างบัญชี
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Reset Password -->
+<div id="modal-reset" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-key-fill"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">รีเซ็ตรหัสผ่าน</h5>
+                    <p id="reset-name" class="text-xs font-bold text-amber-100 uppercase tracking-widest"></p>
+                </div>
+            </div>
+        </div>
+        <form method="POST" class="p-8 space-y-4">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="reset_password">
+            <input type="hidden" name="user_id" id="reset-uid">
+            <div>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">รหัสผ่านใหม่</label>
+                <input type="password" name="new_password" required autocomplete="new-password"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all"
+                    placeholder="อย่างน้อย 6 ตัวอักษร">
+            </div>
+            <div class="flex gap-3">
+                <button type="button" onclick="document.getElementById('modal-reset').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="submit"
+                    class="flex-[2] py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-black text-sm shadow-lg shadow-amber-200 hover:opacity-90 transition-all">
+                    <i class="bi bi-key-fill mr-1"></i> รีเซ็ตรหัสผ่าน
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: นำเข้า CSV -->
+<div id="modal-import" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-file-earmark-arrow-up"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">นำเข้าผู้ใช้งานจาก CSV</h5>
+                    <p class="text-xs font-bold text-emerald-100 uppercase tracking-widest">รองรับไฟล์ .csv (UTF-8)</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-8 space-y-6">
+            <div class="bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
+                <p class="text-xs font-bold text-emerald-700 mb-2"><i class="bi bi-info-circle-fill mr-1"></i>รูปแบบไฟล์ CSV (ไม่มีหัวตาราง):</p>
+                <code class="text-sm text-emerald-600 bg-emerald-100/50 px-2 py-1 rounded-lg block leading-relaxed">
+                    username, firstname, lastname, password, role
+                </code>
+                <p class="text-xs text-emerald-500 mt-2 italic">* Role: super_admin, wfh_admin, wfh_staff, cb_admin, att_teacher</p>
+                <p class="text-sm text-emerald-600 mt-3">
+                    <a href="api/download_user_template.php" class="inline-flex items-center gap-1 font-black underline decoration-emerald-200 hover:text-emerald-800 transition-colors">
+                        <i class="bi bi-download"></i> ดาวน์โหลดไฟล์ตัวอย่าง (.csv)
+                    </a>
+                </p>
+            </div>
+            
+            <div id="drop-zone" class="border-2 border-dashed border-emerald-200 rounded-2xl p-10 text-center hover:border-emerald-400 hover:bg-emerald-50/50 transition-all cursor-pointer"
+                 onclick="document.getElementById('csv-file').click()">
+                <i class="bi bi-cloud-upload text-4xl text-emerald-400 block mb-2"></i>
+                <p class="text-sm font-bold text-slate-500">คลิกเพื่อเลือกไฟล์ CSV หรือลากมาวาง</p>
+                <p class="text-xs text-slate-400 mt-1" id="file-name">ยังไม่ได้เลือกไฟล์</p>
+            </div>
+            <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="document.getElementById('file-name').textContent = this.files[0].name">
+
+            <div class="flex gap-3">
+                <button type="button" onclick="document.getElementById('modal-import').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="button" onclick="handleImport()"
+                    class="flex-[2] py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-emerald-200/50 hover:opacity-90 transition-all">
+                    <i class="bi bi-check-circle-fill mr-1"></i> เริ่มนำเข้าข้อมูล
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit User (Role + Name) -->
+<div id="modal-edit" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-600 to-blue-600 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-pencil-fill"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">แก้ไขข้อมูลผู้ใช้</h5>
+                    <p id="edit-username-display" class="text-xs font-bold text-indigo-200 uppercase tracking-widest"></p>
+                </div>
+            </div>
+        </div>
+        <form method="POST" class="p-6 space-y-4">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="edit_user">
+            <input type="hidden" name="user_id" id="edit-uid">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">ชื่อ</label>
+                    <input type="text" name="firstname" id="edit-firstname" required
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
+                        placeholder="ชื่อ">
+                </div>
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">นามสกุล</label>
+                    <input type="text" name="lastname" id="edit-lastname"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
+                        placeholder="นามสกุล">
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">สิทธิ์การใช้งาน <span class="text-rose-500">*</span></label>
+                    <span class="text-[10px] text-slate-400 font-medium">เลือกหลายได้ · <i class="bi bi-star-fill text-amber-500"></i> = หลัก</span>
+                </div>
+                <div data-role-grid="edit" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto p-1">
+                    <?php foreach ($ROLE_CATALOG as $rk => $rm): ?>
+                    <label class="role-card relative cursor-pointer flex items-start gap-2.5 p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/40 transition-all">
+                        <input type="checkbox" name="roles[]" value="<?= $rk ?>" class="role-cb mt-0.5 accent-indigo-600 w-4 h-4 flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-black text-sm text-slate-700"><?= htmlspecialchars($rm['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <button type="button" class="primary-btn opacity-0 pointer-events-none text-[10px] font-bold text-slate-400 hover:text-amber-500 transition-all">
+                                    <i class="bi bi-star"></i>
+                                </button>
+                            </div>
+                            <p class="text-[10.5px] text-slate-400 font-medium mt-0.5 leading-tight"><?= htmlspecialchars($rm['desc'], ENT_QUOTES, 'UTF-8') ?></p>
+                        </div>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+                <input type="hidden" name="primary_role" id="edit-primary-role" value="">
+            </div>
+            <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 text-xs text-indigo-600">
+                <i class="bi bi-info-circle-fill me-1"></i>
+                สิทธิ์หลัก (<i class="bi bi-star-fill text-amber-500"></i>) ใช้กำหนดหน้า dashboard เริ่มต้น — มีผลทันทีในการ Login ครั้งถัดไป
+            </div>
+            <div class="flex gap-3 pt-1">
+                <button type="button" onclick="document.getElementById('modal-edit').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="submit"
+                    class="flex-[2] py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-200 hover:opacity-90 transition-all">
+                    <i class="bi bi-check-circle-fill mr-1"></i> บันทึก
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete form (hidden) -->
+<form id="delete-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="user_id" id="delete-uid">
+</form>
+
+<!-- Reset-all-roles form (hidden) -->
+<form id="reset-roles-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="reset_all_roles">
+</form>
+
+<!-- Reset-all-passwords form (hidden) -->
+<form id="reset-pass-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="reset_all_default">
+</form>
+
+<!-- Clear-users form (hidden) -->
+<form id="clear-users-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="clear_users">
+</form>
+
+<script>
+function confirmResetAll() {
+    Swal.fire({
+        title: 'Reset รหัสผ่านทุกบัญชี?',
+        html: 'รหัสผ่านของ<b>ทุกบัญชี (ยกเว้นคุณ)</b> จะถูกเปลี่ยนเป็น <b class="font-mono">123456</b><br><small class="text-amber-600 font-bold">ผู้ใช้ทุกคนต้องเปลี่ยนรหัสผ่านใน Login ครั้งถัดไป</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f59e0b',
+        confirmButtonText: 'ยืนยัน Reset ทั้งหมด',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) document.getElementById('reset-pass-form').submit();
+    });
+}
+
+function confirmClear() {
+    Swal.fire({
+        title: 'ล้างข้อมูลผู้ใช้ทั้งหมด?',
+        html: 'ระบบจะลบข้อมูลผู้ใช้อื่น <b>"ทั้งหมด"</b> ยกเว้นคุณ<br><small class="text-rose-500 font-bold">การดำเนินการนี้ไม่สามารถย้อนกลับได้!</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'ยืนยันลบทั้งหมด',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) document.getElementById('clear-users-form').submit();
+    });
+}
+
+function confirmResetAllRoles() {
+    Swal.fire({
+        title: 'Reset Role ผู้ใช้ทั้งหมด?',
+        html: 'ผู้ใช้<b>ทุกคน (ยกเว้น super_admin และคุณ)</b> จะถูกเปลี่ยน role เป็น <b>att_teacher (ครูผู้สอน)</b><br><small class="text-indigo-600 font-bold">ต้องกำหนด role ใหม่ให้ผู้ที่มีหน้าที่พิเศษด้วยตนเอง</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#4f46e5',
+        confirmButtonText: 'ยืนยัน Reset Role',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) document.getElementById('reset-roles-form').submit();
+    });
+}
+
+function openEdit(uid, firstname, lastname, roles, primary) {
+    document.getElementById('edit-uid').value = uid;
+    document.getElementById('edit-firstname').value = firstname;
+    document.getElementById('edit-lastname').value = lastname;
+    document.getElementById('edit-username-display').textContent = (firstname || '') + ' ' + (lastname || '');
+
+    const grid = document.querySelector('[data-role-grid="edit"]');
+    grid.querySelectorAll('.role-cb').forEach(cb => {
+        cb.checked = roles.includes(cb.value);
+    });
+    document.getElementById('edit-primary-role').value = primary || roles[0] || '';
+    refreshRoleGrid(grid);
+    document.getElementById('modal-edit').classList.remove('hidden');
+}
+
+// ─── Multi-role grid: ทำให้ checkbox + primary star ทำงานร่วมกัน ───
+function refreshRoleGrid(grid) {
+    if (!grid) return;
+    const form = grid.closest('form');
+    const primaryInput = form.querySelector('input[name="primary_role"]');
+    const checked = Array.from(grid.querySelectorAll('.role-cb')).filter(c => c.checked).map(c => c.value);
+
+    // ถ้า primary ไม่อยู่ใน checked — set primary เป็นตัวแรก
+    if (!checked.includes(primaryInput.value)) {
+        primaryInput.value = checked[0] || '';
+    }
+
+    grid.querySelectorAll('.role-card').forEach(card => {
+        const cb = card.querySelector('.role-cb');
+        const btn = card.querySelector('.primary-btn');
+        const icon = btn.querySelector('i');
+        const isPrimary = (cb.value === primaryInput.value);
+
+        if (cb.checked) {
+            card.classList.add('!border-blue-500','!bg-blue-50');
+            btn.classList.remove('opacity-0','pointer-events-none');
+        } else {
+            card.classList.remove('!border-blue-500','!bg-blue-50','!border-amber-400','!bg-amber-50');
+            btn.classList.add('opacity-0','pointer-events-none');
+        }
+        if (cb.checked && isPrimary) {
+            card.classList.remove('!border-blue-500','!bg-blue-50');
+            card.classList.add('!border-amber-400','!bg-amber-50');
+            icon.className = 'bi bi-star-fill text-amber-500';
+            btn.classList.add('text-amber-500');
+            btn.classList.remove('text-slate-400');
+        } else {
+            icon.className = 'bi bi-star';
+            btn.classList.remove('text-amber-500');
+            btn.classList.add('text-slate-400');
+        }
+    });
+}
+
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.primary-btn');
+    if (btn) {
+        e.preventDefault();
+        const grid = btn.closest('[data-role-grid]');
+        const card = btn.closest('.role-card');
+        const cb = card.querySelector('.role-cb');
+        if (!cb.checked) { cb.checked = true; }
+        grid.closest('form').querySelector('input[name="primary_role"]').value = cb.value;
+        refreshRoleGrid(grid);
+        return;
+    }
+    const cb = e.target.closest('.role-cb');
+    if (cb) {
+        setTimeout(() => refreshRoleGrid(cb.closest('[data-role-grid]')), 0);
+    }
+});
+
+// validate ฟอร์มก่อน submit
+document.querySelectorAll('form').forEach(f => {
+    f.addEventListener('submit', (e) => {
+        const grid = f.querySelector('[data-role-grid]');
+        if (!grid) return;
+        const checked = grid.querySelectorAll('.role-cb:checked');
+        if (checked.length === 0) {
+            e.preventDefault();
+            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกสิทธิ์', text: 'ต้องเลือกอย่างน้อย 1 สิทธิ์การใช้งาน', confirmButtonColor: '#2563eb' });
+            return;
+        }
+        const primaryInput = f.querySelector('input[name="primary_role"]');
+        if (!primaryInput.value || !Array.from(checked).some(c => c.value === primaryInput.value)) {
+            primaryInput.value = checked[0].value;
+        }
+    });
+});
+
+function openReset(uid, name) {
+    document.getElementById('reset-uid').value = uid;
+    document.getElementById('reset-name').textContent = name;
+    document.getElementById('modal-reset').classList.remove('hidden');
+}
+
+function confirmDelete(uid, name) {
+    Swal.fire({
+        title: 'ลบผู้ใช้?',
+        html: `ต้องการลบบัญชี <b>${name}</b> ออกจากระบบ?<br><small class="text-slate-400">การดำเนินการนี้ไม่สามารถย้อนกลับได้</small>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'ลบเลย',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) {
+            document.getElementById('delete-uid').value = uid;
+            document.getElementById('delete-form').submit();
+        }
+    });
+}
+
+async function handleImport() {
+    const fileInput = document.getElementById('csv-file');
+    if (!fileInput.files.length) {
+        Swal.fire({ icon: 'warning', title: 'กรุณาเลือกไฟล์', text: 'กรุณาเลือกไฟล์ CSV ก่อนดำเนินการ' });
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('csv_file', fileInput.files[0]);
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+
+    Swal.fire({
+        title: 'กำลังนำเข้าข้อมูล...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    try {
+        const response = await fetch('api/import_users.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const text = await response.text();
+        let res;
+        try {
+            res = JSON.parse(text);
+        } catch (e) {
+            console.error('Raw Response:', text);
+            Swal.fire({
+                icon: 'error',
+                title: 'API Error',
+                html: `<div class="text-left text-xs bg-slate-50 p-4 rounded-xl overflow-auto max-h-40"><code>${text.substring(0, 500)}</code></div>`,
+                confirmButtonColor: '#ef4444'
+            });
+            return;
+        }
+
+        if (res.status === 'success') {
+            Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ!',
+                text: res.message,
+                confirmButtonColor: '#059669'
+            }).then(() => location.reload());
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'ผิดพลาด',
+                text: res.message
+            });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: ' + e.message });
+    }
+}
+</script>
+
+</body>
+</html>
+SESSION['llw_role'] === 'super_admin') {
+    header('Location: login.php'); exit();
+}
+
+$pdo = getPdo();
+$msg = '';
+$msgType = 'success';
+
+// ─── Role Catalog ─── (label, description, color class, group)
+$ROLE_CATALOG = [
+    'super_admin'      => ['label' => 'Super Admin',       'desc' => 'สิทธิ์สูงสุดทุกระบบ',         'color' => 'bg-purple-100 text-purple-700 border-purple-200',     'group' => 'admin'],
+    'director'         => ['label' => 'Director',          'desc' => 'ผู้อำนวยการ — ลงนามขั้นสุดท้าย',   'color' => 'bg-violet-100 text-violet-700 border-violet-200',     'group' => 'exec'],
+    'deputy_director'  => ['label' => 'Deputy Director',   'desc' => 'รองผู้อำนวยการ',                 'color' => 'bg-indigo-100 text-indigo-700 border-indigo-200',     'group' => 'exec'],
+    'wfh_admin'        => ['label' => 'WFH Admin',         'desc' => 'ตรวจสอบใบลา / WFH',              'color' => 'bg-blue-100 text-blue-700 border-blue-200',           'group' => 'admin'],
+    'finance_head'     => ['label' => 'Finance Head',      'desc' => 'หัวหน้าการเงิน — ลงนาม',          'color' => 'bg-emerald-100 text-emerald-700 border-emerald-200', 'group' => 'finance'],
+    'procurement_head' => ['label' => 'Procurement Head',  'desc' => 'หัวหน้าพัสดุ — ลงนาม',             'color' => 'bg-teal-100 text-teal-700 border-teal-200',           'group' => 'finance'],
+    'cb_admin'         => ['label' => 'CB Admin',          'desc' => 'จัดการ Chromebook',                'color' => 'bg-cyan-100 text-cyan-700 border-cyan-200',           'group' => 'module'],
+    'bus_admin'        => ['label' => 'Bus Admin',         'desc' => 'จัดการระบบรถรับส่ง',                'color' => 'bg-orange-100 text-orange-700 border-orange-200',     'group' => 'module'],
+    'bus_finance'      => ['label' => 'Bus Finance',       'desc' => 'การเงินรถรับส่ง',                  'color' => 'bg-amber-100 text-amber-700 border-amber-200',        'group' => 'module'],
+    'club_admin'       => ['label' => 'Club Admin',        'desc' => 'แอดมินจัดการชุมนุม',                'color' => 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200', 'group' => 'module'],
+    'att_teacher'      => ['label' => 'ครูผู้สอน',          'desc' => 'ระบบครูทั่วไป (เช็คชื่อ)',           'color' => 'bg-rose-100 text-rose-700 border-rose-200',           'group' => 'staff'],
+    'wfh_staff'        => ['label' => 'WFH Staff',         'desc' => 'บุคลากรทั่วไป (ลงเวลา)',            'color' => 'bg-slate-100 text-slate-700 border-slate-200',        'group' => 'staff'],
+];
+$ALLOWED_ROLES = array_keys($ROLE_CATALOG);
+
+// บันทึก role-set ของผู้ใช้ลง pivot (เปลี่ยน roles ทั้งชุดและ set primary)
+$syncUserRoles = function (int $uid, array $roles, string $primary) use ($pdo): void {
+    // ข้ามการ sync หากตาราง pivot ยังไม่ถูก migrate (legacy mode)
+    try {
+        $chk = $pdo->query("SHOW TABLES LIKE 'llw_user_roles'")->fetchColumn();
+        if (!$chk) return;
+    } catch (Throwable $e) { return; }
+
+    $roles = array_values(array_unique(array_filter($roles)));
+    if (!in_array($primary, $roles, true)) {
+        $primary = $roles[0] ?? '';
+    }
+    $del = $pdo->prepare("DELETE FROM llw_user_roles WHERE user_id = ?");
+    $del->execute([$uid]);
+    $ins = $pdo->prepare("INSERT INTO llw_user_roles (user_id, role, is_primary) VALUES (?, ?, ?)");
+    foreach ($roles as $r) {
+        $ins->execute([$uid, $r, $r === $primary ? 1 : 0]);
+    }
+};
+
+// ─── POST Actions ────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'create') {
+        $username  = trim($_POST['username']);
+        $firstname = trim($_POST['firstname']);
+        $lastname  = trim($_POST['lastname']);
+        $roles     = array_values(array_intersect((array)($_POST['roles'] ?? []), $ALLOWED_ROLES));
+        $primary   = $_POST['primary_role'] ?? '';
+
+        if (empty($roles)) {
+            $msg = 'กรุณาเลือกอย่างน้อย 1 สิทธิ์การใช้งาน'; $msgType = 'error';
+        } elseif (!in_array($primary, $roles, true)) {
+            $primary = $roles[0];
+        }
+
+        if ($msgType !== 'error') {
+            try {
+                $pdo->beginTransaction();
+                $hash = password_hash('123456', PASSWORD_BCRYPT);
+                $stmt = $pdo->prepare("INSERT INTO llw_users (username,firstname,lastname,password,role,status,force_password_change) VALUES (?,?,?,?,?,'active',1)");
+                $stmt->execute([$username, $firstname, $lastname, $hash, $primary]);
+                $newUserId = (int)$pdo->lastInsertId();
+
+                $syncUserRoles($newUserId, $roles, $primary);
+
+                // Auto sync to att_teachers (ทุกคนสามารถเป็นครูได้)
+                $name = trim($firstname . ' ' . $lastname);
+                $ins = $pdo->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, ?, ?)");
+                $ins->execute([$name, $username, $hash, $newUserId]);
+
+                $pdo->commit();
+                $msg = "เพิ่มผู้ใช้ {$firstname} {$lastname} สำเร็จแล้ว (รหัสผ่านเริ่มต้น: 123456) — กำหนด " . count($roles) . " สิทธิ์";
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                if ($e->getCode() == 23000) {
+                    $msg = 'Username นี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น'; $msgType = 'error';
+                } else {
+                    error_log($e->getMessage());
+                    $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+                }
+            }
+        }
+    }
+
+    if ($action === 'toggle_status') {
+        $uid = (int)$_POST['user_id'];
+        $newStatus = $_POST['new_status'];
+        if (in_array($newStatus, ['active','inactive'])) {
+            $stmt = $pdo->prepare("UPDATE llw_users SET status = ? WHERE user_id = ?");
+            $stmt->execute([$newStatus, $uid]);
+            $msg = 'อัปเดตสถานะเรียบร้อย';
+        }
+    }
+
+    if ($action === 'reset_password') {
+        $uid  = (int)$_POST['user_id'];
+        $newp = trim($_POST['new_password']);
+        if (strlen($newp) < 6) {
+            $msg = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'; $msgType = 'error';
+        } else {
+            $hash = password_hash($newp, PASSWORD_BCRYPT);
+            $stmt = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 1 WHERE user_id = ?");
+            $stmt->execute([$hash, $uid]);
+            $msg = 'รีเซ็ตรหัสผ่านเรียบร้อย (ผู้ใช้ต้องเปลี่ยนรหัสผ่านในครั้งถัดไป)';
+        }
+    }
+
+    if ($action === 'reset_default') {
+        $uid  = (int)$_POST['user_id'];
+        $hash = password_hash('123456', PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 1 WHERE user_id = ?");
+        $stmt->execute([$hash, $uid]);
+        $msg = 'รีเซ็ตเป็นรหัสผ่านเริ่มต้น (123456) เรียบร้อย';
+    }
+
+    if ($action === 'reset_all_default') {
+        $myId = (int)$_SESSION['user_id'];
+        $hash = password_hash('123456', PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 1 WHERE user_id != ?");
+        $stmt->execute([$hash, $myId]);
+        $msg = 'รีเซ็ตรหัสผ่านทุกบัญชี (ยกเว้นคุณ) เป็น 123456 เรียบร้อย';
+    }
+
+    if ($action === 'delete') {
+        $uid = (int)$_POST['user_id'];
+        if ($uid === (int)$_SESSION['user_id']) {
+            $msg = 'ไม่สามารถลบบัญชีของตัวเองได้'; $msgType = 'error';
+        } else {
+            $stmt = $pdo->prepare("DELETE FROM llw_users WHERE user_id = ?");
+            $stmt->execute([$uid]);
+            $msg = 'ลบผู้ใช้เรียบร้อยแล้ว';
+        }
+    }
+
+    if ($action === 'reset_all_roles') {
+        if ($_SESSION['llw_role'] !== 'super_admin') {
+            $msg = 'ไม่มีสิทธิ์'; $msgType = 'error';
+        } else {
+            $myId = (int)$_SESSION['user_id'];
+            try {
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare("UPDATE llw_users SET role = 'att_teacher' WHERE role != 'super_admin' AND user_id != ?");
+                $stmt->execute([$myId]);
+                $affected = $stmt->rowCount();
+                // sync pivot: ลบทุก role ของผู้ใช้ที่ถูก reset แล้วใส่ att_teacher
+                $pdo->prepare("DELETE lur FROM llw_user_roles lur INNER JOIN llw_users u ON u.user_id = lur.user_id WHERE u.role != 'super_admin' AND u.user_id != ?")->execute([$myId]);
+                $pdo->prepare("INSERT IGNORE INTO llw_user_roles (user_id, role, is_primary) SELECT user_id, 'att_teacher', 1 FROM llw_users WHERE role = 'att_teacher' AND user_id != ?")->execute([$myId]);
+                $pdo->commit();
+                $msg = "Reset สำเร็จ — อัปเดต {$affected} บัญชีเป็น att_teacher (ยกเว้น super_admin)";
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                error_log($e->getMessage());
+                $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+            }
+        }
+    }
+
+    if ($action === 'clear_users') {
+        $myId = (int)$_SESSION['user_id'];
+        try {
+            $stmt = $pdo->prepare("DELETE FROM llw_users WHERE user_id != ?");
+            $stmt->execute([$myId]);
+            $msg = 'ล้างข้อมูลผู้ใช้อื่นทั้งหมดเรียบร้อยแล้ว (ยกเว้นคุณ)';
+        } catch (Exception $e) {
+            $msg = 'ไม่สามารถล้างข้อมูลได้'; $msgType = 'error';
+        }
+    }
+
+    if ($action === 'edit_user') {
+        $uid       = (int)$_POST['user_id'];
+        $firstname = trim($_POST['firstname'] ?? '');
+        $lastname  = trim($_POST['lastname'] ?? '');
+        $roles     = array_values(array_intersect((array)($_POST['roles'] ?? []), $ALLOWED_ROLES));
+        $primary   = $_POST['primary_role'] ?? '';
+
+        if ($uid <= 0 || empty($firstname)) {
+            $msg = 'ข้อมูลไม่ถูกต้อง'; $msgType = 'error';
+        } elseif (empty($roles)) {
+            $msg = 'กรุณาเลือกอย่างน้อย 1 สิทธิ์การใช้งาน'; $msgType = 'error';
+        } else {
+            if (!in_array($primary, $roles, true)) $primary = $roles[0];
+            try {
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare("UPDATE llw_users SET firstname=?, lastname=?, role=? WHERE user_id=?");
+                $stmt->execute([$firstname, $lastname, $primary, $uid]);
+
+                $syncUserRoles($uid, $roles, $primary);
+                $pdo->commit();
+                
+                // Auto update att_teachers
+                $name = trim($firstname . ' ' . $lastname);
+                $upd = $pdo->prepare("UPDATE att_teachers SET name=? WHERE llw_user_id=?");
+                $upd->execute([$name, $uid]);
+                
+                // If not in att_teachers yet, insert them
+                $chk = $pdo->prepare("SELECT id FROM att_teachers WHERE llw_user_id=?");
+                $chk->execute([$uid]);
+                if (!$chk->fetch()) {
+                    $uInfo = $pdo->prepare("SELECT username, password FROM llw_users WHERE user_id=?");
+                    $uInfo->execute([$uid]);
+                    $uRow = $uInfo->fetch();
+                    if ($uRow) {
+                        $ins = $pdo->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, ?, ?)");
+                        $ins->execute([$name, $uRow['username'], $uRow['password'], $uid]);
+                    }
+                }
+                
+                $msg = "อัปเดตข้อมูล {$firstname} {$lastname} เรียบร้อยแล้ว";
+            } catch (Exception $e) {
+                error_log($e->getMessage());
+                $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+            }
+        }
+    }
+}
+
+// ─── Fetch Users + roles (1:M) ─────────────────────────────────
+// ตรวจว่าตาราง pivot ถูก migrate แล้วหรือยัง — ถ้ายัง fallback ที่ llw_users.role
+$hasPivot = false;
+try {
+    $chk = $pdo->query("SHOW TABLES LIKE 'llw_user_roles'")->fetchColumn();
+    $hasPivot = (bool)$chk;
+} catch (Throwable $e) { $hasPivot = false; }
+
+if ($hasPivot) {
+    $users = $pdo->query("
+        SELECT u.*,
+            COALESCE(
+                (SELECT GROUP_CONCAT(role ORDER BY is_primary DESC, role ASC SEPARATOR ',')
+                 FROM llw_user_roles WHERE user_id = u.user_id),
+                u.role
+            ) AS all_roles
+        FROM llw_users u
+        ORDER BY u.role, u.firstname
+    ")->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $users = $pdo->query("SELECT u.*, u.role AS all_roles FROM llw_users u ORDER BY u.role, u.firstname")->fetchAll(PDO::FETCH_ASSOC);
+}
+
+foreach ($users as &$u) {
+    $u['roles_list'] = !empty($u['all_roles']) ? explode(',', $u['all_roles']) : [$u['role']];
+}
+unset($u);
+
+$totalUsers    = count($users);
+$activeUsers   = count(array_filter($users, fn($u) => $u['status'] === 'active'));
+$pendingChange = count(array_filter($users, fn($u) => !empty($u['force_password_change'])));
+?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>จัดการผู้ใช้ | LLW Platinum</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+    body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
+    .sidebar-item-active { background-color: #1d4ed8; color: white; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.2); }
+</style>
+</head>
+<body class="flex min-h-screen">
+
+<!-- Sidebar (เหมือนกับ central_dashboard.php) -->
+<aside class="w-72 bg-white border-r border-slate-100 flex flex-col fixed h-full z-20">
+    <div class="p-8 flex items-center gap-4">
+        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white text-xl">
+            <i class="bi bi-rocket-takeoff-fill"></i>
+        </div>
+        <span class="text-xl font-black text-slate-800 tracking-tight">LLW Platinum</span>
+    </div>
+    <nav class="flex-1 px-6 space-y-2">
+        <a href="central_dashboard.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <i class="bi bi-grid-fill text-lg"></i> แดชบอร์ด
+        </a>
+        <a href="manage_users.php" class="sidebar-item-active flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all">
+            <i class="bi bi-people text-lg"></i> จัดการผู้ใช้
+        </a>
+        <a href="attendance_system/admin.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <i class="bi bi-building text-lg"></i> ห้องเรียน / นักเรียน
+        </a>
+        <a href="attendance_system/admin.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <i class="bi bi-book text-lg"></i> รายวิชา
+        </a>
+        <a href="admin/reports.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <i class="bi bi-file-earmark-bar-graph text-lg"></i> รายงาน
+        </a>
+    </nav>
+    <div class="p-8 mt-auto space-y-4">
+        <a href="change_password.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-indigo-500 hover:bg-indigo-50 transition-all">
+            <i class="bi bi-key-fill text-lg"></i> เปลี่ยนรหัสผ่าน
+        </a>
+        <a href="logout.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-rose-500 hover:bg-rose-50 transition-all">
+            <i class="bi bi-box-arrow-left text-lg"></i> ออกจากระบบ
+        </a>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<main class="ml-72 flex-1 p-10">
+
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                <i class="bi bi-people-fill text-blue-600"></i> จัดการผู้ใช้งาน
+            </h1>
+            <p class="text-slate-400 font-medium mt-1">เพิ่ม / แก้ไข / ปิดใช้งานบัญชีผู้ใช้ทั้งหมด</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <?php if ($msg): ?>
+            <div class="px-5 py-3 rounded-2xl text-sm font-bold <?= $msgType === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600' ?>">
+                <i class="bi bi-<?= $msgType === 'error' ? 'exclamation-triangle' : 'check-circle' ?>-fill mr-1"></i>
+                <?= htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') ?>
+            </div>
+            <?php endif; ?>
+            <button onclick="confirmResetAll()"
+                class="flex items-center gap-2 bg-amber-100 text-amber-600 px-6 py-3 rounded-2xl font-bold hover:bg-amber-500 hover:text-white transition-all">
+                <i class="bi bi-arrow-repeat text-lg"></i> Reset รหัสทั้งหมด
+            </button>
+            <button onclick="confirmResetAllRoles()"
+                class="flex items-center gap-2 bg-indigo-100 text-indigo-600 px-6 py-3 rounded-2xl font-bold hover:bg-indigo-500 hover:text-white transition-all">
+                <i class="bi bi-person-fill-slash text-lg"></i> Reset Role ทั้งหมด
+            </button>
+            <button onclick="confirmClear()"
+                class="flex items-center gap-2 bg-rose-100 text-rose-500 px-6 py-3 rounded-2xl font-bold hover:bg-rose-500 hover:text-white transition-all">
+                <i class="bi bi-trash3 text-lg"></i> ล้างทั้งหมด
+            </button>
+            <button onclick="document.getElementById('modal-import').classList.remove('hidden')"
+                class="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-600 hover:scale-[1.02] transition-all">
+                <i class="bi bi-file-earmark-spreadsheet text-lg"></i> นำเข้า CSV
+            </button>
+            <button onclick="document.getElementById('modal-add').classList.remove('hidden')"
+                class="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] transition-all">
+                <i class="bi bi-plus-lg text-lg"></i> เพิ่มผู้ใช้ใหม่
+            </button>
+        </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-3 gap-4 mb-8 max-w-xl">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest">ผู้ใช้ทั้งหมด</p>
+            <p class="text-4xl font-black text-slate-800 mt-1"><?= $totalUsers ?></p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest">ใช้งานอยู่</p>
+            <p class="text-4xl font-black text-emerald-600 mt-1"><?= $activeUsers ?></p>
+        </div>
+        <div class="bg-amber-50 rounded-2xl shadow-sm border border-amber-100 p-5">
+            <p class="text-xs font-black text-amber-500 uppercase tracking-widest">รอเปลี่ยนรหัส</p>
+            <p class="text-4xl font-black text-amber-600 mt-1"><?= $pendingChange ?></p>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-8 py-6 border-b border-slate-100 flex items-center gap-3">
+            <i class="bi bi-person-lines-fill text-blue-600"></i>
+            <span class="font-black text-slate-700">รายชื่อผู้ใช้งานทั้งหมด</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">#</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ชื่อ-สกุล / Username</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Role</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">สถานะ</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">เข้าสู่ระบบล่าสุด</th>
+                        <th class="px-6 py-5 text-center text-xs font-black text-slate-400 uppercase tracking-widest">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                <?php foreach ($users as $i => $u):
+                    $isMe = ((int)$u['user_id'] === (int)$_SESSION['user_id']);
+                    $primaryRole = $u['role'];
+                ?>
+                <tr class="hover:bg-slate-50/50 transition-all group">
+                    <td class="px-6 py-5 text-xs font-bold text-slate-400"><?= $i + 1 ?></td>
+                    <td class="px-6 py-5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-black text-sm">
+                                <?= mb_substr($u['firstname'], 0, 1) ?>
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-800 text-sm"><?= htmlspecialchars($u['firstname'].' '.$u['lastname'], ENT_QUOTES, 'UTF-8') ?></p>
+                                <p class="text-xs text-slate-400 font-medium">@<?= htmlspecialchars($u['username'], ENT_QUOTES, 'UTF-8') ?></p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex flex-wrap gap-1.5 max-w-xs">
+                            <?php foreach ($u['roles_list'] as $rk):
+                                $rm = $ROLE_CATALOG[$rk] ?? ['label' => $rk, 'color' => 'bg-slate-100 text-slate-600 border-slate-200'];
+                                $isPrimary = ($rk === $primaryRole);
+                            ?>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black border <?= $rm['color'] ?>" title="<?= htmlspecialchars($rm['desc'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                                <?php if ($isPrimary): ?><i class="bi bi-star-fill text-amber-500 text-[9px]"></i><?php endif; ?>
+                                <?= htmlspecialchars($rm['label'], ENT_QUOTES, 'UTF-8') ?>
+                            </span>
+                            <?php endforeach; ?>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <?php if ($u['status'] === 'active'): ?>
+                        <span class="flex items-center gap-1.5 text-emerald-600 text-xs font-bold">
+                            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> ใช้งาน
+                        </span>
+                        <?php else: ?>
+                        <span class="flex items-center gap-1.5 text-slate-400 text-xs font-bold">
+                            <span class="w-2 h-2 bg-slate-300 rounded-full"></span> ปิดใช้งาน
+                        </span>
+                        <?php endif; ?>
+                        <?php if (!empty($u['force_password_change'])): ?>
+                        <span class="mt-1 flex items-center gap-1 text-amber-500 text-xs font-black">
+                            <i class="bi bi-exclamation-triangle-fill"></i> รอเปลี่ยนรหัส
+                        </span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="px-6 py-5 text-xs text-slate-500 font-medium">
+                        <?= $u['last_login'] ? date('d/m/').((int)date('Y')+543).' '.date('H:i', strtotime($u['last_login'])) : '—' ?>
+                    </td>
+                    <td class="px-6 py-5 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <!-- Edit Role / Name -->
+                            <button onclick='openEdit(<?= (int)$u['user_id'] ?>, <?= json_encode($u['firstname'], JSON_HEX_APOS|JSON_HEX_QUOT) ?>, <?= json_encode($u['lastname'], JSON_HEX_APOS|JSON_HEX_QUOT) ?>, <?= json_encode($u['roles_list']) ?>, <?= json_encode($u['role']) ?>)'
+                                class="w-8 h-8 bg-indigo-50 text-indigo-500 rounded-xl flex items-center justify-center hover:bg-indigo-500 hover:text-white transition-all" title="แก้ไขชื่อ / Role">
+                                <i class="bi bi-pencil-fill text-xs"></i>
+                            </button>
+                            <!-- Reset to Default 123456 -->
+                            <?php if (!$isMe): ?>
+                            <form method="POST" class="inline">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="reset_default">
+                                <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
+                                <button type="submit"
+                                    class="w-8 h-8 bg-slate-100 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-500 hover:text-white transition-all" title="Reset รหัสเป็น 123456">
+                                    <i class="bi bi-arrow-repeat text-xs"></i>
+                                </button>
+                            </form>
+                            <?php endif; ?>
+                            <!-- Reset Password (custom) -->
+                            <button onclick="openReset(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['firstname'], ENT_QUOTES) ?>')"
+                                class="w-8 h-8 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center hover:bg-amber-500 hover:text-white transition-all" title="ตั้งรหัสผ่านเอง">
+                                <i class="bi bi-key-fill text-xs"></i>
+                            </button>
+                            <!-- Toggle Status -->
+                            <?php if (!$isMe): ?>
+                            <form method="POST" class="inline">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="toggle_status">
+                                <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
+                                <input type="hidden" name="new_status" value="<?= $u['status'] === 'active' ? 'inactive' : 'active' ?>">
+                                <button type="submit"
+                                    class="w-8 h-8 rounded-xl flex items-center justify-center transition-all <?= $u['status'] === 'active' ? 'bg-slate-100 text-slate-400 hover:bg-slate-500 hover:text-white' : 'bg-emerald-50 text-emerald-500 hover:bg-emerald-500 hover:text-white' ?>"
+                                    title="<?= $u['status'] === 'active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน' ?>">
+                                    <i class="bi bi-<?= $u['status'] === 'active' ? 'pause-fill' : 'play-fill' ?> text-xs"></i>
+                                </button>
+                            </form>
+                            <!-- Delete -->
+                            <button onclick="confirmDelete(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['firstname'].' '.$u['lastname'], ENT_QUOTES) ?>')"
+                                class="w-8 h-8 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all" title="ลบผู้ใช้">
+                                <i class="bi bi-trash3-fill text-xs"></i>
+                            </button>
+                            <?php else: ?>
+                            <span class="text-xs text-slate-300 font-bold">บัญชีของคุณ</span>
+                            <?php endif; ?>
+                        </div>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- Modal: เพิ่มผู้ใช้ -->
+<div id="modal-add" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-person-plus-fill"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">เพิ่มผู้ใช้งานใหม่</h5>
+                    <p class="text-xs font-bold text-blue-100 uppercase tracking-widest">กรอกข้อมูลให้ครบถ้วน</p>
+                </div>
+            </div>
+        </div>
+        <form method="POST" class="p-8 space-y-4">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="create">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">ชื่อ</label>
+                    <input type="text" name="firstname" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="ชื่อจริง">
+                </div>
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">นามสกุล</label>
+                    <input type="text" name="lastname" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="นามสกุล">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Username</label>
+                <input type="text" name="username" required autocomplete="off" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="ตัวอักษรภาษาอังกฤษ ไม่มีช่องว่าง">
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">สิทธิ์การใช้งาน <span class="text-rose-500">*</span></label>
+                    <span class="text-[10px] text-slate-400 font-medium">เลือกได้หลายรายการ · <i class="bi bi-star-fill text-amber-500"></i> = สิทธิ์หลัก</span>
+                </div>
+                <div data-role-grid="add" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto p-1">
+                    <?php foreach ($ROLE_CATALOG as $rk => $rm): ?>
+                    <label class="role-card relative cursor-pointer flex items-start gap-2.5 p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40 transition-all">
+                        <input type="checkbox" name="roles[]" value="<?= $rk ?>" class="role-cb mt-0.5 accent-blue-600 w-4 h-4 flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-black text-sm text-slate-700"><?= htmlspecialchars($rm['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <button type="button" class="primary-btn opacity-0 pointer-events-none text-[10px] font-bold text-slate-400 hover:text-amber-500 transition-all">
+                                    <i class="bi bi-star"></i>
+                                </button>
+                            </div>
+                            <p class="text-[10.5px] text-slate-400 font-medium mt-0.5 leading-tight"><?= htmlspecialchars($rm['desc'], ENT_QUOTES, 'UTF-8') ?></p>
+                        </div>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+                <input type="hidden" name="primary_role" value="">
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                <i class="bi bi-info-circle-fill text-amber-500 flex-shrink-0 mt-0.5"></i>
+                <div>
+                    <p class="text-amber-800 font-black text-xs">รหัสผ่านเริ่มต้น: <span class="font-mono bg-amber-100 px-1.5 py-0.5 rounded-lg">123456</span></p>
+                    <p class="text-amber-600 text-xs mt-0.5">ผู้ใช้จะถูกบังคับให้เปลี่ยนรหัสผ่านเมื่อ Login ครั้งแรก</p>
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="document.getElementById('modal-add').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="submit"
+                    class="flex-[2] py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-200 hover:opacity-90 transition-all">
+                    <i class="bi bi-person-plus-fill mr-1"></i> สร้างบัญชี
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Reset Password -->
+<div id="modal-reset" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-key-fill"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">รีเซ็ตรหัสผ่าน</h5>
+                    <p id="reset-name" class="text-xs font-bold text-amber-100 uppercase tracking-widest"></p>
+                </div>
+            </div>
+        </div>
+        <form method="POST" class="p-8 space-y-4">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="reset_password">
+            <input type="hidden" name="user_id" id="reset-uid">
+            <div>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">รหัสผ่านใหม่</label>
+                <input type="password" name="new_password" required autocomplete="new-password"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all"
+                    placeholder="อย่างน้อย 6 ตัวอักษร">
+            </div>
+            <div class="flex gap-3">
+                <button type="button" onclick="document.getElementById('modal-reset').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="submit"
+                    class="flex-[2] py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-black text-sm shadow-lg shadow-amber-200 hover:opacity-90 transition-all">
+                    <i class="bi bi-key-fill mr-1"></i> รีเซ็ตรหัสผ่าน
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: นำเข้า CSV -->
+<div id="modal-import" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-file-earmark-arrow-up"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">นำเข้าผู้ใช้งานจาก CSV</h5>
+                    <p class="text-xs font-bold text-emerald-100 uppercase tracking-widest">รองรับไฟล์ .csv (UTF-8)</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-8 space-y-6">
+            <div class="bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
+                <p class="text-xs font-bold text-emerald-700 mb-2"><i class="bi bi-info-circle-fill mr-1"></i>รูปแบบไฟล์ CSV (ไม่มีหัวตาราง):</p>
+                <code class="text-sm text-emerald-600 bg-emerald-100/50 px-2 py-1 rounded-lg block leading-relaxed">
+                    username, firstname, lastname, password, role
+                </code>
+                <p class="text-xs text-emerald-500 mt-2 italic">* Role: super_admin, wfh_admin, wfh_staff, cb_admin, att_teacher</p>
+                <p class="text-sm text-emerald-600 mt-3">
+                    <a href="api/download_user_template.php" class="inline-flex items-center gap-1 font-black underline decoration-emerald-200 hover:text-emerald-800 transition-colors">
+                        <i class="bi bi-download"></i> ดาวน์โหลดไฟล์ตัวอย่าง (.csv)
+                    </a>
+                </p>
+            </div>
+            
+            <div id="drop-zone" class="border-2 border-dashed border-emerald-200 rounded-2xl p-10 text-center hover:border-emerald-400 hover:bg-emerald-50/50 transition-all cursor-pointer"
+                 onclick="document.getElementById('csv-file').click()">
+                <i class="bi bi-cloud-upload text-4xl text-emerald-400 block mb-2"></i>
+                <p class="text-sm font-bold text-slate-500">คลิกเพื่อเลือกไฟล์ CSV หรือลากมาวาง</p>
+                <p class="text-xs text-slate-400 mt-1" id="file-name">ยังไม่ได้เลือกไฟล์</p>
+            </div>
+            <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="document.getElementById('file-name').textContent = this.files[0].name">
+
+            <div class="flex gap-3">
+                <button type="button" onclick="document.getElementById('modal-import').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="button" onclick="handleImport()"
+                    class="flex-[2] py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-emerald-200/50 hover:opacity-90 transition-all">
+                    <i class="bi bi-check-circle-fill mr-1"></i> เริ่มนำเข้าข้อมูล
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit User (Role + Name) -->
+<div id="modal-edit" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-600 to-blue-600 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-pencil-fill"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">แก้ไขข้อมูลผู้ใช้</h5>
+                    <p id="edit-username-display" class="text-xs font-bold text-indigo-200 uppercase tracking-widest"></p>
+                </div>
+            </div>
+        </div>
+        <form method="POST" class="p-6 space-y-4">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="edit_user">
+            <input type="hidden" name="user_id" id="edit-uid">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">ชื่อ</label>
+                    <input type="text" name="firstname" id="edit-firstname" required
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
+                        placeholder="ชื่อ">
+                </div>
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">นามสกุล</label>
+                    <input type="text" name="lastname" id="edit-lastname"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
+                        placeholder="นามสกุล">
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">สิทธิ์การใช้งาน <span class="text-rose-500">*</span></label>
+                    <span class="text-[10px] text-slate-400 font-medium">เลือกหลายได้ · <i class="bi bi-star-fill text-amber-500"></i> = หลัก</span>
+                </div>
+                <div data-role-grid="edit" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto p-1">
+                    <?php foreach ($ROLE_CATALOG as $rk => $rm): ?>
+                    <label class="role-card relative cursor-pointer flex items-start gap-2.5 p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/40 transition-all">
+                        <input type="checkbox" name="roles[]" value="<?= $rk ?>" class="role-cb mt-0.5 accent-indigo-600 w-4 h-4 flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-black text-sm text-slate-700"><?= htmlspecialchars($rm['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <button type="button" class="primary-btn opacity-0 pointer-events-none text-[10px] font-bold text-slate-400 hover:text-amber-500 transition-all">
+                                    <i class="bi bi-star"></i>
+                                </button>
+                            </div>
+                            <p class="text-[10.5px] text-slate-400 font-medium mt-0.5 leading-tight"><?= htmlspecialchars($rm['desc'], ENT_QUOTES, 'UTF-8') ?></p>
+                        </div>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+                <input type="hidden" name="primary_role" id="edit-primary-role" value="">
+            </div>
+            <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 text-xs text-indigo-600">
+                <i class="bi bi-info-circle-fill me-1"></i>
+                สิทธิ์หลัก (<i class="bi bi-star-fill text-amber-500"></i>) ใช้กำหนดหน้า dashboard เริ่มต้น — มีผลทันทีในการ Login ครั้งถัดไป
+            </div>
+            <div class="flex gap-3 pt-1">
+                <button type="button" onclick="document.getElementById('modal-edit').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="submit"
+                    class="flex-[2] py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-200 hover:opacity-90 transition-all">
+                    <i class="bi bi-check-circle-fill mr-1"></i> บันทึก
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete form (hidden) -->
+<form id="delete-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="user_id" id="delete-uid">
+</form>
+
+<!-- Reset-all-roles form (hidden) -->
+<form id="reset-roles-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="reset_all_roles">
+</form>
+
+<!-- Reset-all-passwords form (hidden) -->
+<form id="reset-pass-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="reset_all_default">
+</form>
+
+<!-- Clear-users form (hidden) -->
+<form id="clear-users-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="clear_users">
+</form>
+
+<script>
+function confirmResetAll() {
+    Swal.fire({
+        title: 'Reset รหัสผ่านทุกบัญชี?',
+        html: 'รหัสผ่านของ<b>ทุกบัญชี (ยกเว้นคุณ)</b> จะถูกเปลี่ยนเป็น <b class="font-mono">123456</b><br><small class="text-amber-600 font-bold">ผู้ใช้ทุกคนต้องเปลี่ยนรหัสผ่านใน Login ครั้งถัดไป</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f59e0b',
+        confirmButtonText: 'ยืนยัน Reset ทั้งหมด',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) document.getElementById('reset-pass-form').submit();
+    });
+}
+
+function confirmClear() {
+    Swal.fire({
+        title: 'ล้างข้อมูลผู้ใช้ทั้งหมด?',
+        html: 'ระบบจะลบข้อมูลผู้ใช้อื่น <b>"ทั้งหมด"</b> ยกเว้นคุณ<br><small class="text-rose-500 font-bold">การดำเนินการนี้ไม่สามารถย้อนกลับได้!</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'ยืนยันลบทั้งหมด',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) document.getElementById('clear-users-form').submit();
+    });
+}
+
+function confirmResetAllRoles() {
+    Swal.fire({
+        title: 'Reset Role ผู้ใช้ทั้งหมด?',
+        html: 'ผู้ใช้<b>ทุกคน (ยกเว้น super_admin และคุณ)</b> จะถูกเปลี่ยน role เป็น <b>att_teacher (ครูผู้สอน)</b><br><small class="text-indigo-600 font-bold">ต้องกำหนด role ใหม่ให้ผู้ที่มีหน้าที่พิเศษด้วยตนเอง</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#4f46e5',
+        confirmButtonText: 'ยืนยัน Reset Role',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) document.getElementById('reset-roles-form').submit();
+    });
+}
+
+function openEdit(uid, firstname, lastname, roles, primary) {
+    document.getElementById('edit-uid').value = uid;
+    document.getElementById('edit-firstname').value = firstname;
+    document.getElementById('edit-lastname').value = lastname;
+    document.getElementById('edit-username-display').textContent = (firstname || '') + ' ' + (lastname || '');
+
+    const grid = document.querySelector('[data-role-grid="edit"]');
+    grid.querySelectorAll('.role-cb').forEach(cb => {
+        cb.checked = roles.includes(cb.value);
+    });
+    document.getElementById('edit-primary-role').value = primary || roles[0] || '';
+    refreshRoleGrid(grid);
+    document.getElementById('modal-edit').classList.remove('hidden');
+}
+
+// ─── Multi-role grid: ทำให้ checkbox + primary star ทำงานร่วมกัน ───
+function refreshRoleGrid(grid) {
+    if (!grid) return;
+    const form = grid.closest('form');
+    const primaryInput = form.querySelector('input[name="primary_role"]');
+    const checked = Array.from(grid.querySelectorAll('.role-cb')).filter(c => c.checked).map(c => c.value);
+
+    // ถ้า primary ไม่อยู่ใน checked — set primary เป็นตัวแรก
+    if (!checked.includes(primaryInput.value)) {
+        primaryInput.value = checked[0] || '';
+    }
+
+    grid.querySelectorAll('.role-card').forEach(card => {
+        const cb = card.querySelector('.role-cb');
+        const btn = card.querySelector('.primary-btn');
+        const icon = btn.querySelector('i');
+        const isPrimary = (cb.value === primaryInput.value);
+
+        if (cb.checked) {
+            card.classList.add('!border-blue-500','!bg-blue-50');
+            btn.classList.remove('opacity-0','pointer-events-none');
+        } else {
+            card.classList.remove('!border-blue-500','!bg-blue-50','!border-amber-400','!bg-amber-50');
+            btn.classList.add('opacity-0','pointer-events-none');
+        }
+        if (cb.checked && isPrimary) {
+            card.classList.remove('!border-blue-500','!bg-blue-50');
+            card.classList.add('!border-amber-400','!bg-amber-50');
+            icon.className = 'bi bi-star-fill text-amber-500';
+            btn.classList.add('text-amber-500');
+            btn.classList.remove('text-slate-400');
+        } else {
+            icon.className = 'bi bi-star';
+            btn.classList.remove('text-amber-500');
+            btn.classList.add('text-slate-400');
+        }
+    });
+}
+
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.primary-btn');
+    if (btn) {
+        e.preventDefault();
+        const grid = btn.closest('[data-role-grid]');
+        const card = btn.closest('.role-card');
+        const cb = card.querySelector('.role-cb');
+        if (!cb.checked) { cb.checked = true; }
+        grid.closest('form').querySelector('input[name="primary_role"]').value = cb.value;
+        refreshRoleGrid(grid);
+        return;
+    }
+    const cb = e.target.closest('.role-cb');
+    if (cb) {
+        setTimeout(() => refreshRoleGrid(cb.closest('[data-role-grid]')), 0);
+    }
+});
+
+// validate ฟอร์มก่อน submit
+document.querySelectorAll('form').forEach(f => {
+    f.addEventListener('submit', (e) => {
+        const grid = f.querySelector('[data-role-grid]');
+        if (!grid) return;
+        const checked = grid.querySelectorAll('.role-cb:checked');
+        if (checked.length === 0) {
+            e.preventDefault();
+            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกสิทธิ์', text: 'ต้องเลือกอย่างน้อย 1 สิทธิ์การใช้งาน', confirmButtonColor: '#2563eb' });
+            return;
+        }
+        const primaryInput = f.querySelector('input[name="primary_role"]');
+        if (!primaryInput.value || !Array.from(checked).some(c => c.value === primaryInput.value)) {
+            primaryInput.value = checked[0].value;
+        }
+    });
+});
+
+function openReset(uid, name) {
+    document.getElementById('reset-uid').value = uid;
+    document.getElementById('reset-name').textContent = name;
+    document.getElementById('modal-reset').classList.remove('hidden');
+}
+
+function confirmDelete(uid, name) {
+    Swal.fire({
+        title: 'ลบผู้ใช้?',
+        html: `ต้องการลบบัญชี <b>${name}</b> ออกจากระบบ?<br><small class="text-slate-400">การดำเนินการนี้ไม่สามารถย้อนกลับได้</small>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'ลบเลย',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) {
+            document.getElementById('delete-uid').value = uid;
+            document.getElementById('delete-form').submit();
+        }
+    });
+}
+
+async function handleImport() {
+    const fileInput = document.getElementById('csv-file');
+    if (!fileInput.files.length) {
+        Swal.fire({ icon: 'warning', title: 'กรุณาเลือกไฟล์', text: 'กรุณาเลือกไฟล์ CSV ก่อนดำเนินการ' });
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('csv_file', fileInput.files[0]);
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+
+    Swal.fire({
+        title: 'กำลังนำเข้าข้อมูล...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    try {
+        const response = await fetch('api/import_users.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const text = await response.text();
+        let res;
+        try {
+            res = JSON.parse(text);
+        } catch (e) {
+            console.error('Raw Response:', text);
+            Swal.fire({
+                icon: 'error',
+                title: 'API Error',
+                html: `<div class="text-left text-xs bg-slate-50 p-4 rounded-xl overflow-auto max-h-40"><code>${text.substring(0, 500)}</code></div>`,
+                confirmButtonColor: '#ef4444'
+            });
+            return;
+        }
+
+        if (res.status === 'success') {
+            Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ!',
+                text: res.message,
+                confirmButtonColor: '#059669'
+            }).then(() => location.reload());
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'ผิดพลาด',
+                text: res.message
+            });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: ' + e.message });
+    }
+}
+</script>
+
+</body>
+</html>
+SESSION['llw_role'] !== 'super_admin') {
+    header('Location: login.php'); exit();
+}
+
+$pdo = getPdo();
+$msg = '';
+$msgType = 'success';
+
+// ─── Role Catalog ─── (label, description, color class, group)
+$ROLE_CATALOG = [
+    'super_admin'      => ['label' => 'Super Admin',       'desc' => 'สิทธิ์สูงสุดทุกระบบ',         'color' => 'bg-purple-100 text-purple-700 border-purple-200',     'group' => 'admin'],
+    'director'         => ['label' => 'Director',          'desc' => 'ผู้อำนวยการ — ลงนามขั้นสุดท้าย',   'color' => 'bg-violet-100 text-violet-700 border-violet-200',     'group' => 'exec'],
+    'deputy_director'  => ['label' => 'Deputy Director',   'desc' => 'รองผู้อำนวยการ',                 'color' => 'bg-indigo-100 text-indigo-700 border-indigo-200',     'group' => 'exec'],
+    'wfh_admin'        => ['label' => 'WFH Admin',         'desc' => 'ตรวจสอบใบลา / WFH',              'color' => 'bg-blue-100 text-blue-700 border-blue-200',           'group' => 'admin'],
+    'finance_head'     => ['label' => 'Finance Head',      'desc' => 'หัวหน้าการเงิน — ลงนาม',          'color' => 'bg-emerald-100 text-emerald-700 border-emerald-200', 'group' => 'finance'],
+    'procurement_head' => ['label' => 'Procurement Head',  'desc' => 'หัวหน้าพัสดุ — ลงนาม',             'color' => 'bg-teal-100 text-teal-700 border-teal-200',           'group' => 'finance'],
+    'cb_admin'         => ['label' => 'CB Admin',          'desc' => 'จัดการ Chromebook',                'color' => 'bg-cyan-100 text-cyan-700 border-cyan-200',           'group' => 'module'],
+    'bus_admin'        => ['label' => 'Bus Admin',         'desc' => 'จัดการระบบรถรับส่ง',                'color' => 'bg-orange-100 text-orange-700 border-orange-200',     'group' => 'module'],
+    'bus_finance'      => ['label' => 'Bus Finance',       'desc' => 'การเงินรถรับส่ง',                  'color' => 'bg-amber-100 text-amber-700 border-amber-200',        'group' => 'module'],
+    'club_admin'       => ['label' => 'Club Admin',        'desc' => 'แอดมินจัดการชุมนุม',                'color' => 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200', 'group' => 'module'],
+    'att_teacher'      => ['label' => 'ครูผู้สอน',          'desc' => 'ระบบครูทั่วไป (เช็คชื่อ)',           'color' => 'bg-rose-100 text-rose-700 border-rose-200',           'group' => 'staff'],
+    'wfh_staff'        => ['label' => 'WFH Staff',         'desc' => 'บุคลากรทั่วไป (ลงเวลา)',            'color' => 'bg-slate-100 text-slate-700 border-slate-200',        'group' => 'staff'],
+];
+$ALLOWED_ROLES = array_keys($ROLE_CATALOG);
+
+// บันทึก role-set ของผู้ใช้ลง pivot (เปลี่ยน roles ทั้งชุดและ set primary)
+$syncUserRoles = function (int $uid, array $roles, string $primary) use ($pdo): void {
+    // ข้ามการ sync หากตาราง pivot ยังไม่ถูก migrate (legacy mode)
+    try {
+        $chk = $pdo->query("SHOW TABLES LIKE 'llw_user_roles'")->fetchColumn();
+        if (!$chk) return;
+    } catch (Throwable $e) { return; }
+
+    $roles = array_values(array_unique(array_filter($roles)));
+    if (!in_array($primary, $roles, true)) {
+        $primary = $roles[0] ?? '';
+    }
+    $del = $pdo->prepare("DELETE FROM llw_user_roles WHERE user_id = ?");
+    $del->execute([$uid]);
+    $ins = $pdo->prepare("INSERT INTO llw_user_roles (user_id, role, is_primary) VALUES (?, ?, ?)");
+    foreach ($roles as $r) {
+        $ins->execute([$uid, $r, $r === $primary ? 1 : 0]);
+    }
+};
+
+// ─── POST Actions ────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'create') {
+        $username  = trim($_POST['username']);
+        $firstname = trim($_POST['firstname']);
+        $lastname  = trim($_POST['lastname']);
+        $roles     = array_values(array_intersect((array)($_POST['roles'] ?? []), $ALLOWED_ROLES));
+        $primary   = $_POST['primary_role'] ?? '';
+
+        if (empty($roles)) {
+            $msg = 'กรุณาเลือกอย่างน้อย 1 สิทธิ์การใช้งาน'; $msgType = 'error';
+        } elseif (!in_array($primary, $roles, true)) {
+            $primary = $roles[0];
+        }
+
+        if ($msgType !== 'error') {
+            try {
+                $pdo->beginTransaction();
+                $hash = password_hash('123456', PASSWORD_BCRYPT);
+                $stmt = $pdo->prepare("INSERT INTO llw_users (username,firstname,lastname,password,role,status,force_password_change) VALUES (?,?,?,?,?,'active',1)");
+                $stmt->execute([$username, $firstname, $lastname, $hash, $primary]);
+                $newUserId = (int)$pdo->lastInsertId();
+
+                $syncUserRoles($newUserId, $roles, $primary);
+
+                // Auto sync to att_teachers (ทุกคนสามารถเป็นครูได้)
+                $name = trim($firstname . ' ' . $lastname);
+                $ins = $pdo->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, ?, ?)");
+                $ins->execute([$name, $username, $hash, $newUserId]);
+
+                $pdo->commit();
+                $msg = "เพิ่มผู้ใช้ {$firstname} {$lastname} สำเร็จแล้ว (รหัสผ่านเริ่มต้น: 123456) — กำหนด " . count($roles) . " สิทธิ์";
+            } catch (PDOException $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                if ($e->getCode() == 23000) {
+                    $msg = 'Username นี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น'; $msgType = 'error';
+                } else {
+                    error_log($e->getMessage());
+                    $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+                }
+            }
+        }
+    }
+
+    if ($action === 'toggle_status') {
+        $uid = (int)$_POST['user_id'];
+        $newStatus = $_POST['new_status'];
+        if (in_array($newStatus, ['active','inactive'])) {
+            $stmt = $pdo->prepare("UPDATE llw_users SET status = ? WHERE user_id = ?");
+            $stmt->execute([$newStatus, $uid]);
+            $msg = 'อัปเดตสถานะเรียบร้อย';
+        }
+    }
+
+    if ($action === 'reset_password') {
+        $uid  = (int)$_POST['user_id'];
+        $newp = trim($_POST['new_password']);
+        if (strlen($newp) < 6) {
+            $msg = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'; $msgType = 'error';
+        } else {
+            $hash = password_hash($newp, PASSWORD_BCRYPT);
+            $stmt = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 1 WHERE user_id = ?");
+            $stmt->execute([$hash, $uid]);
+            $msg = 'รีเซ็ตรหัสผ่านเรียบร้อย (ผู้ใช้ต้องเปลี่ยนรหัสผ่านในครั้งถัดไป)';
+        }
+    }
+
+    if ($action === 'reset_default') {
+        $uid  = (int)$_POST['user_id'];
+        $hash = password_hash('123456', PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 1 WHERE user_id = ?");
+        $stmt->execute([$hash, $uid]);
+        $msg = 'รีเซ็ตเป็นรหัสผ่านเริ่มต้น (123456) เรียบร้อย';
+    }
+
+    if ($action === 'reset_all_default') {
+        $myId = (int)$_SESSION['user_id'];
+        $hash = password_hash('123456', PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare("UPDATE llw_users SET password = ?, force_password_change = 1 WHERE user_id != ?");
+        $stmt->execute([$hash, $myId]);
+        $msg = 'รีเซ็ตรหัสผ่านทุกบัญชี (ยกเว้นคุณ) เป็น 123456 เรียบร้อย';
+    }
+
+    if ($action === 'delete') {
+        $uid = (int)$_POST['user_id'];
+        if ($uid === (int)$_SESSION['user_id']) {
+            $msg = 'ไม่สามารถลบบัญชีของตัวเองได้'; $msgType = 'error';
+        } else {
+            $stmt = $pdo->prepare("DELETE FROM llw_users WHERE user_id = ?");
+            $stmt->execute([$uid]);
+            $msg = 'ลบผู้ใช้เรียบร้อยแล้ว';
+        }
+    }
+
+    if ($action === 'reset_all_roles') {
+        if ($_SESSION['llw_role'] !== 'super_admin') {
+            $msg = 'ไม่มีสิทธิ์'; $msgType = 'error';
+        } else {
+            $myId = (int)$_SESSION['user_id'];
+            try {
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare("UPDATE llw_users SET role = 'att_teacher' WHERE role != 'super_admin' AND user_id != ?");
+                $stmt->execute([$myId]);
+                $affected = $stmt->rowCount();
+                // sync pivot: ลบทุก role ของผู้ใช้ที่ถูก reset แล้วใส่ att_teacher
+                $pdo->prepare("DELETE lur FROM llw_user_roles lur INNER JOIN llw_users u ON u.user_id = lur.user_id WHERE u.role != 'super_admin' AND u.user_id != ?")->execute([$myId]);
+                $pdo->prepare("INSERT IGNORE INTO llw_user_roles (user_id, role, is_primary) SELECT user_id, 'att_teacher', 1 FROM llw_users WHERE role = 'att_teacher' AND user_id != ?")->execute([$myId]);
+                $pdo->commit();
+                $msg = "Reset สำเร็จ — อัปเดต {$affected} บัญชีเป็น att_teacher (ยกเว้น super_admin)";
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                error_log($e->getMessage());
+                $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+            }
+        }
+    }
+
+    if ($action === 'clear_users') {
+        $myId = (int)$_SESSION['user_id'];
+        try {
+            $stmt = $pdo->prepare("DELETE FROM llw_users WHERE user_id != ?");
+            $stmt->execute([$myId]);
+            $msg = 'ล้างข้อมูลผู้ใช้อื่นทั้งหมดเรียบร้อยแล้ว (ยกเว้นคุณ)';
+        } catch (Exception $e) {
+            $msg = 'ไม่สามารถล้างข้อมูลได้'; $msgType = 'error';
+        }
+    }
+
+    if ($action === 'edit_user') {
+        $uid       = (int)$_POST['user_id'];
+        $firstname = trim($_POST['firstname'] ?? '');
+        $lastname  = trim($_POST['lastname'] ?? '');
+        $roles     = array_values(array_intersect((array)($_POST['roles'] ?? []), $ALLOWED_ROLES));
+        $primary   = $_POST['primary_role'] ?? '';
+
+        if ($uid <= 0 || empty($firstname)) {
+            $msg = 'ข้อมูลไม่ถูกต้อง'; $msgType = 'error';
+        } elseif (empty($roles)) {
+            $msg = 'กรุณาเลือกอย่างน้อย 1 สิทธิ์การใช้งาน'; $msgType = 'error';
+        } else {
+            if (!in_array($primary, $roles, true)) $primary = $roles[0];
+            try {
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare("UPDATE llw_users SET firstname=?, lastname=?, role=? WHERE user_id=?");
+                $stmt->execute([$firstname, $lastname, $primary, $uid]);
+
+                $syncUserRoles($uid, $roles, $primary);
+                $pdo->commit();
+                
+                // Auto update att_teachers
+                $name = trim($firstname . ' ' . $lastname);
+                $upd = $pdo->prepare("UPDATE att_teachers SET name=? WHERE llw_user_id=?");
+                $upd->execute([$name, $uid]);
+                
+                // If not in att_teachers yet, insert them
+                $chk = $pdo->prepare("SELECT id FROM att_teachers WHERE llw_user_id=?");
+                $chk->execute([$uid]);
+                if (!$chk->fetch()) {
+                    $uInfo = $pdo->prepare("SELECT username, password FROM llw_users WHERE user_id=?");
+                    $uInfo->execute([$uid]);
+                    $uRow = $uInfo->fetch();
+                    if ($uRow) {
+                        $ins = $pdo->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, ?, ?)");
+                        $ins->execute([$name, $uRow['username'], $uRow['password'], $uid]);
+                    }
+                }
+                
+                $msg = "อัปเดตข้อมูล {$firstname} {$lastname} เรียบร้อยแล้ว";
+            } catch (Exception $e) {
+                error_log($e->getMessage());
+                $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error';
+            }
+        }
+    }
+}
+
+// ─── Fetch Users + roles (1:M) ─────────────────────────────────
+// ตรวจว่าตาราง pivot ถูก migrate แล้วหรือยัง — ถ้ายัง fallback ที่ llw_users.role
+$hasPivot = false;
+try {
+    $chk = $pdo->query("SHOW TABLES LIKE 'llw_user_roles'")->fetchColumn();
+    $hasPivot = (bool)$chk;
+} catch (Throwable $e) { $hasPivot = false; }
+
+if ($hasPivot) {
+    $users = $pdo->query("
+        SELECT u.*,
+            COALESCE(
+                (SELECT GROUP_CONCAT(role ORDER BY is_primary DESC, role ASC SEPARATOR ',')
+                 FROM llw_user_roles WHERE user_id = u.user_id),
+                u.role
+            ) AS all_roles
+        FROM llw_users u
+        ORDER BY u.role, u.firstname
+    ")->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $users = $pdo->query("SELECT u.*, u.role AS all_roles FROM llw_users u ORDER BY u.role, u.firstname")->fetchAll(PDO::FETCH_ASSOC);
+}
+
+foreach ($users as &$u) {
+    $u['roles_list'] = !empty($u['all_roles']) ? explode(',', $u['all_roles']) : [$u['role']];
+}
+unset($u);
+
+$totalUsers    = count($users);
+$activeUsers   = count(array_filter($users, fn($u) => $u['status'] === 'active'));
+$pendingChange = count(array_filter($users, fn($u) => !empty($u['force_password_change'])));
+?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>จัดการผู้ใช้ | LLW Platinum</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+    body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
+    .sidebar-item-active { background-color: #1d4ed8; color: white; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.2); }
+</style>
+</head>
+<body class="flex min-h-screen">
+
+<!-- Sidebar (เหมือนกับ central_dashboard.php) -->
+<aside class="w-72 bg-white border-r border-slate-100 flex flex-col fixed h-full z-20">
+    <div class="p-8 flex items-center gap-4">
+        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white text-xl">
+            <i class="bi bi-rocket-takeoff-fill"></i>
+        </div>
+        <span class="text-xl font-black text-slate-800 tracking-tight">LLW Platinum</span>
+    </div>
+    <nav class="flex-1 px-6 space-y-2">
+        <a href="central_dashboard.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <i class="bi bi-grid-fill text-lg"></i> แดชบอร์ด
+        </a>
+        <a href="manage_users.php" class="sidebar-item-active flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all">
+            <i class="bi bi-people text-lg"></i> จัดการผู้ใช้
+        </a>
+        <a href="attendance_system/admin.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <i class="bi bi-building text-lg"></i> ห้องเรียน / นักเรียน
+        </a>
+        <a href="attendance_system/admin.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <i class="bi bi-book text-lg"></i> รายวิชา
+        </a>
+        <a href="admin/reports.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 hover:text-slate-800 transition-all">
+            <i class="bi bi-file-earmark-bar-graph text-lg"></i> รายงาน
+        </a>
+    </nav>
+    <div class="p-8 mt-auto space-y-4">
+        <a href="change_password.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-indigo-500 hover:bg-indigo-50 transition-all">
+            <i class="bi bi-key-fill text-lg"></i> เปลี่ยนรหัสผ่าน
+        </a>
+        <a href="logout.php" class="flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-rose-500 hover:bg-rose-50 transition-all">
+            <i class="bi bi-box-arrow-left text-lg"></i> ออกจากระบบ
+        </a>
+    </div>
+</aside>
+
+<!-- Main Content -->
+<main class="ml-72 flex-1 p-10">
+
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                <i class="bi bi-people-fill text-blue-600"></i> จัดการผู้ใช้งาน
+            </h1>
+            <p class="text-slate-400 font-medium mt-1">เพิ่ม / แก้ไข / ปิดใช้งานบัญชีผู้ใช้ทั้งหมด</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <?php if ($msg): ?>
+            <div class="px-5 py-3 rounded-2xl text-sm font-bold <?= $msgType === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600' ?>">
+                <i class="bi bi-<?= $msgType === 'error' ? 'exclamation-triangle' : 'check-circle' ?>-fill mr-1"></i>
+                <?= htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') ?>
+            </div>
+            <?php endif; ?>
+            <button onclick="confirmResetAll()"
+                class="flex items-center gap-2 bg-amber-100 text-amber-600 px-6 py-3 rounded-2xl font-bold hover:bg-amber-500 hover:text-white transition-all">
+                <i class="bi bi-arrow-repeat text-lg"></i> Reset รหัสทั้งหมด
+            </button>
+            <button onclick="confirmResetAllRoles()"
+                class="flex items-center gap-2 bg-indigo-100 text-indigo-600 px-6 py-3 rounded-2xl font-bold hover:bg-indigo-500 hover:text-white transition-all">
+                <i class="bi bi-person-fill-slash text-lg"></i> Reset Role ทั้งหมด
+            </button>
+            <button onclick="confirmClear()"
+                class="flex items-center gap-2 bg-rose-100 text-rose-500 px-6 py-3 rounded-2xl font-bold hover:bg-rose-500 hover:text-white transition-all">
+                <i class="bi bi-trash3 text-lg"></i> ล้างทั้งหมด
+            </button>
+            <button onclick="document.getElementById('modal-import').classList.remove('hidden')"
+                class="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-600 hover:scale-[1.02] transition-all">
+                <i class="bi bi-file-earmark-spreadsheet text-lg"></i> นำเข้า CSV
+            </button>
+            <button onclick="document.getElementById('modal-add').classList.remove('hidden')"
+                class="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] transition-all">
+                <i class="bi bi-plus-lg text-lg"></i> เพิ่มผู้ใช้ใหม่
+            </button>
+        </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-3 gap-4 mb-8 max-w-xl">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest">ผู้ใช้ทั้งหมด</p>
+            <p class="text-4xl font-black text-slate-800 mt-1"><?= $totalUsers ?></p>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <p class="text-xs font-black text-slate-400 uppercase tracking-widest">ใช้งานอยู่</p>
+            <p class="text-4xl font-black text-emerald-600 mt-1"><?= $activeUsers ?></p>
+        </div>
+        <div class="bg-amber-50 rounded-2xl shadow-sm border border-amber-100 p-5">
+            <p class="text-xs font-black text-amber-500 uppercase tracking-widest">รอเปลี่ยนรหัส</p>
+            <p class="text-4xl font-black text-amber-600 mt-1"><?= $pendingChange ?></p>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-8 py-6 border-b border-slate-100 flex items-center gap-3">
+            <i class="bi bi-person-lines-fill text-blue-600"></i>
+            <span class="font-black text-slate-700">รายชื่อผู้ใช้งานทั้งหมด</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">#</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ชื่อ-สกุล / Username</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Role</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">สถานะ</th>
+                        <th class="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">เข้าสู่ระบบล่าสุด</th>
+                        <th class="px-6 py-5 text-center text-xs font-black text-slate-400 uppercase tracking-widest">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                <?php foreach ($users as $i => $u):
+                    $isMe = ((int)$u['user_id'] === (int)$_SESSION['user_id']);
+                    $primaryRole = $u['role'];
+                ?>
+                <tr class="hover:bg-slate-50/50 transition-all group">
+                    <td class="px-6 py-5 text-xs font-bold text-slate-400"><?= $i + 1 ?></td>
+                    <td class="px-6 py-5">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center font-black text-sm">
+                                <?= mb_substr($u['firstname'], 0, 1) ?>
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-800 text-sm"><?= htmlspecialchars($u['firstname'].' '.$u['lastname'], ENT_QUOTES, 'UTF-8') ?></p>
+                                <p class="text-xs text-slate-400 font-medium">@<?= htmlspecialchars($u['username'], ENT_QUOTES, 'UTF-8') ?></p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex flex-wrap gap-1.5 max-w-xs">
+                            <?php foreach ($u['roles_list'] as $rk):
+                                $rm = $ROLE_CATALOG[$rk] ?? ['label' => $rk, 'color' => 'bg-slate-100 text-slate-600 border-slate-200'];
+                                $isPrimary = ($rk === $primaryRole);
+                            ?>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black border <?= $rm['color'] ?>" title="<?= htmlspecialchars($rm['desc'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                                <?php if ($isPrimary): ?><i class="bi bi-star-fill text-amber-500 text-[9px]"></i><?php endif; ?>
+                                <?= htmlspecialchars($rm['label'], ENT_QUOTES, 'UTF-8') ?>
+                            </span>
+                            <?php endforeach; ?>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5">
+                        <?php if ($u['status'] === 'active'): ?>
+                        <span class="flex items-center gap-1.5 text-emerald-600 text-xs font-bold">
+                            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> ใช้งาน
+                        </span>
+                        <?php else: ?>
+                        <span class="flex items-center gap-1.5 text-slate-400 text-xs font-bold">
+                            <span class="w-2 h-2 bg-slate-300 rounded-full"></span> ปิดใช้งาน
+                        </span>
+                        <?php endif; ?>
+                        <?php if (!empty($u['force_password_change'])): ?>
+                        <span class="mt-1 flex items-center gap-1 text-amber-500 text-xs font-black">
+                            <i class="bi bi-exclamation-triangle-fill"></i> รอเปลี่ยนรหัส
+                        </span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="px-6 py-5 text-xs text-slate-500 font-medium">
+                        <?= $u['last_login'] ? date('d/m/').((int)date('Y')+543).' '.date('H:i', strtotime($u['last_login'])) : '—' ?>
+                    </td>
+                    <td class="px-6 py-5 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <!-- Edit Role / Name -->
+                            <button onclick='openEdit(<?= (int)$u['user_id'] ?>, <?= json_encode($u['firstname'], JSON_HEX_APOS|JSON_HEX_QUOT) ?>, <?= json_encode($u['lastname'], JSON_HEX_APOS|JSON_HEX_QUOT) ?>, <?= json_encode($u['roles_list']) ?>, <?= json_encode($u['role']) ?>)'
+                                class="w-8 h-8 bg-indigo-50 text-indigo-500 rounded-xl flex items-center justify-center hover:bg-indigo-500 hover:text-white transition-all" title="แก้ไขชื่อ / Role">
+                                <i class="bi bi-pencil-fill text-xs"></i>
+                            </button>
+                            <!-- Reset to Default 123456 -->
+                            <?php if (!$isMe): ?>
+                            <form method="POST" class="inline">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="reset_default">
+                                <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
+                                <button type="submit"
+                                    class="w-8 h-8 bg-slate-100 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-500 hover:text-white transition-all" title="Reset รหัสเป็น 123456">
+                                    <i class="bi bi-arrow-repeat text-xs"></i>
+                                </button>
+                            </form>
+                            <?php endif; ?>
+                            <!-- Reset Password (custom) -->
+                            <button onclick="openReset(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['firstname'], ENT_QUOTES) ?>')"
+                                class="w-8 h-8 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center hover:bg-amber-500 hover:text-white transition-all" title="ตั้งรหัสผ่านเอง">
+                                <i class="bi bi-key-fill text-xs"></i>
+                            </button>
+                            <!-- Toggle Status -->
+                            <?php if (!$isMe): ?>
+                            <form method="POST" class="inline">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="toggle_status">
+                                <input type="hidden" name="user_id" value="<?= $u['user_id'] ?>">
+                                <input type="hidden" name="new_status" value="<?= $u['status'] === 'active' ? 'inactive' : 'active' ?>">
+                                <button type="submit"
+                                    class="w-8 h-8 rounded-xl flex items-center justify-center transition-all <?= $u['status'] === 'active' ? 'bg-slate-100 text-slate-400 hover:bg-slate-500 hover:text-white' : 'bg-emerald-50 text-emerald-500 hover:bg-emerald-500 hover:text-white' ?>"
+                                    title="<?= $u['status'] === 'active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน' ?>">
+                                    <i class="bi bi-<?= $u['status'] === 'active' ? 'pause-fill' : 'play-fill' ?> text-xs"></i>
+                                </button>
+                            </form>
+                            <!-- Delete -->
+                            <button onclick="confirmDelete(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['firstname'].' '.$u['lastname'], ENT_QUOTES) ?>')"
+                                class="w-8 h-8 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all" title="ลบผู้ใช้">
+                                <i class="bi bi-trash3-fill text-xs"></i>
+                            </button>
+                            <?php else: ?>
+                            <span class="text-xs text-slate-300 font-bold">บัญชีของคุณ</span>
+                            <?php endif; ?>
+                        </div>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- Modal: เพิ่มผู้ใช้ -->
+<div id="modal-add" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-person-plus-fill"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">เพิ่มผู้ใช้งานใหม่</h5>
+                    <p class="text-xs font-bold text-blue-100 uppercase tracking-widest">กรอกข้อมูลให้ครบถ้วน</p>
+                </div>
+            </div>
+        </div>
+        <form method="POST" class="p-8 space-y-4">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="create">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">ชื่อ</label>
+                    <input type="text" name="firstname" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="ชื่อจริง">
+                </div>
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">นามสกุล</label>
+                    <input type="text" name="lastname" required class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="นามสกุล">
+                </div>
+            </div>
+            <div>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Username</label>
+                <input type="text" name="username" required autocomplete="off" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="ตัวอักษรภาษาอังกฤษ ไม่มีช่องว่าง">
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">สิทธิ์การใช้งาน <span class="text-rose-500">*</span></label>
+                    <span class="text-[10px] text-slate-400 font-medium">เลือกได้หลายรายการ · <i class="bi bi-star-fill text-amber-500"></i> = สิทธิ์หลัก</span>
+                </div>
+                <div data-role-grid="add" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto p-1">
+                    <?php foreach ($ROLE_CATALOG as $rk => $rm): ?>
+                    <label class="role-card relative cursor-pointer flex items-start gap-2.5 p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40 transition-all">
+                        <input type="checkbox" name="roles[]" value="<?= $rk ?>" class="role-cb mt-0.5 accent-blue-600 w-4 h-4 flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-black text-sm text-slate-700"><?= htmlspecialchars($rm['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <button type="button" class="primary-btn opacity-0 pointer-events-none text-[10px] font-bold text-slate-400 hover:text-amber-500 transition-all">
+                                    <i class="bi bi-star"></i>
+                                </button>
+                            </div>
+                            <p class="text-[10.5px] text-slate-400 font-medium mt-0.5 leading-tight"><?= htmlspecialchars($rm['desc'], ENT_QUOTES, 'UTF-8') ?></p>
+                        </div>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+                <input type="hidden" name="primary_role" value="">
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                <i class="bi bi-info-circle-fill text-amber-500 flex-shrink-0 mt-0.5"></i>
+                <div>
+                    <p class="text-amber-800 font-black text-xs">รหัสผ่านเริ่มต้น: <span class="font-mono bg-amber-100 px-1.5 py-0.5 rounded-lg">123456</span></p>
+                    <p class="text-amber-600 text-xs mt-0.5">ผู้ใช้จะถูกบังคับให้เปลี่ยนรหัสผ่านเมื่อ Login ครั้งแรก</p>
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="document.getElementById('modal-add').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="submit"
+                    class="flex-[2] py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-200 hover:opacity-90 transition-all">
+                    <i class="bi bi-person-plus-fill mr-1"></i> สร้างบัญชี
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Reset Password -->
+<div id="modal-reset" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-key-fill"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">รีเซ็ตรหัสผ่าน</h5>
+                    <p id="reset-name" class="text-xs font-bold text-amber-100 uppercase tracking-widest"></p>
+                </div>
+            </div>
+        </div>
+        <form method="POST" class="p-8 space-y-4">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="reset_password">
+            <input type="hidden" name="user_id" id="reset-uid">
+            <div>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">รหัสผ่านใหม่</label>
+                <input type="password" name="new_password" required autocomplete="new-password"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all"
+                    placeholder="อย่างน้อย 6 ตัวอักษร">
+            </div>
+            <div class="flex gap-3">
+                <button type="button" onclick="document.getElementById('modal-reset').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="submit"
+                    class="flex-[2] py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl font-black text-sm shadow-lg shadow-amber-200 hover:opacity-90 transition-all">
+                    <i class="bi bi-key-fill mr-1"></i> รีเซ็ตรหัสผ่าน
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: นำเข้า CSV -->
+<div id="modal-import" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-file-earmark-arrow-up"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">นำเข้าผู้ใช้งานจาก CSV</h5>
+                    <p class="text-xs font-bold text-emerald-100 uppercase tracking-widest">รองรับไฟล์ .csv (UTF-8)</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-8 space-y-6">
+            <div class="bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
+                <p class="text-xs font-bold text-emerald-700 mb-2"><i class="bi bi-info-circle-fill mr-1"></i>รูปแบบไฟล์ CSV (ไม่มีหัวตาราง):</p>
+                <code class="text-sm text-emerald-600 bg-emerald-100/50 px-2 py-1 rounded-lg block leading-relaxed">
+                    username, firstname, lastname, password, role
+                </code>
+                <p class="text-xs text-emerald-500 mt-2 italic">* Role: super_admin, wfh_admin, wfh_staff, cb_admin, att_teacher</p>
+                <p class="text-sm text-emerald-600 mt-3">
+                    <a href="api/download_user_template.php" class="inline-flex items-center gap-1 font-black underline decoration-emerald-200 hover:text-emerald-800 transition-colors">
+                        <i class="bi bi-download"></i> ดาวน์โหลดไฟล์ตัวอย่าง (.csv)
+                    </a>
+                </p>
+            </div>
+            
+            <div id="drop-zone" class="border-2 border-dashed border-emerald-200 rounded-2xl p-10 text-center hover:border-emerald-400 hover:bg-emerald-50/50 transition-all cursor-pointer"
+                 onclick="document.getElementById('csv-file').click()">
+                <i class="bi bi-cloud-upload text-4xl text-emerald-400 block mb-2"></i>
+                <p class="text-sm font-bold text-slate-500">คลิกเพื่อเลือกไฟล์ CSV หรือลากมาวาง</p>
+                <p class="text-xs text-slate-400 mt-1" id="file-name">ยังไม่ได้เลือกไฟล์</p>
+            </div>
+            <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="document.getElementById('file-name').textContent = this.files[0].name">
+
+            <div class="flex gap-3">
+                <button type="button" onclick="document.getElementById('modal-import').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="button" onclick="handleImport()"
+                    class="flex-[2] py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-emerald-200/50 hover:opacity-90 transition-all">
+                    <i class="bi bi-check-circle-fill mr-1"></i> เริ่มนำเข้าข้อมูล
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit User (Role + Name) -->
+<div id="modal-edit" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-600 to-blue-600 p-6 text-white">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-xl">
+                    <i class="bi bi-pencil-fill"></i>
+                </div>
+                <div>
+                    <h5 class="font-black text-lg">แก้ไขข้อมูลผู้ใช้</h5>
+                    <p id="edit-username-display" class="text-xs font-bold text-indigo-200 uppercase tracking-widest"></p>
+                </div>
+            </div>
+        </div>
+        <form method="POST" class="p-6 space-y-4">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="edit_user">
+            <input type="hidden" name="user_id" id="edit-uid">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">ชื่อ</label>
+                    <input type="text" name="firstname" id="edit-firstname" required
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
+                        placeholder="ชื่อ">
+                </div>
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">นามสกุล</label>
+                    <input type="text" name="lastname" id="edit-lastname"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-400 outline-none transition-all"
+                        placeholder="นามสกุล">
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">สิทธิ์การใช้งาน <span class="text-rose-500">*</span></label>
+                    <span class="text-[10px] text-slate-400 font-medium">เลือกหลายได้ · <i class="bi bi-star-fill text-amber-500"></i> = หลัก</span>
+                </div>
+                <div data-role-grid="edit" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto p-1">
+                    <?php foreach ($ROLE_CATALOG as $rk => $rm): ?>
+                    <label class="role-card relative cursor-pointer flex items-start gap-2.5 p-3 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/40 transition-all">
+                        <input type="checkbox" name="roles[]" value="<?= $rk ?>" class="role-cb mt-0.5 accent-indigo-600 w-4 h-4 flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="font-black text-sm text-slate-700"><?= htmlspecialchars($rm['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <button type="button" class="primary-btn opacity-0 pointer-events-none text-[10px] font-bold text-slate-400 hover:text-amber-500 transition-all">
+                                    <i class="bi bi-star"></i>
+                                </button>
+                            </div>
+                            <p class="text-[10.5px] text-slate-400 font-medium mt-0.5 leading-tight"><?= htmlspecialchars($rm['desc'], ENT_QUOTES, 'UTF-8') ?></p>
+                        </div>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+                <input type="hidden" name="primary_role" id="edit-primary-role" value="">
+            </div>
+            <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 text-xs text-indigo-600">
+                <i class="bi bi-info-circle-fill me-1"></i>
+                สิทธิ์หลัก (<i class="bi bi-star-fill text-amber-500"></i>) ใช้กำหนดหน้า dashboard เริ่มต้น — มีผลทันทีในการ Login ครั้งถัดไป
+            </div>
+            <div class="flex gap-3 pt-1">
+                <button type="button" onclick="document.getElementById('modal-edit').classList.add('hidden')"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="submit"
+                    class="flex-[2] py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-200 hover:opacity-90 transition-all">
+                    <i class="bi bi-check-circle-fill mr-1"></i> บันทึก
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete form (hidden) -->
+<form id="delete-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="user_id" id="delete-uid">
+</form>
+
+<!-- Reset-all-roles form (hidden) -->
+<form id="reset-roles-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="reset_all_roles">
+</form>
+
+<!-- Reset-all-passwords form (hidden) -->
+<form id="reset-pass-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="reset_all_default">
+</form>
+
+<!-- Clear-users form (hidden) -->
+<form id="clear-users-form" method="POST" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="clear_users">
+</form>
+
+<script>
+function confirmResetAll() {
+    Swal.fire({
+        title: 'Reset รหัสผ่านทุกบัญชี?',
+        html: 'รหัสผ่านของ<b>ทุกบัญชี (ยกเว้นคุณ)</b> จะถูกเปลี่ยนเป็น <b class="font-mono">123456</b><br><small class="text-amber-600 font-bold">ผู้ใช้ทุกคนต้องเปลี่ยนรหัสผ่านใน Login ครั้งถัดไป</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f59e0b',
+        confirmButtonText: 'ยืนยัน Reset ทั้งหมด',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) document.getElementById('reset-pass-form').submit();
+    });
+}
+
+function confirmClear() {
+    Swal.fire({
+        title: 'ล้างข้อมูลผู้ใช้ทั้งหมด?',
+        html: 'ระบบจะลบข้อมูลผู้ใช้อื่น <b>"ทั้งหมด"</b> ยกเว้นคุณ<br><small class="text-rose-500 font-bold">การดำเนินการนี้ไม่สามารถย้อนกลับได้!</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'ยืนยันลบทั้งหมด',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) document.getElementById('clear-users-form').submit();
+    });
+}
+
+function confirmResetAllRoles() {
+    Swal.fire({
+        title: 'Reset Role ผู้ใช้ทั้งหมด?',
+        html: 'ผู้ใช้<b>ทุกคน (ยกเว้น super_admin และคุณ)</b> จะถูกเปลี่ยน role เป็น <b>att_teacher (ครูผู้สอน)</b><br><small class="text-indigo-600 font-bold">ต้องกำหนด role ใหม่ให้ผู้ที่มีหน้าที่พิเศษด้วยตนเอง</small>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#4f46e5',
+        confirmButtonText: 'ยืนยัน Reset Role',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) document.getElementById('reset-roles-form').submit();
+    });
+}
+
+function openEdit(uid, firstname, lastname, roles, primary) {
+    document.getElementById('edit-uid').value = uid;
+    document.getElementById('edit-firstname').value = firstname;
+    document.getElementById('edit-lastname').value = lastname;
+    document.getElementById('edit-username-display').textContent = (firstname || '') + ' ' + (lastname || '');
+
+    const grid = document.querySelector('[data-role-grid="edit"]');
+    grid.querySelectorAll('.role-cb').forEach(cb => {
+        cb.checked = roles.includes(cb.value);
+    });
+    document.getElementById('edit-primary-role').value = primary || roles[0] || '';
+    refreshRoleGrid(grid);
+    document.getElementById('modal-edit').classList.remove('hidden');
+}
+
+// ─── Multi-role grid: ทำให้ checkbox + primary star ทำงานร่วมกัน ───
+function refreshRoleGrid(grid) {
+    if (!grid) return;
+    const form = grid.closest('form');
+    const primaryInput = form.querySelector('input[name="primary_role"]');
+    const checked = Array.from(grid.querySelectorAll('.role-cb')).filter(c => c.checked).map(c => c.value);
+
+    // ถ้า primary ไม่อยู่ใน checked — set primary เป็นตัวแรก
+    if (!checked.includes(primaryInput.value)) {
+        primaryInput.value = checked[0] || '';
+    }
+
+    grid.querySelectorAll('.role-card').forEach(card => {
+        const cb = card.querySelector('.role-cb');
+        const btn = card.querySelector('.primary-btn');
+        const icon = btn.querySelector('i');
+        const isPrimary = (cb.value === primaryInput.value);
+
+        if (cb.checked) {
+            card.classList.add('!border-blue-500','!bg-blue-50');
+            btn.classList.remove('opacity-0','pointer-events-none');
+        } else {
+            card.classList.remove('!border-blue-500','!bg-blue-50','!border-amber-400','!bg-amber-50');
+            btn.classList.add('opacity-0','pointer-events-none');
+        }
+        if (cb.checked && isPrimary) {
+            card.classList.remove('!border-blue-500','!bg-blue-50');
+            card.classList.add('!border-amber-400','!bg-amber-50');
+            icon.className = 'bi bi-star-fill text-amber-500';
+            btn.classList.add('text-amber-500');
+            btn.classList.remove('text-slate-400');
+        } else {
+            icon.className = 'bi bi-star';
+            btn.classList.remove('text-amber-500');
+            btn.classList.add('text-slate-400');
+        }
+    });
+}
+
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.primary-btn');
+    if (btn) {
+        e.preventDefault();
+        const grid = btn.closest('[data-role-grid]');
+        const card = btn.closest('.role-card');
+        const cb = card.querySelector('.role-cb');
+        if (!cb.checked) { cb.checked = true; }
+        grid.closest('form').querySelector('input[name="primary_role"]').value = cb.value;
+        refreshRoleGrid(grid);
+        return;
+    }
+    const cb = e.target.closest('.role-cb');
+    if (cb) {
+        setTimeout(() => refreshRoleGrid(cb.closest('[data-role-grid]')), 0);
+    }
+});
+
+// validate ฟอร์มก่อน submit
+document.querySelectorAll('form').forEach(f => {
+    f.addEventListener('submit', (e) => {
+        const grid = f.querySelector('[data-role-grid]');
+        if (!grid) return;
+        const checked = grid.querySelectorAll('.role-cb:checked');
+        if (checked.length === 0) {
+            e.preventDefault();
+            Swal.fire({ icon: 'warning', title: 'กรุณาเลือกสิทธิ์', text: 'ต้องเลือกอย่างน้อย 1 สิทธิ์การใช้งาน', confirmButtonColor: '#2563eb' });
+            return;
+        }
+        const primaryInput = f.querySelector('input[name="primary_role"]');
+        if (!primaryInput.value || !Array.from(checked).some(c => c.value === primaryInput.value)) {
+            primaryInput.value = checked[0].value;
+        }
+    });
+});
+
+function openReset(uid, name) {
+    document.getElementById('reset-uid').value = uid;
+    document.getElementById('reset-name').textContent = name;
+    document.getElementById('modal-reset').classList.remove('hidden');
+}
+
+function confirmDelete(uid, name) {
+    Swal.fire({
+        title: 'ลบผู้ใช้?',
+        html: `ต้องการลบบัญชี <b>${name}</b> ออกจากระบบ?<br><small class="text-slate-400">การดำเนินการนี้ไม่สามารถย้อนกลับได้</small>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'ลบเลย',
+        cancelButtonText: 'ยกเลิก',
+        customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl', cancelButton: 'rounded-xl' }
+    }).then(r => {
+        if (r.isConfirmed) {
+            document.getElementById('delete-uid').value = uid;
+            document.getElementById('delete-form').submit();
+        }
+    });
+}
+
+async function handleImport() {
+    const fileInput = document.getElementById('csv-file');
+    if (!fileInput.files.length) {
+        Swal.fire({ icon: 'warning', title: 'กรุณาเลือกไฟล์', text: 'กรุณาเลือกไฟล์ CSV ก่อนดำเนินการ' });
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('csv_file', fileInput.files[0]);
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
+
+    Swal.fire({
+        title: 'กำลังนำเข้าข้อมูล...',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    try {
+        const response = await fetch('api/import_users.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const text = await response.text();
+        let res;
+        try {
+            res = JSON.parse(text);
+        } catch (e) {
+            console.error('Raw Response:', text);
+            Swal.fire({
+                icon: 'error',
+                title: 'API Error',
+                html: `<div class="text-left text-xs bg-slate-50 p-4 rounded-xl overflow-auto max-h-40"><code>${text.substring(0, 500)}</code></div>`,
+                confirmButtonColor: '#ef4444'
+            });
+            return;
+        }
+
+        if (res.status === 'success') {
+            Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ!',
+                text: res.message,
+                confirmButtonColor: '#059669'
+            }).then(() => location.reload());
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'ผิดพลาด',
+                text: res.message
+            });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: ' + e.message });
+    }
+}
+</script>
+
+</body>
+</html>
+

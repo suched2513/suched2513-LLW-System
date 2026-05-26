@@ -18,7 +18,7 @@ try {
     $stmtC->execute([$_SESSION['user_id']]);
     $currUser = $stmtC->fetch();
 
-    $isAdmin = in_array($currUser['role'] ?? '', ['super_admin', 'wfh_admin']);
+    $isAdmin = ($currUser['role'] ?? '') === 'super_admin';
     $isEval  = ($currUser['is_evaluator'] ?? 0) == 1;
 
     $teachers = [];

@@ -3,7 +3,7 @@ session_start();
 require_once __DIR__ . '/../../config.php';
 
 // Staff only
-if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin','wfh_admin','att_teacher','bus_admin'], true)) {
+if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin','att_teacher','bus_admin'], true)) {
     header('Location: /login.php'); exit();
 }
 
@@ -17,7 +17,7 @@ if (!function_exists('busGetSemester')) {
 }
 $semester     = $_GET['semester'] ?? busGetSemester();
 $filterType   = $_GET['type'] ?? 'all';
-$canConfirm   = in_array($_SESSION['llw_role'], ['super_admin','wfh_admin','bus_admin'], true);
+$canConfirm   = in_array($_SESSION['llw_role'], ['super_admin','bus_admin'], true);
 
 // Handle confirm/unconfirm
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canConfirm) {

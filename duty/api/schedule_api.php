@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * duty/api/schedule_api.php — AJAX API สำหรับระบบจัดตารางเวร
  */
@@ -6,7 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 session_start();
 require_once __DIR__ . '/../../config/database.php';
 
-if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin','wfh_admin'])) {
+if (($_SESSION['llw_role'] ?? '') !== 'super_admin') {
     http_response_code(401);
     echo json_encode(['status'=>'error','message'=>'กรุณาเข้าสู่ระบบ']);
     exit;

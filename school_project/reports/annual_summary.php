@@ -1,10 +1,10 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/constants.php';
 require_once __DIR__ . '/../includes/layout.php';
-requireRole(['admin','super_admin','director','budget_officer','wfh_admin','procurement_head','finance_head','deputy_director']);
+requireRole(['admin','super_admin','director','budget_officer','procurement_head','finance_head','deputy_director']);
 $db = getDB();
 $fy = (int)($_GET['fy'] ?? FISCAL_YEAR);
 

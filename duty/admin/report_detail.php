@@ -29,7 +29,7 @@ if (!$report) { header('Location: reports.php'); exit(); }
 
 // ── ลบรูป (admin เท่านั้น) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_photo') {
-    if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+    if ($_SESSION['llw_role'] !== 'super_admin') {
         http_response_code(403); exit();
     }
     csrf_verify();

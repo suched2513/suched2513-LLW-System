@@ -633,7 +633,7 @@ async function loadTeachers() {
 
             // Set Evaluator Status
             const self = teachers.find(t => t.id == APP_USER_ID);
-            USER_IS_EVALUATOR = ['super_admin', 'wfh_admin'].includes(APP_ROLE) || (self && self.is_evaluator == 1);
+            USER_IS_EVALUATOR = APP_ROLE === 'super_admin' || (self && self.is_evaluator == 1);
             
             if (USER_IS_EVALUATOR) {
                 document.getElementById('mode-selector-container').classList.remove('hidden');

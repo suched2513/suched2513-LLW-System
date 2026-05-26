@@ -27,7 +27,7 @@ function requireRole($roles) {
     // Map platform roles to local roles for comparison
     $map = [
         'att_teacher'=>'teacher',
-        'wfh_admin'=>'budget_officer',
+        'wfh_admin'=>'teacher',
         'wfh_staff'=>'teacher',
         'cb_admin'=>'teacher',
         'procurement_head'=>'procurement_head',
@@ -81,7 +81,7 @@ function roleLabel($r) {
         'admin'=>'ผู้ดูแลระบบ','super_admin'=>'ผู้ดูแลระบบสูงสุด',
         'teacher'=>'ครู','att_teacher'=>'ครู',
         'head'=>'หัวหน้าฝ่าย',
-        'budget_officer'=>'เจ้าหน้าที่งบประมาณ (แผนงาน)','wfh_admin'=>'เจ้าหน้าที่งบประมาณ',
+        'budget_officer'=>'เจ้าหน้าที่งบประมาณ (แผนงาน)',
         'procurement_head'=>'หัวหน้าพัสดุ',
         'finance_head'=>'หัวหน้าการเงิน',
         'deputy_director'=>'รองผู้อำนวยการ',

@@ -33,7 +33,7 @@ try {
     $stmtC->execute([$_SESSION['user_id']]);
     $currUser = $stmtC->fetch();
 
-    $isAdmin = in_array($currUser['role'] ?? '', ['super_admin', 'wfh_admin']);
+    $isAdmin = ($currUser['role'] ?? '') === 'super_admin';
     $isEval  = ($currUser['is_evaluator'] ?? 0) == 1;
 
     // Security guard: If not admin AND not evaluator, teacher_id MUST be their own ID
