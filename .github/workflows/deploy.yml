@@ -142,6 +142,9 @@ jobs:
               --exclude ^\.git/ \
               --exclude ^\.github/ \
               --exclude ^uploads \
+              --exclude chromebook/uploads \
+              --exclude behavior/uploads \
+              --exclude bus/uploads \
               --exclude school_project/uploads \
               --exclude parent_meeting/uploads \
               --exclude ^lms/uploads/exercises/[^.] \
