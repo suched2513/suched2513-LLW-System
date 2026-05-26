@@ -179,6 +179,10 @@ require_once __DIR__ . '/../components/layout_start.php';
                                     <i class="bi bi-arrow-right-circle"></i> <?= htmlspecialchars($nextStatus, ENT_QUOTES, 'UTF-8') ?>
                                 </button>
                                 <?php endif; ?>
+                                <a href="print_slip.php?id=<?= $rep['id'] ?>" target="_blank"
+                                    class="p-2 text-blue-400 hover:bg-blue-50 rounded-xl transition" title="พิมพ์ใบแจ้งซ่อม">
+                                    <i class="bi bi-printer-fill"></i>
+                                </a>
                                 <button onclick="openEdit(<?= $rep['id'] ?>, <?= htmlspecialchars(json_encode($rep['status']), ENT_QUOTES, 'UTF-8') ?>, <?= htmlspecialchars(json_encode($rep['repair_notes'] ?? ''), ENT_QUOTES, 'UTF-8') ?>)"
                                     class="p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition" title="แก้ไข">
                                     <i class="bi bi-pencil-square"></i>
