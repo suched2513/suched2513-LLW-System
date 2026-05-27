@@ -232,8 +232,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <input type="checkbox" name="classrooms[]" value="<?=htmlspecialchars($cl,ENT_QUOTES,'UTF-8')?>"
                        class="hidden cl-check" checked onchange="updatePillStyle(this); updateAllGradeBtns();">
                 <span class="pill px-3 py-1.5 rounded-xl text-xs font-black border-2 select-none transition-all
-                             border-violet-500 bg-violet-600 text-white"
-                      onclick="this.previousElementSibling.click()">
+                             border-violet-500 bg-violet-600 text-white">
                   <i class="bi bi-check2 mr-0.5"></i><?=htmlspecialchars($cl,ENT_QUOTES,'UTF-8')?>
                 </span>
               </label>
