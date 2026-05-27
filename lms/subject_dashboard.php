@@ -65,10 +65,11 @@ $sel_class   = trim($_GET['class'] ?? '');
 $exercise_id = (int)($_GET['exercise_id'] ?? 0);
 $exercise    = null; $submissions = [];
 
+$_reviewed_expr = $_has_grade ? 'SUM(CASE WHEN se.reviewed_at IS NOT NULL THEN 1 ELSE 0 END)' : '0';
 $exercises_all = $pdo->prepare("
     SELECT e.id, e.exercise_title, e.max_score, e.due_date, u.unit_name,
            COUNT(se.id) AS sub_count,
-           SUM(CASE WHEN se.reviewed_at IS NOT NULL THEN 1 ELSE 0 END) AS reviewed_count
+           {$_reviewed_expr} AS reviewed_count
     FROM lms_unit_exercises e
     JOIN lms_units u ON u.id = e.unit_id
     LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.subject_id = ?
@@ -548,6 +549,9 @@ require_once __DIR__ . '/../components/layout_start.php';
             <p class="text-[10px] font-black text-slate-400 mb-1">คำตอบ</p>
             <p class="text-xs text-slate-700 whitespace-pre-wrap"><?=htmlspecialchars($s['answer_text'],ENT_QUOTES,'UTF-8')?></p>
           </div>
+          <?php endif; ?>
+          <?php if (empty($sub_files) && empty($s['link_url']) && empty($s['answer_text'])): ?>
+          <p class="text-xs text-slate-400 text-center py-1 italic">— ไม่พบเนื้อหาที่ส่ง —</p>
           <?php endif; ?>
           <div class="flex items-center gap-2 flex-wrap">
             <input type="number" min="0" max="<?=$exercise['max_score']??100?>" value="<?=$s['grade']??''?>" placeholder="—"

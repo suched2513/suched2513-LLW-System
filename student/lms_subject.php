@@ -45,7 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exercise_id'])) {
         }
     }
     $fp = !empty($files) ? json_encode($files) : null;
-    if ($answer !== '' || !empty($files) || $link !== '') {
+    $_sub_has_link = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'link_url'")->fetch();
+    if ($answer !== '' || !empty($files) || ($link !== '' && $_sub_has_link)) {
         $eq = $pdo->prepare("SELECT id, file_paths FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
         $eq->execute([$uid, $ex_id]); $existing = $eq->fetch();
         if ($existing) {
@@ -54,11 +55,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exercise_id'])) {
                     $op = __DIR__ . '/../' . $of; if (file_exists($op)) @unlink($op);
                 }
             }
-            $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?,file_paths=COALESCE(?,file_paths),link_url=?,submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
-                ->execute([$answer, $fp, $link ?: null, $uid, $ex_id]);
+            if ($_sub_has_link) {
+                $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?,file_paths=COALESCE(?,file_paths),link_url=?,submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
+                    ->execute([$answer, $fp, $link ?: null, $uid, $ex_id]);
+            } else {
+                $pdo->prepare("UPDATE lms_student_exercises SET answer_text=?,file_paths=COALESCE(?,file_paths),submitted_at=NOW() WHERE student_uid=? AND exercise_id=?")
+                    ->execute([$answer, $fp, $uid, $ex_id]);
+            }
         } else {
-            $pdo->prepare("INSERT INTO lms_student_exercises (student_uid,exercise_id,unit_id,subject_id,answer_text,file_paths,link_url) VALUES (?,?,?,?,?,?,?)")
-                ->execute([$uid, $ex_id, $uid_p, $subject_id, $answer, $fp, $link ?: null]);
+            if ($_sub_has_link) {
+                $pdo->prepare("INSERT INTO lms_student_exercises (student_uid,exercise_id,unit_id,subject_id,answer_text,file_paths,link_url) VALUES (?,?,?,?,?,?,?)")
+                    ->execute([$uid, $ex_id, $uid_p, $subject_id, $answer, $fp, $link ?: null]);
+            } else {
+                $pdo->prepare("INSERT INTO lms_student_exercises (student_uid,exercise_id,unit_id,subject_id,answer_text,file_paths) VALUES (?,?,?,?,?,?)")
+                    ->execute([$uid, $ex_id, $uid_p, $subject_id, $answer, $fp]);
+            }
         }
         header('Location: /student/lms_subject.php?subject_id=' . $subject_id . '&done=1'); exit();
     }
@@ -104,7 +115,9 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$subject_id]); $all_exercises = $stmt->fetchAll();
 
-$stmt = $pdo->prepare("SELECT exercise_id, answer_text, file_paths, link_url, grade, feedback, reviewed_at, submitted_at FROM lms_student_exercises WHERE student_uid=? AND subject_id=?");
+$_sub_lk_col  = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'link_url'")->fetch()   ? ', link_url'                             : ", '' AS link_url";
+$_sub_gr_cols = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'reviewed_at'")->fetch() ? ', grade, feedback, reviewed_at'          : ', NULL AS grade, NULL AS feedback, NULL AS reviewed_at';
+$stmt = $pdo->prepare("SELECT exercise_id, answer_text, file_paths{$_sub_lk_col}{$_sub_gr_cols}, submitted_at FROM lms_student_exercises WHERE student_uid=? AND subject_id=?");
 $stmt->execute([$uid, $subject_id]); $submissions = array_column($stmt->fetchAll(), null, 'exercise_id');
 
 $cnt_pending = count(array_filter($all_exercises, fn($e) => !isset($submissions[$e['id']])));
