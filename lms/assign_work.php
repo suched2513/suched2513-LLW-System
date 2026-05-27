@@ -179,7 +179,16 @@ require_once __DIR__ . '/../components/layout_start.php';
       </a>
     </div>
 
-    <?php else: ?>
+    <?php
+        // Group classrooms by grade level (prefix before '/')
+        $grade_groups = [];
+        foreach ($sel_classrooms as $cl) {
+            $grade = strstr($cl, '/', true);
+            if ($grade === false) $grade = $cl;
+            $grade_groups[$grade][] = $cl;
+        }
+        $has_grade_btns = count($grade_groups) >= 2;
+    ?>
     <!-- ── Assignment form ─────────────────────────────────── -->
     <form method="POST" action="assign_work.php">
       <input type="hidden" name="subject_id" value="<?=$sel_subject_id?>">
@@ -202,19 +211,28 @@ require_once __DIR__ . '/../components/layout_start.php';
               <i class="bi bi-door-open-fill text-violet-400 mr-1"></i>
               ① ส่งถึงห้อง <span class="text-rose-400">*</span>
             </label>
+            <!-- Quick-select row -->
             <div class="flex flex-wrap gap-2 mb-2">
               <button type="button" onclick="toggleAll()"
                 class="px-3 py-1.5 rounded-xl text-xs font-black border-2 border-slate-200 text-slate-500 hover:border-violet-400 hover:text-violet-600 transition-all">
                 เลือกทั้งหมด
               </button>
+              <?php if ($has_grade_btns): foreach ($grade_groups as $grade => $gCls): ?>
+              <button type="button" onclick="toggleGrade(this)"
+                data-grade="<?=htmlspecialchars($grade,ENT_QUOTES,'UTF-8')?>"
+                class="grade-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 border-violet-500 bg-violet-100 text-violet-700 transition-all">
+                <?=htmlspecialchars($grade,ENT_QUOTES,'UTF-8')?>
+              </button>
+              <?php endforeach; endif; ?>
             </div>
+            <!-- Individual classroom pills -->
             <div class="flex flex-wrap gap-2" id="classroomPills">
               <?php foreach ($sel_classrooms as $cl): ?>
               <label class="cursor-pointer">
                 <input type="checkbox" name="classrooms[]" value="<?=htmlspecialchars($cl,ENT_QUOTES,'UTF-8')?>"
-                       class="hidden cl-check" checked onchange="updatePillStyle(this)">
+                       class="hidden cl-check" checked onchange="updatePillStyle(this); updateAllGradeBtns();">
                 <span class="pill px-3 py-1.5 rounded-xl text-xs font-black border-2 select-none transition-all
-                             border-violet-500 bg-violet-600 text-white cl-active"
+                             border-violet-500 bg-violet-600 text-white"
                       onclick="this.previousElementSibling.click()">
                   <i class="bi bi-check2 mr-0.5"></i><?=htmlspecialchars($cl,ENT_QUOTES,'UTF-8')?>
                 </span>
@@ -345,20 +363,52 @@ require_once __DIR__ . '/../components/layout_start.php';
 function updatePillStyle(checkbox) {
     const span = checkbox.nextElementSibling;
     if (checkbox.checked) {
-        span.className = span.className.replace('border-slate-200 bg-white text-slate-500', '');
-        span.classList.add('border-violet-500','bg-violet-600','text-white','cl-active');
-        span.innerHTML = '<i class="bi bi-check2 mr-0.5"></i>' + span.innerHTML.replace(/<i[^>]*><\/i>/, '');
+        span.classList.remove('border-slate-200','bg-white','text-slate-500');
+        span.classList.add('border-violet-500','bg-violet-600','text-white');
+        span.innerHTML = '<i class="bi bi-check2 mr-0.5"></i>' + span.textContent.trim();
     } else {
-        span.classList.remove('border-violet-500','bg-violet-600','text-white','cl-active');
+        span.classList.remove('border-violet-500','bg-violet-600','text-white');
         span.classList.add('border-slate-200','bg-white','text-slate-500');
         span.innerHTML = span.textContent.trim();
     }
+}
+
+function gradeOf(val) {
+    const idx = val.indexOf('/');
+    return idx >= 0 ? val.substring(0, idx) : val;
+}
+
+function toggleGrade(btn) {
+    const grade = btn.dataset.grade;
+    const checks = [...document.querySelectorAll('.cl-check')].filter(c => gradeOf(c.value) === grade);
+    const allChecked = checks.every(c => c.checked);
+    checks.forEach(c => { c.checked = !allChecked; updatePillStyle(c); });
+    updateAllGradeBtns();
+}
+
+function updateAllGradeBtns() {
+    document.querySelectorAll('.grade-btn').forEach(btn => {
+        const grade = btn.dataset.grade;
+        const checks = [...document.querySelectorAll('.cl-check')].filter(c => gradeOf(c.value) === grade);
+        const allChecked = checks.length > 0 && checks.every(c => c.checked);
+        const noneChecked = checks.every(c => !c.checked);
+        btn.classList.toggle('border-violet-500', allChecked);
+        btn.classList.toggle('bg-violet-100',     allChecked);
+        btn.classList.toggle('text-violet-700',   allChecked);
+        btn.classList.toggle('border-amber-400',  !allChecked && !noneChecked);
+        btn.classList.toggle('bg-amber-50',       !allChecked && !noneChecked);
+        btn.classList.toggle('text-amber-600',    !allChecked && !noneChecked);
+        btn.classList.toggle('border-slate-200',  noneChecked);
+        btn.classList.toggle('bg-white',          noneChecked);
+        btn.classList.toggle('text-slate-400',    noneChecked);
+    });
 }
 
 function toggleAll() {
     const checks = document.querySelectorAll('.cl-check');
     const allChecked = [...checks].every(c => c.checked);
     checks.forEach(c => { c.checked = !allChecked; updatePillStyle(c); });
+    updateAllGradeBtns();
 }
 
 function toggleNewUnit() {
