@@ -183,6 +183,7 @@ require_once __DIR__ . '/../components/layout_start.php';
       </a>
     </div>
 
+    <?php else: ?>
     <?php
         // Group classrooms by grade level (prefix before '/')
         $grade_groups = [];
