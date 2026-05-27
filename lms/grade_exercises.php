@@ -56,10 +56,12 @@ if ($subject_id) {
             : "LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.subject_id = ?";
         $params = $sel_class ? [$subject_id, $subject_id, $sel_class] : [$subject_id, $subject_id];
 
+        $_has_reviewed = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'reviewed_at'")->fetch();
+        $_rev_expr     = $_has_reviewed ? 'SUM(CASE WHEN se.reviewed_at IS NOT NULL THEN 1 ELSE 0 END)' : '0';
         $exercises = $pdo->prepare("
             SELECT e.id, e.exercise_title, e.max_score, e.due_date, u.unit_name,
                    COUNT(se.id) AS sub_count,
-                   SUM(CASE WHEN se.reviewed_at IS NOT NULL THEN 1 ELSE 0 END) AS reviewed_count
+                   {$_rev_expr} AS reviewed_count
             FROM lms_unit_exercises e
             JOIN lms_units u ON u.id = e.unit_id
             {$class_join}
@@ -72,8 +74,8 @@ if ($subject_id) {
     }
 }
 
-$_lk_col     = ', se.link_url';
-$_grade_cols = ', se.grade, se.feedback, se.reviewed_at';
+$_lk_col     = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'link_url'")->fetch()    ? ', se.link_url'                             : ", '' AS link_url";
+$_grade_cols = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'reviewed_at'")->fetch() ? ', se.grade, se.feedback, se.reviewed_at'    : ', NULL AS grade, NULL AS feedback, NULL AS reviewed_at';
 
 // Pre-fetch enrolled count once to avoid N+1 in exercise list
 $enrolled_count = 0;
@@ -318,6 +320,14 @@ require_once __DIR__ . '/../components/layout_start.php';
           <div class="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
             <p class="text-[10px] font-black text-slate-400 mb-1">คำตอบ</p>
             <p class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap"><?=htmlspecialchars($s['answer_text'],ENT_QUOTES,'UTF-8')?></p>
+          </div>
+          <?php endif; ?>
+
+          <!-- No content fallback -->
+          <?php if (empty($sub_files) && empty($s['link_url']) && empty($s['answer_text'])): ?>
+          <div class="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-center">
+            <p class="text-xs text-amber-600 font-bold"><i class="bi bi-exclamation-circle mr-1"></i>ไม่พบเนื้อหาที่ส่ง — นักเรียนอาจส่งข้อมูลผ่านระบบเก่า</p>
+            <p class="text-[10px] text-amber-500 mt-0.5">ขอให้นักเรียนส่งงานใหม่อีกครั้ง</p>
           </div>
           <?php endif; ?>
 
