@@ -42,12 +42,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ex_id = (int)$pdo->lastInsertId();
 
         // Classroom assignment — only record if NOT sending to all enrolled classrooms
+        // (skip if migration hasn't been run yet on this server)
         $all_r = $pdo->prepare("SELECT classroom FROM lms_subject_classrooms WHERE subject_id=? ORDER BY classroom");
         $all_r->execute([$subject_id]); $all_cl = $all_r->fetchAll(PDO::FETCH_COLUMN);
         $sel = $classrooms; sort($sel); $all_sorted = $all_cl; sort($all_sorted);
         if ($sel !== $all_sorted) {
-            $stmt = $pdo->prepare("INSERT IGNORE INTO lms_exercise_classrooms (exercise_id, classroom) VALUES (?,?)");
-            foreach ($classrooms as $cl) $stmt->execute([$ex_id, $cl]);
+            $_cls_tbl = (bool)$pdo->query("SHOW TABLES LIKE 'lms_exercise_classrooms'")->fetch();
+            if ($_cls_tbl) {
+                $stmt = $pdo->prepare("INSERT IGNORE INTO lms_exercise_classrooms (exercise_id, classroom) VALUES (?,?)");
+                foreach ($classrooms as $cl) $stmt->execute([$ex_id, $cl]);
+            }
         }
 
         $pdo->commit();
