@@ -50,11 +50,25 @@ if ($subject_id) {
         $cs = $pdo->prepare("SELECT classroom FROM lms_subject_classrooms WHERE subject_id=? ORDER BY classroom");
         $cs->execute([$subject_id]); $classes = $cs->fetchAll(PDO::FETCH_COLUMN);
 
-        // All exercises in this subject (sub_count filtered by classroom if selected)
+        // All exercises in this subject, filtered by classroom assignment when a class is selected
+        $_ex_cls_tbl = (bool)$pdo->query("SHOW TABLES LIKE 'lms_exercise_classrooms'")->fetch();
+
         $class_join = $sel_class
             ? "LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.subject_id = ? AND se.student_uid IN (SELECT id FROM att_students WHERE classroom=? AND status='active')"
             : "LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.subject_id = ?";
-        $params = $sel_class ? [$subject_id, $subject_id, $sel_class] : [$subject_id, $subject_id];
+
+        // Only show exercises assigned to selected classroom (or with no classroom restriction)
+        $_cls_ex_filter = ($sel_class && $_ex_cls_tbl)
+            ? "AND (NOT EXISTS (SELECT 1 FROM lms_exercise_classrooms ec WHERE ec.exercise_id = e.id) OR EXISTS (SELECT 1 FROM lms_exercise_classrooms ec WHERE ec.exercise_id = e.id AND ec.classroom = ?))"
+            : '';
+
+        if ($sel_class) {
+            // param order: se.subject_id, classroom (for JOIN), u.subject_id, classroom (for filter)
+            $params = [$subject_id, $sel_class, $subject_id];
+            if ($_ex_cls_tbl) $params[] = $sel_class;
+        } else {
+            $params = [$subject_id, $subject_id];
+        }
 
         $_has_reviewed = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'reviewed_at'")->fetch();
         $_rev_expr     = $_has_reviewed ? 'SUM(CASE WHEN se.reviewed_at IS NOT NULL THEN 1 ELSE 0 END)' : '0';
@@ -66,6 +80,7 @@ if ($subject_id) {
             JOIN lms_units u ON u.id = e.unit_id
             {$class_join}
             WHERE u.subject_id = ?
+            {$_cls_ex_filter}
             GROUP BY e.id
             ORDER BY u.order_no, e.id
         ");
