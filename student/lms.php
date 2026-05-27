@@ -50,7 +50,11 @@ if (!empty($sids)) {
     $r->execute($sids);
     $unit_map = array_column($r->fetchAll(), 'cnt', 'subject_id');
 
-    // Exercise totals + submitted
+    // Exercise totals + submitted (filtered by classroom)
+    $_ex_cls_exists = (bool)$pdo->query("SHOW TABLES LIKE 'lms_exercise_classrooms'")->fetch();
+    $_cls_ex_filter = $_ex_cls_exists
+        ? "AND (NOT EXISTS (SELECT 1 FROM lms_exercise_classrooms ec WHERE ec.exercise_id = e.id) OR EXISTS (SELECT 1 FROM lms_exercise_classrooms ec WHERE ec.exercise_id = e.id AND ec.classroom = ?))"
+        : '';
     $r = $pdo->prepare("
         SELECT u.subject_id,
                COUNT(e.id) total_ex,
@@ -59,9 +63,10 @@ if (!empty($sids)) {
         JOIN lms_unit_exercises e ON e.unit_id = u.id
         LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.student_uid = ?
         WHERE u.subject_id IN ($ph)
+        {$_cls_ex_filter}
         GROUP BY u.subject_id
     ");
-    $r->execute(array_merge([$uid], $sids));
+    $r->execute(array_merge([$uid], $sids, $_ex_cls_exists ? [$class] : []));
     $ex_map = array_column($r->fetchAll(), null, 'subject_id');
 
     foreach ($subjects as $subj) {

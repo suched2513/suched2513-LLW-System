@@ -104,16 +104,22 @@ if (!$post_passed && $total_post === 0) $post_passed = ['score' => 0, 'total' =>
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_post_exam WHERE student_uid=? AND subject_id=?");
 $stmt->execute([$uid, $subject_id]); $post_att_count = (int)$stmt->fetchColumn();
 
-// ── Exercises feed (newest first) ─────────────────────────
+// ── Exercises feed (newest first, filtered by classroom) ──
+$_ex_cls_exists = (bool)$pdo->query("SHOW TABLES LIKE 'lms_exercise_classrooms'")->fetch();
+$_cls_filter = $_ex_cls_exists
+    ? "AND (NOT EXISTS (SELECT 1 FROM lms_exercise_classrooms ec WHERE ec.exercise_id = e.id) OR EXISTS (SELECT 1 FROM lms_exercise_classrooms ec WHERE ec.exercise_id = e.id AND ec.classroom = ?))"
+    : '';
 $stmt = $pdo->prepare("
     SELECT e.id, e.exercise_title, e.description, e.max_score, e.due_date, e.allow_resubmit,
            u.id AS unit_id, u.unit_name, u.order_no
     FROM lms_unit_exercises e
     JOIN lms_units u ON u.id = e.unit_id
     WHERE u.subject_id = ?
+    {$_cls_filter}
     ORDER BY e.id DESC
 ");
-$stmt->execute([$subject_id]); $all_exercises = $stmt->fetchAll();
+$stmt->execute($_ex_cls_exists ? [$subject_id, $class] : [$subject_id]);
+$all_exercises = $stmt->fetchAll();
 
 $_sub_lk_col  = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'link_url'")->fetch()   ? ', link_url'                             : ", '' AS link_url";
 $_sub_gr_cols = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'reviewed_at'")->fetch() ? ', grade, feedback, reviewed_at'          : ', NULL AS grade, NULL AS feedback, NULL AS reviewed_at';
