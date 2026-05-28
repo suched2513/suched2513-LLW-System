@@ -147,7 +147,7 @@ jobs:
               --exclude bus/uploads \
               --exclude school_project/uploads \
               --exclude parent_meeting/uploads \
-              --exclude ^lms/uploads/exercises/[^.] \
+              --exclude lms/uploads/exercises \
               --exclude ^assets/images/user_photos \
               ./ ${{ secrets.FTP_SERVER_DIR }};
             cd ${{ secrets.FTP_SERVER_DIR }};
@@ -156,6 +156,8 @@ jobs:
             -mkdir bus/uploads;
             -mkdir school_project/uploads;
             -mkdir parent_meeting/uploads;
+            -mkdir lms/uploads;
+            -mkdir lms/uploads/exercises;
             bye
           "
           echo "✅ Deploy completed successfully!"
