@@ -265,12 +265,12 @@ require_once __DIR__ . '/../components/layout_start.php';
         }
         $reviewed = !empty($s['reviewed_at']);
       ?>
-      <div class="bg-white rounded-2xl border <?=$reviewed?'border-emerald-200':'border-amber-200'?> shadow-sm overflow-hidden">
+      <div class="bg-white rounded-2xl border <?=$reviewed?'border-emerald-200':'border-amber-200'?> shadow-sm overflow-hidden" id="card_<?=$s['sub_id']?>">
         <!-- Student header -->
-        <div class="flex items-center justify-between px-5 py-3 <?=$reviewed?'bg-emerald-50':'bg-amber-50'?> border-b <?=$reviewed?'border-emerald-100':'border-amber-100'?>">
+        <div class="flex items-center justify-between px-5 py-3 <?=$reviewed?'bg-emerald-50':'bg-amber-50'?> border-b <?=$reviewed?'border-emerald-100':'border-amber-100'?>" id="hdr_<?=$s['sub_id']?>">
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-xl bg-white flex items-center justify-center border <?=$reviewed?'border-emerald-200':'border-amber-200'?>">
-              <i class="bi bi-person-fill text-sm <?=$reviewed?'text-emerald-600':'text-amber-600'?>"></i>
+            <div class="w-8 h-8 rounded-xl bg-white flex items-center justify-center border <?=$reviewed?'border-emerald-200':'border-amber-200'?>" id="icon_<?=$s['sub_id']?>">
+              <i class="bi bi-person-fill text-sm <?=$reviewed?'text-emerald-600':'text-amber-600'?>" id="iconi_<?=$s['sub_id']?>"></i>
             </div>
             <div>
               <p class="text-sm font-black text-slate-800"><?=htmlspecialchars($s['student_name'],ENT_QUOTES,'UTF-8')?></p>
@@ -278,16 +278,10 @@ require_once __DIR__ . '/../components/layout_start.php';
             </div>
           </div>
           <div class="text-right">
-            <?php if ($reviewed): ?>
-            <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full">
-              <i class="bi bi-check-circle-fill mr-0.5"></i>ตรวจแล้ว
+            <span id="badge_<?=$s['sub_id']?>" class="px-2 py-0.5 <?=$reviewed?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'?> text-[10px] font-black rounded-full">
+              <?php if ($reviewed): ?><i class="bi bi-check-circle-fill mr-0.5"></i>ตรวจแล้ว<?php else: ?>รอตรวจ<?php endif; ?>
             </span>
-            <?php if ($s['grade'] !== null): ?>
-            <p class="text-xs font-black text-emerald-700 mt-0.5"><?=$s['grade']?><?=$exercise['max_score'] ? ' / '.$exercise['max_score'] : ''?> คะแนน</p>
-            <?php endif; ?>
-            <?php else: ?>
-            <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full">รอตรวจ</span>
-            <?php endif; ?>
+            <p class="text-xs font-black text-emerald-700 mt-0.5" id="score_<?=$s['sub_id']?>"><?=$s['grade'] !== null ? $s['grade'].($exercise['max_score'] ? ' / '.$exercise['max_score'] : '').' คะแนน' : ''?></p>
             <p class="text-[10px] text-slate-400 mt-0.5"><?=date('d/m H:i', strtotime($s['submitted_at']))?></p>
           </div>
         </div>
@@ -426,6 +420,23 @@ async function saveFeedback(subId) {
     btn.innerHTML = '<i class="bi bi-check-lg mr-1"></i>บันทึกแล้ว';
     btn.className = btn.className.replace('bg-violet-600 hover:bg-violet-700','bg-emerald-500 hover:bg-emerald-600');
     setTimeout(() => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-save mr-1"></i>อัปเดต'; }, 2000);
+
+    // Update badge and card colors immediately
+    const badge = document.getElementById('badge_' + subId);
+    if (badge) {
+      badge.className = 'px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full';
+      badge.innerHTML = '<i class="bi bi-check-circle-fill mr-0.5"></i>ตรวจแล้ว';
+    }
+    const card = document.getElementById('card_' + subId);
+    if (card) card.className = card.className.replace('border-amber-200','border-emerald-200');
+    const hdr = document.getElementById('hdr_' + subId);
+    if (hdr) hdr.className = hdr.className.replace('bg-amber-50','bg-emerald-50').replace('border-amber-100','border-emerald-100');
+    const icon = document.getElementById('icon_' + subId);
+    if (icon) icon.className = icon.className.replace('border-amber-200','border-emerald-200');
+    const iconi = document.getElementById('iconi_' + subId);
+    if (iconi) iconi.className = iconi.className.replace('text-amber-600','text-emerald-600');
+    const scoreEl = document.getElementById('score_' + subId);
+    if (scoreEl && grade !== '') scoreEl.textContent = grade + '<?=$exercise['max_score'] ? ' / '.$exercise['max_score'] : ''?> คะแนน';
   } else {
     btn.disabled = false; btn.innerHTML = '<i class="bi bi-save mr-1"></i>ลองใหม่';
     Swal.fire({icon:'error', title:'เกิดข้อผิดพลาด', confirmButtonColor:'#7C3AED'});
