@@ -1,28 +1,4 @@
-﻿<?php
-/**
- * manage_users.php — จัดการผู้ใช้งานระบบ LLW (llw_users)
- * เข้าถึงได้: super_admin เท่านั้น
- */
-session_start();
-require_once __DIR__ . '/config.php';
-
-if (!isset($_SESSION['llw_role']) || <?php
-/**
- * manage_users.php — จัดการผู้ใช้งานระบบ LLW (llw_users)
- * เข้าถึงได้: super_admin เท่านั้น
- */
-session_start();
-require_once __DIR__ . '/config.php';
-
-if (!isset($_SESSION['llw_role']) || !<?php
-/**
- * manage_users.php — จัดการผู้ใช้งานระบบ LLW (llw_users)
- * เข้าถึงได้: super_admin เท่านั้น
- */
-session_start();
-require_once __DIR__ . '/config.php';
-
-if (!isset($_SESSION['llw_role']) || <?php
+<?php
 /**
  * manage_users.php — จัดการผู้ใช้งานระบบ LLW (llw_users)
  * เข้าถึงได้: super_admin เท่านั้น
@@ -3874,4 +3850,3 @@ async function handleImport() {
 
 </body>
 </html>
-
