@@ -51,10 +51,17 @@ try {
     $added     = 0;
     $updated   = 0;
 
-    // ดึง teacher name สำหรับ Telegram
-    $tcStmt = $pdo->prepare("SELECT teacher_name FROM assembly_classrooms WHERE classroom = ?");
+    // ดึง teacher name จาก llw_class_advisors (ตารางที่ถูกต้อง)
+    $tcStmt = $pdo->prepare("
+        SELECT CONCAT(u.firstname, ' ', u.lastname)
+        FROM llw_class_advisors ca
+        JOIN llw_users u ON u.user_id = ca.user_id
+        WHERE ca.classroom = ?
+        ORDER BY u.firstname
+    ");
     $tcStmt->execute([$classroom]);
-    $teacherName = $tcStmt->fetchColumn() ?: '-';
+    $advisors = $tcStmt->fetchAll(PDO::FETCH_COLUMN);
+    $teacherName = !empty($advisors) ? implode(' / ', $advisors) : '-';
 
     $upsert = $pdo->prepare("
         INSERT INTO assembly_attendance
