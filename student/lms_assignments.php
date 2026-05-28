@@ -97,8 +97,10 @@ $units->execute([$subject_id]);
 $units = $units->fetchAll();
 
 // Load all student submissions for this subject (one query)
+$_has_quality = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'quality'")->fetch();
+$_quality_sel = $_has_quality ? ', quality' : ", '' AS quality";
 $subs_stmt = $pdo->prepare("
-    SELECT exercise_id, answer_text, file_paths, link_url, grade, feedback, reviewed_at, submitted_at
+    SELECT exercise_id, answer_text, file_paths, link_url, grade, feedback, reviewed_at, submitted_at{$_quality_sel}
     FROM lms_student_exercises
     WHERE student_uid=? AND subject_id=?
 ");
@@ -336,14 +338,25 @@ body { font-family: 'Prompt', sans-serif; }
 
     <!-- Teacher review result -->
     <?php if ($reviewed): ?>
+    <?php
+      $qmap_s = ['ดีเยี่ยม'=>'bg-violet-100 text-violet-700','ดี'=>'bg-blue-100 text-blue-700','พอใช้'=>'bg-amber-100 text-amber-700','ควรปรับปรุง'=>'bg-orange-100 text-orange-700','ไม่ผ่าน'=>'bg-rose-100 text-rose-700'];
+      $qval_s = $sub['quality'] ?? '';
+    ?>
     <div class="ml-10 mb-2 bg-violet-50 border border-violet-100 rounded-xl px-3 py-2">
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between gap-2 flex-wrap">
         <p class="text-xs font-black text-violet-700"><i class="bi bi-person-check-fill mr-1"></i>ครูตรวจแล้ว</p>
-        <?php if ($sub['grade'] !== null): ?>
-        <span class="px-2.5 py-0.5 bg-violet-600 text-white text-xs font-black rounded-full">
-          <?=$sub['grade']?><?=$ex['max_score'] ? ' / ' . $ex['max_score'] . ' คะแนน' : ' คะแนน'?>
-        </span>
-        <?php endif; ?>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <?php if ($qval_s && isset($qmap_s[$qval_s])): ?>
+          <span class="px-2.5 py-0.5 text-xs font-black rounded-full <?=$qmap_s[$qval_s]?>">
+            <?=htmlspecialchars($qval_s,ENT_QUOTES,'UTF-8')?>
+          </span>
+          <?php endif; ?>
+          <?php if ($sub['grade'] !== null): ?>
+          <span class="px-2.5 py-0.5 bg-violet-600 text-white text-xs font-black rounded-full">
+            <?=$sub['grade']?><?=$ex['max_score'] ? ' / ' . $ex['max_score'] . ' คะแนน' : ' คะแนน'?>
+          </span>
+          <?php endif; ?>
+        </div>
       </div>
       <?php if (!empty($sub['feedback'])): ?>
       <p class="text-xs text-violet-600 leading-relaxed mt-1"><?=nl2br(htmlspecialchars($sub['feedback'],ENT_QUOTES,'UTF-8'))?></p>

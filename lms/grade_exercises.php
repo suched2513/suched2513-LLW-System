@@ -17,8 +17,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'save') 
         $sub_id   = (int)$_POST['sub_id'];
         $grade    = $_POST['grade'] !== '' ? max(0, (float)$_POST['grade']) : null;
         $feedback = trim($_POST['feedback'] ?? '') ?: null;
-        $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, reviewed_at=NOW() WHERE id=?")
-            ->execute([$grade, $feedback, $sub_id]);
+        $allowed_quality = ['ดีเยี่ยม','ดี','พอใช้','ควรปรับปรุง','ไม่ผ่าน'];
+        $quality  = in_array($_POST['quality'] ?? '', $allowed_quality) ? $_POST['quality'] : null;
+        $has_quality = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'quality'")->fetch();
+        if ($has_quality) {
+            $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, quality=?, reviewed_at=NOW() WHERE id=?")
+                ->execute([$grade, $feedback, $quality, $sub_id]);
+        } else {
+            $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, reviewed_at=NOW() WHERE id=?")
+                ->execute([$grade, $feedback, $sub_id]);
+        }
         echo json_encode(['ok' => true]);
     } catch (Exception $e) {
         error_log($e->getMessage());
@@ -89,8 +97,9 @@ if ($subject_id) {
     }
 }
 
-$_lk_col     = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'link_url'")->fetch()    ? ', se.link_url'                             : ", '' AS link_url";
-$_grade_cols = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'reviewed_at'")->fetch() ? ', se.grade, se.feedback, se.reviewed_at'    : ', NULL AS grade, NULL AS feedback, NULL AS reviewed_at';
+$_lk_col      = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'link_url'")->fetch()    ? ', se.link_url'                                        : ", '' AS link_url";
+$_grade_cols  = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'reviewed_at'")->fetch() ? ', se.grade, se.feedback, se.reviewed_at'               : ', NULL AS grade, NULL AS feedback, NULL AS reviewed_at';
+$_quality_col = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'quality'")->fetch()     ? ', se.quality'                                           : ", '' AS quality";
 
 // Pre-fetch enrolled count once to avoid N+1 in exercise list
 $enrolled_count = 0;
@@ -107,7 +116,7 @@ if ($subject_id && $exercise_id) {
     if ($exercise) {
         $class_where = $sel_class ? "AND s.classroom = ?" : "";
         $q = $pdo->prepare("
-            SELECT se.id AS sub_id, se.student_uid, se.answer_text, se.file_paths{$_lk_col}{$_grade_cols},
+            SELECT se.id AS sub_id, se.student_uid, se.answer_text, se.file_paths{$_lk_col}{$_grade_cols}{$_quality_col},
                    se.submitted_at,
                    s.name AS student_name, s.student_id AS student_no, s.classroom
             FROM lms_student_exercises se
@@ -277,12 +286,19 @@ require_once __DIR__ . '/../components/layout_start.php';
               <p class="text-[10px] text-slate-400"><?=htmlspecialchars($s['student_no'],ENT_QUOTES,'UTF-8')?> · <?=htmlspecialchars($s['classroom'],ENT_QUOTES,'UTF-8')?></p>
             </div>
           </div>
-          <div class="text-right">
+          <div class="text-right flex flex-col items-end gap-0.5">
             <span id="badge_<?=$s['sub_id']?>" class="px-2 py-0.5 <?=$reviewed?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'?> text-[10px] font-black rounded-full">
               <?php if ($reviewed): ?><i class="bi bi-check-circle-fill mr-0.5"></i>ตรวจแล้ว<?php else: ?>รอตรวจ<?php endif; ?>
             </span>
-            <p class="text-xs font-black text-emerald-700 mt-0.5" id="score_<?=$s['sub_id']?>"><?=$s['grade'] !== null ? $s['grade'].($exercise['max_score'] ? ' / '.$exercise['max_score'] : '').' คะแนน' : ''?></p>
-            <p class="text-[10px] text-slate-400 mt-0.5"><?=date('d/m H:i', strtotime($s['submitted_at']))?></p>
+            <?php
+              $qmap = ['ดีเยี่ยม'=>'bg-violet-100 text-violet-700','ดี'=>'bg-blue-100 text-blue-700','พอใช้'=>'bg-amber-100 text-amber-700','ควรปรับปรุง'=>'bg-orange-100 text-orange-700','ไม่ผ่าน'=>'bg-rose-100 text-rose-700'];
+              $qval = $s['quality'] ?? '';
+            ?>
+            <span id="qlabel_<?=$s['sub_id']?>" class="px-2 py-0.5 text-[10px] font-black rounded-full <?=$qval && isset($qmap[$qval]) ? $qmap[$qval] : 'hidden'?>">
+              <?=htmlspecialchars($qval,ENT_QUOTES,'UTF-8')?>
+            </span>
+            <p class="text-xs font-black text-emerald-700" id="score_<?=$s['sub_id']?>"><?=$s['grade'] !== null ? $s['grade'].($exercise['max_score'] ? ' / '.$exercise['max_score'] : '').' คะแนน' : ''?></p>
+            <p class="text-[10px] text-slate-400"><?=date('d/m H:i', strtotime($s['submitted_at']))?></p>
           </div>
         </div>
 
@@ -375,8 +391,17 @@ require_once __DIR__ . '/../components/layout_start.php';
           <!-- Grade form -->
           <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2">
             <p class="text-xs font-black text-slate-500">ให้คะแนน / แสดงความคิดเห็น</p>
+            <!-- Row 1: quality dropdown -->
+            <select id="q_<?=$s['sub_id']?>"
+              class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-violet-400 outline-none bg-white">
+              <option value="">— ระดับคุณภาพ —</option>
+              <?php foreach(['ดีเยี่ยม','ดี','พอใช้','ควรปรับปรุง','ไม่ผ่าน'] as $ql): ?>
+              <option value="<?=$ql?>" <?=($s['quality']??'')===$ql?'selected':''?>><?=$ql?></option>
+              <?php endforeach; ?>
+            </select>
+            <!-- Row 2: score + feedback + save -->
             <div class="flex items-center gap-3">
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 flex-shrink-0">
                 <input type="number" min="0" max="<?=$exercise['max_score']??100?>"
                   value="<?=$s['grade']??''?>" placeholder="—"
                   class="w-20 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-violet-400 outline-none"
@@ -406,27 +431,49 @@ require_once __DIR__ . '/../components/layout_start.php';
 </div>
 
 <script>
+const QUALITY_CLASS = {
+  'ดีเยี่ยม':     'bg-violet-100 text-violet-700',
+  'ดี':           'bg-blue-100 text-blue-700',
+  'พอใช้':        'bg-amber-100 text-amber-700',
+  'ควรปรับปรุง':  'bg-orange-100 text-orange-700',
+  'ไม่ผ่าน':      'bg-rose-100 text-rose-700',
+};
+
 async function saveFeedback(subId) {
   const grade    = document.getElementById('g_' + subId).value;
   const feedback = document.getElementById('f_' + subId).value;
+  const quality  = document.getElementById('q_' + subId)?.value ?? '';
   const btn      = document.getElementById('btn_' + subId);
   btn.disabled = true;
   btn.innerHTML = '<i class="bi bi-hourglass-split mr-1"></i>';
   const fd = new FormData();
   fd.append('ajax','save'); fd.append('sub_id', subId);
   fd.append('grade', grade); fd.append('feedback', feedback);
+  fd.append('quality', quality);
   const res = await fetch('grade_exercises.php?subject_id=<?=$subject_id?>', {method:'POST', body:fd}).then(r=>r.json());
   if (res.ok) {
     btn.innerHTML = '<i class="bi bi-check-lg mr-1"></i>บันทึกแล้ว';
     btn.className = btn.className.replace('bg-violet-600 hover:bg-violet-700','bg-emerald-500 hover:bg-emerald-600');
     setTimeout(() => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-save mr-1"></i>อัปเดต'; }, 2000);
 
-    // Update badge and card colors immediately
+    // Update status badge
     const badge = document.getElementById('badge_' + subId);
     if (badge) {
       badge.className = 'px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full';
       badge.innerHTML = '<i class="bi bi-check-circle-fill mr-0.5"></i>ตรวจแล้ว';
     }
+    // Update quality badge
+    const qlabel = document.getElementById('qlabel_' + subId);
+    if (qlabel) {
+      if (quality && QUALITY_CLASS[quality]) {
+        qlabel.className = 'px-2 py-0.5 text-[10px] font-black rounded-full ' + QUALITY_CLASS[quality];
+        qlabel.textContent = quality;
+      } else {
+        qlabel.className = 'hidden';
+        qlabel.textContent = '';
+      }
+    }
+    // Update card / header colors
     const card = document.getElementById('card_' + subId);
     if (card) card.className = card.className.replace('border-amber-200','border-emerald-200');
     const hdr = document.getElementById('hdr_' + subId);
