@@ -14,6 +14,3 @@ AddType video/webm .webm
 AddType image/jpeg .jpg .jpeg
 AddType image/png .png
 AddType image/webp .webp
-
-# Enable range requests (required for video seeking/streaming)
-Header set Accept-Ranges bytes
