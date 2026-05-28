@@ -3,3 +3,17 @@ Options -Indexes
 <FilesMatch "\.php$">
   Deny from all
 </FilesMatch>
+
+# MIME types for video/image files (required for HTML5 video playback)
+AddType video/mp4 .mp4
+AddType video/mp4 .m4v
+AddType video/quicktime .mov
+AddType video/x-msvideo .avi
+AddType video/3gpp .3gp
+AddType video/webm .webm
+AddType image/jpeg .jpg .jpeg
+AddType image/png .png
+AddType image/webp .webp
+
+# Enable range requests (required for video seeking/streaming)
+Header set Accept-Ranges bytes

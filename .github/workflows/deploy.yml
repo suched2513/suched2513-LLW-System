@@ -158,6 +158,7 @@ jobs:
             -mkdir parent_meeting/uploads;
             -mkdir lms/uploads;
             -mkdir lms/uploads/exercises;
+            put lms/uploads/exercises/.htaccess -o lms/uploads/exercises/.htaccess;
             bye
           "
           echo "✅ Deploy completed successfully!"
