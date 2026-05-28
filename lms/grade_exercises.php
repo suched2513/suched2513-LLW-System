@@ -301,9 +301,9 @@ require_once __DIR__ . '/../components/layout_start.php';
               $fext      = strtolower(pathinfo($fp, PATHINFO_EXTENSION));
               $is_img    = in_array($fext, ['jpg','jpeg','png','gif','webp']);
               $is_vid    = in_array($fext, ['mp4','mov','avi','3gp','webm']);
-              $file_url  = htmlspecialchars($base_path.'/'.$fp, ENT_QUOTES, 'UTF-8');
               $file_disk = __DIR__ . '/../' . $fp;
               $file_ok   = file_exists($file_disk);
+              $file_url  = htmlspecialchars($base_path . '/lms/serve_exercise.php?f=' . rawurlencode(basename($fp)), ENT_QUOTES, 'UTF-8');
             ?>
             <?php if (!$file_ok): ?>
             <div class="flex items-center gap-2 px-3 py-2 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-bold">

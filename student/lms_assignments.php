@@ -302,15 +302,23 @@ body { font-family: 'Prompt', sans-serif; }
       <?php endif; ?>
       <?php if (!empty($sub['file_paths'])): ?>
       <?php $sub_files = json_decode($sub['file_paths'], true) ?: [$sub['file_paths']]; ?>
-      <?php foreach ($sub_files as $fp): $fext = strtolower(pathinfo($fp, PATHINFO_EXTENSION)); ?>
+      <?php foreach ($sub_files as $fp):
+        $fext    = strtolower(pathinfo($fp, PATHINFO_EXTENSION));
+        $srv_url = htmlspecialchars($base_path . '/lms/serve_exercise.php?f=' . rawurlencode(basename($fp)), ENT_QUOTES, 'UTF-8');
+      ?>
       <?php if (in_array($fext, ['jpg','jpeg','png','gif','webp'])): ?>
-      <img src="<?=$base_path . '/' . htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>"
+      <img src="<?=$srv_url?>"
            class="mt-2 w-full max-h-40 object-contain rounded-lg bg-white border border-slate-100" alt="">
       <?php elseif (in_array($fext, ['mp4','mov','avi','3gp','webm'])): ?>
-      <video src="<?=$base_path . '/' . htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>"
-             controls class="mt-2 w-full rounded-lg border border-slate-100 max-h-48"></video>
+      <video src="<?=$srv_url?>" controls
+             class="mt-2 w-full rounded-lg border border-slate-100 max-h-48"
+             playsinline></video>
+      <a href="<?=$srv_url?>" target="_blank"
+         class="mt-1 flex items-center gap-1.5 text-xs text-indigo-600 font-bold">
+        <i class="bi bi-box-arrow-up-right"></i><span>เปิด / ดาวน์โหลดวิดีโอ</span>
+      </a>
       <?php else: ?>
-      <a href="<?=$base_path . '/' . htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
+      <a href="<?=$srv_url?>" target="_blank" rel="noopener"
          class="mt-1.5 flex items-center gap-2 text-xs text-blue-600 font-bold">
         <i class="bi bi-file-earmark-pdf text-red-500"></i><span class="underline">ดูไฟล์ที่แนบ</span>
       </a>
