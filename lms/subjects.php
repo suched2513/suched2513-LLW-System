@@ -82,7 +82,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
 if ($_has_tid && !$is_admin) {
-    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY created_at");
+    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? OR teacher_id IS NULL ORDER BY created_at");
     $st->execute([$teacher_id]); $subjects = $st->fetchAll();
 } else {
     $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY created_at")->fetchAll();

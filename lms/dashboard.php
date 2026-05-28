@@ -9,7 +9,7 @@ $is_admin   = $_SESSION['llw_role'] === 'super_admin';
 $teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
 
 if (!$is_admin) {
-    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
+    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? OR teacher_id IS NULL ORDER BY subject_name");
     $st->execute([$teacher_id]);
     $subjects = $st->fetchAll();
 } else {
