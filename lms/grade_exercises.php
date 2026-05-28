@@ -296,22 +296,47 @@ require_once __DIR__ . '/../components/layout_start.php';
         <div class="px-5 py-4 space-y-3">
           <!-- Files -->
           <?php if (!empty($sub_files)): ?>
-          <div class="flex flex-wrap gap-2">
+          <div class="space-y-2">
             <?php foreach ($sub_files as $fp):
-              $fext = strtolower(pathinfo($fp, PATHINFO_EXTENSION));
-              $is_img = in_array($fext, ['jpg','jpeg','png','gif','webp']);
-              $is_vid = in_array($fext, ['mp4','mov','avi','3gp','webm']);
+              $fext    = strtolower(pathinfo($fp, PATHINFO_EXTENSION));
+              $is_img  = in_array($fext, ['jpg','jpeg','png','gif','webp']);
+              $is_vid  = in_array($fext, ['mp4','mov','avi','3gp','webm']);
+              $file_url = htmlspecialchars($base_path.'/'.$fp, ENT_QUOTES, 'UTF-8');
             ?>
             <?php if ($is_img): ?>
-            <a href="<?=$base_path.'/'.htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>" target="_blank">
-              <img src="<?=$base_path.'/'.htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>"
-                   class="h-32 w-auto rounded-xl border border-slate-200 object-cover hover:opacity-80 transition-all" alt="">
-            </a>
+            <div>
+              <a href="<?=$file_url?>" target="_blank">
+                <img src="<?=$file_url?>"
+                     class="max-w-full rounded-xl border border-slate-200 hover:opacity-80 transition-all"
+                     style="max-height:300px"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                     alt="">
+              </a>
+              <a href="<?=$file_url?>" target="_blank" style="display:none"
+                 class="items-center gap-2 px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700 font-bold hover:bg-blue-100 transition-all">
+                <i class="bi bi-image text-xl flex-shrink-0"></i>
+                <span>เปิดรูปภาพ (คลิก)</span>
+                <i class="bi bi-box-arrow-up-right text-xs ml-auto"></i>
+              </a>
+            </div>
             <?php elseif ($is_vid): ?>
-            <video src="<?=$base_path.'/'.htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>"
-                   controls class="w-full rounded-xl border border-slate-200 max-h-48"></video>
+            <div class="space-y-1">
+              <video src="<?=$file_url?>" controls
+                     class="w-full rounded-xl border border-slate-200 max-h-56"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"></video>
+              <a href="<?=$file_url?>" download style="display:none"
+                 class="items-center gap-2 px-3 py-2.5 bg-indigo-50 border border-indigo-100 rounded-xl text-sm text-indigo-700 font-bold hover:bg-indigo-100 transition-all">
+                <i class="bi bi-download text-xl flex-shrink-0"></i>
+                <span>ดาวน์โหลดวิดีโอ (เปิดด้วยโปรแกรมอื่น)</span>
+              </a>
+              <a href="<?=$file_url?>" target="_blank"
+                 class="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 font-bold hover:bg-slate-100 transition-all">
+                <i class="bi bi-box-arrow-up-right"></i>
+                <span>เปิดวิดีโอใน tab ใหม่ / ดาวน์โหลด</span>
+              </a>
+            </div>
             <?php else: ?>
-            <a href="<?=$base_path.'/'.htmlspecialchars($fp,ENT_QUOTES,'UTF-8')?>" target="_blank"
+            <a href="<?=$file_url?>" target="_blank"
                class="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-100 rounded-xl text-sm text-red-700 font-bold hover:bg-red-100 transition-all">
               <i class="bi bi-file-earmark-pdf text-xl"></i><span>ดู PDF</span>
             </a>
