@@ -10,6 +10,31 @@ $pdo        = getPdo();
 $is_admin   = $_SESSION['llw_role'] === 'super_admin';
 $teacher_id = $_SESSION['teacher_id'] ?? 0;
 
+// AJAX: delete submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'delete') {
+    header('Content-Type: application/json');
+    try {
+        $sub_id = (int)$_POST['sub_id'];
+        $row = $pdo->prepare("SELECT id, file_paths FROM lms_student_exercises WHERE id=?");
+        $row->execute([$sub_id]); $row = $row->fetch();
+        if ($row) {
+            if (!empty($row['file_paths'])) {
+                $files = json_decode($row['file_paths'], true) ?: [$row['file_paths']];
+                foreach ($files as $f) {
+                    $fp = __DIR__ . '/../' . $f;
+                    if (file_exists($fp)) @unlink($fp);
+                }
+            }
+            $pdo->prepare("DELETE FROM lms_student_exercises WHERE id=?")->execute([$sub_id]);
+        }
+        echo json_encode(['ok' => true]);
+    } catch (Exception $e) {
+        error_log($e->getMessage());
+        echo json_encode(['ok' => false]);
+    }
+    exit();
+}
+
 // AJAX: save grade + feedback
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'save') {
     header('Content-Type: application/json');
@@ -388,6 +413,14 @@ require_once __DIR__ . '/../components/layout_start.php';
           </div>
           <?php endif; ?>
 
+          <!-- Delete button -->
+          <div class="flex justify-end">
+            <button onclick="deleteSubmission(<?=$s['sub_id']?>)"
+              class="flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+              <i class="bi bi-trash3"></i> ลบงานนี้
+            </button>
+          </div>
+
           <!-- Grade form -->
           <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2">
             <p class="text-xs font-black text-slate-500">ให้คะแนน / แสดงความคิดเห็น</p>
@@ -438,6 +471,30 @@ const QUALITY_CLASS = {
   'สู้ๆ ครูเชื่อในตัวเธอครับ': 'bg-amber-100 text-amber-700',
   'อย่าท้อ ลองใหม่นะครับ':    'bg-rose-100 text-rose-700',
 };
+
+async function deleteSubmission(subId) {
+  const r = await Swal.fire({
+    title: 'ลบงานนี้?',
+    text: 'ไฟล์และคำตอบของนักเรียนจะถูกลบถาวร นักเรียนสามารถส่งใหม่ได้',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'ลบเลย',
+    cancelButtonText: 'ยกเลิก',
+  });
+  if (!r.isConfirmed) return;
+  const fd = new FormData();
+  fd.append('ajax','delete'); fd.append('sub_id', subId);
+  const res = await fetch('grade_exercises.php?subject_id=<?=$subject_id?>', {method:'POST', body:fd}).then(r=>r.json());
+  if (res.ok) {
+    const card = document.getElementById('card_' + subId);
+    if (card) card.remove();
+    Swal.fire({icon:'success', title:'ลบแล้ว', timer:1500, showConfirmButton:false});
+  } else {
+    Swal.fire({icon:'error', title:'เกิดข้อผิดพลาด', confirmButtonColor:'#7C3AED'});
+  }
+}
 
 async function saveFeedback(subId) {
   const grade    = document.getElementById('g_' + subId).value;
