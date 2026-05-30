@@ -33,6 +33,30 @@ if (!$pre_done->fetch()) {
     }
 }
 
+// Handle: ถอนงาน (withdraw submission)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'withdraw') {
+    $ex_id = (int)($_POST['exercise_id'] ?? 0);
+    if ($ex_id) {
+        try {
+            // Only allow if NOT yet reviewed
+            $row = $pdo->prepare("SELECT id, file_paths, reviewed_at FROM lms_student_exercises WHERE student_uid=? AND exercise_id=? LIMIT 1");
+            $row->execute([$uid, $ex_id]);
+            $row = $row->fetch();
+            if ($row && $row['reviewed_at'] === null) {
+                if (!empty($row['file_paths'])) {
+                    $files = json_decode($row['file_paths'], true) ?: [$row['file_paths']];
+                    foreach ($files as $f) {
+                        $fp = __DIR__ . '/../' . $f;
+                        if (file_exists($fp)) @unlink($fp);
+                    }
+                }
+                $pdo->prepare("DELETE FROM lms_student_exercises WHERE id=?")->execute([$row['id']]);
+            }
+        } catch (Exception $e) { error_log($e->getMessage()); }
+    }
+    header('Location: /student/lms_assignments.php?subject_id=' . $subject_id . '&withdrawn=1'); exit();
+}
+
 // Handle exercise submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exercise_id'])) {
     $ex_id        = (int)$_POST['exercise_id'];
@@ -364,6 +388,18 @@ body { font-family: 'Prompt', sans-serif; }
     </div>
     <?php endif; ?>
 
+    <!-- Withdraw button: submitted but not yet reviewed -->
+    <?php if ($done && !$reviewed): ?>
+    <form method="POST" id="wf_<?=$ex['id']?>" class="hidden">
+      <input type="hidden" name="action" value="withdraw">
+      <input type="hidden" name="exercise_id" value="<?=$ex['id']?>">
+    </form>
+    <button onclick="confirmWithdraw(<?=$ex['id']?>)"
+      class="mt-2 w-full py-2 border-2 border-dashed border-rose-300 text-rose-500 font-bold text-xs rounded-xl active:opacity-70 transition-all hover:bg-rose-50 flex items-center justify-center gap-1.5">
+      <i class="bi bi-arrow-counterclockwise"></i> ถอนงาน / ส่งใหม่
+    </button>
+    <?php endif; ?>
+
     <!-- Inline submit form (always visible for pending / editable) -->
     <?php if (!$done || $can_edit): ?>
     <form method="POST" enctype="multipart/form-data"
@@ -428,9 +464,28 @@ window.addEventListener('load',()=>{
 });
 <?php elseif (isset($_GET['err'])): ?>
 window.addEventListener('load',()=>{
-  Swal.fire({icon:'warning',title:'กรุณาส่งงาน',text:'พิมพ์คำตอบหรือแนบไฟล์อย่างน้อย 1 อย่าง',confirmButtonColor:'#7C3AED'});
+  Swal.fire({icon:'warning',title:'กรุณาส่งงาน',text:'ถ่ายรูป / ใส่ลิงค์ / หรือพิมพ์คำตอบอย่างน้อย 1 อย่าง',confirmButtonColor:'#7C3AED'});
+});
+<?php elseif (isset($_GET['withdrawn'])): ?>
+window.addEventListener('load',()=>{
+  Swal.fire({icon:'info',title:'ถอนงานแล้ว',text:'ส่งงานใหม่ได้เลยครับ',confirmButtonColor:'#7C3AED',timer:2500,showConfirmButton:false});
 });
 <?php endif; ?>
+
+function confirmWithdraw(exId) {
+  Swal.fire({
+    title: 'ถอนงานนี้?',
+    text: 'ไฟล์และคำตอบจะถูกลบ สามารถส่งงานใหม่ได้หลังถอน',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'ถอนงาน',
+    cancelButtonText: 'ยกเลิก',
+  }).then(r => {
+    if (r.isConfirmed) document.getElementById('wf_' + exId).submit();
+  });
+}
 
 // ── Filter logic ───────────────────────────────────
 function setFilter(f) {
