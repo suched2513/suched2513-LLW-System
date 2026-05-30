@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'save') 
         $sub_id   = (int)$_POST['sub_id'];
         $grade    = $_POST['grade'] !== '' ? max(0, (float)$_POST['grade']) : null;
         $feedback = trim($_POST['feedback'] ?? '') ?: null;
-        $allowed_quality = ['น่าชื่นชมมาก!','ทำได้ดีมาก!','พยายามดีนะ','สู้ๆ ครูเชื่อในตัวเธอ','อย่าท้อ ลองใหม่นะ'];
+        $allowed_quality = ['น่าชื่นชมมาก!','ทำได้ดีมาก!','ดีขึ้นเรื่อยๆ เลย!ครับ','สู้ๆ ครูเชื่อในตัวเธอ','อย่าท้อ ลองใหม่นะ'];
         $quality  = in_array($_POST['quality'] ?? '', $allowed_quality) ? $_POST['quality'] : null;
         $has_quality = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'quality'")->fetch();
         if ($has_quality) {
@@ -291,7 +291,7 @@ require_once __DIR__ . '/../components/layout_start.php';
               <?php if ($reviewed): ?><i class="bi bi-check-circle-fill mr-0.5"></i>ตรวจแล้ว<?php else: ?>รอตรวจ<?php endif; ?>
             </span>
             <?php
-              $qmap = ['น่าชื่นชมมาก!'=>'bg-violet-100 text-violet-700','ทำได้ดีมาก!'=>'bg-blue-100 text-blue-700','พยายามดีนะ'=>'bg-emerald-100 text-emerald-700','สู้ๆ ครูเชื่อในตัวเธอ'=>'bg-amber-100 text-amber-700','อย่าท้อ ลองใหม่นะ'=>'bg-rose-100 text-rose-700'];
+              $qmap = ['น่าชื่นชมมาก!'=>'bg-violet-100 text-violet-700','ทำได้ดีมาก!'=>'bg-blue-100 text-blue-700','ดีขึ้นเรื่อยๆ เลย!ครับ'=>'bg-emerald-100 text-emerald-700','สู้ๆ ครูเชื่อในตัวเธอ'=>'bg-amber-100 text-amber-700','อย่าท้อ ลองใหม่นะ'=>'bg-rose-100 text-rose-700'];
               $qval = $s['quality'] ?? '';
             ?>
             <span id="qlabel_<?=$s['sub_id']?>" class="px-2 py-0.5 text-[10px] font-black rounded-full <?=$qval && isset($qmap[$qval]) ? $qmap[$qval] : 'hidden'?>">
@@ -395,7 +395,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             <select id="q_<?=$s['sub_id']?>"
               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-violet-400 outline-none bg-white">
               <option value="">— ระดับคุณภาพ —</option>
-              <?php foreach(['น่าชื่นชมมาก!','ทำได้ดีมาก!','พยายามดีนะ','สู้ๆ ครูเชื่อในตัวเธอ','อย่าท้อ ลองใหม่นะ'] as $ql): ?>
+              <?php foreach(['น่าชื่นชมมาก!','ทำได้ดีมาก!','ดีขึ้นเรื่อยๆ เลย!ครับ','สู้ๆ ครูเชื่อในตัวเธอ','อย่าท้อ ลองใหม่นะ'] as $ql): ?>
               <option value="<?=$ql?>" <?=($s['quality']??'')===$ql?'selected':''?>><?=$ql?></option>
               <?php endforeach; ?>
             </select>
@@ -434,7 +434,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 const QUALITY_CLASS = {
   'น่าชื่นชมมาก!':        'bg-violet-100 text-violet-700',
   'ทำได้ดีมาก!':          'bg-blue-100 text-blue-700',
-  'พยายามดีนะ':           'bg-emerald-100 text-emerald-700',
+  'ดีขึ้นเรื่อยๆ เลย!ครับ':           'bg-emerald-100 text-emerald-700',
   'สู้ๆ ครูเชื่อในตัวเธอ': 'bg-amber-100 text-amber-700',
   'อย่าท้อ ลองใหม่นะ':    'bg-rose-100 text-rose-700',
 };

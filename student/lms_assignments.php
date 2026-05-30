@@ -363,7 +363,7 @@ body { font-family: 'Prompt', sans-serif; }
     <!-- Teacher review result -->
     <?php if ($reviewed): ?>
     <?php
-      $qmap_s = ['น่าชื่นชมมาก!'=>'bg-violet-100 text-violet-700','ทำได้ดีมาก!'=>'bg-blue-100 text-blue-700','พยายามดีนะ'=>'bg-emerald-100 text-emerald-700','สู้ๆ ครูเชื่อในตัวเธอ'=>'bg-amber-100 text-amber-700','อย่าท้อ ลองใหม่นะ'=>'bg-rose-100 text-rose-700'];
+      $qmap_s = ['น่าชื่นชมมาก!'=>'bg-violet-100 text-violet-700','ทำได้ดีมาก!'=>'bg-blue-100 text-blue-700','ดีขึ้นเรื่อยๆ เลย!ครับ'=>'bg-emerald-100 text-emerald-700','สู้ๆ ครูเชื่อในตัวเธอ'=>'bg-amber-100 text-amber-700','อย่าท้อ ลองใหม่นะ'=>'bg-rose-100 text-rose-700'];
       $qval_s = $sub['quality'] ?? '';
     ?>
     <div class="ml-10 mb-2 bg-violet-50 border border-violet-100 rounded-xl px-3 py-2">
