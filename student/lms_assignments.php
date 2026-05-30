@@ -378,8 +378,9 @@ body { font-family: 'Prompt', sans-serif; }
         multiple class="hidden"
         onchange="previewInlineFiles(this,<?=$ex['id']?>)">
       <label for="fi_<?=$ex['id']?>"
-        class="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-violet-300 rounded-xl text-violet-500 font-bold text-sm cursor-pointer hover:bg-violet-50 active:opacity-70 transition-all">
-        <i class="bi bi-camera-fill text-lg"></i> ถ่ายรูป / แนบไฟล์ / วีดีโอ
+        class="flex flex-col items-center justify-center gap-1 w-full py-3 border-2 border-dashed border-violet-300 rounded-xl text-violet-500 cursor-pointer hover:bg-violet-50 active:opacity-70 transition-all">
+        <span class="flex items-center gap-2 font-bold text-sm"><i class="bi bi-camera-fill text-lg"></i> ถ่ายรูป / แนบไฟล์ / วีดีโอ</span>
+        <span class="text-[10px] text-violet-400 font-bold">เลือกได้สูงสุด 3 ไฟล์ · กด &amp; ค้างเพื่อเลือกหลายไฟล์</span>
       </label>
       <div id="fp_<?=$ex['id']?>" class="space-y-1.5"></div>
       <!-- Link -->
