@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * assembly/report_print.php — หน้าปริ้นรายงานการเข้าแถวรายห้อง
  * GET ?classroom=...&date=...

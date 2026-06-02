@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * assembly/api/get_daily_summary.php
  * GET ?date= — รายงานเช้า-เย็นรายวัน (all rooms)

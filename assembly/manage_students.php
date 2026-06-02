@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * assembly/manage_students.php — จัดการข้อมูลนักเรียนและห้องเรียน
  * Roles: super_admin

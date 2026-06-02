@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * assembly/admin.php — Admin Dashboard (ผู้บริหาร)
  * Roles: super_admin, wfh_admin

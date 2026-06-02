@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * assembly/api/get_admin_detailed.php
  * GET ?month=&level=&classroom= — รายงานเชิงลึกรายวัน

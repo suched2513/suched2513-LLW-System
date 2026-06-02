@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * assembly/api/get_admin_summary.php
  * GET ?month=&grade=&classroom= — Admin dashboard summary
