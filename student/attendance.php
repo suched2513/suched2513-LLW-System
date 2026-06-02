@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/_guard.php';
@@ -30,22 +30,22 @@ $dateTo   = $sem === 1 ? "$gregYear-10-31" : ($gregYear + 1) . "-04-30";
 // ── Summary per subject ────────────────────────────────────────────
 $subjects = [];
 try {
+    // Get summary per subject
     $stmt = $pdo->prepare("
-        SELECT
+        SELECT 
             s.subject_name, s.subject_code,
             COUNT(*)                                             AS total,
             SUM(a.status IN ('มา','สาย'))                       AS present,
-            SUM(a.status = 'ขาด')                               AS absent,
-            SUM(a.status = 'โดด')                               AS skip,
-            SUM(a.status = 'ลา')                                AS leave,
-            SUM(a.status = 'สาย')                               AS late
+            SUM(a.status = 'ขาด')                                AS absent,
+            SUM(a.status = 'ลา')                                 AS `leave`,
+            SUM(a.status = 'สาย')                                AS late,
+            SUM(a.status = 'โดด')                                AS skip
         FROM att_attendance a
         JOIN att_subjects s ON s.id = a.subject_id
-        WHERE a.student_id = ? AND a.date BETWEEN ? AND ?
+        WHERE (a.student_id = ? OR a.student_id = ?) AND a.date BETWEEN ? AND ?
         GROUP BY s.id, s.subject_name, s.subject_code
-        ORDER BY s.subject_code
     ");
-    $stmt->execute([$uid, $dateFrom, $dateTo]);
+    $stmt->execute([$uid, $code, $dateFrom, $dateTo]);
     $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) { error_log($e->getMessage()); }
 
@@ -56,11 +56,11 @@ try {
         SELECT a.date, a.status, a.period, a.note, s.subject_name
         FROM att_attendance a
         JOIN att_subjects s ON s.id = a.subject_id
-        WHERE a.student_id = ? AND a.date BETWEEN ? AND ?
+        WHERE (a.student_id = ? OR a.student_id = ?) AND a.date BETWEEN ? AND ?
         ORDER BY a.date DESC, a.period DESC
         LIMIT 30
     ");
-    $stmt->execute([$uid, $dateFrom, $dateTo]);
+    $stmt->execute([$uid, $code, $dateFrom, $dateTo]);
     $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) { error_log($e->getMessage()); }
 

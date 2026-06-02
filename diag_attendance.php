@@ -22,20 +22,41 @@ try {
 
 echo "\n--- 3. Direct Test query (Simulation of student/attendance.php) ---\n";
 try {
-    // Pick the first student from attendance to see if we can find them via our typical query
     $sample = $pdo->query("SELECT student_id FROM att_attendance LIMIT 1")->fetchColumn();
     if ($sample) {
-        echo "Testing lookup for student_id=$sample...\n";
-        // Check if $sample is an ID or CODE
+        echo "Testing lookup for att_attendance.student_id=$sample...\n";
         $st = $pdo->prepare("SELECT name FROM att_students WHERE id = ?");
         $st->execute([$sample]);
         $resId = $st->fetchColumn();
-        
         $st2 = $pdo->prepare("SELECT name FROM att_students WHERE student_id = ?");
         $st2->execute([$sample]);
         $resCode = $st2->fetchColumn();
-        
         echo "Lookup by ID result: " . ($resId ?: 'NOT FOUND') . "\n";
         echo "Lookup by CODE result: " . ($resCode ?: 'NOT FOUND') . "\n";
     }
 } catch (Exception $e) { echo "Error test: " . $e->getMessage() . "\n"; }
+
+echo "\n--- 4. Simulate attendance.php for student uid=116 (04707) ---\n";
+try {
+    $uid  = 116;
+    $dateFrom = '2026-05-01';
+    $dateTo   = '2026-10-31';
+    $stmt = $pdo->prepare("
+        SELECT s.subject_name, COUNT(*) AS total, SUM(a.status IN ('มา','สาย')) AS present
+        FROM att_attendance a
+        JOIN att_subjects s ON s.id = a.subject_id
+        WHERE a.student_id = ? AND a.date BETWEEN ? AND ?
+        GROUP BY s.id, s.subject_name
+    ");
+    $stmt->execute([$uid, $dateFrom, $dateTo]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    echo "Subjects found: " . count($rows) . "\n";
+    foreach ($rows as $r) {
+        echo "  - " . $r['subject_name'] . ": " . $r['present'] . "/" . $r['total'] . "\n";
+    }
+} catch (Exception $e) { echo "Error sim: " . $e->getMessage() . "\n"; }
+
+echo "\n--- 5. Session state ---\n";
+echo "student_uid  = " . ($_SESSION['student_uid']  ?? 'NOT SET') . "\n";
+echo "student_code = " . ($_SESSION['student_code'] ?? 'NOT SET') . "\n";
+echo "student_name = " . ($_SESSION['student_name'] ?? 'NOT SET') . "\n";
