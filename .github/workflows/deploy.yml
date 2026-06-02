@@ -162,3 +162,27 @@ jobs:
             bye
           "
           echo "✅ Deploy completed successfully!"
+
+      # ─── 6. Clear PHP OPcache ──────────────────────────────────
+      - name: Clear PHP OPcache
+        run: |
+          printf '<?php opcache_reset(); echo "ok";' > /tmp/_opc.php
+          lftp -e "
+            set ftp:passive-mode yes;
+            set ftp:ssl-allow no;
+            open ftp://${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}@${{ secrets.FTP_SERVER }};
+            cd ${{ secrets.FTP_SERVER_DIR }};
+            put /tmp/_opc.php -o _opc.php;
+            bye
+          "
+          sleep 3
+          curl -sf "https://llw.krusuched.com/_opc.php" || true
+          lftp -e "
+            set ftp:passive-mode yes;
+            set ftp:ssl-allow no;
+            open ftp://${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}@${{ secrets.FTP_SERVER }};
+            cd ${{ secrets.FTP_SERVER_DIR }};
+            rm _opc.php;
+            bye
+          "
+          echo "✅ OPcache cleared"
