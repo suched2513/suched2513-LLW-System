@@ -35,7 +35,8 @@ try {
             SUM(a.status = 'สาย')                               AS late
         FROM att_attendance a
         JOIN att_subjects s ON s.id = a.subject_id
-        WHERE a.student_id = ? AND a.date BETWEEN ? AND ?
+        JOIN att_students st ON st.id = a.student_id
+        WHERE st.student_id = ? AND a.date BETWEEN ? AND ?
         GROUP BY s.id, s.subject_name, s.subject_code
         ORDER BY s.subject_code
     ");
@@ -50,7 +51,8 @@ try {
         SELECT a.date, a.status, a.period, a.note, s.subject_name
         FROM att_attendance a
         JOIN att_subjects s ON s.id = a.subject_id
-        WHERE a.student_id = ? AND a.date BETWEEN ? AND ?
+        JOIN att_students st ON st.id = a.student_id
+        WHERE st.student_id = ? AND a.date BETWEEN ? AND ?
         ORDER BY a.date DESC, a.period DESC
         LIMIT 30
     ");
