@@ -7,6 +7,11 @@ $pdo  = getPdo();
 $code = $_SESSION['student_code'];
 $name = $_SESSION['student_name'];
 $uid  = (int)($_SESSION['student_uid'] ?? 0);
+if ($uid === 0 && $code !== '') {
+    $r = $pdo->prepare("SELECT id FROM att_students WHERE student_id = ? LIMIT 1");
+    $r->execute([$code]);
+    $uid = (int)($r->fetchColumn() ?: 0);
+}
 
 if (!function_exists('busGetSemester')) {
     function busGetSemester(): string {
