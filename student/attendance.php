@@ -4,6 +4,7 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/_guard.php';
 
 $pdo  = getPdo();
+$uid  = (int)$_SESSION['student_uid'];
 $code = $_SESSION['student_code'];
 $name = $_SESSION['student_name'];
 
@@ -35,12 +36,11 @@ try {
             SUM(a.status = 'สาย')                               AS late
         FROM att_attendance a
         JOIN att_subjects s ON s.id = a.subject_id
-        JOIN att_students st ON st.id = a.student_id
-        WHERE st.student_id = ? AND a.date BETWEEN ? AND ?
+        WHERE a.student_id = ? AND a.date BETWEEN ? AND ?
         GROUP BY s.id, s.subject_name, s.subject_code
         ORDER BY s.subject_code
     ");
-    $stmt->execute([$code, $dateFrom, $dateTo]);
+    $stmt->execute([$uid, $dateFrom, $dateTo]);
     $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) { error_log($e->getMessage()); }
 
@@ -51,12 +51,11 @@ try {
         SELECT a.date, a.status, a.period, a.note, s.subject_name
         FROM att_attendance a
         JOIN att_subjects s ON s.id = a.subject_id
-        JOIN att_students st ON st.id = a.student_id
-        WHERE st.student_id = ? AND a.date BETWEEN ? AND ?
+        WHERE a.student_id = ? AND a.date BETWEEN ? AND ?
         ORDER BY a.date DESC, a.period DESC
         LIMIT 30
     ");
-    $stmt->execute([$code, $dateFrom, $dateTo]);
+    $stmt->execute([$uid, $dateFrom, $dateTo]);
     $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) { error_log($e->getMessage()); }
 
