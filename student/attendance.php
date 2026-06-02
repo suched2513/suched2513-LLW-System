@@ -157,6 +157,7 @@ body { font-family:'Prompt',sans-serif; }
         <i class="bi bi-calendar-x text-5xl text-slate-300"></i>
         <p class="font-black text-slate-500 mt-4">ยังไม่มีข้อมูลการเข้าเรียน</p>
         <p class="text-slate-400 text-xs mt-1">สำหรับภาคเรียน <?= htmlspecialchars($semester) ?></p>
+        <!-- DEBUG: uid=<?= $uid ?> code=<?= htmlspecialchars($code) ?> from=<?= $dateFrom ?> -->
     </div>
     <?php else: ?>
 
