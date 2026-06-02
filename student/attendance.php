@@ -4,9 +4,13 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/_guard.php';
 
 $pdo  = getPdo();
-$uid  = (int)$_SESSION['student_uid'];
 $code = $_SESSION['student_code'];
 $name = $_SESSION['student_name'];
+
+// Look up numeric att_students.id (stored in att_attendance.student_id as INT)
+$_stRow = $pdo->prepare("SELECT id FROM att_students WHERE student_id = ? LIMIT 1");
+$_stRow->execute([$code]);
+$uid = (int)($_stRow->fetchColumn() ?: 0);
 
 if (!function_exists('busGetSemester')) {
     function busGetSemester(): string {
