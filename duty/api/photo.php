@@ -19,17 +19,22 @@ $relPath = $_GET['path'] ?? '';
 $relPath = str_replace(["\0", '..'], '', $relPath);
 $relPath = ltrim(str_replace('\\', '/', $relPath), '/');
 
-// ตรวจให้แน่ใจว่าอยู่ใน uploads/reports/
-if (!str_starts_with($relPath, 'uploads/reports/')) {
+// อนุญาตเฉพาะ 2 path ที่กำหนด
+$allowedPrefixes = ['uploads/reports/', 'uploads/teacher_photos/'];
+$inAllowed = false;
+foreach ($allowedPrefixes as $prefix) {
+    if (strpos($relPath, $prefix) === 0) { $inAllowed = true; break; }
+}
+if (!$inAllowed) {
     http_response_code(403);
     exit('Forbidden');
 }
 
 $fullPath = realpath(__DIR__ . '/../../' . $relPath);
-$uploadBase = realpath(__DIR__ . '/../../uploads/reports');
+$uploadBase = realpath(__DIR__ . '/../../uploads');
 
 // ตรวจว่า path จริงอยู่ใน uploadBase
-if (!$fullPath || !$uploadBase || !str_starts_with($fullPath, $uploadBase)) {
+if (!$fullPath || !$uploadBase || strpos($fullPath, $uploadBase) !== 0) {
     http_response_code(404);
     exit('Not found');
 }

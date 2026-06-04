@@ -16,7 +16,7 @@ if (!$reportId) { header('Location: reports.php'); exit(); }
 
 // ── ดึงข้อมูล report ──
 $stmtR = $pdo->prepare(
-    "SELECT dr.*, dt.full_name AS teacher_name, dt.prefix AS teacher_prefix
+    "SELECT dr.*, dt.full_name AS teacher_name, dt.prefix AS teacher_prefix, dt.photo AS teacher_photo
      FROM duty_reports dr
      LEFT JOIN duty_teachers dt ON dt.id = dr.teacher_id
      WHERE dr.id = ?"
@@ -124,7 +124,11 @@ $shiftName = $report['shift'] === 'day' ? 'กลางวัน' : 'กลา�
             </div>
             <div class="w-24 text-center">
                 <div class="w-20 h-20 mx-auto rounded-2xl border-2 border-blue-900 overflow-hidden bg-white">
-                    <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Teacher" class="w-full h-full object-cover">
+                    <?php if (!empty($report['teacher_photo'])): ?>
+                        <img src="/duty/api/photo.php?path=<?= urlencode($report['teacher_photo']) ?>" alt="Teacher" class="w-full h-full object-cover">
+                    <?php else: ?>
+                        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Teacher" class="w-full h-full object-cover">
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
