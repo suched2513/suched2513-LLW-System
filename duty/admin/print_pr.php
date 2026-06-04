@@ -27,7 +27,7 @@ $report = $stmtR->fetch(PDO::FETCH_ASSOC);
 if (!$report) { header('Location: reports.php'); exit(); }
 
 // ── Mapping ชื่อจุด (Point Names) ──
-$pointNames = [
+$pointNamesDay = [
     1 => 'รับนักเรียนหน้าโรงเรียน',
     2 => 'ประตูหน้า/จราจร',
     3 => 'อาคารเรียน/สนามเด็กเล่น',
@@ -35,6 +35,12 @@ $pointNames = [
     5 => 'เดินตรวจรอบโรงเรียน',
     6 => 'ประธานกิจกรรม/ควบคุมแถว'
 ];
+$pointNamesNight = [
+    1 => 'เวรยามดูแลความปลอดภัยกลางคืน',
+    2 => 'เวรยามอาคารเรียน/ทรัพย์สินโรงเรียน',
+    3 => 'เวรยามประตูหน้า/รั้วโรงเรียน',
+];
+$pointNames = $report['shift'] === 'night' ? $pointNamesNight : $pointNamesDay;
 $pointName = $pointNames[$report['point_no']] ?? 'จุดปฏิบัติหน้าที่';
 
 // ── ดึงรูป 6 รูปแรก ──
@@ -46,7 +52,8 @@ $stmtPh = $pdo->prepare(
 $stmtPh->execute([$reportId]);
 $photos = $stmtPh->fetchAll(PDO::FETCH_ASSOC);
 
-$thaiDate = date('d/m/') . (date('Y', strtotime($report['duty_date'])) + 543);
+$dutyTs  = strtotime($report['duty_date']);
+$thaiDate = date('d/m/', $dutyTs) . (date('Y', $dutyTs) + 543);
 $shiftName = $report['shift'] === 'day' ? 'กลางวัน' : 'กลางคืน';
 ?>
 <!DOCTYPE html>
@@ -101,6 +108,9 @@ $shiftName = $report['shift'] === 'day' ? 'กลางวัน' : 'กลา�
             <img src="https://suched2513.github.io/image/%E0%B8%95%E0%B8%A3%E0%B8%B2%E0%B8%A5%E0%B8%B0%E0%B8%A5%E0%B8%A1%E0%B8%A7%E0%B8%B4%E0%B8%9767.png" alt="Logo" class="w-16 h-16 mx-auto mb-1 drop-shadow-md">
             <h1 class="text-2xl font-black title-official mb-0">รายงานการปฏิบัติหน้าที่เวรประจำวัน</h1>
             <h2 class="text-lg font-black text-slate-500">โรงเรียนละลมวิทยา</h2>
+            <p class="text-sm font-bold text-blue-900 mt-1">
+                วันที่ <?= $thaiDate ?> &nbsp;|&nbsp; เวร<?= $shiftName ?>
+            </p>
         </div>
 
         <div class="flex justify-between items-center gap-4 mb-4 relative z-10">
