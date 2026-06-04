@@ -290,6 +290,28 @@ require_once __DIR__ . '/../components/layout_start.php';
       <p class="font-bold text-sm">ยังไม่มีนักเรียนส่งงาน</p>
     </div>
     <?php else: ?>
+    <?php
+      $pending_ct  = count(array_filter($submissions, function($s){ return empty($s['reviewed_at']); }));
+      $reviewed_ct = count($submissions) - $pending_ct;
+    ?>
+    <!-- Filter bar -->
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <p class="text-xs text-slate-400 font-bold"><span id="filterCount"><?=count($submissions)?></span> รายการ</p>
+      <div class="flex gap-1.5 flex-wrap">
+        <button onclick="filterSubs('all')" id="fbtn_all"
+                class="px-3 py-1 rounded-full text-xs font-black bg-violet-600 text-white transition-all">
+          ทั้งหมด (<?=count($submissions)?>)
+        </button>
+        <button onclick="filterSubs('pending')" id="fbtn_pending"
+                class="px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-700 hover:bg-amber-200 transition-all">
+          รอตรวจ (<?=$pending_ct?>)
+        </button>
+        <button onclick="filterSubs('reviewed')" id="fbtn_reviewed"
+                class="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-all">
+          ตรวจแล้ว (<?=$reviewed_ct?>)
+        </button>
+      </div>
+    </div>
     <div class="space-y-4" id="submissionList">
       <?php foreach ($submissions as $s): ?>
       <?php
@@ -299,7 +321,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         }
         $reviewed = !empty($s['reviewed_at']);
       ?>
-      <div class="bg-white rounded-2xl border <?=$reviewed?'border-emerald-200':'border-amber-200'?> shadow-sm overflow-hidden" id="card_<?=$s['sub_id']?>">
+      <div class="bg-white rounded-2xl border <?=$reviewed?'border-emerald-200':'border-amber-200'?> shadow-sm overflow-hidden" id="card_<?=$s['sub_id']?>" data-reviewed="<?=$reviewed?'1':'0'?>">
         <!-- Student header -->
         <div class="flex items-center justify-between px-5 py-3 <?=$reviewed?'bg-emerald-50':'bg-amber-50'?> border-b <?=$reviewed?'border-emerald-100':'border-amber-100'?>" id="hdr_<?=$s['sub_id']?>">
           <div class="flex items-center gap-3">
@@ -496,6 +518,30 @@ async function deleteSubmission(subId) {
   }
 }
 
+let _filterMode = 'all';
+function filterSubs(mode) {
+  _filterMode = mode;
+  const cards = document.querySelectorAll('#submissionList [data-reviewed]');
+  let visible = 0;
+  cards.forEach(c => {
+    const rev = c.dataset.reviewed === '1';
+    const show = mode === 'all' || (mode === 'pending' && !rev) || (mode === 'reviewed' && rev);
+    c.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  const el = document.getElementById('filterCount');
+  if (el) el.textContent = visible;
+  const styles = {
+    all:      { active: 'px-3 py-1 rounded-full text-xs font-black bg-violet-600 text-white transition-all',      inactive: 'px-3 py-1 rounded-full text-xs font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all' },
+    pending:  { active: 'px-3 py-1 rounded-full text-xs font-black bg-amber-600 text-white transition-all',       inactive: 'px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-700 hover:bg-amber-200 transition-all' },
+    reviewed: { active: 'px-3 py-1 rounded-full text-xs font-black bg-emerald-600 text-white transition-all',     inactive: 'px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-all' },
+  };
+  ['all','pending','reviewed'].forEach(m => {
+    const btn = document.getElementById('fbtn_' + m);
+    if (btn) btn.className = styles[m][m === mode ? 'active' : 'inactive'];
+  });
+}
+
 async function saveFeedback(subId) {
   const grade    = document.getElementById('g_' + subId).value;
   const feedback = document.getElementById('f_' + subId).value;
@@ -541,6 +587,7 @@ async function saveFeedback(subId) {
     if (iconi) iconi.className = iconi.className.replace('text-amber-600','text-emerald-600');
     const scoreEl = document.getElementById('score_' + subId);
     if (scoreEl && grade !== '') scoreEl.textContent = grade + '<?=$exercise['max_score'] ? ' / '.$exercise['max_score'] : ''?> คะแนน';
+    if (card) { card.dataset.reviewed = '1'; filterSubs(_filterMode); }
   } else {
     btn.disabled = false; btn.innerHTML = '<i class="bi bi-save mr-1"></i>ลองใหม่';
     Swal.fire({icon:'error', title:'เกิดข้อผิดพลาด', confirmButtonColor:'#7C3AED'});
