@@ -238,42 +238,6 @@ require_once __DIR__ . '/../components/layout_start.php';
     </div>
     <?php endif; ?>
 
-    <!-- Quick Grade Panel (sticky sidebar grader) -->
-    <?php if ($exercise): ?>
-    <div class="bg-white rounded-2xl shadow-sm border border-violet-100 p-4">
-      <p class="text-xs font-black text-violet-500 uppercase tracking-wider mb-3">
-        <i class="bi bi-pencil-square mr-1"></i>ให้คะแนนเร็ว
-      </p>
-      <div id="qg_placeholder" class="text-center text-slate-300 py-4">
-        <i class="bi bi-hand-index-thumb text-2xl block mb-1"></i>
-        <p class="text-xs font-bold">เลื่อนดูงานเพื่อให้คะแนน</p>
-      </div>
-      <div id="qg_form" class="space-y-2" style="display:none">
-        <div class="flex items-center gap-2 mb-1">
-          <span id="qg_badge" class="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-100 text-amber-700 flex-shrink-0"></span>
-          <p id="qg_name" class="text-xs font-black text-slate-700 truncate"></p>
-        </div>
-        <select id="qg_quality"
-                class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-violet-400 outline-none bg-white">
-          <option value="">— ระดับคุณภาพ —</option>
-          <?php foreach(['น่าชื่นชมมาก!ครับ','ทำได้ดีมาก!ครับ','ดีขึ้นเรื่อยๆ เลย!ครับ','สู้ๆ ครูเชื่อในตัวเธอครับ','อย่าท้อ ลองใหม่นะครับ'] as $ql): ?>
-          <option value="<?=$ql?>"><?=$ql?></option>
-          <?php endforeach; ?>
-        </select>
-        <div class="flex items-center gap-2">
-          <input type="number" id="qg_grade" min="0" placeholder="—"
-                 class="w-20 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-violet-400 outline-none">
-          <span id="qg_max" class="text-xs text-slate-400 font-bold"></span>
-        </div>
-        <input type="text" id="qg_feedback" placeholder="ความคิดเห็น..."
-               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-violet-400 outline-none">
-        <button onclick="saveQuickGrade()" id="qg_btn"
-                class="w-full px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl transition-all">
-          <i class="bi bi-save mr-1"></i>บันทึก
-        </button>
-      </div>
-    </div>
-    <?php endif; ?>
   </div>
 
   <!-- Right: submissions -->
@@ -565,36 +529,52 @@ async function deleteSubmission(subId) {
 // ── Quick Grade sidebar ──────────────────────────────────────
 let _activeSubId = null;
 
+function toggleQGPanel(show) {
+  const panel = document.getElementById('qgFloat');
+  const tab   = document.getElementById('qgTab');
+  if (!panel) return;
+  if (show === undefined) show = panel.style.right !== '0px';
+  panel.style.right = show ? '0px' : '-290px';
+  if (tab) tab.style.display = show ? 'none' : '';
+}
+
 function activateCard(subId) {
   if (_activeSubId === subId) return;
   _activeSubId = subId;
   const card = document.getElementById('card_' + subId);
   if (!card) return;
 
-  document.getElementById('qg_placeholder').style.display = 'none';
-  document.getElementById('qg_form').style.display = '';
+  // Auto-open panel on first activation
+  const panel = document.getElementById('qgFloat');
+  if (panel && panel.style.right !== '0px') toggleQGPanel(true);
 
-  document.getElementById('qg_name').textContent    = card.dataset.name || '';
-  document.getElementById('qg_grade').value         = card.dataset.grade || '';
-  document.getElementById('qg_feedback').value      = card.dataset.feedback || '';
-  document.getElementById('qg_quality').value       = card.dataset.quality || '';
+  const ph = document.getElementById('qg_placeholder');
+  const fm = document.getElementById('qg_form');
+  if (ph) ph.style.display = 'none';
+  if (fm) fm.style.display = 'flex';
+
+  document.getElementById('qg_name').textContent = card.dataset.name || '';
+  document.getElementById('qg_grade').value      = card.dataset.grade || '';
+  document.getElementById('qg_feedback').value   = card.dataset.feedback || '';
+  document.getElementById('qg_quality').value    = card.dataset.quality || '';
 
   const maxVal = parseInt(card.dataset.max) || 0;
-  document.getElementById('qg_max').textContent     = maxVal ? '/ ' + maxVal : '';
-  document.getElementById('qg_grade').max           = maxVal || 100;
+  document.getElementById('qg_max').textContent  = maxVal ? '/ ' + maxVal + ' คะแนน' : '';
+  document.getElementById('qg_grade').max        = maxVal || 100;
 
   const rev   = card.dataset.reviewed === '1';
   const badge = document.getElementById('qg_badge');
-  badge.className = 'px-2 py-0.5 text-[10px] font-black rounded-full flex-shrink-0 ' + (rev ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700');
-  badge.textContent = rev ? '✓ ตรวจแล้ว' : 'รอตรวจ';
+  badge.style.background  = rev ? '#d1fae5' : '#fef3c7';
+  badge.style.color       = rev ? '#065f46' : '#b45309';
+  badge.textContent       = rev ? '✓ ตรวจแล้ว' : 'รอตรวจ';
 
   const btn = document.getElementById('qg_btn');
-  btn.className = 'w-full px-4 py-2 ' + (rev ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-violet-600 hover:bg-violet-700') + ' text-white font-bold text-xs rounded-xl transition-all';
-  btn.innerHTML = '<i class="bi bi-save mr-1"></i>' + (rev ? 'อัปเดต' : 'บันทึก');
+  btn.style.background = rev ? '#10b981' : '#7c3aed';
+  btn.innerHTML = '<i class="bi bi-save me-1"></i>' + (rev ? 'อัปเดต' : 'บันทึก');
 
-  // Highlight active card with outline
+  // Highlight active card
   document.querySelectorAll('#submissionList [data-reviewed]').forEach(c => {
-    c.style.outline = (c.id === 'card_' + subId) ? '2px solid #7C3AED' : '';
+    c.style.outline = (c.id === 'card_' + subId) ? '2px solid #7c3aed' : '';
   });
 }
 
@@ -625,9 +605,9 @@ async function saveQuickGrade() {
     card.dataset.feedback = f;
     card.dataset.quality  = q;
     const badge = document.getElementById('qg_badge');
-    if (badge) { badge.className = 'px-2 py-0.5 text-[10px] font-black rounded-full flex-shrink-0 bg-emerald-100 text-emerald-700'; badge.textContent = '✓ ตรวจแล้ว'; }
-    btn.className = 'w-full px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition-all';
-    btn.innerHTML = '<i class="bi bi-check-lg mr-1"></i>อัปเดต';
+    if (badge) { badge.style.background = '#d1fae5'; badge.style.color = '#065f46'; badge.textContent = '✓ ตรวจแล้ว'; }
+    btn.style.background = '#10b981';
+    btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>อัปเดต';
   }
   btn.disabled = false;
 }
@@ -724,5 +704,58 @@ async function saveFeedback(subId) {
   }
 }
 </script>
+
+<?php if ($exercise): ?>
+<!-- ── Floating Quick-Grade Panel (right edge) ── -->
+<div id="qgFloat" style="position:fixed;right:-290px;top:50%;transform:translateY(-50%);z-index:1050;width:288px;transition:right .25s cubic-bezier(.4,0,.2,1);">
+  <div style="background:#fff;border-radius:16px 0 0 16px;box-shadow:-6px 0 32px rgba(0,0,0,.14);overflow:hidden;">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#7c3aed,#5b21b6);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="color:#fff;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;">
+        <i class="bi bi-pencil-square me-1"></i>ให้คะแนนเร็ว
+      </span>
+      <button onclick="toggleQGPanel(false)" title="ซ่อน"
+              style="background:rgba(255,255,255,.2);border:none;border-radius:6px;color:#fff;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;">
+        &times;
+      </button>
+    </div>
+    <!-- Placeholder -->
+    <div id="qg_placeholder" style="padding:24px 16px;text-align:center;color:#94a3b8;">
+      <i class="bi bi-hand-index-thumb" style="font-size:1.8rem;display:block;margin-bottom:6px;"></i>
+      <p style="font-size:11px;font-weight:700;">เลื่อนดูงานเพื่อให้คะแนน</p>
+    </div>
+    <!-- Form -->
+    <div id="qg_form" style="padding:12px;display:none;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;gap:6px;overflow:hidden;">
+        <span id="qg_badge" style="padding:2px 8px;border-radius:99px;font-size:10px;font-weight:900;flex-shrink:0;white-space:nowrap;background:#fef3c7;color:#b45309;"></span>
+        <p id="qg_name" style="font-size:11px;font-weight:900;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></p>
+      </div>
+      <select id="qg_quality"
+              style="width:100%;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;font-size:11px;font-weight:700;outline:none;background:#fff;">
+        <option value="">— ระดับคุณภาพ —</option>
+        <?php foreach(['น่าชื่นชมมาก!ครับ','ทำได้ดีมาก!ครับ','ดีขึ้นเรื่อยๆ เลย!ครับ','สู้ๆ ครูเชื่อในตัวเธอครับ','อย่าท้อ ลองใหม่นะครับ'] as $ql): ?>
+        <option value="<?=$ql?>"><?=$ql?></option>
+        <?php endforeach; ?>
+      </select>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="qg_grade" min="0" placeholder="คะแนน"
+               style="width:80px;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;font-size:14px;font-weight:700;text-align:center;outline:none;">
+        <span id="qg_max" style="font-size:11px;color:#94a3b8;font-weight:700;"></span>
+      </div>
+      <input type="text" id="qg_feedback" placeholder="ความคิดเห็น..."
+             style="width:100%;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;font-size:12px;outline:none;box-sizing:border-box;">
+      <button onclick="saveQuickGrade()" id="qg_btn"
+              style="width:100%;padding:10px;background:#7c3aed;color:#fff;font-size:12px;font-weight:900;border:none;border-radius:12px;cursor:pointer;transition:background .15s;">
+        <i class="bi bi-save me-1"></i>บันทึก
+      </button>
+    </div>
+  </div>
+</div>
+<!-- Pull tab (visible when panel is hidden) -->
+<button id="qgTab" onclick="toggleQGPanel(true)"
+        style="display:none;position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:1050;background:linear-gradient(180deg,#7c3aed,#5b21b6);color:#fff;border:none;border-radius:12px 0 0 12px;padding:14px 7px;cursor:pointer;writing-mode:vertical-lr;font-size:11px;font-weight:900;letter-spacing:.08em;box-shadow:-3px 0 16px rgba(0,0,0,.18);">
+  ✏ คะแนน
+</button>
+<?php endif; ?>
 
 <?php require_once __DIR__ . '/../components/layout_end.php'; ?>
