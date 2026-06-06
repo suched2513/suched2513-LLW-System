@@ -174,7 +174,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
   <!-- Left: subject + classroom + exercise list -->
-  <div class="space-y-4">
+  <div class="space-y-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto">
     <!-- Subject selector -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
       <p class="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">เลือกวิชา</p>
@@ -234,6 +234,43 @@ require_once __DIR__ . '/../components/layout_start.php';
           </div>
         </a>
         <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Quick Grade Panel (sticky sidebar grader) -->
+    <?php if ($exercise): ?>
+    <div class="bg-white rounded-2xl shadow-sm border border-violet-100 p-4">
+      <p class="text-xs font-black text-violet-500 uppercase tracking-wider mb-3">
+        <i class="bi bi-pencil-square mr-1"></i>ให้คะแนนเร็ว
+      </p>
+      <div id="qg_placeholder" class="text-center text-slate-300 py-4">
+        <i class="bi bi-hand-index-thumb text-2xl block mb-1"></i>
+        <p class="text-xs font-bold">เลื่อนดูงานเพื่อให้คะแนน</p>
+      </div>
+      <div id="qg_form" class="space-y-2" style="display:none">
+        <div class="flex items-center gap-2 mb-1">
+          <span id="qg_badge" class="px-2 py-0.5 text-[10px] font-black rounded-full bg-amber-100 text-amber-700 flex-shrink-0"></span>
+          <p id="qg_name" class="text-xs font-black text-slate-700 truncate"></p>
+        </div>
+        <select id="qg_quality"
+                class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-violet-400 outline-none bg-white">
+          <option value="">— ระดับคุณภาพ —</option>
+          <?php foreach(['น่าชื่นชมมาก!ครับ','ทำได้ดีมาก!ครับ','ดีขึ้นเรื่อยๆ เลย!ครับ','สู้ๆ ครูเชื่อในตัวเธอครับ','อย่าท้อ ลองใหม่นะครับ'] as $ql): ?>
+          <option value="<?=$ql?>"><?=$ql?></option>
+          <?php endforeach; ?>
+        </select>
+        <div class="flex items-center gap-2">
+          <input type="number" id="qg_grade" min="0" placeholder="—"
+                 class="w-20 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-violet-400 outline-none">
+          <span id="qg_max" class="text-xs text-slate-400 font-bold"></span>
+        </div>
+        <input type="text" id="qg_feedback" placeholder="ความคิดเห็น..."
+               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-violet-400 outline-none">
+        <button onclick="saveQuickGrade()" id="qg_btn"
+                class="w-full px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl transition-all">
+          <i class="bi bi-save mr-1"></i>บันทึก
+        </button>
       </div>
     </div>
     <?php endif; ?>
@@ -321,7 +358,14 @@ require_once __DIR__ . '/../components/layout_start.php';
         }
         $reviewed = !empty($s['reviewed_at']);
       ?>
-      <div class="bg-white rounded-2xl border <?=$reviewed?'border-emerald-200':'border-amber-200'?> shadow-sm overflow-hidden" id="card_<?=$s['sub_id']?>" data-reviewed="<?=$reviewed?'1':'0'?>">
+      <div class="bg-white rounded-2xl border <?=$reviewed?'border-emerald-200':'border-amber-200'?> shadow-sm overflow-hidden"
+           id="card_<?=$s['sub_id']?>"
+           data-reviewed="<?=$reviewed?'1':'0'?>"
+           data-name="<?=htmlspecialchars($s['student_name'].' ('.$s['classroom'].')',ENT_QUOTES,'UTF-8')?>"
+           data-grade="<?=htmlspecialchars($s['grade']??'',ENT_QUOTES,'UTF-8')?>"
+           data-feedback="<?=htmlspecialchars($s['feedback']??'',ENT_QUOTES,'UTF-8')?>"
+           data-quality="<?=htmlspecialchars($s['quality']??'',ENT_QUOTES,'UTF-8')?>"
+           data-max="<?=(int)($exercise['max_score']??0)?>">
         <!-- Student header -->
         <div class="flex items-center justify-between px-5 py-3 <?=$reviewed?'bg-emerald-50':'bg-amber-50'?> border-b <?=$reviewed?'border-emerald-100':'border-amber-100'?>" id="hdr_<?=$s['sub_id']?>">
           <div class="flex items-center gap-3">
@@ -517,6 +561,92 @@ async function deleteSubmission(subId) {
     Swal.fire({icon:'error', title:'เกิดข้อผิดพลาด', confirmButtonColor:'#7C3AED'});
   }
 }
+
+// ── Quick Grade sidebar ──────────────────────────────────────
+let _activeSubId = null;
+
+function activateCard(subId) {
+  if (_activeSubId === subId) return;
+  _activeSubId = subId;
+  const card = document.getElementById('card_' + subId);
+  if (!card) return;
+
+  document.getElementById('qg_placeholder').style.display = 'none';
+  document.getElementById('qg_form').style.display = '';
+
+  document.getElementById('qg_name').textContent    = card.dataset.name || '';
+  document.getElementById('qg_grade').value         = card.dataset.grade || '';
+  document.getElementById('qg_feedback').value      = card.dataset.feedback || '';
+  document.getElementById('qg_quality').value       = card.dataset.quality || '';
+
+  const maxVal = parseInt(card.dataset.max) || 0;
+  document.getElementById('qg_max').textContent     = maxVal ? '/ ' + maxVal : '';
+  document.getElementById('qg_grade').max           = maxVal || 100;
+
+  const rev   = card.dataset.reviewed === '1';
+  const badge = document.getElementById('qg_badge');
+  badge.className = 'px-2 py-0.5 text-[10px] font-black rounded-full flex-shrink-0 ' + (rev ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700');
+  badge.textContent = rev ? '✓ ตรวจแล้ว' : 'รอตรวจ';
+
+  const btn = document.getElementById('qg_btn');
+  btn.className = 'w-full px-4 py-2 ' + (rev ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-violet-600 hover:bg-violet-700') + ' text-white font-bold text-xs rounded-xl transition-all';
+  btn.innerHTML = '<i class="bi bi-save mr-1"></i>' + (rev ? 'อัปเดต' : 'บันทึก');
+
+  // Highlight active card with outline
+  document.querySelectorAll('#submissionList [data-reviewed]').forEach(c => {
+    c.style.outline = (c.id === 'card_' + subId) ? '2px solid #7C3AED' : '';
+  });
+}
+
+async function saveQuickGrade() {
+  if (!_activeSubId) return;
+  const g = document.getElementById('qg_grade').value;
+  const f = document.getElementById('qg_feedback').value;
+  const q = document.getElementById('qg_quality').value;
+
+  // Sync to inline form so saveFeedback reads correct values
+  const gi = document.getElementById('g_' + _activeSubId);
+  const fi = document.getElementById('f_' + _activeSubId);
+  const qi = document.getElementById('q_' + _activeSubId);
+  if (gi) gi.value = g;
+  if (fi) fi.value = f;
+  if (qi) qi.value = q;
+
+  const btn = document.getElementById('qg_btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="bi bi-hourglass-split mr-1"></span>กำลังบันทึก...';
+
+  await saveFeedback(_activeSubId);
+
+  // Update card data attributes + quick grade panel
+  const card = document.getElementById('card_' + _activeSubId);
+  if (card) {
+    card.dataset.grade    = g;
+    card.dataset.feedback = f;
+    card.dataset.quality  = q;
+    const badge = document.getElementById('qg_badge');
+    if (badge) { badge.className = 'px-2 py-0.5 text-[10px] font-black rounded-full flex-shrink-0 bg-emerald-100 text-emerald-700'; badge.textContent = '✓ ตรวจแล้ว'; }
+    btn.className = 'w-full px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition-all';
+    btn.innerHTML = '<i class="bi bi-check-lg mr-1"></i>อัปเดต';
+  }
+  btn.disabled = false;
+}
+
+// IntersectionObserver: activate card as it enters viewport
+if (document.getElementById('submissionList')) {
+  const _cardObserver = new IntersectionObserver(entries => {
+    let best = null, bestRatio = 0;
+    entries.forEach(e => {
+      if (e.isIntersecting && e.intersectionRatio > bestRatio) {
+        bestRatio = e.intersectionRatio;
+        best = e.target;
+      }
+    });
+    if (best) activateCard(best.id.replace('card_', ''));
+  }, { threshold: [0.25, 0.5, 0.75] });
+  document.querySelectorAll('#submissionList [data-reviewed]').forEach(c => _cardObserver.observe(c));
+}
+// ─────────────────────────────────────────────────────────────
 
 let _filterMode = 'all';
 function filterSubs(mode) {
