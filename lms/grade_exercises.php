@@ -376,7 +376,7 @@ require_once __DIR__ . '/../components/layout_start.php';
               <span>ไฟล์ถูกลบออกจากเซิร์ฟเวอร์แล้ว — นักเรียนต้องส่งงานใหม่</span>
             </div>
             <?php elseif ($is_img): ?>
-            <div>
+            <div style="position:relative;overflow:hidden;" class="rounded-xl">
               <a href="<?=$file_url?>" target="_blank">
                 <img src="<?=$file_url?>"
                      class="max-w-full rounded-xl border border-slate-200 hover:opacity-80 transition-all"
@@ -390,6 +390,11 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <span>เปิดรูปภาพ (คลิก)</span>
                 <i class="bi bi-box-arrow-up-right text-xs ml-auto"></i>
               </a>
+              <?php if ($reviewed): ?>
+              <div style="position:absolute;top:12px;right:-32px;transform:rotate(45deg);background:rgba(5,150,105,0.92);color:white;font-size:8px;font-weight:900;padding:4px 40px;pointer-events:none;z-index:10;text-align:center;line-height:1.5;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+                ตรวจแล้ว ✓<?php if (!empty($s['quality'])): ?><br><?=htmlspecialchars($s['quality'],ENT_QUOTES,'UTF-8')?><?php endif; ?>
+              </div>
+              <?php endif; ?>
             </div>
             <?php elseif ($is_vid): ?>
             <div class="space-y-1">

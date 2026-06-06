@@ -333,8 +333,15 @@ body { font-family: 'Prompt', sans-serif; }
         $srv_url = htmlspecialchars($base_path . '/lms/serve_exercise.php?f=' . rawurlencode(basename($fp)), ENT_QUOTES, 'UTF-8');
       ?>
       <?php if (in_array($fext, ['jpg','jpeg','png','gif','webp'])): ?>
-      <img src="<?=$srv_url?>"
-           class="mt-2 w-full max-h-40 object-contain rounded-lg bg-white border border-slate-100" alt="">
+      <div style="position:relative;overflow:hidden;" class="mt-2 rounded-lg">
+        <img src="<?=$srv_url?>"
+             class="w-full max-h-40 object-contain rounded-lg bg-white border border-slate-100" alt="">
+        <?php if ($reviewed): ?>
+        <div style="position:absolute;top:8px;right:-26px;transform:rotate(45deg);background:rgba(5,150,105,0.92);color:white;font-size:7px;font-weight:900;padding:3px 34px;pointer-events:none;z-index:10;text-align:center;line-height:1.5;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.2);">
+          ตรวจแล้ว ✓<?php if (!empty($sub['quality'])): ?><br><?=htmlspecialchars($sub['quality'],ENT_QUOTES,'UTF-8')?><?php endif; ?>
+        </div>
+        <?php endif; ?>
+      </div>
       <?php elseif (in_array($fext, ['mp4','mov','avi','3gp','webm'])): ?>
       <video src="<?=$srv_url?>" controls
              class="mt-2 w-full rounded-lg border border-slate-100 max-h-48"
