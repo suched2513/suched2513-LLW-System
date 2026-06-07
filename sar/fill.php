@@ -343,7 +343,16 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
       <div class="card-body">
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>วัน/เดือน/ปี</th><th>รางวัล / เกียรติคุณ</th><th>หน่วยงานที่มอบ</th><th>หลักฐาน</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th>วัน/เดือน/ปี</th>
+                <th>รางวัล / เกียรติคุณ</th>
+                <th>หน่วยงานที่มอบ</th>
+                <th>หลักฐาน</th>
+                <th style="width:80px">ไฟล์</th>
+                <th style="width:24px"></th>
+              </tr>
+            </thead>
             <tbody id="award-body"></tbody>
           </table>
         </div>
@@ -642,9 +651,20 @@ async function uploadEvidence(input) {
 }
 function addAward() {
   document.getElementById('award-body').insertAdjacentHTML('beforeend',
-    `<tr><td><input type="date"/></td><td><input type="text"/></td>` +
-    `<td><input type="text"/></td><td><input type="text"/></td>` +
-    `<td><button class="del-btn" onclick="delRow(this)">✕</button></td></tr>`);
+    `<tr>
+      <td><input type="date"/></td>
+      <td><input type="text" placeholder="รางวัล / เกียรติคุณ"/></td>
+      <td><input type="text" placeholder="หน่วยงานที่มอบ"/></td>
+      <td><input type="text" placeholder="ชื่อหลักฐาน"/></td>
+      <td><div style="display:flex;align-items:center;gap:3px">
+        <input type="file" class="ev-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="uploadEvidence(this)"/>
+        <input type="hidden" class="ev-path" value=""/>
+        <input type="hidden" class="ev-name-val" value=""/>
+        <button type="button" class="ev-btn" onclick="this.parentElement.querySelector('.ev-input').click()">📎</button>
+        <span class="ev-label"></span>
+      </div></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    </tr>`);
 }
 
 function addActivity() {
@@ -724,9 +744,16 @@ function collectFormData() {
 
   d.award_rows = [];
   document.querySelectorAll('#award-body tr').forEach(tr => {
-    const ins = tr.querySelectorAll('input');
-    if (ins.length >= 4)
-      d.award_rows.push({date: ins[0].value, title: ins[1].value, org: ins[2].value, evidence: ins[3].value});
+    const cells = tr.querySelectorAll('td');
+    if (cells.length < 6) return;
+    d.award_rows.push({
+      date:      cells[0].querySelector('input')?.value || '',
+      title:     cells[1].querySelector('input')?.value || '',
+      org:       cells[2].querySelector('input')?.value || '',
+      evidence:  cells[3].querySelector('input')?.value || '',
+      file_path: cells[4].querySelector('.ev-path')?.value || '',
+      file_name: cells[4].querySelector('.ev-name-val')?.value || ''
+    });
   });
 
   d.activity_rows = [];
@@ -826,12 +853,27 @@ function loadFormData(data) {
   if (Array.isArray(data.award_rows) && data.award_rows.length) {
     ab.innerHTML = '';
     data.award_rows.forEach(row => {
+      const fp = row.file_path || '';
+      const fn = row.file_name || '';
+      const sn = fn.length > 14 ? fn.substring(0, 14) + '…' : fn;
+      const fileLabel = fp
+        ? `<a href="${BASE_PATH}/sar/api/serve_evidence.php?f=${encodeURIComponent(fp)}" target="_blank" title="${esc(fn)}">${esc(sn)}</a>`
+        : '';
       ab.insertAdjacentHTML('beforeend',
-        `<tr><td><input type="date" value="${esc(row.date)}"/></td>` +
-        `<td><input type="text" value="${esc(row.title)}"/></td>` +
-        `<td><input type="text" value="${esc(row.org)}"/></td>` +
-        `<td><input type="text" value="${esc(row.evidence)}"/></td>` +
-        `<td><button class="del-btn" onclick="delRow(this)">✕</button></td></tr>`);
+        `<tr>
+          <td><input type="date" value="${esc(row.date)}"/></td>
+          <td><input type="text" value="${esc(row.title)}"/></td>
+          <td><input type="text" value="${esc(row.org)}"/></td>
+          <td><input type="text" value="${esc(row.evidence)}"/></td>
+          <td><div style="display:flex;align-items:center;gap:3px">
+            <input type="file" class="ev-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="uploadEvidence(this)"/>
+            <input type="hidden" class="ev-path" value="${esc(fp)}"/>
+            <input type="hidden" class="ev-name-val" value="${esc(fn)}"/>
+            <button type="button" class="ev-btn" onclick="this.parentElement.querySelector('.ev-input').click()">📎</button>
+            <span class="ev-label">${fileLabel}</span>
+          </div></td>
+          <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+        </tr>`);
     });
   }
   if (!ab.rows.length) addAward();
