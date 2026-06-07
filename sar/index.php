@@ -12,33 +12,62 @@ if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin', 'wfh_staff', '
 $pdo     = getPdo();
 $isAdmin = in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin']);
 $userId  = (int)$_SESSION['user_id'];
+$dbError = false;
+
+// Auto-create table if not exists (first-run convenience)
+try {
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS sar_reports (
+            id           INT AUTO_INCREMENT PRIMARY KEY,
+            teacher_id   INT NOT NULL,
+            teacher_name VARCHAR(200) NOT NULL DEFAULT '',
+            year         VARCHAR(10)  NOT NULL DEFAULT '',
+            semester     TINYINT      NOT NULL DEFAULT 1,
+            form_data    LONGTEXT     NOT NULL DEFAULT '{}',
+            status       ENUM('draft','submitted') NOT NULL DEFAULT 'draft',
+            created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_teacher (teacher_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+} catch (Exception $e) {
+    error_log('SAR table create: ' . $e->getMessage());
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
     $delId = (int)($_POST['id'] ?? 0);
     if ($delId) {
-        $isAdmin
-            ? $pdo->prepare("DELETE FROM sar_reports WHERE id = ?")->execute([$delId])
-            : $pdo->prepare("DELETE FROM sar_reports WHERE id = ? AND teacher_id = ?")->execute([$delId, $userId]);
+        try {
+            $isAdmin
+                ? $pdo->prepare("DELETE FROM sar_reports WHERE id = ?")->execute([$delId])
+                : $pdo->prepare("DELETE FROM sar_reports WHERE id = ? AND teacher_id = ?")->execute([$delId, $userId]);
+        } catch (Exception $e) { error_log($e->getMessage()); }
     }
     header('Location: index.php'); exit();
 }
 
-if ($isAdmin) {
-    $stmt = $pdo->query(
-        "SELECT s.*, u.firstname, u.lastname FROM sar_reports s
-         LEFT JOIN llw_users u ON u.user_id = s.teacher_id
-         ORDER BY s.created_at DESC"
-    );
-    $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} else {
-    $stmt = $pdo->prepare(
-        "SELECT s.*, u.firstname, u.lastname FROM sar_reports s
-         LEFT JOIN llw_users u ON u.user_id = s.teacher_id
-         WHERE s.teacher_id = ?
-         ORDER BY s.created_at DESC"
-    );
-    $stmt->execute([$userId]);
-    $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$reports = [];
+try {
+    if ($isAdmin) {
+        $stmt = $pdo->query(
+            "SELECT s.*, u.firstname, u.lastname FROM sar_reports s
+             LEFT JOIN llw_users u ON u.user_id = s.teacher_id
+             ORDER BY s.created_at DESC"
+        );
+        $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $stmt = $pdo->prepare(
+            "SELECT s.*, u.firstname, u.lastname FROM sar_reports s
+             LEFT JOIN llw_users u ON u.user_id = s.teacher_id
+             WHERE s.teacher_id = ?
+             ORDER BY s.created_at DESC"
+        );
+        $stmt->execute([$userId]);
+        $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $e) {
+    error_log($e->getMessage());
+    $dbError = true;
 }
 
 $pageTitle    = 'รายงาน SAR';

@@ -16,14 +16,37 @@ $isAdmin   = in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin']);
 $userId    = (int)$_SESSION['user_id'];
 $formData  = [];
 
+// Ensure table exists
+try {
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS sar_reports (
+            id           INT AUTO_INCREMENT PRIMARY KEY,
+            teacher_id   INT NOT NULL,
+            teacher_name VARCHAR(200) NOT NULL DEFAULT '',
+            year         VARCHAR(10)  NOT NULL DEFAULT '',
+            semester     TINYINT      NOT NULL DEFAULT 1,
+            form_data    LONGTEXT     NOT NULL DEFAULT '{}',
+            status       ENUM('draft','submitted') NOT NULL DEFAULT 'draft',
+            created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_teacher (teacher_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+} catch (Exception $e) { error_log('SAR table: ' . $e->getMessage()); }
+
 if ($sarId) {
-    $stmt = $isAdmin
-        ? $pdo->prepare("SELECT * FROM sar_reports WHERE id = ?")
-        : $pdo->prepare("SELECT * FROM sar_reports WHERE id = ? AND teacher_id = ?");
-    $isAdmin ? $stmt->execute([$sarId]) : $stmt->execute([$sarId, $userId]);
-    $sarRow = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$sarRow) { header('Location: index.php'); exit(); }
-    $formData = json_decode($sarRow['form_data'], true) ?: [];
+    try {
+        $stmt = $isAdmin
+            ? $pdo->prepare("SELECT * FROM sar_reports WHERE id = ?")
+            : $pdo->prepare("SELECT * FROM sar_reports WHERE id = ? AND teacher_id = ?");
+        $isAdmin ? $stmt->execute([$sarId]) : $stmt->execute([$sarId, $userId]);
+        $sarRow = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$sarRow) { header('Location: index.php'); exit(); }
+        $formData = json_decode($sarRow['form_data'], true) ?: [];
+    } catch (Exception $e) {
+        error_log($e->getMessage());
+        header('Location: index.php'); exit();
+    }
 } else {
     $fullname = $_SESSION['fullname'] ?? '';
     $parts = explode(' ', $fullname, 2);
