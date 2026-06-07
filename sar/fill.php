@@ -364,6 +364,7 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
                 <th style="width:110px">วัน/เดือน/ปี</th>
                 <th>ชื่อวิทยากร</th>
                 <th>เรื่อง / หัวข้อ</th>
+                <th style="width:80px">ไฟล์แนบ</th>
                 <th style="width:24px"></th>
               </tr>
             </thead>
@@ -498,9 +499,19 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
         <button class="add-row-btn" onclick="addCharRow()">+ เพิ่มชั้นเรียน</button>
 
         <p class="sub-heading">งานฝ่าย / กลุ่มงานที่รับผิดชอบ</p>
-        <div class="field">
-          <textarea id="dept_work" placeholder="ระบุงานฝ่าย / กลุ่มงานที่รับผิดชอบ..."></textarea>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ฝ่าย / กลุ่มงาน</th>
+                <th>หน้าที่ / งานที่รับผิดชอบ</th>
+                <th style="width:24px"></th>
+              </tr>
+            </thead>
+            <tbody id="deptwork-body"></tbody>
+          </table>
         </div>
+        <button class="add-row-btn" onclick="addDeptWork()">+ เพิ่มงาน</button>
 
       </div>
     </div>
@@ -825,6 +836,22 @@ function addExtSpeaker() {
       <td><input type="date"/></td>
       <td><input type="text" placeholder="ชื่อวิทยากร"/></td>
       <td><input type="text" placeholder="เรื่อง / หัวข้อ"/></td>
+      <td><div style="display:flex;align-items:center;gap:3px">
+        <input type="file" class="ev-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="uploadEvidence(this)"/>
+        <input type="hidden" class="ev-path" value=""/>
+        <input type="hidden" class="ev-name-val" value=""/>
+        <button type="button" class="ev-btn" onclick="this.parentElement.querySelector('.ev-input').click()">📎</button>
+        <span class="ev-label"></span>
+      </div></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    </tr>`);
+}
+
+function addDeptWork() {
+  document.getElementById('deptwork-body').insertAdjacentHTML('beforeend',
+    `<tr>
+      <td><input type="text" placeholder="ฝ่าย / กลุ่มงาน"/></td>
+      <td><input type="text" placeholder="หน้าที่ / งานที่รับผิดชอบ"/></td>
       <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
     </tr>`);
 }
@@ -1010,7 +1037,17 @@ function collectFormData() {
   d.sem = document.getElementById('sem')?.value || '2';
 
   d.special_work = document.getElementById('special_work')?.value || '';
-  d.dept_work    = document.getElementById('dept_work')?.value || '';
+
+  d.dept_work_rows = [];
+  document.querySelectorAll('#deptwork-body tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length >= 2) {
+      d.dept_work_rows.push({
+        dept: cells[0].querySelector('input')?.value || '',
+        duty: cells[1].querySelector('input')?.value || ''
+      });
+    }
+  });
 
   d.methods = [];
   for (let i = 1; i <= 12; i++) {
@@ -1065,11 +1102,13 @@ function collectFormData() {
   d.ext_speaker_rows = [];
   document.querySelectorAll('#extspeaker-body tr').forEach(tr => {
     const cells = tr.querySelectorAll('td');
-    if (cells.length >= 4) {
+    if (cells.length >= 5) {
       d.ext_speaker_rows.push({
-        date:  cells[1].querySelector('input')?.value || '',
-        name:  cells[2].querySelector('input')?.value || '',
-        topic: cells[3].querySelector('input')?.value || ''
+        date:      cells[1].querySelector('input')?.value || '',
+        name:      cells[2].querySelector('input')?.value || '',
+        topic:     cells[3].querySelector('input')?.value || '',
+        file_path: cells[4].querySelector('.ev-path')?.value || '',
+        file_name: cells[4].querySelector('.ev-name-val')?.value || ''
       });
     }
   });
@@ -1215,8 +1254,19 @@ function loadFormData(data) {
   const swEl = document.getElementById('special_work');
   if (swEl && data.special_work != null) swEl.value = data.special_work;
 
-  const dwEl = document.getElementById('dept_work');
-  if (dwEl && data.dept_work != null) dwEl.value = data.dept_work;
+  // งานฝ่าย/กลุ่มงาน
+  const dwb = document.getElementById('deptwork-body');
+  if (Array.isArray(data.dept_work_rows) && data.dept_work_rows.length) {
+    dwb.innerHTML = '';
+    data.dept_work_rows.forEach(row => {
+      dwb.insertAdjacentHTML('beforeend',
+        `<tr>
+          <td><input type="text" value="${esc(row.dept)}"/></td>
+          <td><input type="text" value="${esc(row.duty)}"/></td>
+          <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+        </tr>`);
+    });
+  }
 
   if (Array.isArray(data.methods))
     data.methods.forEach(id => { const cb = document.getElementById(id); if (cb) cb.checked = true; });
@@ -1284,12 +1334,25 @@ function loadFormData(data) {
   if (Array.isArray(data.ext_speaker_rows) && data.ext_speaker_rows.length) {
     esb.innerHTML = '';
     data.ext_speaker_rows.forEach((row, i) => {
+      const fp = row.file_path || '';
+      const fn = row.file_name || '';
+      const sn = fn.length > 14 ? fn.substring(0, 14) + '…' : fn;
+      const fileLabel = fp
+        ? `<a href="${BASE_PATH}/sar/api/serve_evidence.php?f=${encodeURIComponent(fp)}" target="_blank" title="${esc(fn)}">${esc(sn)}</a>`
+        : '';
       esb.insertAdjacentHTML('beforeend',
         `<tr>
           <td style="text-align:center">${i+1}</td>
           <td><input type="date" value="${esc(row.date)}"/></td>
           <td><input type="text" value="${esc(row.name)}"/></td>
           <td><input type="text" value="${esc(row.topic)}"/></td>
+          <td><div style="display:flex;align-items:center;gap:3px">
+            <input type="file" class="ev-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="uploadEvidence(this)"/>
+            <input type="hidden" class="ev-path" value="${esc(fp)}"/>
+            <input type="hidden" class="ev-name-val" value="${esc(fn)}"/>
+            <button type="button" class="ev-btn" onclick="this.parentElement.querySelector('.ev-input').click()">📎</button>
+            <span class="ev-label">${fileLabel}</span>
+          </div></td>
           <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
         </tr>`);
     });
