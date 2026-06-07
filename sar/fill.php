@@ -16,7 +16,6 @@ $isAdmin   = in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin']);
 $userId    = (int)$_SESSION['user_id'];
 $formData  = [];
 
-// Ensure table exists
 try {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS sar_reports (
@@ -160,6 +159,7 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
 .ev-label{font-size:11px;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 .ev-label a{color:var(--blue);text-decoration:none}.ev-label a:hover{text-decoration:underline}
 .legend{font-size:12px;color:var(--muted);margin-bottom:9px;background:var(--blue-light);padding:7px 11px;border-radius:6px}
+.sub-heading{font-size:13px;font-weight:600;color:var(--blue);margin:14px 0 7px}
 @media print{
   .no-print{display:none!important}
   .pane{display:block!important}
@@ -201,9 +201,10 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
     <button class="tab" onclick="tab(2)">สรุปผลการประเมิน</button>
   </div>
 
-  <!-- ══ PANE 0 — ข้อมูลส่วนตัว ══ -->
+  <!-- ══ PANE 0 ══ -->
   <div id="p0" class="pane active">
 
+    <!-- 1.1 ข้อมูลทั่วไป -->
     <div class="section card">
       <div class="sec-title">1.1 ข้อมูลทั่วไป</div>
       <div class="card-body">
@@ -242,10 +243,11 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
       </div>
     </div>
 
+    <!-- 1.2 ข้อมูลการปฏิบัติหน้าที่ -->
     <div class="section card">
       <div class="sec-title">1.2 ข้อมูลการปฏิบัติหน้าที่</div>
       <div class="card-body">
-        <p style="font-size:13px;font-weight:600;color:var(--blue);margin-bottom:7px">ตารางสอน</p>
+        <p class="sub-heading" style="margin-top:0">1.2.1 ตารางสอน</p>
         <div class="tbl-wrap">
           <table>
             <thead><tr><th>ที่</th><th>รหัสวิชา</th><th>ชื่อวิชา</th><th>ชั้น</th><th>จำนวนห้อง</th><th>ชม./สัปดาห์</th><th></th></tr></thead>
@@ -254,7 +256,7 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
         </div>
         <button class="add-row-btn" onclick="addTeach()">+ เพิ่มรายวิชา</button>
 
-        <p style="font-size:13px;font-weight:600;color:var(--blue);margin:14px 0 7px">ครูที่ปรึกษา</p>
+        <p class="sub-heading">ครูที่ปรึกษา</p>
         <div class="grid grid-3">
           <div class="field"><label class="lbl">ชั้น</label><input type="text" id="ac" placeholder="ม.1"/></div>
           <div class="field"><label class="lbl">ห้อง</label><input type="text" id="ar" placeholder="2"/></div>
@@ -263,7 +265,7 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
           <div class="field"><label class="lbl">นักเรียนหญิง</label><input type="number" id="af" placeholder="18"/></div>
         </div>
 
-        <p style="font-size:13px;font-weight:600;color:var(--blue);margin:14px 0 7px">
+        <p class="sub-heading">
           1.2.2 กิจกรรมพัฒนาผู้เรียน
           <span id="act-sem-label" style="font-weight:400;color:var(--muted)"></span>
         </p>
@@ -284,17 +286,43 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
           </table>
         </div>
         <button class="add-row-btn" onclick="addActivity()">+ เพิ่มกิจกรรม</button>
+
+        <p class="sub-heading">1.2.4 งานพิเศษในโรงเรียน / งานที่ได้รับมอบหมาย</p>
+        <div class="field">
+          <textarea id="special_work" placeholder="ระบุงานพิเศษที่ได้รับมอบหมายนอกเหนือจากการสอน เช่น งานธุรการ, งานฝ่าย, กรรมการต่างๆ..."></textarea>
+        </div>
       </div>
     </div>
 
+    <!-- 1.3 การจัดกิจกรรมการเรียนการสอน -->
     <div class="section card">
       <div class="sec-title">1.3 การจัดกิจกรรมการเรียนการสอน</div>
       <div class="card-body">
+
+        <p class="sub-heading" style="margin-top:0">1.3.1 แผนการจัดการเรียนรู้</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>รหัสวิชา</th>
+                <th>สาระ / รายวิชา</th>
+                <th style="width:90px">ระดับชั้น</th>
+                <th style="width:90px">จำนวนแผน</th>
+                <th style="width:24px"></th>
+              </tr>
+            </thead>
+            <tbody id="plan-body"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addPlan()">+ เพิ่มรายวิชา</button>
+
+        <p class="sub-heading">1.3.2 สื่อ / นวัตกรรม และวิจัยในชั้นเรียน</p>
         <div class="grid grid-2">
           <div class="field"><label class="lbl">สื่อ / นวัตกรรม</label><textarea id="innov" placeholder="เช่น tatuga class, QUIZIZZ..."></textarea></div>
           <div class="field"><label class="lbl">วิจัยในชั้นเรียน</label><textarea id="research" placeholder="ชื่อเรื่องวิจัย..."></textarea></div>
         </div>
-        <p style="font-size:13px;font-weight:600;color:var(--blue);margin:10px 0 7px">รูปแบบการสอนที่ใช้</p>
+
+        <p class="sub-heading">1.3.3 รูปแบบการสอนที่ใช้</p>
         <div class="check-grid">
           <label class="check-item"><input type="checkbox" id="m1"/> การอธิบาย</label>
           <label class="check-item"><input type="checkbox" id="m2"/> การสืบสวนสอบสวน</label>
@@ -309,11 +337,177 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
           <label class="check-item"><input type="checkbox" id="m11"/> คอมพิวเตอร์ช่วยสอน</label>
           <label class="check-item"><input type="checkbox" id="m12"/> การทัศนศึกษานอกสถานที่</label>
         </div>
+
+        <p class="sub-heading">1.3.4 แหล่งเรียนรู้นอกโรงเรียน</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px">ที่</th>
+                <th>ชื่อแหล่งเรียนรู้</th>
+                <th>เรื่อง / หัวข้อ</th>
+                <th style="width:90px">จำนวนครั้ง</th>
+                <th style="width:24px"></th>
+              </tr>
+            </thead>
+            <tbody id="learnsrc-body"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addLearnSource()">+ เพิ่มแหล่งเรียนรู้</button>
+
+        <p class="sub-heading">1.3.5 การเชิญวิทยากรภายนอกมาให้ความรู้</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px">ที่</th>
+                <th style="width:110px">วัน/เดือน/ปี</th>
+                <th>ชื่อวิทยากร</th>
+                <th>เรื่อง / หัวข้อ</th>
+                <th style="width:24px"></th>
+              </tr>
+            </thead>
+            <tbody id="extspeaker-body"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addExtSpeaker()">+ เพิ่มวิทยากร</button>
+
+        <p class="sub-heading">1.3.7 สภาพการปฏิบัติงานสอน</p>
+        <div class="tbl-wrap">
+          <table class="std-tbl" style="min-width:480px">
+            <thead>
+              <tr>
+                <th>รายการ</th>
+                <th>มากที่สุด</th>
+                <th>มาก</th>
+                <th>ปานกลาง</th>
+                <th>น้อย</th>
+                <th>น้อยที่สุด</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>สอนตรงตามวุฒิที่ได้รับ</td>
+                <td><input type="radio" name="teach_status_1" value="5"/></td>
+                <td><input type="radio" name="teach_status_1" value="4"/></td>
+                <td><input type="radio" name="teach_status_1" value="3"/></td>
+                <td><input type="radio" name="teach_status_1" value="2"/></td>
+                <td><input type="radio" name="teach_status_1" value="1"/></td>
+              </tr>
+              <tr>
+                <td>สอนตรงตามความถนัด</td>
+                <td><input type="radio" name="teach_status_2" value="5"/></td>
+                <td><input type="radio" name="teach_status_2" value="4"/></td>
+                <td><input type="radio" name="teach_status_2" value="3"/></td>
+                <td><input type="radio" name="teach_status_2" value="2"/></td>
+                <td><input type="radio" name="teach_status_2" value="1"/></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="sub-heading">1.3.10 ได้รับเชิญเป็นวิทยากร / กรรมการ</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px">ที่</th>
+                <th style="width:110px">วัน/เดือน/ปี</th>
+                <th>รายการ / เรื่อง</th>
+                <th>หน่วยงานที่เชิญ</th>
+                <th style="width:24px"></th>
+              </tr>
+            </thead>
+            <tbody id="speakerinv-body"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addSpeakerInvited()">+ เพิ่มรายการ</button>
+
       </div>
     </div>
 
+    <!-- 1.4 ผลการปฏิบัติงาน (NEW) -->
     <div class="section card">
-      <div class="sec-title">1.4 การพัฒนาตนเอง</div>
+      <div class="sec-title">1.4 ผลการปฏิบัติงาน</div>
+      <div class="card-body">
+
+        <p class="sub-heading" style="margin-top:0">1.4.1 ผลการเรียนรายวิชาที่สอน</p>
+        <div class="legend">ร = รอการประเมิน &nbsp;|&nbsp; มส = ไม่มีสิทธิ์สอบ &nbsp;|&nbsp; 0-4 = ระดับผลการเรียน</div>
+        <div class="tbl-wrap">
+          <table style="min-width:900px">
+            <thead>
+              <tr>
+                <th>รายวิชา</th>
+                <th style="width:58px">ห้อง</th>
+                <th style="width:58px">จำนวน</th>
+                <th style="width:38px">ร</th>
+                <th style="width:38px">มส</th>
+                <th style="width:38px">0</th>
+                <th style="width:38px">1</th>
+                <th style="width:38px">1.5</th>
+                <th style="width:38px">2</th>
+                <th style="width:38px">2.5</th>
+                <th style="width:38px">3</th>
+                <th style="width:38px">3.5</th>
+                <th style="width:38px">4</th>
+                <th style="width:50px">รวม</th>
+                <th style="width:24px"></th>
+              </tr>
+            </thead>
+            <tbody id="grade-body"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addGradeRow()">+ เพิ่มรายวิชา</button>
+
+        <p class="sub-heading">1.4.2 ผลการประเมินการอ่าน คิดวิเคราะห์ และเขียน</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ชั้น</th>
+                <th style="width:70px">จำนวน</th>
+                <th style="width:80px">ดีเยี่ยม</th>
+                <th style="width:80px">ดี</th>
+                <th style="width:80px">ผ่าน</th>
+                <th style="width:80px">ไม่ผ่าน</th>
+                <th style="width:24px"></th>
+              </tr>
+            </thead>
+            <tbody id="readeval-body"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addReadRow()">+ เพิ่มชั้นเรียน</button>
+
+        <p class="sub-heading">1.4.3 ผลการประเมินคุณลักษณะอันพึงประสงค์</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ชั้น</th>
+                <th style="width:70px">จำนวน</th>
+                <th style="width:80px">ดีเยี่ยม</th>
+                <th style="width:80px">ดี</th>
+                <th style="width:80px">ผ่าน</th>
+                <th style="width:80px">ไม่ผ่าน</th>
+                <th style="width:24px"></th>
+              </tr>
+            </thead>
+            <tbody id="chareval-body"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addCharRow()">+ เพิ่มชั้นเรียน</button>
+
+        <p class="sub-heading">งานฝ่าย / กลุ่มงานที่รับผิดชอบ</p>
+        <div class="field">
+          <textarea id="dept_work" placeholder="ระบุงานฝ่าย / กลุ่มงานที่รับผิดชอบ..."></textarea>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 1.5 การพัฒนาตนเอง -->
+    <div class="section card">
+      <div class="sec-title">1.5 การพัฒนาตนเอง</div>
       <div class="card-body">
         <div class="tbl-wrap">
           <table>
@@ -338,8 +532,9 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
       </div>
     </div>
 
+    <!-- 1.6 รางวัล / เกียรติคุณ -->
     <div class="section card">
-      <div class="sec-title">1.5 รางวัล / เกียรติคุณ</div>
+      <div class="sec-title">1.6 รางวัล / เกียรติคุณ</div>
       <div class="card-body">
         <div class="tbl-wrap">
           <table>
@@ -360,6 +555,7 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
       </div>
     </div>
 
+    <!-- การประเมินแผน -->
     <div class="section card">
       <div class="sec-title">การประเมินแผนการจัดการเรียนรู้</div>
       <div class="card-body">
@@ -585,6 +781,7 @@ function tab(i) {
 
 function delRow(btn) { btn.closest('tr').remove(); }
 
+// ── Row adders ──
 function addTeach() {
   const tb = document.getElementById('teach-body');
   const n  = tb.rows.length + 1;
@@ -594,6 +791,106 @@ function addTeach() {
     `<td><input type="number" min="0" value="0"/></td>` +
     `<td><button class="del-btn" onclick="delRow(this)">✕</button></td></tr>`);
 }
+
+function addPlan() {
+  document.getElementById('plan-body').insertAdjacentHTML('beforeend',
+    `<tr>
+      <td><input type="text" placeholder="รหัสวิชา"/></td>
+      <td><input type="text" placeholder="ชื่อวิชา"/></td>
+      <td><input type="text" placeholder="ชั้น"/></td>
+      <td><input type="number" min="0" value="1" style="text-align:center"/></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    </tr>`);
+}
+
+function addLearnSource() {
+  const tb = document.getElementById('learnsrc-body');
+  const n  = tb.rows.length + 1;
+  tb.insertAdjacentHTML('beforeend',
+    `<tr>
+      <td style="text-align:center">${n}</td>
+      <td><input type="text" placeholder="ชื่อแหล่งเรียนรู้"/></td>
+      <td><input type="text" placeholder="เรื่อง / หัวข้อ"/></td>
+      <td><input type="number" min="0" value="1" style="text-align:center"/></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    </tr>`);
+}
+
+function addExtSpeaker() {
+  const tb = document.getElementById('extspeaker-body');
+  const n  = tb.rows.length + 1;
+  tb.insertAdjacentHTML('beforeend',
+    `<tr>
+      <td style="text-align:center">${n}</td>
+      <td><input type="date"/></td>
+      <td><input type="text" placeholder="ชื่อวิทยากร"/></td>
+      <td><input type="text" placeholder="เรื่อง / หัวข้อ"/></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    </tr>`);
+}
+
+function addSpeakerInvited() {
+  const tb = document.getElementById('speakerinv-body');
+  const n  = tb.rows.length + 1;
+  tb.insertAdjacentHTML('beforeend',
+    `<tr>
+      <td style="text-align:center">${n}</td>
+      <td><input type="date"/></td>
+      <td><input type="text" placeholder="รายการ / เรื่อง"/></td>
+      <td><input type="text" placeholder="หน่วยงานที่เชิญ"/></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    </tr>`);
+}
+
+function calcGradeSum(input) {
+  const cells = input.closest('tr').querySelectorAll('td');
+  let s = 0;
+  for (let ci = 3; ci <= 12; ci++) {
+    s += parseFloat(cells[ci].querySelector('input')?.value || 0) || 0;
+  }
+  cells[13].textContent = s;
+}
+
+function addGradeRow() {
+  const gi = `<input type="number" min="0" value="0" style="text-align:center;min-width:30px" oninput="calcGradeSum(this)"/>`;
+  document.getElementById('grade-body').insertAdjacentHTML('beforeend',
+    `<tr>
+      <td><input type="text" placeholder="ชื่อวิชา"/></td>
+      <td><input type="text" style="text-align:center" placeholder="ห้อง"/></td>
+      <td><input type="number" min="0" value="0" style="text-align:center"/></td>
+      <td>${gi}</td><td>${gi}</td><td>${gi}</td><td>${gi}</td><td>${gi}</td>
+      <td>${gi}</td><td>${gi}</td><td>${gi}</td><td>${gi}</td><td>${gi}</td>
+      <td style="font-weight:600;text-align:center;color:var(--blue)">0</td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    </tr>`);
+}
+
+function addReadRow() {
+  document.getElementById('readeval-body').insertAdjacentHTML('beforeend',
+    `<tr>
+      <td><input type="text" placeholder="ชั้น"/></td>
+      <td><input type="number" min="0" value="0" style="text-align:center"/></td>
+      <td><input type="number" min="0" value="0" style="text-align:center"/></td>
+      <td><input type="number" min="0" value="0" style="text-align:center"/></td>
+      <td><input type="number" min="0" value="0" style="text-align:center"/></td>
+      <td><input type="number" min="0" value="0" style="text-align:center"/></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    </tr>`);
+}
+
+function addCharRow() {
+  document.getElementById('chareval-body').insertAdjacentHTML('beforeend',
+    `<tr>
+      <td><input type="text" placeholder="ชั้น"/></td>
+      <td><input type="number" min="0" value="0" style="text-align:center"/></td>
+      <td><input type="number" min="0" value="0" style="text-align:center"/></td>
+      <td><input type="number" min="0" value="0" style="text-align:center"/></td>
+      <td><input type="number" min="0" value="0" style="text-align:center"/></td>
+      <td><input type="number" min="0" value="0" style="text-align:center"/></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    </tr>`);
+}
+
 function addDev() {
   document.getElementById('dev-body').insertAdjacentHTML('beforeend',
     `<tr>
@@ -613,7 +910,9 @@ function addDev() {
     </tr>`);
   updateDevSummary();
 }
+
 function delRowDev(btn) { btn.closest('tr').remove(); updateDevSummary(); }
+
 function updateDevSummary() {
   const rows = document.querySelectorAll('#dev-body tr');
   let total = 0;
@@ -621,6 +920,7 @@ function updateDevSummary() {
   const el = document.getElementById('dev-summary');
   if (el) el.textContent = rows.length ? `อบรม ${rows.length} ครั้ง | รวม ${total} ชั่วโมง` : '';
 }
+
 async function uploadEvidence(input) {
   if (!input.files || !input.files[0]) return;
   const td  = input.closest('td');
@@ -649,6 +949,7 @@ async function uploadEvidence(input) {
     input.value = '';
   }
 }
+
 function addAward() {
   document.getElementById('award-body').insertAdjacentHTML('beforeend',
     `<tr>
@@ -702,16 +1003,25 @@ function trackProgress() {
 // ── Collect all form data ──
 function collectFormData() {
   const d = {};
+
   ['fname','lname','pos','vithaya','d1','i1','d2','i2','bday','sdate','awork',
    'salary','vsal','leave','subj','syear','innov','research','ac','ar','at','am','af'
   ].forEach(id => { const el = document.getElementById(id); if (el) d[id] = el.value; });
   d.sem = document.getElementById('sem')?.value || '2';
+
+  d.special_work = document.getElementById('special_work')?.value || '';
+  d.dept_work    = document.getElementById('dept_work')?.value || '';
 
   d.methods = [];
   for (let i = 1; i <= 12; i++) {
     const cb = document.getElementById(`m${i}`);
     if (cb?.checked) d.methods.push(`m${i}`);
   }
+
+  const ts1 = document.querySelector('[name="teach_status_1"]:checked');
+  const ts2 = document.querySelector('[name="teach_status_2"]:checked');
+  d.teach_status_1 = ts1 ? ts1.value : '';
+  d.teach_status_2 = ts2 ? ts2.value : '';
 
   d.teach_rows = [];
   document.querySelectorAll('#teach-body tr').forEach(tr => {
@@ -723,6 +1033,107 @@ function collectFormData() {
         cls:   cells[3].querySelector('input')?.value || '',
         rooms: cells[4].querySelector('input')?.value || '',
         hours: cells[5].querySelector('input')?.value || ''
+      });
+    }
+  });
+
+  d.plan_rows = [];
+  document.querySelectorAll('#plan-body tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length >= 4) {
+      d.plan_rows.push({
+        code:  cells[0].querySelector('input')?.value || '',
+        name:  cells[1].querySelector('input')?.value || '',
+        cls:   cells[2].querySelector('input')?.value || '',
+        plans: cells[3].querySelector('input')?.value || ''
+      });
+    }
+  });
+
+  d.learn_source_rows = [];
+  document.querySelectorAll('#learnsrc-body tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length >= 4) {
+      d.learn_source_rows.push({
+        name:  cells[1].querySelector('input')?.value || '',
+        topic: cells[2].querySelector('input')?.value || '',
+        times: cells[3].querySelector('input')?.value || ''
+      });
+    }
+  });
+
+  d.ext_speaker_rows = [];
+  document.querySelectorAll('#extspeaker-body tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length >= 4) {
+      d.ext_speaker_rows.push({
+        date:  cells[1].querySelector('input')?.value || '',
+        name:  cells[2].querySelector('input')?.value || '',
+        topic: cells[3].querySelector('input')?.value || ''
+      });
+    }
+  });
+
+  d.speaker_invited_rows = [];
+  document.querySelectorAll('#speakerinv-body tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length >= 4) {
+      d.speaker_invited_rows.push({
+        date:  cells[1].querySelector('input')?.value || '',
+        topic: cells[2].querySelector('input')?.value || '',
+        org:   cells[3].querySelector('input')?.value || ''
+      });
+    }
+  });
+
+  d.grade_rows = [];
+  document.querySelectorAll('#grade-body tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length >= 13) {
+      d.grade_rows.push({
+        subject: cells[0].querySelector('input')?.value || '',
+        room:    cells[1].querySelector('input')?.value || '',
+        total:   cells[2].querySelector('input')?.value || '',
+        r:       cells[3].querySelector('input')?.value || '',
+        ms:      cells[4].querySelector('input')?.value || '',
+        g0:      cells[5].querySelector('input')?.value || '',
+        g1:      cells[6].querySelector('input')?.value || '',
+        g15:     cells[7].querySelector('input')?.value || '',
+        g2:      cells[8].querySelector('input')?.value || '',
+        g25:     cells[9].querySelector('input')?.value || '',
+        g3:      cells[10].querySelector('input')?.value || '',
+        g35:     cells[11].querySelector('input')?.value || '',
+        g4:      cells[12].querySelector('input')?.value || ''
+      });
+    }
+  });
+
+  d.read_eval_rows = [];
+  document.querySelectorAll('#readeval-body tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length >= 6) {
+      d.read_eval_rows.push({
+        cls:   cells[0].querySelector('input')?.value || '',
+        total: cells[1].querySelector('input')?.value || '',
+        exc:   cells[2].querySelector('input')?.value || '',
+        good:  cells[3].querySelector('input')?.value || '',
+        pass:  cells[4].querySelector('input')?.value || '',
+        fail:  cells[5].querySelector('input')?.value || ''
+      });
+    }
+  });
+
+  d.char_eval_rows = [];
+  document.querySelectorAll('#chareval-body tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length >= 6) {
+      d.char_eval_rows.push({
+        cls:   cells[0].querySelector('input')?.value || '',
+        total: cells[1].querySelector('input')?.value || '',
+        exc:   cells[2].querySelector('input')?.value || '',
+        good:  cells[3].querySelector('input')?.value || '',
+        pass:  cells[4].querySelector('input')?.value || '',
+        fail:  cells[5].querySelector('input')?.value || ''
       });
     }
   });
@@ -761,11 +1172,11 @@ function collectFormData() {
     const cells = tr.querySelectorAll('td');
     if (cells.length >= 6) {
       d.activity_rows.push({
-        name:    cells[1].querySelector('input')?.value || '',
-        cls:     cells[2].querySelector('input')?.value || '',
-        total:   cells[3].querySelector('input')?.value || '',
-        pass:    cells[4].querySelector('input')?.value || '',
-        fail:    cells[5].querySelector('input')?.value || ''
+        name:  cells[1].querySelector('input')?.value || '',
+        cls:   cells[2].querySelector('input')?.value || '',
+        total: cells[3].querySelector('input')?.value || '',
+        pass:  cells[4].querySelector('input')?.value || '',
+        fail:  cells[5].querySelector('input')?.value || ''
       });
     }
   });
@@ -784,13 +1195,15 @@ function collectFormData() {
   return d;
 }
 
-// ── Load form data from object ──
+// ── esc helper ──
 function esc(str) {
   return String(str ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// ── Load form data ──
 function loadFormData(data) {
   if (!data || typeof data !== 'object') return;
+
   ['fname','lname','pos','vithaya','d1','i1','d2','i2','bday','sdate','awork',
    'salary','vsal','leave','subj','syear','innov','research','ac','ar','at','am','af'
   ].forEach(id => {
@@ -799,9 +1212,25 @@ function loadFormData(data) {
   });
   if (data.sem) document.getElementById('sem').value = data.sem;
 
+  const swEl = document.getElementById('special_work');
+  if (swEl && data.special_work != null) swEl.value = data.special_work;
+
+  const dwEl = document.getElementById('dept_work');
+  if (dwEl && data.dept_work != null) dwEl.value = data.dept_work;
+
   if (Array.isArray(data.methods))
     data.methods.forEach(id => { const cb = document.getElementById(id); if (cb) cb.checked = true; });
 
+  if (data.teach_status_1) {
+    const r = document.querySelector(`[name="teach_status_1"][value="${data.teach_status_1}"]`);
+    if (r) r.checked = true;
+  }
+  if (data.teach_status_2) {
+    const r = document.querySelector(`[name="teach_status_2"][value="${data.teach_status_2}"]`);
+    if (r) r.checked = true;
+  }
+
+  // ตารางสอน
   const tb = document.getElementById('teach-body');
   if (Array.isArray(data.teach_rows) && data.teach_rows.length) {
     tb.innerHTML = '';
@@ -818,6 +1247,128 @@ function loadFormData(data) {
   }
   if (!tb.rows.length) addTeach();
 
+  // 1.3.1 แผนการจัดการเรียนรู้
+  const planb = document.getElementById('plan-body');
+  if (Array.isArray(data.plan_rows) && data.plan_rows.length) {
+    planb.innerHTML = '';
+    data.plan_rows.forEach(row => {
+      planb.insertAdjacentHTML('beforeend',
+        `<tr>
+          <td><input type="text" value="${esc(row.code)}"/></td>
+          <td><input type="text" value="${esc(row.name)}"/></td>
+          <td><input type="text" value="${esc(row.cls)}"/></td>
+          <td><input type="number" min="0" value="${esc(row.plans)}" style="text-align:center"/></td>
+          <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+        </tr>`);
+    });
+  }
+
+  // 1.3.4 แหล่งเรียนรู้
+  const lsb = document.getElementById('learnsrc-body');
+  if (Array.isArray(data.learn_source_rows) && data.learn_source_rows.length) {
+    lsb.innerHTML = '';
+    data.learn_source_rows.forEach((row, i) => {
+      lsb.insertAdjacentHTML('beforeend',
+        `<tr>
+          <td style="text-align:center">${i+1}</td>
+          <td><input type="text" value="${esc(row.name)}"/></td>
+          <td><input type="text" value="${esc(row.topic)}"/></td>
+          <td><input type="number" min="0" value="${esc(row.times)}" style="text-align:center"/></td>
+          <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+        </tr>`);
+    });
+  }
+
+  // 1.3.5 เชิญวิทยากร
+  const esb = document.getElementById('extspeaker-body');
+  if (Array.isArray(data.ext_speaker_rows) && data.ext_speaker_rows.length) {
+    esb.innerHTML = '';
+    data.ext_speaker_rows.forEach((row, i) => {
+      esb.insertAdjacentHTML('beforeend',
+        `<tr>
+          <td style="text-align:center">${i+1}</td>
+          <td><input type="date" value="${esc(row.date)}"/></td>
+          <td><input type="text" value="${esc(row.name)}"/></td>
+          <td><input type="text" value="${esc(row.topic)}"/></td>
+          <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+        </tr>`);
+    });
+  }
+
+  // 1.3.10 ได้รับเชิญเป็นวิทยากร
+  const sib = document.getElementById('speakerinv-body');
+  if (Array.isArray(data.speaker_invited_rows) && data.speaker_invited_rows.length) {
+    sib.innerHTML = '';
+    data.speaker_invited_rows.forEach((row, i) => {
+      sib.insertAdjacentHTML('beforeend',
+        `<tr>
+          <td style="text-align:center">${i+1}</td>
+          <td><input type="date" value="${esc(row.date)}"/></td>
+          <td><input type="text" value="${esc(row.topic)}"/></td>
+          <td><input type="text" value="${esc(row.org)}"/></td>
+          <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+        </tr>`);
+    });
+  }
+
+  // 1.4.1 ผลการเรียน
+  const grb = document.getElementById('grade-body');
+  if (Array.isArray(data.grade_rows) && data.grade_rows.length) {
+    grb.innerHTML = '';
+    data.grade_rows.forEach(row => {
+      const sum = ['r','ms','g0','g1','g15','g2','g25','g3','g35','g4'].reduce((s,k) => s + (parseFloat(row[k]) || 0), 0);
+      const gi = (v) => `<input type="number" min="0" value="${esc(v||'0')}" style="text-align:center;min-width:30px" oninput="calcGradeSum(this)"/>`;
+      grb.insertAdjacentHTML('beforeend',
+        `<tr>
+          <td><input type="text" value="${esc(row.subject)}"/></td>
+          <td><input type="text" style="text-align:center" value="${esc(row.room)}"/></td>
+          <td><input type="number" min="0" value="${esc(row.total)}" style="text-align:center"/></td>
+          <td>${gi(row.r)}</td><td>${gi(row.ms)}</td><td>${gi(row.g0)}</td>
+          <td>${gi(row.g1)}</td><td>${gi(row.g15)}</td><td>${gi(row.g2)}</td>
+          <td>${gi(row.g25)}</td><td>${gi(row.g3)}</td><td>${gi(row.g35)}</td><td>${gi(row.g4)}</td>
+          <td style="font-weight:600;text-align:center;color:var(--blue)">${sum}</td>
+          <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+        </tr>`);
+    });
+  }
+
+  // 1.4.2 การอ่านคิดวิเคราะห์
+  const reb = document.getElementById('readeval-body');
+  if (Array.isArray(data.read_eval_rows) && data.read_eval_rows.length) {
+    reb.innerHTML = '';
+    data.read_eval_rows.forEach(row => {
+      reb.insertAdjacentHTML('beforeend',
+        `<tr>
+          <td><input type="text" value="${esc(row.cls)}"/></td>
+          <td><input type="number" min="0" value="${esc(row.total)}" style="text-align:center"/></td>
+          <td><input type="number" min="0" value="${esc(row.exc)}" style="text-align:center"/></td>
+          <td><input type="number" min="0" value="${esc(row.good)}" style="text-align:center"/></td>
+          <td><input type="number" min="0" value="${esc(row.pass)}" style="text-align:center"/></td>
+          <td><input type="number" min="0" value="${esc(row.fail)}" style="text-align:center"/></td>
+          <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+        </tr>`);
+    });
+  }
+
+  // 1.4.3 คุณลักษณะ
+  const ceb = document.getElementById('chareval-body');
+  if (Array.isArray(data.char_eval_rows) && data.char_eval_rows.length) {
+    ceb.innerHTML = '';
+    data.char_eval_rows.forEach(row => {
+      ceb.insertAdjacentHTML('beforeend',
+        `<tr>
+          <td><input type="text" value="${esc(row.cls)}"/></td>
+          <td><input type="number" min="0" value="${esc(row.total)}" style="text-align:center"/></td>
+          <td><input type="number" min="0" value="${esc(row.exc)}" style="text-align:center"/></td>
+          <td><input type="number" min="0" value="${esc(row.good)}" style="text-align:center"/></td>
+          <td><input type="number" min="0" value="${esc(row.pass)}" style="text-align:center"/></td>
+          <td><input type="number" min="0" value="${esc(row.fail)}" style="text-align:center"/></td>
+          <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+        </tr>`);
+    });
+  }
+
+  // 1.5 การพัฒนาตนเอง
   const db = document.getElementById('dev-body');
   if (Array.isArray(data.dev_rows) && data.dev_rows.length) {
     db.innerHTML = '';
@@ -849,6 +1400,7 @@ function loadFormData(data) {
   if (!db.rows.length) addDev();
   updateDevSummary();
 
+  // 1.6 รางวัล
   const ab = document.getElementById('award-body');
   if (Array.isArray(data.award_rows) && data.award_rows.length) {
     ab.innerHTML = '';
@@ -878,6 +1430,7 @@ function loadFormData(data) {
   }
   if (!ab.rows.length) addAward();
 
+  // กิจกรรมพัฒนาผู้เรียน
   const actb = document.getElementById('act-body');
   if (Array.isArray(data.activity_rows) && data.activity_rows.length) {
     actb.innerHTML = '';
