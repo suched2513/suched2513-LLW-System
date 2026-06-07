@@ -155,6 +155,10 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
 .sig-line{border-bottom:1px solid var(--border);min-height:38px;margin-bottom:5px}
 .sig-name{font-size:13px;font-weight:500}
 .sig-pos{font-size:12px;color:var(--muted)}
+.ev-btn{background:none;border:1px solid var(--border);border-radius:5px;cursor:pointer;padding:2px 6px;font-size:14px;color:var(--blue);line-height:1;transition:all .15s;flex-shrink:0}
+.ev-btn:hover{background:var(--blue-light);border-color:var(--blue-mid)}
+.ev-label{font-size:11px;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.ev-label a{color:var(--blue);text-decoration:none}.ev-label a:hover{text-decoration:underline}
 .legend{font-size:12px;color:var(--muted);margin-bottom:9px;background:var(--blue-light);padding:7px 11px;border-radius:6px}
 @media print{
   .no-print{display:none!important}
@@ -313,11 +317,24 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
       <div class="card-body">
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>วัน/เดือน/ปี</th><th>เรื่อง / การอบรม</th><th>หน่วยงานที่จัด</th><th>หลักฐาน</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th>วัน/เดือน/ปี</th>
+                <th>เรื่อง / การอบรม</th>
+                <th>หน่วยงานที่จัด</th>
+                <th style="width:72px">ชม.</th>
+                <th>หลักฐาน</th>
+                <th style="width:80px">ไฟล์</th>
+                <th style="width:24px"></th>
+              </tr>
+            </thead>
             <tbody id="dev-body"></tbody>
           </table>
         </div>
-        <button class="add-row-btn" onclick="addDev()">+ เพิ่มรายการ</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:8px">
+          <button class="add-row-btn" onclick="addDev()">+ เพิ่มรายการ</button>
+          <div id="dev-summary" style="font-size:12px;color:var(--muted);background:var(--blue-light);padding:5px 12px;border-radius:6px"></div>
+        </div>
       </div>
     </div>
 
@@ -570,9 +587,58 @@ function addTeach() {
 }
 function addDev() {
   document.getElementById('dev-body').insertAdjacentHTML('beforeend',
-    `<tr><td><input type="date"/></td><td><input type="text"/></td>` +
-    `<td><input type="text"/></td><td><input type="text"/></td>` +
-    `<td><button class="del-btn" onclick="delRow(this)">✕</button></td></tr>`);
+    `<tr>
+      <td><input type="date"/></td>
+      <td><input type="text" placeholder="เรื่อง / การอบรม"/></td>
+      <td><input type="text" placeholder="หน่วยงานที่จัด"/></td>
+      <td><input type="number" min="0" value="0" class="dev-hours" style="text-align:center" oninput="updateDevSummary()"/></td>
+      <td><input type="text" placeholder="ชื่อหลักฐาน"/></td>
+      <td><div style="display:flex;align-items:center;gap:3px">
+        <input type="file" class="ev-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="uploadEvidence(this)"/>
+        <input type="hidden" class="ev-path" value=""/>
+        <input type="hidden" class="ev-name-val" value=""/>
+        <button type="button" class="ev-btn" onclick="this.parentElement.querySelector('.ev-input').click()">📎</button>
+        <span class="ev-label"></span>
+      </div></td>
+      <td><button class="del-btn" onclick="delRowDev(this)">✕</button></td>
+    </tr>`);
+  updateDevSummary();
+}
+function delRowDev(btn) { btn.closest('tr').remove(); updateDevSummary(); }
+function updateDevSummary() {
+  const rows = document.querySelectorAll('#dev-body tr');
+  let total = 0;
+  rows.forEach(tr => { const h = tr.querySelector('.dev-hours'); if (h) total += parseFloat(h.value) || 0; });
+  const el = document.getElementById('dev-summary');
+  if (el) el.textContent = rows.length ? `อบรม ${rows.length} ครั้ง | รวม ${total} ชั่วโมง` : '';
+}
+async function uploadEvidence(input) {
+  if (!input.files || !input.files[0]) return;
+  const td  = input.closest('td');
+  const btn = td.querySelector('.ev-btn');
+  const lbl = td.querySelector('.ev-label');
+  const evp = td.querySelector('.ev-path');
+  const evn = td.querySelector('.ev-name-val');
+  if (btn) btn.textContent = '⏳';
+  try {
+    const fd = new FormData();
+    fd.append('file', input.files[0]);
+    const resp = await fetch(BASE_PATH + '/sar/api/upload_evidence.php', {method:'POST', body:fd});
+    const json = await resp.json();
+    if (json.status === 'success') {
+      evp.value = json.path;
+      evn.value = json.filename;
+      const sn = json.filename.length > 14 ? json.filename.substring(0, 14) + '…' : json.filename;
+      lbl.innerHTML = `<a href="${BASE_PATH}/sar/api/serve_evidence.php?f=${encodeURIComponent(json.path)}" target="_blank" title="${esc(json.filename)}">${esc(sn)}</a>`;
+    } else {
+      Swal.fire({icon:'error', title:'อัปโหลดไม่สำเร็จ', text: json.message || 'ลองใหม่'});
+    }
+  } catch(e) {
+    Swal.fire({icon:'error', title:'เกิดข้อผิดพลาด', text:'ไม่สามารถอัปโหลดได้'});
+  } finally {
+    if (btn) btn.textContent = '📎';
+    input.value = '';
+  }
 }
 function addAward() {
   document.getElementById('award-body').insertAdjacentHTML('beforeend',
@@ -643,9 +709,17 @@ function collectFormData() {
 
   d.dev_rows = [];
   document.querySelectorAll('#dev-body tr').forEach(tr => {
-    const ins = tr.querySelectorAll('input');
-    if (ins.length >= 4)
-      d.dev_rows.push({date: ins[0].value, title: ins[1].value, org: ins[2].value, evidence: ins[3].value});
+    const cells = tr.querySelectorAll('td');
+    if (cells.length < 7) return;
+    d.dev_rows.push({
+      date:      cells[0].querySelector('input')?.value || '',
+      title:     cells[1].querySelector('input')?.value || '',
+      org:       cells[2].querySelector('input')?.value || '',
+      hours:     cells[3].querySelector('input')?.value || '0',
+      evidence:  cells[4].querySelector('input')?.value || '',
+      file_path: cells[5].querySelector('.ev-path')?.value || '',
+      file_name: cells[5].querySelector('.ev-name-val')?.value || ''
+    });
   });
 
   d.award_rows = [];
@@ -721,15 +795,32 @@ function loadFormData(data) {
   if (Array.isArray(data.dev_rows) && data.dev_rows.length) {
     db.innerHTML = '';
     data.dev_rows.forEach(row => {
+      const fp = row.file_path || '';
+      const fn = row.file_name || '';
+      const sn = fn.length > 14 ? fn.substring(0, 14) + '…' : fn;
+      const fileLabel = fp
+        ? `<a href="${BASE_PATH}/sar/api/serve_evidence.php?f=${encodeURIComponent(fp)}" target="_blank" title="${esc(fn)}">${esc(sn)}</a>`
+        : '';
       db.insertAdjacentHTML('beforeend',
-        `<tr><td><input type="date" value="${esc(row.date)}"/></td>` +
-        `<td><input type="text" value="${esc(row.title)}"/></td>` +
-        `<td><input type="text" value="${esc(row.org)}"/></td>` +
-        `<td><input type="text" value="${esc(row.evidence)}"/></td>` +
-        `<td><button class="del-btn" onclick="delRow(this)">✕</button></td></tr>`);
+        `<tr>
+          <td><input type="date" value="${esc(row.date)}"/></td>
+          <td><input type="text" value="${esc(row.title)}"/></td>
+          <td><input type="text" value="${esc(row.org)}"/></td>
+          <td><input type="number" min="0" value="${esc(row.hours||'0')}" class="dev-hours" style="text-align:center" oninput="updateDevSummary()"/></td>
+          <td><input type="text" value="${esc(row.evidence)}"/></td>
+          <td><div style="display:flex;align-items:center;gap:3px">
+            <input type="file" class="ev-input" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onchange="uploadEvidence(this)"/>
+            <input type="hidden" class="ev-path" value="${esc(fp)}"/>
+            <input type="hidden" class="ev-name-val" value="${esc(fn)}"/>
+            <button type="button" class="ev-btn" onclick="this.parentElement.querySelector('.ev-input').click()">📎</button>
+            <span class="ev-label">${fileLabel}</span>
+          </div></td>
+          <td><button class="del-btn" onclick="delRowDev(this)">✕</button></td>
+        </tr>`);
     });
   }
   if (!db.rows.length) addDev();
+  updateDevSummary();
 
   const ab = document.getElementById('award-body');
   if (Array.isArray(data.award_rows) && data.award_rows.length) {
