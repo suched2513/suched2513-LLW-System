@@ -26,6 +26,7 @@ elseif (strpos($full_url, '/student_leave/') !== false)   $activeSystem = 'stude
 elseif (strpos($full_url, '/duty/') !== false)            $activeSystem = 'duty';
 elseif (strpos($full_url, '/club/') !== false || strpos($full_url, '/student_club/') !== false) $activeSystem = 'club';
 elseif (strpos($full_url, '/lms/') !== false)             $activeSystem = 'lms';
+elseif (strpos($full_url, '/sar/') !== false)             $activeSystem = 'sar';
 elseif (strpos($full_url, '/health/') !== false)           $activeSystem = 'health';
 elseif (strpos($full_url, '/parent_meeting/') !== false)   $activeSystem = 'parent_meeting';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
@@ -161,6 +162,10 @@ $subMenus = [
         ['icon' => 'fas fa-chalkboard',      'label' => 'รายงานระดับห้องเรียน',  'url' => $base_path . '/health/report_class.php',  'roles' => ['super_admin']],
         ['icon' => 'fas fa-school',          'label' => 'ภาพรวมโรงเรียน',        'url' => $base_path . '/health/report_school.php', 'roles' => ['super_admin']],
         ['icon' => 'fas fa-table',           'label' => 'เกณฑ์มาตรฐาน',          'url' => $base_path . '/health/standards.php',     'roles' => ['super_admin']],
+    ],
+    'sar' => [
+        ['icon' => 'fas fa-clipboard-list', 'label' => 'รายงาน SAR ของฉัน', 'url' => $base_path . '/sar/index.php'],
+        ['icon' => 'fas fa-plus-circle',    'label' => 'สร้าง SAR ใหม่',    'url' => $base_path . '/sar/fill.php'],
     ],
     'parent_meeting' => [
         ['icon' => 'fas fa-tachometer-alt',  'label' => 'Dashboard',         'url' => $base_path . '/parent_meeting/dashboard.php'],
@@ -568,6 +573,24 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
 
                 <!-- 5. PERSONNEL & HR -->
                 <li class="nav-header">งานบุคคลและสวัสดิการ</li>
+
+                <!-- SAR -->
+                <li class="nav-item <?= $activeSystem === 'sar' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'sar' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-clipboard-list" style="color:#f59e0b"></i>
+                        <p>รายงาน SAR <i class="nav-arrow fas fa-angle-left"></i></p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <?php foreach ($subMenus['sar'] as $sub): ?>
+                        <li class="nav-item">
+                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
+                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
+                                <p><?= $sub['label'] ?></p>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </li>
 
                 <!-- WFH & Leave -->
                 <li class="nav-item <?= in_array($activeSystem, ['wfh', 'teacher_leave', 'leave']) ? 'menu-open' : '' ?>">
