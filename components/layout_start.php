@@ -25,6 +25,10 @@ $systemLabels = [
     'student_leave' => 'ใบลานักเรียน',
     'plc'           => 'PLC',
     'homeroom'      => 'ระบบที่ปรึกษา',
+    'sar'           => 'รายงาน SAR',
+    'lms'           => 'LMS',
+    'health'        => 'สุขภาวะนักเรียน',
+    'parent_meeting'=> 'ประชุมผู้ปกครอง',
 ];
 if (isset($activeSystem) && $activeSystem !== 'portal') {
     $breadcrumbs[] = ['label' => $systemLabels[$activeSystem] ?? $activeSystem];
@@ -51,6 +55,10 @@ $headerBg = [
     'homeroom'      => 'linear-gradient(135deg,#d97706 0%,#b45309 100%)',
     'info'          => 'linear-gradient(135deg,#475569 0%,#334155 100%)',
     'plc'           => 'linear-gradient(135deg,#16a34a 0%,#0d9488 100%)',
+    'sar'           => 'linear-gradient(135deg,#d97706 0%,#f59e0b 100%)',
+    'lms'           => 'linear-gradient(135deg,#7c3aed 0%,#8B5CF6 100%)',
+    'health'        => 'linear-gradient(135deg,#059669 0%,#10B981 100%)',
+    'parent_meeting'=> 'linear-gradient(135deg,#2563eb 0%,#4338ca 100%)',
 ];
 $headerIcons = [
     'portal'        => 'fas fa-th-large',
@@ -69,6 +77,10 @@ $headerIcons = [
     'homeroom'      => 'fas fa-chalkboard-teacher',
     'info'          => 'fas fa-address-book',
     'plc'           => 'fas fa-book-reader',
+    'sar'           => 'fas fa-clipboard-list',
+    'lms'           => 'fas fa-chalkboard',
+    'health'        => 'fas fa-heartbeat',
+    'parent_meeting'=> 'fas fa-handshake',
 ];
 $bgStyle = $headerBg[$activeSystem]    ?? $headerBg['portal'];
 $hdrIcon = $headerIcons[$activeSystem] ?? 'fas fa-cog';
