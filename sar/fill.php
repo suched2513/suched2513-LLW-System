@@ -227,11 +227,11 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
           <div class="field"><label class="lbl">กลุ่มสาระที่สอน</label><input type="text" id="subj" placeholder="ภาษาไทย" oninput="trackProgress()"/></div>
           <div class="field"><label class="lbl">ภาคเรียน / ปีการศึกษา</label>
             <div class="inline-pair">
-              <select id="sem">
+              <select id="sem" onchange="updateActLabel()">
                 <option value="1">ภาคเรียนที่ 1</option>
                 <option value="2" selected>ภาคเรียนที่ 2</option>
               </select>
-              <input type="text" id="syear" placeholder="2567" style="max-width:88px"/>
+              <input type="text" id="syear" placeholder="2567" style="max-width:88px" oninput="updateActLabel()"/>
             </div>
           </div>
         </div>
@@ -258,6 +258,28 @@ td input:focus,td select:focus{background:#f0f5ff;border-radius:4px;outline:none
           <div class="field"><label class="lbl">นักเรียนชาย</label><input type="number" id="am" placeholder="12"/></div>
           <div class="field"><label class="lbl">นักเรียนหญิง</label><input type="number" id="af" placeholder="18"/></div>
         </div>
+
+        <p style="font-size:13px;font-weight:600;color:var(--blue);margin:14px 0 7px">
+          1.2.2 กิจกรรมพัฒนาผู้เรียน
+          <span id="act-sem-label" style="font-weight:400;color:var(--muted)"></span>
+        </p>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px">ที่</th>
+                <th>กิจกรรมพัฒนาผู้เรียน และชุมนุม</th>
+                <th style="width:80px">ชั้น / ห้อง</th>
+                <th style="width:80px">จำนวนนักเรียน</th>
+                <th style="width:70px">ผ่าน (คน)</th>
+                <th style="width:70px">ไม่ผ่าน (คน)</th>
+                <th style="width:28px"></th>
+              </tr>
+            </thead>
+            <tbody id="act-body"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" onclick="addActivity()">+ เพิ่มกิจกรรม</button>
       </div>
     </div>
 
@@ -559,6 +581,24 @@ function addAward() {
     `<td><button class="del-btn" onclick="delRow(this)">✕</button></td></tr>`);
 }
 
+function addActivity() {
+  const tb = document.getElementById('act-body');
+  const n  = tb.rows.length + 1;
+  tb.insertAdjacentHTML('beforeend',
+    `<tr><td>${n}</td><td><input type="text"/></td>` +
+    `<td><input type="text"/></td><td><input type="number" min="0" value="0"/></td>` +
+    `<td><input type="number" min="0" value="0"/></td>` +
+    `<td><input type="number" min="0" value="0"/></td>` +
+    `<td><button class="del-btn" onclick="delRow(this)">✕</button></td></tr>`);
+}
+
+function updateActLabel() {
+  const sem  = document.getElementById('sem')?.value || '';
+  const year = document.getElementById('syear')?.value || '';
+  const el   = document.getElementById('act-sem-label');
+  if (el) el.textContent = (sem || year) ? `— ภาคเรียนที่ ${sem} ปีการศึกษา ${year}` : '';
+}
+
 function updateSig() {
   const fn = document.getElementById('fname').value;
   const ln = document.getElementById('lname').value;
@@ -570,6 +610,7 @@ function updateSig() {
 function trackProgress() {
   const filled = ['fname','lname','pos','subj'].filter(id => document.getElementById(id)?.value.trim()).length;
   document.getElementById('prog').style.width = `${filled * 25}%`;
+  updateActLabel();
 }
 
 // ── Collect all form data ──
@@ -612,6 +653,20 @@ function collectFormData() {
     const ins = tr.querySelectorAll('input');
     if (ins.length >= 4)
       d.award_rows.push({date: ins[0].value, title: ins[1].value, org: ins[2].value, evidence: ins[3].value});
+  });
+
+  d.activity_rows = [];
+  document.querySelectorAll('#act-body tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length >= 6) {
+      d.activity_rows.push({
+        name:    cells[1].querySelector('input')?.value || '',
+        cls:     cells[2].querySelector('input')?.value || '',
+        total:   cells[3].querySelector('input')?.value || '',
+        pass:    cells[4].querySelector('input')?.value || '',
+        fail:    cells[5].querySelector('input')?.value || ''
+      });
+    }
   });
 
   d.plan_ratings = {...planVals};
@@ -689,6 +744,22 @@ function loadFormData(data) {
     });
   }
   if (!ab.rows.length) addAward();
+
+  const actb = document.getElementById('act-body');
+  if (Array.isArray(data.activity_rows) && data.activity_rows.length) {
+    actb.innerHTML = '';
+    data.activity_rows.forEach((row, i) => {
+      actb.insertAdjacentHTML('beforeend',
+        `<tr><td>${i+1}</td>` +
+        `<td><input type="text" value="${esc(row.name)}"/></td>` +
+        `<td><input type="text" value="${esc(row.cls)}"/></td>` +
+        `<td><input type="number" min="0" value="${esc(row.total)}"/></td>` +
+        `<td><input type="number" min="0" value="${esc(row.pass)}"/></td>` +
+        `<td><input type="number" min="0" value="${esc(row.fail)}"/></td>` +
+        `<td><button class="del-btn" onclick="delRow(this)">✕</button></td></tr>`);
+    });
+  }
+  if (!actb.rows.length) addActivity();
 
   if (data.plan_ratings && typeof data.plan_ratings === 'object') {
     Object.entries(data.plan_ratings).forEach(([g, v]) => {
