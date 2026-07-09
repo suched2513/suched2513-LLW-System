@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once 'config.php';
 
@@ -398,12 +398,15 @@ $(document).ready(function() {
                     contentType: 'application/json',
                     success: function(res) {
                         if(res.status === 'success') {
-                            Swal.fire({ title: 'ส่งคำขอสำเร็จ!', text: res.message, icon: 'success', customClass: { popup: 'rounded-[2rem]' } });
-                            $('#requestModal').modal('hide');
+                            // ปิด modal ก่อน แล้วค่อยแสดง popup หลัง modal ปิดสนิท
                             $('#requestForm')[0].reset();
                             cart = [];
                             renderCart();
                             table.ajax.reload();
+                            $('#requestModal').modal('hide');
+                            $('#requestModal').one('hidden.bs.modal', function() {
+                                Swal.fire({ title: 'ส่งคำขอสำเร็จ!', text: res.message, icon: 'success', customClass: { popup: 'rounded-[2rem]' } });
+                            });
                         } else {
                             Swal.fire('Error', res.message, 'error');
                         }
