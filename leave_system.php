@@ -381,9 +381,17 @@ $(document).ready(function() {
             return;
         }
 
-        // ปิด modal ก่อน เพื่อไม่ให้ SweetAlert ทับกับ Bootstrap modal backdrop
-        $('#requestModal').modal('hide');
-        $('#requestModal').one('hidden.bs.modal', function() {
+        // ใช้ Bootstrap 5 native API ปิด modal แล้วรอด้วย setTimeout
+        const modalEl = document.getElementById('requestModal');
+        const bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        bsModal.hide();
+
+        setTimeout(function() {
+            // เคลียร์ backdrop ที่อาจค้างอยู่
+            document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('padding-right');
+
             Swal.fire({
                 title: 'ยืนยันการส่งคำขอ?',
                 text: "คำขอของคุณจะถูกส่งไปเพื่ออนุมัติทาง Telegram",
@@ -416,7 +424,7 @@ $(document).ready(function() {
                     });
                 }
             });
-        });
+        }, 400); // รอ 400ms ให้ animation ปิด modal เสร็จสมบูรณ์
     });
 
 
