@@ -381,40 +381,44 @@ $(document).ready(function() {
             return;
         }
 
-        Swal.fire({
-            title: 'ยืนยันการส่งคำขอ?',
-            text: "คำขอของคุณจะถูกส่งไปเพื่ออนุมัติทาง Telegram",
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'ยืนยัน ส่งคำขอ',
-            cancelButtonText: 'ยกเลิก',
-            customClass: { popup: 'rounded-[2.5rem]', confirmButton: 'bg-blue-600 rounded-2xl px-10 py-3', cancelButton: 'bg-slate-100 text-slate-400 rounded-2xl px-10 py-3' }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: 'api/save_request.php',
-                    type: 'POST',
-                    data: JSON.stringify(formData),
-                    contentType: 'application/json',
-                    success: function(res) {
-                        if(res.status === 'success') {
-                            // ปิด modal ก่อน แล้วค่อยแสดง popup หลัง modal ปิดสนิท
-                            $('#requestForm')[0].reset();
-                            cart = [];
-                            renderCart();
-                            table.ajax.reload();
-                            $('#requestModal').modal('hide');
-                            $('#requestModal').one('hidden.bs.modal', function() {
+        // ปิด modal ก่อน เพื่อไม่ให้ SweetAlert ทับกับ Bootstrap modal backdrop
+        $('#requestModal').modal('hide');
+        $('#requestModal').one('hidden.bs.modal', function() {
+            Swal.fire({
+                title: 'ยืนยันการส่งคำขอ?',
+                text: "คำขอของคุณจะถูกส่งไปเพื่ออนุมัติทาง Telegram",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยัน ส่งคำขอ',
+                cancelButtonText: 'ยกเลิก',
+                customClass: { popup: 'rounded-[2.5rem]', confirmButton: 'bg-blue-600 rounded-2xl px-10 py-3', cancelButton: 'bg-slate-100 text-slate-400 rounded-2xl px-10 py-3' }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: 'api/save_request.php',
+                        type: 'POST',
+                        data: JSON.stringify(formData),
+                        contentType: 'application/json',
+                        success: function(res) {
+                            if(res.status === 'success') {
+                                $('#requestForm')[0].reset();
+                                cart = [];
+                                renderCart();
+                                table.ajax.reload();
                                 Swal.fire({ title: 'ส่งคำขอสำเร็จ!', text: res.message, icon: 'success', customClass: { popup: 'rounded-[2rem]' } });
-                            });
-                        } else {
-                            Swal.fire('Error', res.message, 'error');
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error', 'ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่', 'error');
                         }
-                    }
-                });
-            }
+                    });
+                }
+            });
         });
     });
+
 
     // 6. Approval Action — ต้องใช้ PIN ผอ.
     $(document).on('click', '.approve-btn', function() {
