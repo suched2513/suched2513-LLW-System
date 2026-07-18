@@ -98,6 +98,11 @@ if ($isLoggedIn) {
                 ['url' => 'bus/finance/cancellations.php','icon' => 'bi-x-circle-fill',    'label' => 'คำขอยกเลิก',   'color' => 'rose'],
             ];
             break;
+        case 'student':
+            $quickAccess = [
+                ['url' => 'lms_system/student_quizzes.php', 'icon' => 'bi-pencil-square', 'label' => 'แบบทดสอบของฉัน', 'color' => 'indigo'],
+            ];
+            break;
         default:
             $quickAccess = [['url' => 'user/dashboard.php', 'icon' => 'bi-geo-alt-fill', 'label' => 'ลงเวลา', 'color' => 'emerald']];
     }

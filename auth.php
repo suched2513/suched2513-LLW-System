@@ -56,7 +56,7 @@ $_SESSION['llw_roles'] = $rolesAll;
 // backward-compat: WFH admin pages ตรวจ role === 'admin'
 $_SESSION['role'] = !empty(array_intersect($rolesAll, ['super_admin','wfh_admin'])) ? 'admin' : 'user';
 
-// ─── 3. Attendance teacher: ดึง teacher_id จาก att_teachers ────
+// ─── 3. Attendance teacher/Student details ─────────────────────
 if (in_array($user['role'], ['att_teacher', 'super_admin', 'club_admin'])) {
     $t = $conn->prepare("SELECT id, name FROM att_teachers WHERE username = ? LIMIT 1");
     $t->bind_param('s', $username);
@@ -66,6 +66,17 @@ if (in_array($user['role'], ['att_teacher', 'super_admin', 'club_admin'])) {
     if ($teacher) {
         $_SESSION['teacher_id']   = $teacher['id'];
         $_SESSION['teacher_name'] = $teacher['name'];
+    }
+} elseif ($user['role'] === 'student') {
+    $s = $conn->prepare("SELECT id, name, classroom FROM att_students WHERE llw_user_id = ? OR student_id = ? LIMIT 1");
+    $s->bind_param('is', $user['user_id'], $username);
+    $s->execute();
+    $student = $s->get_result()->fetch_assoc();
+    $s->close();
+    if ($student) {
+        $_SESSION['student_id']        = $student['id'];
+        $_SESSION['student_name']      = $student['name'];
+        $_SESSION['student_classroom'] = $student['classroom'];
     }
 }
 
@@ -85,6 +96,7 @@ $roleMap = [
     'club_admin'  => 'club/index.php',
     'bus_admin'   => 'bus/admin/dashboard.php',
     'bus_finance' => 'bus/admin/dashboard.php',
+    'student'     => 'lms_system/student_quizzes.php',
 ];
 
 // ถ้ามี redirect param ใน session (จาก login.php) และ path ปลอดภัย

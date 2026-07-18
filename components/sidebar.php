@@ -1,46 +1,20 @@
 <?php
 /**
- * sidebar.php — Reorganized AdminLTE 4 Navigation for LLW System
+ * sidebar.php — Premium Navigation with Sub-menus per Module
  */
 $current_page = basename($_SERVER['PHP_SELF']);
 $current_dir  = basename(dirname($_SERVER['PHP_SELF']));
 
-// Define base path if not set
-$base_path = $base_path ?? '';
-
-// Determine active system with better precision
-$full_url = $_SERVER['REQUEST_URI'];
+// Determine active system
+$base_path = '';
 $activeSystem = $activeSystem ?? 'portal';
-
-if (strpos($full_url, '/attendance_system/') !== false || strpos($full_url, '/student/admin/') !== false) $activeSystem = 'attendance';
-elseif (strpos($full_url, '/chromebook/') !== false)        $activeSystem = 'chromebook';
-elseif (strpos($full_url, '/plc_system/') !== false)        $activeSystem = 'plc';
-elseif (strpos($full_url, '/assembly/') !== false)          $activeSystem = 'assembly';
-elseif (strpos($full_url, '/behavior/') !== false)          $activeSystem = 'behavior';
-elseif (strpos($full_url, '/homeroom/') !== false)          $activeSystem = 'homeroom';
-elseif (strpos($full_url, '/school_project/') !== false)     $activeSystem = 'budget';
-elseif (basename($full_url) === 'student_info.php' || basename($full_url) === 'teacher_info.php') $activeSystem = 'info';
-elseif (strpos($full_url, '/bus/admin/') !== false || strpos($full_url, '/bus/finance/') !== false) $activeSystem = 'bus';
-elseif (strpos($full_url, '/edocument/') !== false)        $activeSystem = 'edoc';
-elseif (strpos($full_url, '/student_leave/') !== false)   $activeSystem = 'student_leave';
-elseif (strpos($full_url, '/duty/') !== false)            $activeSystem = 'duty';
-elseif (strpos($full_url, '/club/') !== false || strpos($full_url, '/student_club/') !== false) $activeSystem = 'club';
-elseif (strpos($full_url, '/lms/') !== false)             $activeSystem = 'lms';
-elseif (strpos($full_url, '/sar/') !== false)             $activeSystem = 'sar';
-elseif (strpos($full_url, '/health/') !== false)           $activeSystem = 'health';
-elseif (strpos($full_url, '/parent_meeting/') !== false)   $activeSystem = 'parent_meeting';
-elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
-
-/**
- * Helper to check if a menu item is active
- */
-function isLinkActive($url) {
-    $current = $_SERVER['REQUEST_URI'];
-    // Remove query string for comparison
-    $current_path = parse_url($current, PHP_URL_PATH);
-    $target_path = parse_url($url, PHP_URL_PATH);
-    return $current_path === $target_path;
-}
+if ($current_dir === 'attendance_system') $activeSystem = 'attendance';
+if ($current_dir === 'chromebook')        $activeSystem = 'chromebook';
+if ($current_page === 'leave_system.php') $activeSystem = 'leave';
+if ($current_dir === 'plc_system')        $activeSystem = 'plc';
+if ($current_dir === 'lms_system')        $activeSystem = 'lms';
+if ($current_dir === 'user' || $current_dir === 'admin' || $current_page === 'index_wfh.php') $activeSystem = 'wfh';
+if ($current_page === 'central_dashboard.php' || $current_page === 'index.php') $activeSystem = 'portal';
 
 // User context
 $userName = $_SESSION['firstname'] ?? ($_SESSION['teacher_name'] ?? 'User');
@@ -50,605 +24,216 @@ $roleName = [
     'wfh_admin'   => 'WFH Admin',
     'wfh_staff'   => 'Personnel',
     'cb_admin'    => 'Device Manager',
-    'att_teacher' => 'Academic Staff',
-    'bus_admin'   => 'Bus Administrator',
-    'bus_finance' => 'Bus Finance',
-    'club_admin'  => 'Club Administrator'
+    'att_teacher' => 'Academic Staff'
 ][$userRole] ?? 'Staff Member';
 
 // Sub-menu definitions per module
 $subMenus = [
-    'assembly' => [
-        ['icon' => 'fas fa-check-double',   'label' => 'เช็คชื่อเข้าแถว',   'url' => $base_path . '/assembly/dashboard.php'],
-        ['icon' => 'fas fa-chart-line',     'label' => 'รายงานผู้บริหาร',   'url' => $base_path . '/assembly/admin.php',            'roles' => ['super_admin']],
-        ['icon' => 'fas fa-users-cog',      'label' => 'จัดการนักเรียน',    'url' => $base_path . '/assembly/manage_students.php',  'roles' => ['super_admin']],
-    ],
-    'student_leave' => [
-        ['icon' => 'fas fa-clipboard-list', 'label' => 'รายการใบลา',  'url' => $base_path . '/student_leave/teacher.php'],
-        ['icon' => 'fas fa-clock',          'label' => 'รออนุมัติ',    'url' => $base_path . '/student_leave/teacher.php?status=pending'],
-    ],
-    'club' => [
-        ['icon' => 'fas fa-users',          'label' => 'รายชื่อชุมนุม',   'url' => $base_path . '/club/index.php'],
-        ['icon' => 'fas fa-calendar-alt',   'label' => 'รายงาน',          'url' => $base_path . '/club/report.php'],
-        ['icon' => 'fas fa-plus-circle',    'label' => 'สร้างชุมนุม',     'url' => $base_path . '/club/manage.php',   'roles' => ['super_admin', 'club_admin']],
-        ['icon' => 'fas fa-cog',            'label' => 'ตั้งค่า',          'url' => $base_path . '/club/settings.php', 'roles' => ['super_admin', 'club_admin']],
-    ],
     'attendance' => [
-        ['icon' => 'fas fa-tachometer-alt', 'label' => 'Dashboard',         'url' => $base_path . '/attendance_system/dashboard.php'],
-        ['icon' => 'fas fa-user-check',     'label' => 'เช็คชื่อวิชาเรียน',    'url' => $base_path . '/attendance_system/attendance.php'],
-        ['icon' => 'fas fa-chart-bar',      'label' => 'รายงานการเข้าเรียน',  'url' => $base_path . '/attendance_system/report.php'],
-        ['icon' => 'fas fa-file-alt',       'label' => 'รายงาน ปพ.5',          'url' => $base_path . '/attendance_system/report_p5.php'],
-        ['icon' => 'fas fa-users',          'label' => 'จัดการข้อมูลวิชา',    'url' => $base_path . '/attendance_system/admin.php', 'roles' => ['super_admin']],
-        ['icon' => 'fas fa-user-friends',   'label' => 'จัดการข้อมูลนักเรียน', 'url' => $base_path . '/attendance_system/import_students.php', 'roles' => ['super_admin']],
-        ['icon' => 'fas fa-file-csv',       'label' => 'นำเข้ารายวิชา CSV',   'url' => $base_path . '/attendance_system/import_subjects.php', 'roles' => ['super_admin']],
-        ['icon' => 'fas fa-chart-pie',      'label' => 'รายงานผู้บริหาร',   'url' => $base_path . '/attendance_system/report_admin.php', 'roles' => ['super_admin']],
-        ['icon' => 'fas fa-id-card',        'label' => 'จัดการเลขบัตรประชาชน', 'url' => $base_path . '/student/admin/manage_nid.php', 'roles' => ['super_admin']],
+        ['icon' => 'bi-speedometer2',  'label' => 'Dashboard',    'url' => $base_path . '/attendance_system/dashboard.php'],
+        ['icon' => 'bi-check2-square', 'label' => 'เช็คชื่อ',       'url' => $base_path . '/attendance_system/attendance.php'],
+        ['icon' => 'bi-bar-chart',     'label' => 'รายงาน',        'url' => $base_path . '/attendance_system/report.php'],
+        ['icon' => 'bi-people',        'label' => 'จัดการข้อมูล',    'url' => $base_path . '/attendance_system/admin.php'],
     ],
     'chromebook' => [
-        ['icon' => 'fas fa-tachometer-alt',  'label' => 'Dashboard',       'url' => $base_path . '/chromebook/index.php'],
-        ['icon' => 'fas fa-exchange-alt',    'label' => 'ยืม-คืนอุปกรณ์',  'url' => $base_path . '/chromebook/dashboard.php'],
-        ['icon' => 'fas fa-tools',           'label' => 'ติดตามการซ่อม',  'url' => $base_path . '/chromebook/repairs.php'],
+        ['icon' => 'bi-speedometer2',     'label' => 'Dashboard',  'url' => $base_path . '/chromebook/index.php'],
+        ['icon' => 'bi-arrow-left-right', 'label' => 'ยืม-คืน',     'url' => $base_path . '/chromebook/dashboard.php'],
     ],
     'wfh' => [
-        ['icon' => 'fas fa-tachometer-alt', 'label' => 'Admin Dashboard',  'url' => $base_path . '/admin/dashboard.php',  'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-fingerprint',    'label' => 'ลงเวลาปฏิบัติงาน',   'url' => $base_path . '/user/dashboard.php'],
-        ['icon' => 'fas fa-file-invoice',   'label' => 'รายงานลงเวลา',     'url' => $base_path . '/admin/reports.php',    'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-users-cog',      'label' => 'จัดการบุคลากร',     'url' => $base_path . '/admin/manage_users.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'bi-speedometer2', 'label' => 'Dashboard',     'url' => $base_path . '/admin/dashboard.php',  'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'bi-clock-history', 'label' => 'ลงเวลา',       'url' => $base_path . '/user/dashboard.php'],
+        ['icon' => 'bi-bar-chart',    'label' => 'รายงาน',        'url' => $base_path . '/admin/reports.php',    'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'bi-people',       'label' => 'จัดการบุคลากร',  'url' => $base_path . '/admin/manage_users.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'bi-gear',         'label' => 'ตั้งค่า',        'url' => $base_path . '/admin/settings.php',  'roles' => ['super_admin','wfh_admin']],
     ],
-    'teacher_leave' => [
-        ['icon' => 'fas fa-chart-pie',      'label' => 'ภาพรวมการลา', 'url' => $base_path . '/teacher_leave/admin_overview.php', 'roles' => ['super_admin','wfh_admin']],
-        ['icon' => 'fas fa-tachometer-alt', 'label' => 'สรุปการลา', 'url' => $base_path . '/teacher_leave/index.php'],
-        ['icon' => 'fas fa-plus-circle',    'label' => 'ยื่นใบลาใหม่', 'url' => $base_path . '/teacher_leave/form.php'],
+    'leave' => [
+        ['icon' => 'bi-list-check', 'label' => 'รายการคำขอ', 'url' => $base_path . '/leave_system.php'],
     ],
     'plc' => [
-        ['icon' => 'fas fa-tachometer-alt', 'label' => 'Dashboard PLC', 'url' => $base_path . '/plc_system/dashboard.php'],
-        ['icon' => 'fas fa-book-medical',   'label' => 'บันทึก PDCA', 'url' => $base_path . '/plc_system/add_log.php'],
-        ['icon' => 'fas fa-file-invoice',   'label' => 'รายงานสรุป', 'url' => $base_path . '/plc_system/report_print.php'],
-    ],
-    'supervision' => [
-        ['icon' => 'fas fa-edit',           'label' => 'บันทึกการนิเทศ', 'url' => $base_path . '/supervision.php?tab=record'],
-        ['icon' => 'fas fa-id-card',        'label' => 'รายงานรายบุคคล', 'url' => $base_path . '/supervision.php?tab=individual'],
-        ['icon' => 'fas fa-chart-pie',      'label' => 'รายงานภาพรวม', 'url' => $base_path . '/supervision.php?tab=summary', 'roles' => ['super_admin']],
-    ],
-    'behavior' => [
-        ['icon' => 'fas fa-user-edit',          'label' => 'บันทึกพฤติกรรม',  'url' => $base_path . '/behavior/dashboard.php'],
-        ['icon' => 'fas fa-chalkboard-teacher', 'label' => 'จัดการที่ปรึกษา', 'url' => $base_path . '/behavior/manage_advisors_ui.php', 'roles' => ['super_admin']],
-        ['icon' => 'fas fa-tachometer-alt',     'label' => 'Admin Dashboard',  'url' => $base_path . '/behavior/admin.php',              'roles' => ['super_admin']],
-    ],
-    'homeroom' => [
-        ['icon' => 'fas fa-tachometer-alt', 'label' => 'ระบบที่ปรึกษา', 'url' => $base_path . '/homeroom/index.php'],
-    ],
-    'info' => [
-        ['icon' => 'fas fa-users',          'label' => 'ข้อมูลนักเรียน',      'url' => $base_path . '/student_info.php',  'roles' => ['super_admin']],
-        ['icon' => 'fas fa-address-card',   'label' => 'ข้อมูลครูและบุคลากร', 'url' => $base_path . '/teacher_info.php', 'roles' => ['super_admin']],
-    ],
-    'bus' => [
-        ['icon' => 'fas fa-tachometer-alt',       'label' => 'ภาพรวมระบบ',       'url' => $base_path . '/bus/admin/dashboard.php'],
-        ['icon' => 'fas fa-bus',                  'label' => 'จัดการสายรถ',       'url' => $base_path . '/bus/admin/routes.php',   'roles' => ['super_admin','bus_admin']],
-        ['icon' => 'fas fa-user-graduate',        'label' => 'รายชื่อนักเรียน',   'url' => $base_path . '/bus/admin/students.php', 'roles' => ['super_admin','bus_admin']],
-        ['icon' => 'fas fa-chart-bar',            'label' => 'รายงาน',             'url' => $base_path . '/bus/admin/reports.php'],
-        ['icon' => 'fas fa-file-invoice-dollar',  'label' => 'บันทึกการชำระเงิน', 'url' => $base_path . '/bus/finance/payments.php',       'roles' => ['super_admin','bus_admin','bus_finance']],
-        ['icon' => 'fas fa-image',                'label' => 'ตรวจสอบสลิปโอนเงิน','url' => $base_path . '/bus/finance/slips.php',           'roles' => ['super_admin','bus_admin','bus_finance']],
-        ['icon' => 'fas fa-times-circle',         'label' => 'คำขอยกเลิก',        'url' => $base_path . '/bus/finance/cancellations.php',  'roles' => ['super_admin','bus_admin','bus_finance']],
-        ['icon' => 'fas fa-poll',                 'label' => 'สำรวจการเดินทาง',   'url' => $base_path . '/student/admin/survey_report.php', 'roles' => ['super_admin','bus_admin','att_teacher']],
-    ],
-    'edoc' => [
-        ['icon' => 'fas fa-inbox',                'label' => 'หนังสือรับ',       'url' => $base_path . '/edocument/incoming.php'],
-        ['icon' => 'fas fa-paper-plane',          'label' => 'หนังสือส่ง',       'url' => $base_path . '/edocument/outgoing.php'],
-        ['icon' => 'fas fa-file-signature',       'label' => 'คำสั่ง',            'url' => $base_path . '/edocument/orders.php'],
-        ['icon' => 'fas fa-sticky-note',          'label' => 'บันทึกข้อความ',     'url' => $base_path . '/edocument/memos.php'],
+        ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'url' => $base_path . '/plc_system/dashboard.php'],
+        ['icon' => 'bi-journal-plus', 'label' => 'บันทึก PDCA', 'url' => $base_path . '/plc_system/add_log.php'],
+        ['icon' => 'bi-file-earmark-bar-graph', 'label' => 'รายงานสรุป', 'url' => $base_path . '/plc_system/report_print.php'],
     ],
     'lms' => [
-        ['icon' => 'fas fa-tachometer-alt',    'label' => 'Dashboard LMS',       'url' => $base_path . '/lms/dashboard.php'],
-        ['icon' => 'fas fa-chalkboard',        'label' => 'วิชาของฉัน',           'url' => $base_path . '/lms/subjects.php'],
-        ['icon' => 'fas fa-plus-square',       'label' => 'สั่งงาน',              'url' => $base_path . '/lms/assign_work.php', 'roles' => ['super_admin','att_teacher']],
-        ['icon' => 'fas fa-tasks',             'label' => 'ตรวจงานนักเรียน',      'url' => $base_path . '/lms/grade_exercises.php', 'roles' => ['super_admin','att_teacher'], 'badge' => 'lms_pending'],
-        ['icon' => 'fas fa-table',             'label' => 'สมุดคะแนน',            'url' => $base_path . '/lms/grade_book.php', 'roles' => ['super_admin','att_teacher']],
-        ['icon' => 'fas fa-chart-line',        'label' => 'ความคืบหน้านักเรียน',  'url' => $base_path . '/lms/progress.php'],
-        ['icon' => 'fas fa-pen-fancy',         'label' => 'ตรวจข้อสอบอัตนัย',    'url' => $base_path . '/lms/exam_answers.php', 'roles' => ['super_admin','att_teacher'], 'badge' => 'lms_essay_pending'],
+        ['icon' => 'bi-folder-fill', 'label' => 'จัดการหน่วยเรียน', 'url' => $base_path . '/lms_system/manage_units.php', 'roles' => ['super_admin','att_teacher']],
+        ['icon' => 'bi-bar-chart-line', 'label' => 'รายงานผลสอบ', 'url' => $base_path . '/lms_system/quiz_reports.php', 'roles' => ['super_admin','att_teacher']],
+        ['icon' => 'bi-pencil-square', 'label' => 'แบบทดสอบของฉัน', 'url' => $base_path . '/lms_system/student_quizzes.php', 'roles' => ['student','wfh_staff','super_admin']],
     ],
-    'duty' => [
-        ['icon' => 'fas fa-camera',              'label' => 'ส่งรายงานเวร (ครู)', 'url' => $base_path . '/duty/index.php',          'roles' => ['att_teacher','super_admin','wfh_admin']],
-        ['icon' => 'fas fa-chart-line',          'label' => 'รายงานเวรประจำวัน', 'url' => $base_path . '/duty/admin/reports.php',  'roles' => ['att_teacher','super_admin','wfh_admin']],
-        ['icon' => 'fas fa-calendar-week',        'label' => 'จัดการตารางเวร',   'url' => $base_path . '/duty/admin/schedule.php', 'roles' => ['super_admin']],
-        ['icon' => 'fas fa-layer-group',          'label' => 'จัดการกลุ่มเวร',   'url' => $base_path . '/duty/admin/groups.php',   'roles' => ['super_admin']],
-        ['icon' => 'fas fa-chalkboard-teacher',   'label' => 'จัดการรายชื่อครู', 'url' => $base_path . '/duty/admin/teachers.php', 'roles' => ['super_admin']],
-        ['icon' => 'fas fa-cog',                  'label' => 'ตั้งค่าระบบเวร',    'url' => $base_path . '/duty/admin/settings.php', 'roles' => ['super_admin']],
-    ],
-    'health' => [
-        ['icon' => 'fas fa-heartbeat',       'label' => 'Dashboard สุขภาวะ',     'url' => $base_path . '/health/dashboard.php',     'roles' => ['super_admin']],
-        ['icon' => 'fas fa-plus-circle',     'label' => 'บันทึกข้อมูลสุขภาพ',   'url' => $base_path . '/health/record.php',        'roles' => ['super_admin']],
-        ['icon' => 'fas fa-users',           'label' => 'รายชื่อนักเรียน',       'url' => $base_path . '/health/students.php',      'roles' => ['super_admin']],
-        ['icon' => 'fas fa-chalkboard',      'label' => 'รายงานระดับห้องเรียน',  'url' => $base_path . '/health/report_class.php',  'roles' => ['super_admin']],
-        ['icon' => 'fas fa-school',          'label' => 'ภาพรวมโรงเรียน',        'url' => $base_path . '/health/report_school.php', 'roles' => ['super_admin']],
-        ['icon' => 'fas fa-table',           'label' => 'เกณฑ์มาตรฐาน',          'url' => $base_path . '/health/standards.php',     'roles' => ['super_admin']],
-    ],
-    'sar' => [
-        ['icon' => 'fas fa-clipboard-list', 'label' => 'รายงาน SAR ของฉัน', 'url' => $base_path . '/sar/index.php'],
-        ['icon' => 'fas fa-plus-circle',    'label' => 'สร้าง SAR ใหม่',    'url' => $base_path . '/sar/fill.php'],
-    ],
-    'parent_meeting' => [
-        ['icon' => 'fas fa-tachometer-alt',  'label' => 'Dashboard',         'url' => $base_path . '/parent_meeting/dashboard.php'],
-        ['icon' => 'fas fa-handshake',        'label' => 'บันทึกการประชุม (ลลว.)', 'url' => $base_path . '/parent_meeting/meetings.php', 'roles' => ['super_admin','att_teacher','wfh_staff','cb_admin','club_admin','bus_admin','bus_finance']],
-        ['icon' => 'fas fa-users-cog',        'label' => 'เครือข่ายผู้ปกครอง',     'url' => $base_path . '/parent_meeting/network.php', 'roles' => ['super_admin','att_teacher','wfh_staff','cb_admin','club_admin','bus_admin','bus_finance']],
-        ['icon' => 'fas fa-file-invoice',     'label' => 'รายงานทั้งหมด',       'url' => $base_path . '/parent_meeting/reports.php', 'roles' => ['super_admin']],
-        ['icon' => 'fas fa-users',            'label' => 'จัดการผู้ใช้งาน',        'url' => $base_path . '/parent_meeting/users.php', 'roles' => ['super_admin']],
-        ['icon' => 'fas fa-cog',              'label' => 'ตั้งค่าระบบ (ห้องเรียน)', 'url' => $base_path . '/parent_meeting/settings.php', 'roles' => ['super_admin']],
-    ],
-
 ];
-
-// Badge counts (only for roles that access LMS)
-$_sidebar_badges = ['lms_pending' => 0, 'lms_essay_pending' => 0];
-if (in_array($userRole, ['super_admin', 'att_teacher'])) {
-    try {
-        $_spdo = getPdo();
-        $_sidebar_badges['lms_pending'] = (int)$_spdo->query("SELECT COUNT(*) FROM lms_student_exercises WHERE reviewed_at IS NULL")->fetchColumn();
-        $_sidebar_badges['lms_essay_pending'] = (int)$_spdo->query("SELECT COUNT(*) FROM lms_student_exam_answers WHERE reviewed_at IS NULL")->fetchColumn();
-    } catch (Exception $e) { /* ไม่แสดง error ใน sidebar */ }
-}
-
 ?>
 
-<aside class="app-sidebar shadow">
-    <!-- Sidebar Brand -->
-    <div class="sidebar-brand">
-        <a href="<?= $base_path ?>/index.php" class="brand-link d-flex align-items-center gap-2 px-3 py-3">
-            <div style="width:34px;height:34px;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 10px rgba(59,130,246,0.45);">
-                <i class="fas fa-graduation-cap text-white" style="font-size:0.95rem;"></i>
-            </div>
-            <span class="brand-text">
-                <?= ($activeSystem === 'budget') ? 'SBMS <strong>2569</strong>' : 'LLW <strong>System</strong>' ?>
-            </span>
-        </a>
+<style>
+    .sub-menu { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+    .sub-menu.open { max-height: 300px; }
+    .sub-item { transition: all 0.2s ease; }
+    .sub-item:hover { padding-left: 3.5rem; }
+    .nav-link-active { position: relative; }
+    .nav-link-active::before {
+        content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+        width: 4px; height: 60%; border-radius: 0 4px 4px 0; background: currentColor; opacity: 0.5;
+    }
+</style>
+
+<aside id="sidebar" class="w-72 bg-white flex-shrink-0 border-r border-slate-200/60 z-50 flex flex-col h-full transition-all duration-300 transform no-print fixed lg:static -translate-x-full lg:translate-x-0 shadow-2xl lg:shadow-none">
+
+    <!-- Brand -->
+    <div class="px-6 sm:px-8 py-8 sm:py-10 flex items-center gap-4">
+        <div class="w-11 h-11 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[16px] sm:rounded-[18px] shadow-xl shadow-blue-200/50 flex items-center justify-center text-white text-lg sm:text-xl font-black italic hover:rotate-6 transition-transform">
+            LLW
+        </div>
+        <div class="flex flex-col">
+            <span class="text-lg sm:text-xl font-black text-slate-800 tracking-tight leading-none">Platinum</span>
+            <span class="text-[9px] sm:text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mt-1 opacity-70">School AI Suite</span>
+        </div>
     </div>
 
-    <!-- Sidebar Wrapper -->
-    <div class="sidebar-wrapper">
-        <nav class="mt-2">
-            <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu" data-accordion="true">
-                
-                <!-- 1. CORE SYSTEM -->
-                <li class="nav-header">ระบบส่วนกลาง</li>
-                <li class="nav-item">
-                    <a href="<?= $base_path ?>/index.php" class="nav-link <?= $activeSystem === 'portal' && $current_page !== 'manage_advisors.php' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-th-large"></i>
-                        <p>แดชบอร์ดกลาง</p>
-                    </a>
-                </li>
-                <?php if (in_array($userRole, ['super_admin','bus_admin','bus_finance','att_teacher'])): ?>
-                <li class="nav-item <?= $activeSystem === 'bus' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'bus' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-bus text-warning"></i>
-                        <p class="text-warning">ระบบรถรับส่งนักเรียน <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['bus'] as $sub):
-                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
+    <!-- Navigation -->
+    <nav class="flex-1 px-4 sm:px-5 py-2 space-y-1 overflow-y-auto">
+
+        <!-- Main Portal -->
+        <div class="pb-4 sm:pb-6">
+            <p class="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-3 sm:mb-4">Main Portal</p>
+            <a href="<?= $base_path ?>/index.php" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all <?= $activeSystem === 'portal' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-200/50' : 'text-slate-500 hover:bg-slate-50 hover:pl-6' ?>">
+                <i class="bi bi-grid-fill text-base sm:text-lg"></i> แดชบอร์ดกลาง
+            </a>
+        </div>
+
+        <!-- Academic & Management -->
+        <div class="pb-4 sm:pb-6">
+            <p class="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-3 sm:mb-4">Academic & Management</p>
+
+            <!-- Attendance -->
+            <a href="<?= $base_path ?>/attendance_system/dashboard.php" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all <?= $activeSystem === 'attendance' ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-200/50' : 'text-slate-500 hover:bg-slate-50 hover:pl-6' ?>">
+                <i class="bi bi-person-check-fill text-base sm:text-lg"></i> ระบบเช็คชื่อ
+                <?php if ($activeSystem === 'attendance'): ?>
+                <i class="bi bi-chevron-down ml-auto text-xs opacity-60"></i>
                 <?php endif; ?>
-                <?php if ($userRole === 'super_admin'): ?>
-                <li class="nav-item">
-                    <a href="<?= $base_path ?>/manage_users.php" class="nav-link <?= $current_page === 'manage_users.php' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-user-shield"></i>
-                        <p>จัดการผู้ใช้งานระบบ</p>
-                    </a>
-                </li>
-                <?php endif; ?>
-                <?php if ($userRole === 'super_admin'): ?>
-                <!-- LMS -->
-                <li class="nav-item <?= $activeSystem === 'lms' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'lms' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-chalkboard" style="color:#8B5CF6"></i>
-                        <p style="color:<?= $activeSystem === 'lms' ? '#fff' : '#c4b5fd' ?>">ระบบ LMS <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['lms'] as $sub): ?>
-                        <?php if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue; ?>
-                        <?php
-                            $_badge_count = 0;
-                            if (isset($sub['badge']) && isset($_sidebar_badges[$sub['badge']])) {
-                                $_badge_count = $_sidebar_badges[$sub['badge']];
-                            }
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?><?php if ($_badge_count > 0): ?>
-                                    <span class="badge badge-danger right" style="background:#ef4444;font-size:10px;min-width:18px"><?= $_badge_count ?></span>
-                                <?php endif; ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= $base_path ?>/manage_advisors.php" class="nav-link <?= $current_page === 'manage_advisors.php' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-user-cog"></i>
-                        <p>จัดการครูที่ปรึกษา</p>
-                    </a>
-                </li>
-                <!-- Health -->
-                <li class="nav-item <?= $activeSystem === 'health' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'health' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-heartbeat" style="color:#10B981"></i>
-                        <p style="color:<?= $activeSystem === 'health' ? '#fff' : '#6ee7b7' ?>">สุขภาวะนักเรียน <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['health'] as $sub):
-                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-                <?php endif; ?>
-
-
-                <!-- 2. ADVISOR & STUDENT -->
-                <li class="nav-header">งานนักเรียนและที่ปรึกษา</li>
-                
-                <!-- Assembly -->
-                <li class="nav-item <?= $activeSystem === 'assembly' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'assembly' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-users-viewfinder"></i>
-                        <p>เช็คชื่อเข้าแถว <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['assembly'] as $sub): 
-                             if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-
-                <!-- Student Leave -->
-                <li class="nav-item <?= $activeSystem === 'student_leave' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'student_leave' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-file-medical-alt"></i>
-                        <p>ใบลานักเรียน <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['student_leave'] as $sub):
-                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-
-                <!-- Club System -->
-                <li class="nav-item <?= $activeSystem === 'club' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'club' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-users"></i>
-                        <p>ระบบชุมนุม <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['club'] as $sub):
-                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-
-                <!-- Behavior & Advisor -->
-                <li class="nav-item <?= in_array($activeSystem, ['behavior', 'homeroom']) ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= in_array($activeSystem, ['behavior', 'homeroom']) ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-user-graduate"></i>
-                        <p>งานที่ปรึกษา & พฤติกรรม <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <li class="nav-item">
-                            <a href="<?= $base_path ?>/homeroom/index.php" class="nav-link <?= $activeSystem === 'homeroom' ? 'active' : '' ?>">
-                                <i class="nav-icon fas fa-chalkboard-teacher"></i>
-                                <p>ระบบที่ปรึกษา</p>
-                            </a>
-                        </li>
-                        <?php foreach ($subMenus['behavior'] as $sub): 
-                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-
-                <!-- Parent Meeting -->
-                <li class="nav-item <?= $activeSystem === 'parent_meeting' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'parent_meeting' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-handshake"></i>
-                        <p>ระบบประชุมผู้ปกครอง <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['parent_meeting'] as $sub): 
-                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-
-                <!-- Student Info (admin only) -->
-                <?php if ($userRole === 'super_admin'): ?>
-                <li class="nav-item <?= $activeSystem === 'info' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'info' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-address-book"></i>
-                        <p>สารสนเทศนักเรียน/ครู <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['info'] as $sub):
-                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-                <?php endif; ?>
-
-                <!-- 3. ACADEMIC & TEACHING -->
-                <li class="nav-header">งานวิชาการและการสอน</li>
-                
-                <!-- Class Attendance -->
-                <li class="nav-item <?= $activeSystem === 'attendance' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'attendance' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-user-check"></i>
-                        <p>ระบบเช็คชื่อวิชาเรียน <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['attendance'] as $sub): 
-                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-
-                <!-- Supervision & PLC -->
-                <li class="nav-item <?= in_array($activeSystem, ['supervision', 'plc']) ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= in_array($activeSystem, ['supervision', 'plc']) ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-book-reader"></i>
-                        <p>นิเทศ & PLC <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['supervision'] as $sub): 
-                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                        <?php foreach ($subMenus['plc'] as $sub): ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-
-                <!-- 4. ADMINISTRATION & ASSETS -->
-                <li class="nav-header">งานบริหารและทรัพยากร</li>
-
-                <!-- Budget (SBMS 2569) -->
-                <li class="nav-item <?= $activeSystem === 'budget' ? 'menu-open' : '' ?>">
-                    <a href="<?= $base_path ?>/school_project/admin/dashboard.php" class="nav-link <?= $activeSystem === 'budget' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-hand-holding-usd"></i>
-                        <p>ระบบบริหารงบประมาณ <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <li class="nav-item">
-                            <a href="<?= $base_path ?>/school_project/admin/dashboard.php" class="nav-link <?= isLinkActive($base_path . '/school_project/admin/dashboard.php') ? 'active' : '' ?>">
-                                <i class="nav-icon fas fa-tachometer-alt"></i>
-                                <p>สรุปงบประมาณ</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="<?= $base_path ?>/school_project/admin/budget_list.php" class="nav-link <?= isLinkActive($base_path . '/school_project/admin/budget_list.php') ? 'active' : '' ?>">
-                                <i class="nav-icon fas fa-tasks"></i>
-                                <p>จัดการโครงการ</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="<?= $base_path ?>/school_project/teacher/request_form.php" class="nav-link <?= isLinkActive($base_path . '/school_project/teacher/request_form.php') ? 'active' : '' ?>">
-                                <i class="nav-icon fas fa-file-alt"></i>
-                                <p>ยื่นขออนุมัติ</p>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-
-                <!-- e-Document -->
-                <li class="nav-item <?= $activeSystem === 'edoc' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'edoc' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-file-invoice text-info"></i>
-                        <p class="text-info">ระบบงาน e-สารบรรณ <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['edoc'] as $sub): ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-
-
-                <!-- Chromebook -->
-                <li class="nav-item <?= $activeSystem === 'chromebook' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'chromebook' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-laptop-code"></i>
-                        <p>จัดการ Chromebook <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['chromebook'] as $sub): ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-
-                <!-- Duty System -->
-                <?php if (in_array($userRole, ['super_admin','wfh_admin','att_teacher'])): ?>
-                <li class="nav-item <?= $activeSystem === 'duty' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'duty' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-shield-alt text-danger"></i>
-                        <p>ระบบเวรประจำวัน <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['duty'] as $sub):
-                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-                <?php endif; ?>
-
-                <!-- 5. PERSONNEL & HR -->
-                <li class="nav-header">งานบุคคลและสวัสดิการ</li>
-
-                <!-- SAR -->
-                <li class="nav-item <?= $activeSystem === 'sar' ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= $activeSystem === 'sar' ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-clipboard-list" style="color:#f59e0b"></i>
-                        <p>รายงาน SAR <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['sar'] as $sub): ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </li>
-
-                <!-- WFH & Leave -->
-                <li class="nav-item <?= in_array($activeSystem, ['wfh', 'teacher_leave', 'leave']) ? 'menu-open' : '' ?>">
-                    <a href="#" class="nav-link <?= in_array($activeSystem, ['wfh', 'teacher_leave', 'leave']) ? 'active' : '' ?>">
-                        <i class="nav-icon fas fa-user-clock"></i>
-                        <p>ลงเวลา & การลา <i class="nav-arrow fas fa-angle-left"></i></p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                        <?php foreach ($subMenus['wfh'] as $sub): 
-                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
-                        ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                        <?php foreach ($subMenus['teacher_leave'] as $sub):
-                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue; ?>
-                        <li class="nav-item">
-                            <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
-                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
-                                <p><?= $sub['label'] ?></p>
-                            </a>
-                        </li>
-                        <?php endforeach; ?>
-                        <li class="nav-item">
-                            <a href="<?= $base_path ?>/leave_system.php" class="nav-link <?= $activeSystem === 'leave' ? 'active' : '' ?>">
-                                <i class="nav-icon fas fa-walking"></i>
-                                <p>ขอออกนอกบริเวณ</p>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-
-            </ul>
-        </nav>
-    </div>
-    
-    <!-- Sidebar Footer -->
-    <div class="sidebar-footer p-3">
-        <div class="d-flex align-items-center gap-2 mb-2">
-            <div style="width:36px;height:36px;background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:1rem;flex-shrink:0;">
-                <?= mb_substr($userName, 0, 1, 'UTF-8') ?>
+            </a>
+            <div class="sub-menu <?= $activeSystem === 'attendance' ? 'open' : '' ?> ml-4 sm:ml-6 mt-1 space-y-0.5">
+                <?php foreach ($subMenus['attendance'] as $sub): ?>
+                <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50' ?>">
+                    <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
+                </a>
+                <?php endforeach; ?>
             </div>
-            <div style="overflow:hidden;flex:1;">
-                <div style="font-size:0.78rem;font-weight:700;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">
-                    <?= htmlspecialchars($userName) ?>
-                </div>
-                <div style="font-size:0.64rem;color:rgba(148,163,184,0.65);"><?= $roleName ?></div>
+
+            <!-- Chromebook -->
+            <a href="<?= $base_path ?>/chromebook/index.php" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all mt-1 <?= $activeSystem === 'chromebook' ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-200/50' : 'text-slate-500 hover:bg-slate-50 hover:pl-6' ?>">
+                <i class="bi bi-laptop text-base sm:text-lg"></i> จัดการ Chromebook
+                <?php if ($activeSystem === 'chromebook'): ?>
+                <i class="bi bi-chevron-down ml-auto text-xs opacity-60"></i>
+                <?php endif; ?>
+            </a>
+            <div class="sub-menu <?= $activeSystem === 'chromebook' ? 'open' : '' ?> ml-4 sm:ml-6 mt-1 space-y-0.5">
+                <?php foreach ($subMenus['chromebook'] as $sub): ?>
+                <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-cyan-600 bg-cyan-50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50' ?>">
+                    <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- LMS System -->
+            <?php 
+                $lmsHome = ($userRole === 'student') ? '/lms_system/student_quizzes.php' : '/lms_system/manage_units.php';
+            ?>
+            <a href="<?= $base_path . $lmsHome ?>" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all mt-1 <?= $activeSystem === 'lms' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-200/50' : 'text-slate-500 hover:bg-slate-50 hover:pl-6' ?>">
+                <i class="bi bi-journal-check text-base sm:text-lg"></i> ระบบ LMS & สอบออนไลน์
+                <?php if ($activeSystem === 'lms'): ?>
+                <i class="bi bi-chevron-down ml-auto text-xs opacity-60"></i>
+                <?php endif; ?>
+            </a>
+            <div class="sub-menu <?= $activeSystem === 'lms' ? 'open' : '' ?> ml-4 sm:ml-6 mt-1 space-y-0.5">
+                <?php foreach ($subMenus['lms'] as $sub): 
+                    if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                ?>
+                <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50' ?>">
+                    <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
+                </a>
+                <?php endforeach; ?>
             </div>
         </div>
-        <a href="<?= $base_path ?>/logout.php"
-           style="display:block;text-align:center;background:rgba(239,68,68,0.13);color:#fca5a5;border:1px solid rgba(239,68,68,0.22);border-radius:10px;padding:0.45rem;font-size:0.78rem;font-weight:600;text-decoration:none;transition:all 0.15s;"
-           onmouseover="this.style.background='rgba(239,68,68,0.25)';this.style.color='#fff'"
-           onmouseout="this.style.background='rgba(239,68,68,0.13)';this.style.color='#fca5a5'">
-            <i class="fas fa-power-off me-1"></i>ออกจากระบบ
-        </a>
+
+        <!-- Staff & HR -->
+        <div class="pb-4 sm:pb-6">
+            <p class="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-3 sm:mb-4">Staff & Attendance</p>
+
+            <!-- WFH -->
+            <a href="<?= $base_path ?>/index_wfh.php" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all <?= $activeSystem === 'wfh' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-200/50' : 'text-slate-500 hover:bg-slate-50 hover:pl-6' ?>">
+                <i class="bi bi-geo-alt-fill text-base sm:text-lg"></i> ลงเวลาปฏิบัติงาน
+                <?php if ($activeSystem === 'wfh'): ?>
+                <i class="bi bi-chevron-down ml-auto text-xs opacity-60"></i>
+                <?php endif; ?>
+            </a>
+            <div class="sub-menu <?= $activeSystem === 'wfh' ? 'open' : '' ?> ml-4 sm:ml-6 mt-1 space-y-0.5">
+                <?php foreach ($subMenus['wfh'] as $sub):
+                    // ตรวจสอบ role access
+                    if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                ?>
+                <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50' ?>">
+                    <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Leave -->
+            <a href="<?= $base_path ?>/leave_system.php" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all mt-1 <?= $activeSystem === 'leave' ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-lg shadow-rose-200/50' : 'text-slate-500 hover:bg-slate-50 hover:pl-6' ?>">
+                <i class="bi bi-person-walking text-base sm:text-lg"></i> ขอออกนอกบริเวณ
+            </a>
+        </div>
+
+        <!-- Research & Development -->
+        <div class="pb-4 sm:pb-6">
+            <p class="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pl-4 mb-3 sm:mb-4">Research & Development</p>
+
+            <!-- PLC -->
+            <a href="<?= $base_path ?>/plc_system/dashboard.php" class="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-[13px] font-bold transition-all <?= $activeSystem === 'plc' ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-200/50' : 'text-slate-500 hover:bg-slate-50 hover:pl-6' ?>">
+                <i class="bi bi-journal-richtext text-base sm:text-lg"></i> ระบบ PLC ออนไลน์
+                <?php if ($activeSystem === 'plc'): ?>
+                <i class="bi bi-chevron-down ml-auto text-xs opacity-60"></i>
+                <?php endif; ?>
+            </a>
+            <div class="sub-menu <?= $activeSystem === 'plc' ? 'open' : '' ?> ml-4 sm:ml-6 mt-1 space-y-0.5">
+                <?php foreach ($subMenus['plc'] as $sub): ?>
+                <a href="<?= $sub['url'] ?>" class="sub-item flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-bold <?= $current_page === basename($sub['url']) ? 'text-violet-600 bg-violet-50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50' ?>">
+                    <i class="bi <?= $sub['icon'] ?> text-sm"></i> <?= $sub['label'] ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+    </nav>
+
+    <!-- Profile -->
+    <div class="p-4 sm:p-6">
+        <div class="p-4 sm:p-5 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl sm:rounded-3xl border border-slate-100 hover:shadow-xl hover:shadow-blue-100/30 transition-all duration-500 group">
+            <div class="flex items-center gap-3 sm:gap-4">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-[14px] bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-sm sm:text-lg shadow-lg shadow-blue-200/50 group-hover:rotate-6 transition-transform">
+                    <?= mb_substr($userName, 0, 1) ?>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs sm:text-[13px] font-black text-slate-800 truncate"><?= htmlspecialchars($userName) ?></p>
+                    <p class="text-[9px] sm:text-[10px] font-bold text-blue-500 uppercase tracking-widest truncate"><?= $roleName ?></p>
+                </div>
+            </div>
+            <div class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-200/50 flex justify-between items-center">
+                <a href="<?= $base_path ?>/logout.php" class="flex items-center gap-2 text-rose-500 font-black text-[9px] sm:text-[10px] uppercase tracking-widest hover:text-rose-700 transition-colors">
+                    <i class="bi bi-power"></i> Sign Out
+                </a>
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            </div>
+        </div>
     </div>
 </aside>
+
+<!-- Mobile overlay -->
+<div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-40 hidden lg:hidden transition-all duration-500"></div>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    }
+    document.getElementById('sidebar-overlay')?.addEventListener('click', toggleSidebar);
+</script>
