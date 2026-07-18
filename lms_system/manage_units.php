@@ -29,8 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
             }
             
-            $stmt = $pdo->prepare("INSERT INTO lms_units (subject_id, unit_number, unit_name, description) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$subject_id, $unit_number, $unit_name, $description]);
+            $stmt = $pdo->prepare("INSERT INTO lms_units (subject_id, unit_number, order_no, unit_name, description) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$subject_id, $unit_number, $unit_number, $unit_name, $description]);
             $msg = 'เพิ่มหน่วยการเรียนรู้สำเร็จ';
             
         } elseif ($action === 'edit_unit') {
@@ -43,8 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
             }
             
-            $stmt = $pdo->prepare("UPDATE lms_units SET unit_number = ?, unit_name = ?, description = ? WHERE id = ?");
-            $stmt->execute([$unit_number, $unit_name, $description, $unit_id]);
+            $stmt = $pdo->prepare("UPDATE lms_units SET unit_number = ?, order_no = ?, unit_name = ?, description = ? WHERE id = ?");
+            $stmt->execute([$unit_number, $unit_number, $unit_name, $description, $unit_id]);
             $msg = 'แก้ไขหน่วยการเรียนรู้สำเร็จ';
             
         } elseif ($action === 'delete_unit') {

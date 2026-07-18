@@ -8,7 +8,7 @@ return [
                 teacher_name VARCHAR(200) NOT NULL DEFAULT '',
                 year         VARCHAR(10)  NOT NULL DEFAULT '',
                 semester     TINYINT      NOT NULL DEFAULT 1,
-                form_data    LONGTEXT     NOT NULL DEFAULT '{}',
+                form_data    LONGTEXT     NOT NULL,
                 status       ENUM('draft','submitted') NOT NULL DEFAULT 'draft',
                 created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

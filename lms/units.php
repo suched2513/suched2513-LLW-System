@@ -33,8 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if ($action === 'add') {
             if (!$unit_name) throw new Exception('กรุณาระบุชื่อหน่วย');
-            $pdo->prepare("INSERT INTO lms_units (subject_id, order_no, unit_name) VALUES (?,?,?)")
-                ->execute([$subject_id, $order_no, $unit_name]);
+            $pdo->prepare("INSERT INTO lms_units (subject_id, order_no, unit_number, unit_name) VALUES (?,?,?,?)")
+                ->execute([$subject_id, $order_no, $order_no, $unit_name]);
             $new_id = (int)$pdo->lastInsertId();
             saveExRows($pdo, $new_id,
                 $_POST['exercises']    ?? [],
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = 'success:เพิ่มหน่วยการเรียนรู้สำเร็จ';
         } elseif ($action === 'edit') {
             if (!$unit_name) throw new Exception('กรุณาระบุชื่อหน่วย');
-            $pdo->prepare("UPDATE lms_units SET order_no=?, unit_name=? WHERE id=?")->execute([$order_no, $unit_name, $id]);
+            $pdo->prepare("UPDATE lms_units SET order_no=?, unit_number=?, unit_name=? WHERE id=?")->execute([$order_no, $order_no, $unit_name, $id]);
             $existing_ids = [];
             foreach ($_POST['exercises'] ?? [] as $ex_id => $title) {
                 $ex_id = (int)$ex_id; $title = trim($title);
