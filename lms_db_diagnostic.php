@@ -24,8 +24,17 @@ try {
             $stmt = $pdo->query("SELECT COUNT(*) FROM `$tbl`");
             $count = $stmt->fetchColumn();
             echo "✓ Table `$tbl` exists. Count: $count\n";
+            
+            // Show columns
+            $cols = $pdo->query("DESCRIBE `$tbl`")->fetchAll();
+            echo "  Columns: ";
+            $colNames = [];
+            foreach ($cols as $c) {
+                $colNames[] = $c['Field'] . ' (' . $c['Type'] . ')';
+            }
+            echo implode(', ', $colNames) . "\n\n";
         } catch (Exception $e) {
-            echo "❌ Table `$tbl` ERROR: " . $e->getMessage() . "\n";
+            echo "❌ Table `$tbl` ERROR: " . $e->getMessage() . "\n\n";
         }
     }
 
