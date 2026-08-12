@@ -27,22 +27,42 @@ $_lk_col      = $_has_link  ? ', se.link_url' : ", '' AS link_url";
 $classrooms = $pdo->prepare("SELECT classroom FROM lms_subject_classrooms WHERE subject_id=? ORDER BY classroom");
 $classrooms->execute([$subject_id]); $classrooms = $classrooms->fetchAll(PDO::FETCH_COLUMN);
 
-$settings = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE subject_id=?");
-$settings->execute([$subject_id]); $settings = $settings->fetch();
+$um = $pdo->prepare("SELECT unlock_mode FROM lms_subject_settings WHERE subject_id=?");
+$um->execute([$subject_id]); $unlock_mode = $um->fetchColumn() ?: 'open_all';
 
 $units = $pdo->prepare("
     SELECT u.*, COUNT(DISTINCT t.id) topic_count, COUNT(DISTINCT e.id) ex_count
     FROM lms_units u
-    LEFT JOIN lms_topics t ON t.unit_id = u.id
-    LEFT JOIN lms_unit_exercises e ON e.unit_id = u.id
-    WHERE u.subject_id=?
+    LEFT JOIN lms_topics t ON t.unit_id = u.id AND t.deleted_at IS NULL
+    LEFT JOIN lms_unit_exercises e ON e.unit_id = u.id AND e.deleted_at IS NULL
+    WHERE u.subject_id=? AND u.deleted_at IS NULL
     GROUP BY u.id ORDER BY u.order_no
 ");
 $units->execute([$subject_id]); $units = $units->fetchAll();
 
-$pre_q_count  = (int)$pdo->prepare("SELECT COUNT(*) FROM lms_pre_questions  WHERE subject_id=?")->execute([$subject_id]) ? $pdo->prepare("SELECT COUNT(*) FROM lms_pre_questions WHERE subject_id=?")->execute([$subject_id]) ?: 0 : 0;
-$s = $pdo->prepare("SELECT COUNT(*) FROM lms_pre_questions  WHERE subject_id=?"); $s->execute([$subject_id]); $pre_q_count  = (int)$s->fetchColumn();
-$s = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE subject_id=?"); $s->execute([$subject_id]); $post_q_count = (int)$s->fetchColumn();
+// Per-unit exam settings + question counts (exams are unit-scoped)
+$unit_exam = [];
+foreach ($units as $u) {
+    $un = $u['id'];
+    $es = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE unit_id=?"); $es->execute([$un]); $set = $es->fetch();
+    $pq = $pdo->prepare("SELECT COUNT(*) FROM lms_pre_questions WHERE unit_id=?"); $pq->execute([$un]); $preq = (int)$pq->fetchColumn();
+    $poq = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE unit_id=?"); $poq->execute([$un]); $postq = (int)$poq->fetchColumn();
+    $unit_exam[$un] = [
+        'pre_q' => $preq, 'post_q' => $postq,
+        'pre_pass' => $set['pre_pass_score'] ?? 6, 'post_pass' => $set['post_pass_score'] ?? 6,
+        'max_att' => $set['post_max_attempts'] ?? 3,
+    ];
+}
+$pre_q_count  = array_sum(array_column($unit_exam, 'pre_q'));
+$post_q_count = array_sum(array_column($unit_exam, 'post_q'));
+
+// Subject-wide midterm/final exam summary (not tied to any unit)
+$mf_settings = $pdo->prepare("SELECT * FROM lms_subject_settings WHERE subject_id=?");
+$mf_settings->execute([$subject_id]); $mf_settings = $mf_settings->fetch() ?: [];
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_midterm_questions WHERE subject_id=?"); $stmt->execute([$subject_id]); $midterm_q_count = (int)$stmt->fetchColumn();
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_final_questions WHERE subject_id=?");   $stmt->execute([$subject_id]); $final_q_count   = (int)$stmt->fetchColumn();
+$stmt = $pdo->prepare("SELECT COUNT(DISTINCT student_uid) FROM lms_student_midterm_exam WHERE subject_id=? AND passed=1"); $stmt->execute([$subject_id]); $midterm_passed = (int)$stmt->fetchColumn();
+$stmt = $pdo->prepare("SELECT COUNT(DISTINCT student_uid) FROM lms_student_final_exam WHERE subject_id=? AND passed=1");   $stmt->execute([$subject_id]); $final_passed   = (int)$stmt->fetchColumn();
 
 $enrolled_students = 0;
 if (!empty($classrooms)) {
@@ -73,7 +93,7 @@ $exercises_all = $pdo->prepare("
     FROM lms_unit_exercises e
     JOIN lms_units u ON u.id = e.unit_id
     LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.subject_id = ?
-    WHERE u.subject_id = ?
+    WHERE u.subject_id = ? AND e.deleted_at IS NULL AND u.deleted_at IS NULL
     GROUP BY e.id ORDER BY u.order_no, e.id
 ");
 $exercises_all->execute([$subject_id, $subject_id]); $exercises_all = $exercises_all->fetchAll();
@@ -155,9 +175,9 @@ require_once __DIR__ . '/../components/layout_start.php';
     </div>
     <!-- Quick Actions -->
     <div class="flex flex-wrap gap-2">
-      <a href="<?=$base_path?>/lms/exam_settings.php?subject_id=<?=$subject_id?>"
+      <a href="subject_dashboard.php?subject_id=<?=$subject_id?>&tab=exam"
          class="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200 transition-all">
-        <i class="fas fa-cog mr-1"></i>ตั้งค่า
+        <i class="fas fa-cog mr-1"></i>ตั้งค่าข้อสอบ
       </a>
       <a href="<?=$base_path?>/lms/subjects.php" onclick="sessionStorage.setItem('openEdit','<?=$subject_id?>')"
          class="px-3 py-1.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-xl hover:bg-amber-200 transition-all">
@@ -233,27 +253,16 @@ require_once __DIR__ . '/../components/layout_start.php';
           </div>
           <i class="fas fa-chevron-right text-slate-300 text-xs group-hover:text-violet-400 transition-all"></i>
         </a>
-        <a href="<?=$base_path?>/lms/pre_exam.php?subject_id=<?=$subject_id?>"
+        <a href="subject_dashboard.php?subject_id=<?=$subject_id?>&tab=exam"
            class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 transition-all group">
           <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center group-hover:bg-blue-200 transition-all">
-            <i class="fas fa-play-circle text-sm"></i>
+            <i class="fas fa-clipboard-list text-sm"></i>
           </div>
           <div class="flex-1">
-            <p class="text-xs font-black text-slate-700">ข้อสอบก่อนเรียน</p>
-            <p class="text-[10px] text-slate-400"><?=$pre_q_count?> ข้อ · ผ่าน ≥ <?=$settings['pre_pass_score']??6?></p>
+            <p class="text-xs font-black text-slate-700">ข้อสอบก่อน/หลังเรียนรายหน่วย</p>
+            <p class="text-[10px] text-slate-400"><?=$pre_q_count?> ข้อก่อนเรียน · <?=$post_q_count?> ข้อหลังเรียน</p>
           </div>
           <i class="fas fa-chevron-right text-slate-300 text-xs group-hover:text-blue-400 transition-all"></i>
-        </a>
-        <a href="<?=$base_path?>/lms/post_exam.php?subject_id=<?=$subject_id?>"
-           class="flex items-center gap-3 p-3 rounded-xl hover:bg-rose-50 transition-all group">
-          <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center group-hover:bg-rose-200 transition-all">
-            <i class="fas fa-flag-checkered text-sm"></i>
-          </div>
-          <div class="flex-1">
-            <p class="text-xs font-black text-slate-700">ข้อสอบหลังเรียน</p>
-            <p class="text-[10px] text-slate-400"><?=$post_q_count?> ข้อ · สอบได้ <?=$settings['post_max_attempts']??3?> ครั้ง</p>
-          </div>
-          <i class="fas fa-chevron-right text-slate-300 text-xs group-hover:text-rose-400 transition-all"></i>
         </a>
         <a href="<?=$base_path?>/lms/exam_answers.php?subject_id=<?=$subject_id?>"
            class="flex items-center gap-3 p-3 rounded-xl hover:bg-violet-50 transition-all group">
@@ -580,93 +589,89 @@ require_once __DIR__ . '/../components/layout_start.php';
 <!-- TAB: ข้อสอบ -->
 <!-- ════════════════════════════════════════════════════════════ -->
 <?php elseif ($tab === 'exam'): ?>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-  <!-- Pre exam -->
+<?php if (empty($units)): ?>
+<div class="bg-white rounded-2xl border border-slate-100 p-16 text-center text-slate-300 shadow-sm">
+  <i class="fas fa-clipboard-list text-5xl mb-3 block opacity-30"></i>
+  <p class="font-bold">ยังไม่มีหน่วย — ข้อสอบก่อน/หลังเรียนต้องผูกกับหน่วย</p>
+</div>
+<?php else: ?>
+<p class="text-xs text-slate-400 mb-3">ข้อสอบก่อนเรียน/หลังเรียนผูกกับหน่วยเรียนแต่ละหน่วย — ตั้งค่าและจัดการข้อสอบแยกรายหน่วยด้านล่าง</p>
+<div class="space-y-3">
+  <?php foreach ($units as $u): $ue = $unit_exam[$u['id']]; ?>
   <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-    <div class="px-5 py-4 border-b border-slate-50 flex items-center justify-between"
-         style="background:linear-gradient(135deg,#EFF6FF,#F0F9FF)">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-50" style="background:linear-gradient(135deg,#FFF8F0,#FFFDF5)">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
-          <i class="fas fa-play-circle"></i>
-        </div>
-        <div>
-          <p class="font-black text-slate-800 text-sm">ข้อสอบก่อนเรียน</p>
-          <p class="text-[10px] text-slate-400">ทดสอบก่อนเข้าเรียนบทเรียน</p>
-        </div>
+        <span class="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 text-sm font-black flex items-center justify-center"><?=$u['order_no']?></span>
+        <p class="font-black text-slate-800"><?=htmlspecialchars($u['unit_name'],ENT_QUOTES,'UTF-8')?></p>
       </div>
-      <a href="<?=$base_path?>/lms/pre_exam.php?subject_id=<?=$subject_id?>"
-         class="px-3 py-1.5 bg-blue-500 text-white text-xs font-bold rounded-xl hover:bg-blue-600 transition-all">
-        <i class="fas fa-edit mr-1"></i>จัดการ
+      <a href="<?=$base_path?>/lms/exam_settings.php?unit_id=<?=$u['id']?>"
+         class="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all">
+        <i class="fas fa-cog mr-1"></i>ตั้งค่า
       </a>
     </div>
-    <div class="p-5 space-y-3">
-      <div class="flex justify-between items-center">
-        <span class="text-xs text-slate-500">จำนวนข้อ</span>
-        <span class="font-black text-blue-600"><?=$pre_q_count?> ข้อ</span>
-      </div>
-      <div class="flex justify-between items-center">
-        <span class="text-xs text-slate-500">เกณฑ์ผ่าน</span>
-        <span class="font-black text-slate-700">≥ <?=$settings['pre_pass_score']??6?> คะแนน</span>
-      </div>
-      <?php if ($pre_q_count === 0): ?>
-      <div class="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-700 font-bold">
-        <i class="fas fa-exclamation-triangle"></i> ยังไม่มีข้อสอบ — นักเรียนจะผ่านอัตโนมัติ
-      </div>
-      <?php endif; ?>
-    </div>
-  </div>
-
-  <!-- Post exam -->
-  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-    <div class="px-5 py-4 border-b border-slate-50 flex items-center justify-between"
-         style="background:linear-gradient(135deg,#FFF1F2,#FFF7F7)">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
-          <i class="fas fa-flag-checkered"></i>
-        </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-50">
+      <div class="p-4 flex items-center justify-between gap-3">
         <div>
-          <p class="font-black text-slate-800 text-sm">ข้อสอบหลังเรียน</p>
-          <p class="text-[10px] text-slate-400">ทดสอบหลังเรียนครบทุกหน่วย</p>
+          <p class="text-xs font-black text-slate-700"><i class="fas fa-play-circle text-blue-500 mr-1"></i>ก่อนเรียน</p>
+          <p class="text-[10px] text-slate-400 mt-0.5"><?=$ue['pre_q']?> ข้อ · ผ่าน ≥ <?=$ue['pre_pass']?> คะแนน</p>
         </div>
+        <a href="<?=$base_path?>/lms/pre_exam.php?unit_id=<?=$u['id']?>"
+           class="px-3 py-1.5 bg-blue-500 text-white text-xs font-bold rounded-lg hover:bg-blue-600 transition-all flex-shrink-0">
+          <i class="fas fa-edit mr-1"></i>จัดการ
+        </a>
       </div>
-      <a href="<?=$base_path?>/lms/post_exam.php?subject_id=<?=$subject_id?>"
-         class="px-3 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-xl hover:bg-rose-600 transition-all">
-        <i class="fas fa-edit mr-1"></i>จัดการ
-      </a>
-    </div>
-    <div class="p-5 space-y-3">
-      <div class="flex justify-between items-center">
-        <span class="text-xs text-slate-500">จำนวนข้อ</span>
-        <span class="font-black text-rose-600"><?=$post_q_count?> ข้อ</span>
-      </div>
-      <div class="flex justify-between items-center">
-        <span class="text-xs text-slate-500">เกณฑ์ผ่าน</span>
-        <span class="font-black text-slate-700">≥ <?=$settings['post_pass_score']??6?> คะแนน</span>
-      </div>
-      <div class="flex justify-between items-center">
-        <span class="text-xs text-slate-500">สอบได้สูงสุด</span>
-        <span class="font-black text-slate-700"><?=$settings['post_max_attempts']??3?> ครั้ง</span>
-      </div>
-      <div class="flex justify-between items-center">
-        <span class="text-xs text-slate-500">ผ่านแล้ว</span>
-        <span class="font-black text-emerald-600"><?=$post_passed?> คน</span>
+      <div class="p-4 flex items-center justify-between gap-3">
+        <div>
+          <p class="text-xs font-black text-slate-700"><i class="fas fa-flag-checkered text-rose-500 mr-1"></i>หลังเรียน</p>
+          <p class="text-[10px] text-slate-400 mt-0.5"><?=$ue['post_q']?> ข้อ · ผ่าน ≥ <?=$ue['post_pass']?> · สอบได้ <?=$ue['max_att']?> ครั้ง</p>
+        </div>
+        <a href="<?=$base_path?>/lms/post_exam.php?unit_id=<?=$u['id']?>"
+           class="px-3 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-all flex-shrink-0">
+          <i class="fas fa-edit mr-1"></i>จัดการ
+        </a>
       </div>
     </div>
   </div>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
 
-  <!-- Exam settings link -->
-  <div class="md:col-span-2">
-    <a href="<?=$base_path?>/lms/exam_settings.php?subject_id=<?=$subject_id?>"
-       class="flex items-center gap-4 px-5 py-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:bg-slate-50 transition-all group">
-      <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center group-hover:bg-violet-100 group-hover:text-violet-600 transition-all">
-        <i class="fas fa-cog"></i>
-      </div>
-      <div class="flex-1">
-        <p class="font-black text-slate-700">ตั้งค่าข้อสอบ</p>
-        <p class="text-xs text-slate-400">แก้ไขเกณฑ์ผ่าน จำนวนครั้งที่สอบได้ ช่วงเวลาเปิด-ปิดข้อสอบ</p>
-      </div>
-      <i class="fas fa-chevron-right text-slate-300 group-hover:text-violet-500 transition-all"></i>
+<!-- Subject-wide midterm/final exam (not tied to a unit) -->
+<div class="mt-5 pt-5 border-t border-slate-100">
+  <div class="flex items-center justify-between mb-3">
+    <p class="text-xs text-slate-400">สอบกลางภาค/ปลายภาค ผูกกับทั้งวิชา เปิดสอบตามช่วงเวลาที่กำหนดเท่านั้น ไม่ผูกกับความคืบหน้ารายหน่วย</p>
+    <a href="<?=$base_path?>/lms/midterm_final_settings.php?subject_id=<?=$subject_id?>"
+       class="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all flex-shrink-0">
+      <i class="fas fa-cog mr-1"></i>ตั้งค่า
     </a>
+  </div>
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+    <div class="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-50">
+      <div class="p-4 flex items-center justify-between gap-3">
+        <div>
+          <p class="text-xs font-black text-slate-700"><i class="fas fa-clipboard-list text-indigo-500 mr-1"></i>สอบกลางภาค</p>
+          <p class="text-[10px] text-slate-400 mt-0.5">
+            <?=$midterm_q_count?> ข้อ · ผ่าน ≥ <?=$mf_settings['midterm_pass_score'] ?? 6?> · ผ่านแล้ว <?=$midterm_passed?> คน
+          </p>
+        </div>
+        <a href="<?=$base_path?>/lms/midterm_exam.php?subject_id=<?=$subject_id?>"
+           class="px-3 py-1.5 bg-indigo-500 text-white text-xs font-bold rounded-lg hover:bg-indigo-600 transition-all flex-shrink-0">
+          <i class="fas fa-edit mr-1"></i>จัดการ
+        </a>
+      </div>
+      <div class="p-4 flex items-center justify-between gap-3">
+        <div>
+          <p class="text-xs font-black text-slate-700"><i class="fas fa-flag-checkered text-amber-500 mr-1"></i>สอบปลายภาค</p>
+          <p class="text-[10px] text-slate-400 mt-0.5">
+            <?=$final_q_count?> ข้อ · ผ่าน ≥ <?=$mf_settings['final_pass_score'] ?? 6?> · ผ่านแล้ว <?=$final_passed?> คน
+          </p>
+        </div>
+        <a href="<?=$base_path?>/lms/final_exam.php?subject_id=<?=$subject_id?>"
+           class="px-3 py-1.5 bg-amber-500 text-white text-xs font-bold rounded-lg hover:bg-amber-600 transition-all flex-shrink-0">
+          <i class="fas fa-edit mr-1"></i>จัดการ
+        </a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -702,11 +707,6 @@ require_once __DIR__ . '/../components/layout_start.php';
   <p class="font-bold text-sm">ไม่มีนักเรียนในห้องนี้</p>
 </div>
 <?php else: ?>
-<?php
-  $prog_settings = $settings;
-  $pre_pass  = $prog_settings['pre_pass_score']  ?? 6;
-  $post_pass = $prog_settings['post_pass_score'] ?? 6;
-?>
 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
   <div class="overflow-x-auto">
     <table class="w-full text-xs">
@@ -714,20 +714,18 @@ require_once __DIR__ . '/../components/layout_start.php';
         <tr>
           <th class="px-4 py-3 w-8 text-center">#</th>
           <th class="px-4 py-3 text-left">ชื่อ–สกุล</th>
-          <th class="px-4 py-3 text-center">ก่อนเรียน</th>
           <?php foreach ($prog_units as $u): ?>
-          <th class="px-3 py-3 text-center" style="min-width:72px"><?=htmlspecialchars(mb_substr($u['unit_name'],0,8),ENT_QUOTES,'UTF-8')?></th>
+          <th class="px-3 py-3 text-center border-l border-slate-100" style="min-width:84px">
+            <?=htmlspecialchars(mb_substr($u['unit_name'],0,12),ENT_QUOTES,'UTF-8')?><?=$unlock_mode==='sequential'?' <i class="fas fa-link"></i>':''?>
+            <br><span class="font-normal text-[9px] normal-case">ก่อน · งาน · หลัง</span>
+          </th>
           <?php endforeach; ?>
-          <th class="px-4 py-3 text-center">หลังเรียน<br><span class="font-normal text-[10px]">≥<?=$post_pass?></span></th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-50">
         <?php foreach ($prog_students as $i => $st):
           $uid = $st['id'];
-          $pre  = $pdo->prepare("SELECT score,total FROM lms_student_pre_exam  WHERE student_uid=? AND subject_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $pre->execute([$uid,$subject_id]); $pre=$pre->fetch();
-          $pre_l= $pdo->prepare("SELECT score,total FROM lms_student_pre_exam  WHERE student_uid=? AND subject_id=? ORDER BY taken_at DESC LIMIT 1"); $pre_l->execute([$uid,$subject_id]); $pre_l=$pre_l->fetch();
-          $post = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND subject_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $post->execute([$uid,$subject_id]); $post=$post->fetch();
-          $post_l=$pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND subject_id=? ORDER BY taken_at DESC LIMIT 1"); $post_l->execute([$uid,$subject_id]); $post_l=$post_l->fetch();
+          $prev_unit_post_ok = true;
         ?>
         <tr class="hover:bg-slate-50/50 transition-colors">
           <td class="px-4 py-2.5 text-center text-slate-400"><?=$i+1?></td>
@@ -735,32 +733,41 @@ require_once __DIR__ . '/../components/layout_start.php';
             <p class="font-bold text-slate-700"><?=htmlspecialchars($st['student_name'],ENT_QUOTES,'UTF-8')?></p>
             <p class="text-[10px] text-slate-400"><?=htmlspecialchars($st['student_id'],ENT_QUOTES,'UTF-8')?></p>
           </td>
-          <td class="px-4 py-2.5 text-center">
-            <?php if ($pre): ?>
-            <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 font-black rounded-full"><i class="fas fa-check-circle mr-0.5"></i><?=$pre['score']?>/<?=$pre['total']?></span>
-            <?php else: ?>
-            <span class="px-2 py-0.5 bg-slate-50 text-slate-400 rounded-full"><?=$pre_l?$pre_l['score'].'/'.$pre_l['total']:'—'?></span>
-            <?php endif; ?>
-          </td>
-          <?php foreach ($prog_units as $u):
-            $exs_c = $pdo->prepare("SELECT COUNT(*) FROM lms_unit_exercises WHERE unit_id=?"); $exs_c->execute([$u['id']]); $ex_total=(int)$exs_c->fetchColumn();
-            $sub_c = $pdo->prepare("SELECT COUNT(*) FROM lms_student_exercises WHERE student_uid=? AND unit_id=? AND subject_id=?"); $sub_c->execute([$uid,$u['id'],$subject_id]); $submitted=(int)$sub_c->fetchColumn();
+          <?php foreach ($prog_units as $ui => $u):
+            $un = $u['id'];
+            $pre  = $pdo->prepare("SELECT score,total FROM lms_student_pre_exam  WHERE student_uid=? AND unit_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $pre->execute([$uid,$un]); $pre=$pre->fetch();
+            $pre_l= $pdo->prepare("SELECT score,total FROM lms_student_pre_exam  WHERE student_uid=? AND unit_id=? ORDER BY taken_at DESC LIMIT 1"); $pre_l->execute([$uid,$un]); $pre_l=$pre_l->fetch();
+            $post = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND unit_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $post->execute([$uid,$un]); $post=$post->fetch();
+            $post_l=$pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND unit_id=? ORDER BY taken_at DESC LIMIT 1"); $post_l->execute([$uid,$un]); $post_l=$post_l->fetch();
+            $exs_c = $pdo->prepare("SELECT COUNT(*) FROM lms_unit_exercises WHERE unit_id=?"); $exs_c->execute([$un]); $ex_total=(int)$exs_c->fetchColumn();
+            $sub_c = $pdo->prepare("SELECT COUNT(*) FROM lms_student_exercises WHERE student_uid=? AND unit_id=? AND subject_id=?"); $sub_c->execute([$uid,$un,$subject_id]); $submitted=(int)$sub_c->fetchColumn();
+            $is_locked = $unlock_mode === 'sequential' && $ui > 0 && !$prev_unit_post_ok;
+            $prev_unit_post_ok = (bool)$post;
           ?>
-          <td class="px-3 py-2.5 text-center">
-            <?php if ($ex_total===0): ?>
-            <span class="text-slate-300">—</span>
+          <td class="px-3 py-2.5 text-center border-l border-slate-50">
+            <?php if ($is_locked): ?>
+            <i class="fas fa-lock text-slate-300"></i>
             <?php else: ?>
-            <span class="px-2 py-0.5 rounded-full font-bold <?=$submitted>=$ex_total?'bg-emerald-50 text-emerald-600':'bg-amber-50 text-amber-600'?>"><?=$submitted?>/<?=$ex_total?></span>
+            <div class="flex flex-col items-center gap-1">
+              <?php if ($pre): ?>
+              <span class="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full" title="ก่อนเรียน"><?=$pre['score']?>/<?=$pre['total']?></span>
+              <?php else: ?>
+              <span class="px-1.5 py-0.5 bg-slate-50 text-slate-400 text-[10px] rounded-full" title="ก่อนเรียน"><?=$pre_l?$pre_l['score'].'/'.$pre_l['total']:'—'?></span>
+              <?php endif; ?>
+              <?php if ($ex_total===0): ?>
+              <span class="text-[10px] text-slate-300">ไม่มีงาน</span>
+              <?php else: ?>
+              <span class="px-1.5 py-0.5 rounded-full font-bold text-[10px] <?=$submitted>=$ex_total?'bg-emerald-50 text-emerald-600':'bg-amber-50 text-amber-600'?>" title="แบบฝึก"><?=$submitted?>/<?=$ex_total?></span>
+              <?php endif; ?>
+              <?php if ($post): ?>
+              <span class="px-1.5 py-0.5 bg-violet-50 text-violet-600 text-[10px] font-black rounded-full" title="หลังเรียน"><?=$post['score']?>/<?=$post['total']?></span>
+              <?php else: ?>
+              <span class="px-1.5 py-0.5 bg-slate-50 text-slate-400 text-[10px] rounded-full" title="หลังเรียน"><?=$post_l?$post_l['score'].'/'.$post_l['total']:'—'?></span>
+              <?php endif; ?>
+            </div>
             <?php endif; ?>
           </td>
           <?php endforeach; ?>
-          <td class="px-4 py-2.5 text-center">
-            <?php if ($post): ?>
-            <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 font-black rounded-full"><i class="fas fa-check-circle mr-0.5"></i><?=$post['score']?>/<?=$post['total']?></span>
-            <?php else: ?>
-            <span class="px-2 py-0.5 bg-slate-50 text-slate-400 rounded-full"><?=$post_l?$post_l['score'].'/'.$post_l['total']:'—'?></span>
-            <?php endif; ?>
-          </td>
         </tr>
         <?php endforeach; ?>
       </tbody>

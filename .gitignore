@@ -12,9 +12,13 @@ Thumbs.db
 
 # Database dumps / Backups
 *.sql
+*.sql.gz
 *.zip
 *.tar.gz
 *.rar
+backup/storage/*
+!backup/storage/.gitkeep
+!backup/storage/.htaccess
 
 # Uploaded files (exclude .gitkeep placeholders so directories are tracked)
 uploads/

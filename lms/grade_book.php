@@ -40,7 +40,7 @@ if ($subject_id) {
                 SELECT e.id, e.exercise_title, e.max_score, u.unit_name, u.order_no
                 FROM lms_unit_exercises e
                 JOIN lms_units u ON u.id = e.unit_id
-                WHERE u.subject_id = ? ORDER BY u.order_no, e.id
+                WHERE u.subject_id = ? AND e.deleted_at IS NULL AND u.deleted_at IS NULL ORDER BY u.order_no, e.id
             ");
             $eq->execute([$subject_id]); $exercises = $eq->fetchAll();
 

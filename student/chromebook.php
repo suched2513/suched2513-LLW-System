@@ -90,7 +90,7 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
 <!-- Header -->
 <header class="bg-gradient-to-r from-cyan-600 to-blue-600 text-white sticky top-0 z-50 shadow-lg"
         style="padding-top:env(safe-area-inset-top)">
-    <div class="max-w-lg mx-auto flex items-center gap-3 px-4 py-3">
+    <div class="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3">
         <a href="/student/dashboard.php"
            class="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/25 flex-shrink-0">
             <i class="bi bi-arrow-left text-base"></i>
@@ -105,7 +105,7 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
     </div>
 </header>
 
-<div class="max-w-lg mx-auto px-4 py-5 space-y-4">
+<div class="max-w-2xl mx-auto px-4 py-5 space-y-4">
 
 <?php if (empty($entries)): ?>
 <!-- ไม่มีข้อมูล -->

@@ -21,7 +21,7 @@ $sids = array_column($subjects, 'id');
 if (!empty($sids)) {
     $ph = implode(',', array_fill(0, count($sids), '?'));
 
-    $r = $pdo->prepare("SELECT subject_id, COUNT(*) cnt FROM lms_units WHERE subject_id IN ($ph) GROUP BY subject_id");
+    $r = $pdo->prepare("SELECT subject_id, COUNT(*) cnt FROM lms_units WHERE subject_id IN ($ph) AND deleted_at IS NULL GROUP BY subject_id");
     $r->execute($sids); $units_map = array_column($r->fetchAll(), 'cnt', 'subject_id');
 
     $r = $pdo->prepare("SELECT subject_id, COUNT(*) cnt FROM lms_pre_questions WHERE subject_id IN ($ph) GROUP BY subject_id");
@@ -39,19 +39,19 @@ if (!empty($sids)) {
     $r = $pdo->prepare("SELECT subject_id, GROUP_CONCAT(classroom ORDER BY classroom SEPARATOR ', ') cls FROM lms_subject_classrooms WHERE subject_id IN ($ph) GROUP BY subject_id");
     $r->execute($sids); $cls_map = array_column($r->fetchAll(), 'cls', 'subject_id');
 
-    $r = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE subject_id IN ($ph)");
-    $r->execute($sids); $cfg_map = array_column($r->fetchAll(), null, 'subject_id');
+    $r = $pdo->prepare("SELECT subject_id, unlock_mode FROM lms_subject_settings WHERE subject_id IN ($ph)");
+    $r->execute($sids); $unlock_map = array_column($r->fetchAll(), 'unlock_mode', 'subject_id');
 
     foreach ($subjects as $subj) {
         $sid = $subj['id'];
         $subject_stats[$sid] = [
-            'units'      => (int)($units_map[$sid]     ?? 0),
-            'pre_q'      => (int)($preq_map[$sid]      ?? 0),
-            'post_q'     => (int)($postq_map[$sid]     ?? 0),
-            'pre_pass'   => (int)($pre_pass_map[$sid]  ?? 0),
-            'post_pass'  => (int)($post_pass_map[$sid] ?? 0),
-            'classrooms' => $cls_map[$sid] ?? '—',
-            'cfg'        => $cfg_map[$sid] ?? null,
+            'units'       => (int)($units_map[$sid]     ?? 0),
+            'pre_q'       => (int)($preq_map[$sid]      ?? 0),
+            'post_q'      => (int)($postq_map[$sid]     ?? 0),
+            'pre_pass'    => (int)($pre_pass_map[$sid]  ?? 0),
+            'post_pass'   => (int)($post_pass_map[$sid] ?? 0),
+            'classrooms'  => $cls_map[$sid] ?? '—',
+            'unlock_mode' => $unlock_map[$sid] ?? 'open_all',
         ];
     }
 }
@@ -111,7 +111,6 @@ require_once __DIR__ . '/../components/layout_start.php';
 <?php foreach ($subjects as $subj):
   $sid  = $subj['id'];
   $stat = $subject_stats[$sid];
-  $cfg  = $stat['cfg'];
 ?>
 <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 overflow-hidden">
   <div class="px-5 py-4 border-b border-slate-50 flex items-start justify-between gap-2">
@@ -141,31 +140,19 @@ require_once __DIR__ . '/../components/layout_start.php';
       <div class="text-[10px] text-slate-400">ผ่านแล้ว</div>
     </div>
   </div>
-  <?php if ($cfg): ?>
-  <div class="px-5 py-2 bg-slate-50 flex gap-4 text-[10px] text-slate-400 border-t border-slate-100">
-    <span>ก่อนเรียน ≥ <strong class="text-blue-600"><?=$cfg['pre_pass_score']?></strong></span>
-    <span>หลังเรียน ≥ <strong class="text-rose-500"><?=$cfg['post_pass_score']?></strong></span>
-    <span>สอบได้ <strong class="text-slate-600"><?=$cfg['post_max_attempts']?></strong> ครั้ง</span>
+  <div class="px-5 py-2 bg-slate-50 flex items-center gap-2 text-[10px] text-slate-400 border-t border-slate-100">
+    <i class="fas <?=$stat['unlock_mode']==='sequential'?'fa-link':'fa-unlock'?>"></i>
+    <span><?=$stat['unlock_mode']==='sequential'?'ปลดล็อกหน่วยตามลำดับ':'เปิดทุกหน่วยพร้อมกัน'?></span>
   </div>
-  <?php endif; ?>
   <div class="px-5 py-3 flex gap-2 flex-wrap border-t border-slate-50">
     <a href="units.php?subject_id=<?=$sid?>" class="px-2.5 py-1 bg-violet-50 text-violet-700 text-[10px] font-bold rounded-lg hover:bg-violet-100 transition-all">
-      <i class="fas fa-book-open mr-1"></i>หน่วย
-    </a>
-    <a href="pre_exam.php?subject_id=<?=$sid?>" class="px-2.5 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-lg hover:bg-blue-100 transition-all">
-      <i class="fas fa-clipboard-list mr-1"></i>ก่อนเรียน
-    </a>
-    <a href="post_exam.php?subject_id=<?=$sid?>" class="px-2.5 py-1 bg-rose-50 text-rose-700 text-[10px] font-bold rounded-lg hover:bg-rose-100 transition-all">
-      <i class="fas fa-clipboard-check mr-1"></i>หลังเรียน
+      <i class="fas fa-book-open mr-1"></i>หน่วย (ก่อน/หลังเรียนต่อหน่วย)
     </a>
     <a href="grade_book.php?subject_id=<?=$sid?>" class="px-2.5 py-1 bg-violet-50 text-violet-700 text-[10px] font-bold rounded-lg hover:bg-violet-100 transition-all">
       <i class="fas fa-table mr-1"></i>สมุดคะแนน
     </a>
     <a href="progress.php?subject_id=<?=$sid?>" class="px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-lg hover:bg-amber-100 transition-all">
       <i class="fas fa-chart-line mr-1"></i>ความคืบหน้า
-    </a>
-    <a href="exam_settings.php?subject_id=<?=$sid?>" class="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg hover:bg-slate-200 transition-all">
-      <i class="fas fa-cog mr-1"></i>ตั้งค่า
     </a>
   </div>
 </div>

@@ -2,71 +2,153 @@
 session_start();
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/_guard.php';
+require_once __DIR__ . '/../lms/_helpers.php';
 
 $pdo  = getPdo();
 $uid  = (int)$_SESSION['student_uid'];
 $name = $_SESSION['student_name'];
 $class= $_SESSION['student_class'];
 
-$subject_id = (int)($_GET['subject_id'] ?? $_POST['subject_id'] ?? 0);
-if (!$subject_id) { header('Location: /student/lms.php'); exit(); }
+$unit_id = (int)($_GET['unit_id'] ?? $_POST['unit_id'] ?? 0);
+if (!$unit_id) { header('Location: /student/lms.php'); exit(); }
 
-$ss = $pdo->prepare("SELECT s.* FROM lms_subjects s JOIN lms_subject_classrooms sc ON sc.subject_id=s.id WHERE s.id=? AND sc.classroom=? LIMIT 1");
-$ss->execute([$subject_id,$class]); $subject = $ss->fetch();
-if (!$subject) { header('Location: /student/lms.php'); exit(); }
+$us = $pdo->prepare("
+    SELECT u.*, s.subject_name FROM lms_units u
+    JOIN lms_subjects s ON s.id = u.subject_id
+    JOIN lms_subject_classrooms sc ON sc.subject_id = s.id
+    WHERE u.id=? AND sc.classroom=? AND u.status='published' AND u.deleted_at IS NULL
+    LIMIT 1
+");
+$us->execute([$unit_id, $class]); $unit = $us->fetch();
+if (!$unit) { header('Location: /student/lms.php'); exit(); }
+$subject_id = (int)$unit['subject_id'];
+
+// ── Unlock enforcement (mirrors student/lms_subject.php's display logic) —
+// server-side, since this page can be reached directly by URL regardless of what
+// the subject overview shows/hides.
+$mu = $pdo->prepare("SELECT id FROM lms_student_unit_unlocks WHERE student_uid=? AND unit_id=?");
+$mu->execute([$uid, $unit_id]);
+if (!$mu->fetch()) {
+    $um = $pdo->prepare("SELECT unlock_mode FROM lms_subject_settings WHERE subject_id=?");
+    $um->execute([$subject_id]); $unlock_mode = $um->fetchColumn() ?: 'open_all';
+
+    if ($unlock_mode === 'sequential') {
+        $pu = $pdo->prepare("SELECT id FROM lms_units WHERE subject_id=? AND order_no < ? AND status='published' AND deleted_at IS NULL ORDER BY order_no DESC LIMIT 1");
+        $pu->execute([$subject_id, $unit['order_no']]); $prev_id = $pu->fetchColumn();
+        if ($prev_id) {
+            $ptq = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE unit_id=?"); $ptq->execute([$prev_id]);
+            if ((int)$ptq->fetchColumn() > 0) {
+                $ppost = $pdo->prepare("SELECT id FROM lms_student_post_exam WHERE student_uid=? AND unit_id=? AND passed=1 LIMIT 1");
+                $ppost->execute([$uid, $prev_id]);
+                if (!$ppost->fetch()) { header('Location: /student/lms_subject.php?subject_id='.$subject_id.'&locked=1'); exit(); }
+            }
+        }
+    } else {
+        // open_all: only one in-progress unit at a time — must finish (exercises done +
+        // post-test passed) any other unit already started before beginning a new one
+        $ou = $pdo->prepare("SELECT id FROM lms_units WHERE subject_id=? AND id<>? AND status='published' AND deleted_at IS NULL");
+        $ou->execute([$subject_id, $unit_id]);
+        foreach ($ou->fetchAll(PDO::FETCH_COLUMN) as $other_id) {
+            $started = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND unit_id=? LIMIT 1");
+            $started->execute([$uid, $other_id]);
+            if (!$started->fetch()) continue;
+
+            $exq = $pdo->prepare("SELECT COUNT(*) FROM lms_unit_exercises WHERE unit_id=? AND is_remedial=0 AND status='published' AND deleted_at IS NULL");
+            $exq->execute([$other_id]); $ex_total = (int)$exq->fetchColumn();
+            $exd = $pdo->prepare("SELECT COUNT(DISTINCT se.exercise_id) FROM lms_student_exercises se JOIN lms_unit_exercises e ON e.id=se.exercise_id WHERE se.student_uid=? AND e.unit_id=? AND e.is_remedial=0");
+            $exd->execute([$uid, $other_id]); $ex_done = (int)$exd->fetchColumn();
+
+            $ptq = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE unit_id=?"); $ptq->execute([$other_id]);
+            $post_ok = true;
+            if ((int)$ptq->fetchColumn() > 0) {
+                $ppost = $pdo->prepare("SELECT id FROM lms_student_post_exam WHERE student_uid=? AND unit_id=? AND passed=1 LIMIT 1");
+                $ppost->execute([$uid, $other_id]); $post_ok = (bool)$ppost->fetch();
+            }
+
+            if (!(($ex_total === 0 || $ex_done >= $ex_total) && $post_ok)) {
+                header('Location: /student/lms_subject.php?subject_id='.$subject_id.'&locked=1'); exit();
+            }
+        }
+    }
+}
 
 // Already submitted pre-exam? Redirect back (pre-exam is once-only)
-$already_done = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND subject_id=? LIMIT 1");
-$already_done->execute([$uid,$subject_id]);
+$already_done = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND unit_id=? LIMIT 1");
+$already_done->execute([$uid,$unit_id]);
 if ($already_done->fetch()) {
     header('Location: /student/lms_subject.php?subject_id='.$subject_id); exit();
 }
 
 $attempt_no = 1;
 
+function lms_save_upload_answer(int $qid, int $uid): ?string {
+    $key = 'qf_' . $qid;
+    if (empty($_FILES[$key]['name']) || $_FILES[$key]['error'] !== UPLOAD_ERR_OK) return null;
+    $allowed_mime = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'];
+    $allowed_ext  = ['jpg','jpeg','png','gif','webp','pdf'];
+    $ext = strtolower(pathinfo($_FILES[$key]['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowed_ext, true)) return null;
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime  = finfo_file($finfo, $_FILES[$key]['tmp_name']);
+    finfo_close($finfo);
+    if (!in_array($mime, $allowed_mime, true)) return null;
+    if ($_FILES[$key]['size'] > 10 * 1024 * 1024) return null;
+    $dir = __DIR__ . '/../lms/uploads/exam_answers/';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+        file_put_contents($dir . '.htaccess', "Options -Indexes -ExecCGI\n<FilesMatch \"\\.(php|phtml|phar|php3|php4|php5|php7)$\">\n    Require all denied\n</FilesMatch>\n");
+    }
+    $fname = 'ans_' . $uid . '_' . $qid . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    if (!move_uploaded_file($_FILES[$key]['tmp_name'], $dir . $fname)) return null;
+    return 'lms/uploads/exam_answers/' . $fname;
+}
+
 // Handle submit
 $result = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $qs = $pdo->prepare("SELECT * FROM lms_pre_questions WHERE subject_id=? ORDER BY id");
-    $qs->execute([$subject_id]); $questions_post = $qs->fetchAll();
-    $score = 0; $total_choice = 0; $answers = [];
+    $qs = $pdo->prepare("SELECT * FROM lms_pre_questions WHERE unit_id=? ORDER BY id");
+    $qs->execute([$unit_id]); $questions_post = $qs->fetchAll();
+    $score = 0; $total_auto = 0; $answers = [];
     foreach ($questions_post as $q) {
         $qtype = $q['question_type'] ?? 'choice';
-        if ($qtype === 'text') {
-            $answers[] = ['id'=>$q['id'],'type'=>'text','text'=>trim($_POST['q_'.$q['id']] ?? '')];
-            continue;
+        $g = lms_grade_exam_answer($q);
+        if ($qtype === 'upload') {
+            $g['file_path'] = lms_save_upload_answer((int)$q['id'], $uid);
         }
-        $total_choice++;
-        $chosen  = (int)($_POST['q_'.$q['id']] ?? 0);
-        $correct = ((int)$q['correct_answer'] === $chosen);
-        if ($correct) $score++;
-        $answers[] = ['id'=>$q['id'],'type'=>'choice','chosen'=>$chosen,'correct_answer'=>(int)$q['correct_answer'],'is_correct'=>$correct];
+        if ($g['auto']) {
+            $total_auto++;
+            if ($g['correct']) $score++;
+        }
+        $answers[] = ['id' => $q['id']] + $g;
     }
     // Pre-exam always passes — it's before-learning assessment only
-    $pdo->prepare("INSERT INTO lms_student_pre_exam (student_uid,subject_id,score,total,passed,attempt_no) VALUES (?,?,?,?,1,?)")
-        ->execute([$uid,$subject_id,$score,$total_choice,$attempt_no]);
+    $pdo->prepare("INSERT INTO lms_student_pre_exam (student_uid,subject_id,unit_id,score,total,passed,attempt_no) VALUES (?,?,?,?,?,1,?)")
+        ->execute([$uid,$subject_id,$unit_id,$score,$total_auto,$attempt_no]);
     $exam_record_id = (int)$pdo->lastInsertId();
-    // Save text answers for teacher review
-    foreach ($questions_post as $q) {
-        if (($q['question_type'] ?? 'choice') === 'text') {
-            $text = trim($_POST['q_'.$q['id']] ?? '');
-            if ($text !== '') {
-                $pdo->prepare("INSERT INTO lms_student_exam_answers (student_uid,subject_id,exam_type,exam_record_id,question_id,answer_text) VALUES (?,?,'pre',?,?,?)")
-                    ->execute([$uid,$subject_id,$exam_record_id,$q['id'],$text]);
-            }
+    // Save manually-graded answers (text / upload) for teacher review
+    // Save item-level results for auto-graded types (feeds item-analysis reports)
+    $itemStmt = $pdo->prepare("INSERT INTO lms_exam_item_results (student_uid,subject_id,exam_type,exam_record_id,question_id,is_correct) VALUES (?,?,'pre',?,?,?)");
+    foreach ($answers as $a) {
+        if (!$a['auto'] && (!empty($a['text']) || !empty($a['file_path']))) {
+            $pdo->prepare("INSERT INTO lms_student_exam_answers (student_uid,subject_id,exam_type,exam_record_id,question_id,answer_text,file_path) VALUES (?,?,'pre',?,?,?,?)")
+                ->execute([$uid,$subject_id,$exam_record_id,$a['id'],$a['text'] ?? '',$a['file_path'] ?? null]);
+        }
+        if ($a['auto']) {
+            $itemStmt->execute([$uid,$subject_id,$exam_record_id,$a['id'],$a['correct'] ? 1 : 0]);
         }
     }
-    $result = ['score'=>$score,'total'=>$total_choice,'answers'=>$answers,'questions'=>$questions_post];
+    $result = ['score'=>$score,'total'=>$total_auto,'answers'=>$answers,'questions'=>$questions_post];
 }
 
-$qs = $pdo->prepare("SELECT * FROM lms_pre_questions WHERE subject_id=? ORDER BY id");
-$qs->execute([$subject_id]); $questions = $qs->fetchAll();
+$qs = $pdo->prepare("SELECT * FROM lms_pre_questions WHERE unit_id=? ORDER BY id");
+$qs->execute([$unit_id]); $questions = $qs->fetchAll();
 $total_q = count($questions);
 
-// Pre-generate shuffled choice order for each question (only for choice type)
+// Pre-generate shuffled choice order for each question (choice/multi_choice types)
 $shuffled_orders = [];
 foreach ($questions as $q) {
-    $order = [1,2,3,4]; shuffle($order);
+    $order = !empty($q['choice5']) ? [1,2,3,4,5] : [1,2,3,4];
+    shuffle($order);
     $shuffled_orders[$q['id']] = $order;
 }
 
@@ -98,7 +180,7 @@ body { font-family: 'Prompt', sans-serif; }
     </a>
     <div>
       <h1 class="font-black text-lg leading-tight">แบบทดสอบก่อนเรียน</h1>
-      <p class="text-violet-200 text-xs font-bold"><?=htmlspecialchars($name,ENT_QUOTES,'UTF-8')?></p>
+      <p class="text-violet-200 text-xs font-bold"><?=htmlspecialchars($unit['unit_name'],ENT_QUOTES,'UTF-8')?></p>
     </div>
   </div>
   <?php if (!$result): ?>
@@ -115,85 +197,58 @@ body { font-family: 'Prompt', sans-serif; }
   <p class="font-bold">ยังไม่มีข้อสอบ</p>
 </div>
 <?php elseif ($result): ?>
-<div class="px-4 py-5 max-w-lg mx-auto space-y-4">
+<div class="px-4 py-5 max-w-2xl mx-auto space-y-4">
   <div class="rounded-2xl p-6 text-center shadow-sm border-2 border-violet-200 bg-violet-50">
     <div class="text-5xl mb-3">📝</div>
     <p class="font-black text-xl text-slate-800">ส่งคำตอบแล้ว</p>
     <?php if ($result['total'] > 0): ?>
     <p class="text-4xl font-black mt-2 text-violet-600"><?=$result['score']?> <span class="text-lg text-slate-400 font-bold">/ <?=$result['total']?></span></p>
-    <p class="text-sm text-slate-500 mt-1">คะแนนข้อปรนัย</p>
+    <p class="text-sm text-slate-500 mt-1">คะแนนข้อที่ตรวจอัตโนมัติ</p>
     <?php endif; ?>
   </div>
   <p class="text-xs font-black text-slate-400 uppercase tracking-wider px-1">คำตอบของคุณ</p>
   <?php
   $ans_map = [];
   foreach ($result['answers'] as $a) $ans_map[$a['id']] = $a;
+  $qtypes = lms_question_types();
   foreach ($result['questions'] as $i => $q):
     $ans = $ans_map[$q['id']] ?? null;
     $qtype = $q['question_type'] ?? 'choice';
   ?>
   <div class="rounded-2xl border bg-white p-4 shadow-sm border-slate-200">
-    <p class="text-sm font-bold text-slate-700 mb-3"><?=$i+1?>. <?=htmlspecialchars($q['question_text'],ENT_QUOTES,'UTF-8')?></p>
-    <?php if ($qtype === 'text'): ?>
-    <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm text-slate-600">
-      <?=htmlspecialchars($ans['text'] ?? '—',ENT_QUOTES,'UTF-8')?>
-    </div>
-    <?php else: ?>
-    <?php for($n=1;$n<=4;$n++):
-      $is_chosen = $ans && $ans['chosen'] == $n;
-      $is_right  = $q['correct_answer'] == $n;
-      $cls = 'border rounded-xl px-3 py-2 text-xs flex items-center gap-2 ';
-      if ($is_right) $cls .= 'bg-emerald-50 border-emerald-300 text-emerald-700 font-bold';
-      elseif ($is_chosen) $cls .= 'bg-rose-50 border-rose-300 text-rose-600';
-      else $cls .= 'bg-slate-50 border-slate-100 text-slate-500';
-    ?>
-    <div class="<?=$cls?> mb-1.5">
-      <span class="w-5 h-5 rounded-full text-center leading-5 text-[10px] font-black flex-shrink-0 <?=$is_right?'bg-emerald-500 text-white':($is_chosen?'bg-rose-400 text-white':'bg-slate-200 text-slate-500')?>"><?=$n?></span>
-      <?=htmlspecialchars($q["choice{$n}"],ENT_QUOTES,'UTF-8')?>
-      <?php if ($is_right): ?><i class="bi bi-check-circle-fill text-emerald-500 ml-auto"></i><?php endif; ?>
-      <?php if ($is_chosen && !$is_right): ?><i class="bi bi-x-circle-fill text-rose-400 ml-auto"></i><?php endif; ?>
-    </div>
-    <?php endfor; ?>
-    <?php endif; ?>
+    <p class="text-sm font-bold text-slate-700 mb-3"><?=$i+1?>. <?=htmlspecialchars($q['question_text'],ENT_QUOTES,'UTF-8')?>
+      <?php if (!($qtypes[$qtype]['auto'] ?? true)): ?>
+      <span class="ml-1 px-1.5 py-0.5 bg-violet-100 text-violet-600 text-[10px] font-black rounded-full"><?=htmlspecialchars($qtypes[$qtype]['label'] ?? '',ENT_QUOTES,'UTF-8')?></span>
+      <?php endif; ?>
+    </p>
+    <?=lms_render_exam_result_review($q, $ans)?>
   </div>
   <?php endforeach; ?>
-  <a href="<?=$back_url?>" class="block py-3 bg-violet-600 text-white font-bold text-sm rounded-xl text-center shadow-lg shadow-violet-200/50">
+  <a href="/student/lms_subject.php?subject_id=<?=$subject_id?>&tab=content" class="block py-3 bg-violet-600 text-white font-bold text-sm rounded-xl text-center shadow-lg shadow-violet-200/50">
     <i class="bi bi-mortarboard-fill mr-1"></i> เข้าสู่บทเรียน
   </a>
 </div>
 <?php else: ?>
-<form method="POST" id="examForm" class="px-4 py-5 max-w-lg mx-auto space-y-4 pb-24">
-  <input type="hidden" name="subject_id" value="<?=$subject_id?>">
-  <?php foreach ($questions as $i => $q): $qtype = $q['question_type'] ?? 'choice'; ?>
+<form method="POST" id="examForm" class="px-4 py-5 max-w-2xl mx-auto space-y-4 pb-24" enctype="multipart/form-data">
+  <input type="hidden" name="unit_id" value="<?=$unit_id?>">
+  <?php $qtypes = lms_question_types(); foreach ($questions as $i => $q): $qtype = $q['question_type'] ?? 'choice'; ?>
   <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <p class="text-sm font-bold text-slate-800 mb-1 leading-snug">
       <span class="text-violet-600 font-black mr-1"><?=$i+1?>.</span>
       <?=htmlspecialchars($q['question_text'],ENT_QUOTES,'UTF-8')?>
-      <?php if ($qtype === 'text'): ?>
-      <span class="ml-1 px-1.5 py-0.5 bg-violet-100 text-violet-600 text-[10px] font-black rounded-full">อัตนัย</span>
+      <?php if (!($qtypes[$qtype]['auto'] ?? true)): ?>
+      <span class="ml-1 px-1.5 py-0.5 bg-violet-100 text-violet-600 text-[10px] font-black rounded-full"><?=htmlspecialchars($qtypes[$qtype]['label'] ?? '',ENT_QUOTES,'UTF-8')?></span>
       <?php endif; ?>
     </p>
     <?php if (!empty($q['question_img'])): ?>
     <img src="/uploads/lms/questions/<?=htmlspecialchars($q['question_img'],ENT_QUOTES,'UTF-8')?>" class="rounded-xl w-full max-h-48 object-contain my-3 bg-slate-50">
     <?php endif; ?>
-    <?php if ($qtype === 'text'): ?>
-    <textarea name="q_<?=$q['id']?>" rows="3" class="w-full mt-3 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-violet-400 outline-none resize-none" placeholder="พิมพ์คำตอบของคุณ..." data-type="text"></textarea>
-    <?php else: ?>
-    <div class="space-y-2 mt-3">
-      <?php foreach ($shuffled_orders[$q['id']] as $n): ?>
-      <label class="choice-label flex items-center gap-3 border border-slate-200 rounded-xl px-3 py-2.5 bg-slate-50">
-        <input type="radio" name="q_<?=$q['id']?>" value="<?=$n?>" class="hidden" data-type="choice">
-        <span class="choice-letter w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-black flex items-center justify-center flex-shrink-0"><?=$n?></span>
-        <span class="text-sm text-slate-700"><?=htmlspecialchars($q["choice{$n}"],ENT_QUOTES,'UTF-8')?></span>
-      </label>
-      <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
+    <?=lms_render_exam_question_input($q, $shuffled_orders[$q['id']] ?? [1,2,3,4])?>
   </div>
   <?php endforeach; ?>
 </form>
 <div class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-slate-200 px-4 py-4">
-  <div class="max-w-lg mx-auto flex items-center gap-4">
+  <div class="max-w-2xl mx-auto flex items-center gap-4">
     <div class="flex-1">
       <div class="text-xs text-slate-400 font-bold mb-1">ตอบแล้ว <span id="answered">0</span> / <?=$total_q?> ข้อ</div>
       <div class="w-full bg-slate-100 rounded-full h-1.5">
@@ -208,29 +263,23 @@ body { font-family: 'Prompt', sans-serif; }
 <?php endif; ?>
 
 <script>
+<?=lms_exam_js_helpers()?>
 <?php if ($result): ?>
 window.addEventListener('load', () => {
-  Swal.fire({icon:'success',title:'ส่งคำตอบแล้ว',<?php if($result['total']>0): ?>text:'คะแนนข้อปรนัย <?=$result['score']?>/<?=$result['total']?> ข้อ',<?php endif; ?>confirmButtonColor:'#7C3AED',timer:2500,showConfirmButton:false});
+  Swal.fire({icon:'success',title:'ส่งคำตอบแล้ว',<?php if($result['total']>0): ?>text:'คะแนนข้อที่ตรวจอัตโนมัติ <?=$result['score']?>/<?=$result['total']?> ข้อ',<?php endif; ?>confirmButtonColor:'#7C3AED',timer:2500,showConfirmButton:false});
 });
 <?php else: ?>
 const total = <?=$total_q?>;
 function countAnswered() {
-  let cnt = 0;
-  const qIds = new Set();
-  document.querySelectorAll('[data-type="choice"]').forEach(r => qIds.add(r.name));
-  qIds.forEach(n => { if (document.querySelector(`input[name="${n}"]:checked`)) cnt++; });
-  document.querySelectorAll('[data-type="text"]').forEach(ta => { if (ta.value.trim()) cnt++; });
+  const cnt = lmsCountAnsweredQids();
   document.getElementById('answered').textContent = cnt;
   document.getElementById('progressBar').style.width = (cnt/total*100)+'%';
+  return cnt;
 }
-document.querySelectorAll('[data-type="choice"]').forEach(r => r.addEventListener('change', countAnswered));
-document.querySelectorAll('[data-type="text"]').forEach(ta => ta.addEventListener('input', countAnswered));
+document.querySelectorAll('[data-qid]').forEach(el => el.addEventListener('change', countAnswered));
+document.querySelectorAll('textarea[data-qid], input[type=text][data-qid]').forEach(el => el.addEventListener('input', countAnswered));
 function submitExam() {
-  let cnt = 0;
-  const qIds = new Set();
-  document.querySelectorAll('[data-type="choice"]').forEach(r => qIds.add(r.name));
-  qIds.forEach(n => { if (document.querySelector(`input[name="${n}"]:checked`)) cnt++; });
-  document.querySelectorAll('[data-type="text"]').forEach(ta => { if (ta.value.trim()) cnt++; });
+  const cnt = countAnswered();
   if (cnt < total) {
     Swal.fire({icon:'warning',title:'ยังไม่ครบ',text:`กรุณาตอบให้ครบทุกข้อ (ตอบแล้ว ${cnt}/${total} ข้อ)`,confirmButtonColor:'#7C3AED'});
     return;

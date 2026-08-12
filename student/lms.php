@@ -21,90 +21,106 @@ $subjects = $st->fetchAll();
 
 $subject_stats = [];
 $sids = array_column($subjects, 'id');
+$units_total_all = 0; $units_completed_all = 0; $improve_pairs = [];
 
 if (!empty($sids)) {
     $ph = implode(',', array_fill(0, count($sids), '?'));
 
-    // Pre-exam passed
-    $r = $pdo->prepare("SELECT DISTINCT subject_id FROM lms_student_pre_exam WHERE student_uid=? AND subject_id IN ($ph) AND passed=1");
-    $r->execute(array_merge([$uid], $sids));
-    $pre_done = array_flip($r->fetchAll(PDO::FETCH_COLUMN));
-
-    // Post-exam passed
-    $r = $pdo->prepare("SELECT DISTINCT subject_id FROM lms_student_post_exam WHERE student_uid=? AND subject_id IN ($ph) AND passed=1");
-    $r->execute(array_merge([$uid], $sids));
-    $post_done = array_flip($r->fetchAll(PDO::FETCH_COLUMN));
-
-    // Has pre-exam questions (determines if gate applies)
-    $r = $pdo->prepare("SELECT subject_id FROM lms_pre_questions WHERE subject_id IN ($ph) GROUP BY subject_id");
+    // Units per subject, in order (exams and exercises are unit-scoped)
+    $r = $pdo->prepare("SELECT id, subject_id, order_no FROM lms_units WHERE subject_id IN ($ph) AND status='published' AND deleted_at IS NULL ORDER BY subject_id, order_no");
     $r->execute($sids);
-    $has_pre_q = array_flip($r->fetchAll(PDO::FETCH_COLUMN));
+    $units_by_subject = [];
+    foreach ($r->fetchAll() as $u) $units_by_subject[$u['subject_id']][] = $u;
 
-    // Has post-exam questions
-    $r = $pdo->prepare("SELECT subject_id FROM lms_post_questions WHERE subject_id IN ($ph) GROUP BY subject_id");
-    $r->execute($sids);
-    $has_post_q = array_flip($r->fetchAll(PDO::FETCH_COLUMN));
-
-    // Unit count
-    $r = $pdo->prepare("SELECT subject_id, COUNT(*) cnt FROM lms_units WHERE subject_id IN ($ph) GROUP BY subject_id");
-    $r->execute($sids);
-    $unit_map = array_column($r->fetchAll(), 'cnt', 'subject_id');
-
-    // Exercise totals + submitted (filtered by classroom)
     $_ex_cls_exists = (bool)$pdo->query("SHOW TABLES LIKE 'lms_exercise_classrooms'")->fetch();
     $_cls_ex_filter = $_ex_cls_exists
         ? "AND (NOT EXISTS (SELECT 1 FROM lms_exercise_classrooms ec WHERE ec.exercise_id = e.id) OR EXISTS (SELECT 1 FROM lms_exercise_classrooms ec WHERE ec.exercise_id = e.id AND ec.classroom = ?))"
         : '';
-    $r = $pdo->prepare("
-        SELECT u.subject_id,
-               COUNT(e.id) total_ex,
-               SUM(CASE WHEN se.id IS NOT NULL THEN 1 ELSE 0 END) submitted_ex
-        FROM lms_units u
-        JOIN lms_unit_exercises e ON e.unit_id = u.id
-        LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.student_uid = ?
-        WHERE u.subject_id IN ($ph)
-        {$_cls_ex_filter}
-        GROUP BY u.subject_id
-    ");
-    $r->execute(array_merge([$uid], $sids, $_ex_cls_exists ? [$class] : []));
-    $ex_map = array_column($r->fetchAll(), null, 'subject_id');
 
     foreach ($subjects as $subj) {
-        $sid = $subj['id'];
-        $ex  = $ex_map[$sid] ?? null;
-        $tot = (int)($ex['total_ex']    ?? 0);
-        $sub = (int)($ex['submitted_ex'] ?? 0);
+        $sid   = $subj['id'];
+        $units = $units_by_subject[$sid] ?? [];
+        $tot_ex_all = 0; $sub_ex_all = 0;
+        $cta_type = 'browse';
+        $found_cta = false;
 
-        $pre_passed  = isset($pre_done[$sid])  || !isset($has_pre_q[$sid]);
-        $post_passed = isset($post_done[$sid]) || !isset($has_post_q[$sid]);
-        $pending     = max(0, $tot - $sub);
+        foreach ($units as $u) {
+            $un = $u['id'];
+            $units_total_all++;
 
-        // Determine CTA state
-        if (!$pre_passed) {
-            $cta_type = 'pre_exam';
-        } elseif ($pending > 0) {
-            $cta_type = 'pending_work';
-        } elseif (!$post_passed && isset($has_post_q[$sid])) {
-            $cta_type = 'post_exam';
-        } elseif ($tot > 0) {
-            $cta_type = 'done';
-        } else {
-            $cta_type = 'browse';
+            $pq = $pdo->prepare("SELECT COUNT(*) FROM lms_pre_questions WHERE unit_id=?"); $pq->execute([$un]); $has_pre = (int)$pq->fetchColumn() > 0;
+            $pre_ok = true; $pre_pct = null;
+            if ($has_pre) {
+                $pc = $pdo->prepare("SELECT score,total FROM lms_student_pre_exam WHERE student_uid=? AND unit_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1");
+                $pc->execute([$uid, $un]); $prow = $pc->fetch();
+                $pre_ok = (bool)$prow;
+                if ($prow && $prow['total'] > 0) $pre_pct = $prow['score'] / $prow['total'] * 100;
+            }
+
+            $eq = $pdo->prepare("
+                SELECT COUNT(e.id) total_ex, SUM(CASE WHEN se.id IS NOT NULL THEN 1 ELSE 0 END) submitted_ex
+                FROM lms_unit_exercises e
+                LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id AND se.student_uid = ?
+                WHERE e.unit_id=? AND e.status='published' AND e.deleted_at IS NULL AND e.is_remedial=0 {$_cls_ex_filter}
+            ");
+            $eq->execute($_ex_cls_exists ? [$uid, $un, $class] : [$uid, $un]);
+            $exr = $eq->fetch();
+            $u_tot = (int)($exr['total_ex'] ?? 0); $u_sub = (int)($exr['submitted_ex'] ?? 0);
+            $tot_ex_all += $u_tot; $sub_ex_all += $u_sub;
+
+            $poq = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE unit_id=?"); $poq->execute([$un]); $has_post = (int)$poq->fetchColumn() > 0;
+            $post_ok = true; $post_pct = null;
+            if ($has_post) {
+                $pc = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND unit_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1");
+                $pc->execute([$uid, $un]); $prow = $pc->fetch();
+                $post_ok = (bool)$prow;
+                if ($prow && $prow['total'] > 0) $post_pct = $prow['score'] / $prow['total'] * 100;
+            }
+
+            if ($pre_pct !== null && $post_pct !== null) $improve_pairs[] = $post_pct - $pre_pct;
+            if ($pre_ok && $u_sub >= $u_tot && $post_ok) $units_completed_all++;
+
+            if (!$found_cta) {
+                if (!$pre_ok)              { $cta_type = 'pre_exam'; $found_cta = true; }
+                elseif ($u_sub < $u_tot)   { $cta_type = 'pending_work'; $found_cta = true; }
+                elseif (!$post_ok)         { $cta_type = 'post_exam'; $found_cta = true; }
+            }
         }
 
+        if (!$found_cta) $cta_type = empty($units) ? 'browse' : 'done';
+        $pending = max(0, $tot_ex_all - $sub_ex_all);
+
         $subject_stats[$sid] = [
-            'pre_passed'   => $pre_passed,
-            'post_passed'  => $post_passed,
-            'unit_count'   => (int)($unit_map[$sid] ?? 0),
-            'total_ex'     => $tot,
+            'pre_passed'   => $cta_type !== 'pre_exam',
+            'post_passed'  => !in_array($cta_type, ['pre_exam','pending_work','post_exam'], true),
+            'unit_count'   => count($units),
+            'total_ex'     => $tot_ex_all,
             'pending_ex'   => $pending,
-            'progress_pct' => $tot > 0 ? round($sub / $tot * 100) : 0,
+            'progress_pct' => $tot_ex_all > 0 ? round($sub_ex_all / $tot_ex_all * 100) : 0,
             'cta_type'     => $cta_type,
         ];
     }
 }
 
 $total_pending = array_sum(array_column($subject_stats, 'pending_ex'));
+$avg_improve   = !empty($improve_pairs) ? round(array_sum($improve_pairs) / count($improve_pairs)) : null;
+
+// ── Submission streak: consecutive days (ending today or yesterday) with any LMS activity ──
+$active_dates = [];
+$r = $pdo->prepare("SELECT DISTINCT DATE(taken_at) d FROM lms_student_pre_exam WHERE student_uid=?");
+$r->execute([$uid]); foreach ($r->fetchAll(PDO::FETCH_COLUMN) as $d) $active_dates[$d] = true;
+$r = $pdo->prepare("SELECT DISTINCT DATE(taken_at) d FROM lms_student_post_exam WHERE student_uid=?");
+$r->execute([$uid]); foreach ($r->fetchAll(PDO::FETCH_COLUMN) as $d) $active_dates[$d] = true;
+$r = $pdo->prepare("SELECT DISTINCT DATE(submitted_at) d FROM lms_student_exercises WHERE student_uid=? AND submitted_at IS NOT NULL");
+$r->execute([$uid]); foreach ($r->fetchAll(PDO::FETCH_COLUMN) as $d) $active_dates[$d] = true;
+
+$streak = 0;
+$cursor = new DateTime('today');
+if (!isset($active_dates[$cursor->format('Y-m-d')])) $cursor->modify('-1 day');
+while (isset($active_dates[$cursor->format('Y-m-d')])) {
+    $streak++;
+    $cursor->modify('-1 day');
+}
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
@@ -145,8 +161,34 @@ $total_pending = array_sum(array_column($subject_stats, 'pending_ex'));
   </div>
 </div>
 
+<!-- ── Personal progress stats ──────────────────────────────── -->
+<?php if (!empty($subjects)): ?>
+<div class="px-4 pt-4 max-w-2xl mx-auto">
+  <div class="grid grid-cols-3 gap-2">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-3 text-center">
+      <div class="text-lg font-black text-violet-600"><?=$units_completed_all?>/<?=$units_total_all?></div>
+      <div class="text-[9px] text-slate-400 font-bold mt-0.5">หน่วยที่เรียนจบ</div>
+    </div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-3 text-center">
+      <?php if ($avg_improve !== null): ?>
+      <div class="text-lg font-black <?=$avg_improve>=0?'text-emerald-600':'text-slate-500'?>"><?=$avg_improve>=0?'+':''?><?=$avg_improve?>%</div>
+      <?php else: ?>
+      <div class="text-lg font-black text-slate-300">—</div>
+      <?php endif; ?>
+      <div class="text-[9px] text-slate-400 font-bold mt-0.5">คะแนนดีขึ้นเฉลี่ย</div>
+    </div>
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-3 text-center">
+      <div class="text-lg font-black <?=$streak>0?'text-amber-500':'text-slate-300'?>">
+        <?=$streak?><?php if ($streak > 0): ?> <i class="bi bi-fire text-sm"></i><?php endif; ?>
+      </div>
+      <div class="text-[9px] text-slate-400 font-bold mt-0.5">วันต่อเนื่อง</div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <!-- ── Subject list ─────────────────────────────────────────── -->
-<div class="px-4 py-4 space-y-3 max-w-lg mx-auto">
+<div class="px-4 py-4 space-y-3 max-w-2xl mx-auto">
 
   <?php if (empty($subjects)): ?>
   <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm mt-4">

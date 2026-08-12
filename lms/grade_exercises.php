@@ -5,19 +5,20 @@ if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.
 if (!in_array($_SESSION['llw_role'], ['super_admin','att_teacher'])) {
     header('Location: ' . $base_path . '/login.php'); exit();
 }
+require_once __DIR__ . '/_helpers.php';
 
 $pdo        = getPdo();
 $is_admin   = $_SESSION['llw_role'] === 'super_admin';
-$teacher_id = $_SESSION['teacher_id'] ?? 0;
+$teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
 
 // AJAX: delete submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'delete') {
     header('Content-Type: application/json');
     try {
         $sub_id = (int)$_POST['sub_id'];
-        $row = $pdo->prepare("SELECT id, file_paths FROM lms_student_exercises WHERE id=?");
+        $row = $pdo->prepare("SELECT id, subject_id, file_paths FROM lms_student_exercises WHERE id=?");
         $row->execute([$sub_id]); $row = $row->fetch();
-        if ($row) {
+        if ($row && lms_get_owned_subject($pdo, (int)$row['subject_id'], $is_admin, $teacher_id)) {
             if (!empty($row['file_paths'])) {
                 $files = json_decode($row['file_paths'], true) ?: [$row['file_paths']];
                 foreach ($files as $f) {
@@ -26,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'delete'
                 }
             }
             $pdo->prepare("DELETE FROM lms_student_exercises WHERE id=?")->execute([$sub_id]);
+            lms_log_activity($pdo, 'delete', 'lms_student_exercise', $sub_id);
         }
         echo json_encode(['ok' => true]);
     } catch (Exception $e) {
@@ -44,6 +46,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'save') 
         $feedback = trim($_POST['feedback'] ?? '') ?: null;
         $allowed_quality = ['น่าชื่นชมมาก!ครับ','ทำได้ดีมาก!ครับ','ดีขึ้นเรื่อยๆ เลย!ครับ','สู้ๆ ครูเชื่อในตัวเธอครับ','อย่าท้อ ลองใหม่นะครับ'];
         $quality  = in_array($_POST['quality'] ?? '', $allowed_quality) ? $_POST['quality'] : null;
+
+        $row = $pdo->prepare("SELECT subject_id FROM lms_student_exercises WHERE id=?");
+        $row->execute([$sub_id]); $row = $row->fetch();
+        if (!$row || !lms_get_owned_subject($pdo, (int)$row['subject_id'], $is_admin, $teacher_id)) {
+            throw new Exception('ไม่มีสิทธิ์ตรวจงานนี้');
+        }
+
         $has_quality = (bool)$pdo->query("SHOW COLUMNS FROM `lms_student_exercises` LIKE 'quality'")->fetch();
         if ($has_quality) {
             $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, quality=?, reviewed_at=NOW() WHERE id=?")
@@ -52,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'save') 
             $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, reviewed_at=NOW() WHERE id=?")
                 ->execute([$grade, $feedback, $sub_id]);
         }
+        lms_log_activity($pdo, 'grade', 'lms_student_exercise', $sub_id, null, ['grade' => $grade]);
         echo json_encode(['ok' => true]);
     } catch (Exception $e) {
         error_log($e->getMessage());
@@ -76,7 +86,7 @@ if ($is_admin) {
 $subject = null; $exercises = []; $exercise = null; $submissions = []; $classes = [];
 
 if ($subject_id) {
-    $ss = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $ss->execute([$subject_id]); $subject = $ss->fetch();
+    $subject = lms_get_owned_subject($pdo, $subject_id, $is_admin, $teacher_id);
 
     if ($subject) {
         // Classrooms enrolled in this subject
@@ -112,7 +122,7 @@ if ($subject_id) {
             FROM lms_unit_exercises e
             JOIN lms_units u ON u.id = e.unit_id
             {$class_join}
-            WHERE u.subject_id = ?
+            WHERE u.subject_id = ? AND e.deleted_at IS NULL AND u.deleted_at IS NULL
             {$_cls_ex_filter}
             GROUP BY e.id
             ORDER BY u.order_no, e.id

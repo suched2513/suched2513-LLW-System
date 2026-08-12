@@ -114,7 +114,7 @@ body { font-family:'Prompt',sans-serif; }
 <!-- Header -->
 <header class="bg-gradient-to-r from-orange-500 to-amber-500 text-white sticky top-0 z-50 shadow-md"
         style="padding-top:env(safe-area-inset-top)">
-    <div class="max-w-lg mx-auto flex items-center gap-3 px-4 py-3">
+    <div class="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3">
         <a href="/student/dashboard.php"
            class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/30 flex-shrink-0">
             <i class="bi bi-arrow-left"></i>
@@ -126,7 +126,7 @@ body { font-family:'Prompt',sans-serif; }
     </div>
 </header>
 
-<div class="max-w-lg mx-auto px-4 py-5 space-y-4">
+<div class="max-w-2xl mx-auto px-4 py-5 space-y-4">
 
 <?php if ($err): ?>
 <div class="bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 text-rose-700 text-sm font-bold flex items-center gap-2">

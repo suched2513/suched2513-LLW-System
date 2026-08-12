@@ -103,7 +103,7 @@ body { font-family:'Prompt',sans-serif; }
 <!-- Header -->
 <header class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white sticky top-0 z-50 shadow-md"
         style="padding-top:env(safe-area-inset-top)">
-    <div class="max-w-lg mx-auto flex items-center gap-3 px-4 py-3">
+    <div class="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3">
         <a href="/student/dashboard.php"
            class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/30 flex-shrink-0">
             <i class="bi bi-arrow-left"></i>
@@ -115,7 +115,7 @@ body { font-family:'Prompt',sans-serif; }
     </div>
 </header>
 
-<div class="max-w-lg mx-auto px-4 py-5 space-y-4">
+<div class="max-w-2xl mx-auto px-4 py-5 space-y-4">
 
     <!-- Profile + Overall Stats -->
     <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl p-5 text-white shadow-xl shadow-blue-200/60 relative overflow-hidden">

@@ -3,14 +3,19 @@ session_start();
 require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 if (!in_array($_SESSION['llw_role'], ['super_admin','att_teacher'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
+require_once __DIR__ . '/_helpers.php';
 
-$pdo = getPdo();
+$pdo        = getPdo();
+$is_admin   = $_SESSION['llw_role'] === 'super_admin';
+$teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
 $msg = '';
 
-$subject_id = (int)($_GET['subject_id'] ?? $_POST['subject_id'] ?? 0);
-if (!$subject_id) { header('Location: subjects.php'); exit(); }
-$ss = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $ss->execute([$subject_id]); $subject = $ss->fetch();
-if (!$subject) { header('Location: subjects.php'); exit(); }
+$unit_id = (int)($_GET['unit_id'] ?? $_POST['unit_id'] ?? 0);
+if (!$unit_id) { header('Location: subjects.php'); exit(); }
+$unit = lms_get_owned_unit($pdo, $unit_id, $is_admin, $teacher_id);
+if (!$unit) { header('Location: subjects.php'); exit(); }
+$subject_id = (int)$unit['subject_id'];
+$subject = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $subject->execute([$subject_id]); $subject = $subject->fetch();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pre_pass  = max(1, (int)$_POST['pre_pass_score']);
@@ -24,25 +29,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($open_at && $close_at && $close_at <= $open_at) {
         $msg = 'error:เวลาปิดต้องหลังเวลาเปิดเสมอ';
-        header('Location: exam_settings.php?subject_id='.$subject_id.'&msg='.urlencode($msg)); exit();
+        header('Location: exam_settings.php?unit_id='.$unit_id.'&msg='.urlencode($msg)); exit();
     }
 
-    $pdo->prepare("UPDATE lms_exam_settings SET pre_pass_score=?, post_pass_score=?, post_max_attempts=?, post_exam_open_at=?, post_exam_close_at=? WHERE subject_id=?")
-        ->execute([$pre_pass, $post_pass, $max_att, $open_at, $close_at, $subject_id]);
+    $pdo->prepare("
+        INSERT INTO lms_exam_settings (subject_id, unit_id, pre_pass_score, post_pass_score, post_max_attempts, post_exam_open_at, post_exam_close_at)
+        VALUES (?,?,?,?,?,?,?)
+        ON DUPLICATE KEY UPDATE pre_pass_score=?, post_pass_score=?, post_max_attempts=?, post_exam_open_at=?, post_exam_close_at=?
+    ")->execute([$subject_id, $unit_id, $pre_pass, $post_pass, $max_att, $open_at, $close_at, $pre_pass, $post_pass, $max_att, $open_at, $close_at]);
     $msg = 'success:บันทึกการตั้งค่าสำเร็จ';
-    header('Location: exam_settings.php?subject_id='.$subject_id.'&msg='.urlencode($msg)); exit();
+    header('Location: exam_settings.php?unit_id='.$unit_id.'&msg='.urlencode($msg)); exit();
 }
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
-$st = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE subject_id=?");
-$st->execute([$subject_id]);
+$st = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE unit_id=?");
+$st->execute([$unit_id]);
 $s = $st->fetch();
 
-$stpre = $pdo->prepare("SELECT COUNT(*) FROM lms_pre_questions WHERE subject_id=?"); $stpre->execute([$subject_id]); $pre_total = (int)$stpre->fetchColumn();
-$stpost = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE subject_id=?"); $stpost->execute([$subject_id]); $post_total = (int)$stpost->fetchColumn();
+$stpre = $pdo->prepare("SELECT COUNT(*) FROM lms_pre_questions WHERE unit_id=?"); $stpre->execute([$unit_id]); $pre_total = (int)$stpre->fetchColumn();
+$stpost = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE unit_id=?"); $stpost->execute([$unit_id]); $post_total = (int)$stpost->fetchColumn();
 
 $pageTitle    = 'ตั้งค่าการสอบ';
-$pageSubtitle = htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8');
+$pageSubtitle = htmlspecialchars($unit['unit_name'],ENT_QUOTES,'UTF-8');
 $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
@@ -59,20 +67,20 @@ require_once __DIR__ . '/../components/layout_start.php';
     <i class="fas fa-cog text-white"></i>
   </div>
   <div>
-    <a href="<?=$base_path?>/lms/subjects.php" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>วิชาทั้งหมด</a>
+    <a href="<?=$base_path?>/lms/units.php?subject_id=<?=$subject_id?>" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>หน่วยการเรียนรู้</a>
     <h2 class="text-lg font-black text-slate-800">ตั้งค่าการสอบ</h2>
-    <p class="text-xs text-slate-400"><?=htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8')?></p>
+    <p class="text-xs text-slate-400">หน่วย: <?=htmlspecialchars($unit['unit_name'],ENT_QUOTES,'UTF-8')?> · <?=htmlspecialchars($subject['subject_name'] ?? '',ENT_QUOTES,'UTF-8')?></p>
   </div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
   <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-6">
     <form method="POST" class="space-y-5">
-      <input type="hidden" name="subject_id" value="<?=$subject_id?>">
+      <input type="hidden" name="unit_id" value="<?=$unit_id?>">
       <h3 class="font-black text-slate-700 text-sm mb-4">กำหนดค่า</h3>
 
       <div class="rounded-xl p-4 bg-blue-50 border border-blue-100">
-        <div class="font-bold text-blue-800 text-xs mb-3"><i class="fas fa-play-circle mr-1"></i> แบบทดสอบก่อนเรียน</div>
+        <div class="font-bold text-blue-800 text-xs mb-3"><i class="fas fa-play-circle mr-1"></i> แบบทดสอบก่อนเรียน (หน่วยนี้)</div>
         <label class="block text-xs font-black text-slate-500 mb-1">จำนวนข้อที่ผ่านขึ้นไป
           <span class="font-normal text-slate-400">(จาก <?=$pre_total?> ข้อ)</span></label>
         <div class="flex items-center gap-3">
@@ -85,7 +93,7 @@ require_once __DIR__ . '/../components/layout_start.php';
       </div>
 
       <div class="rounded-xl p-4 bg-rose-50 border border-rose-100 space-y-3">
-        <div class="font-bold text-rose-800 text-xs mb-1"><i class="fas fa-flag-checkered mr-1"></i> แบบทดสอบหลังเรียน</div>
+        <div class="font-bold text-rose-800 text-xs mb-1"><i class="fas fa-flag-checkered mr-1"></i> แบบทดสอบหลังเรียน (หน่วยนี้)</div>
         <div>
           <label class="block text-xs font-black text-slate-500 mb-1">จำนวนข้อที่ผ่านขึ้นไป
             <span class="font-normal text-slate-400">(จาก <?=$post_total?> ข้อ)</span></label>
@@ -164,7 +172,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     </div>
     <div class="bg-orange-50 rounded-2xl border border-orange-100 p-5">
       <div class="font-bold text-orange-700 text-xs mb-2"><i class="fas fa-exclamation-triangle mr-1"></i>เงื่อนไขรีเซ็ต</div>
-      <p class="text-xs text-orange-600">หากนักเรียนสอบหลังเรียนครบจำนวนครั้งแล้วยังไม่ผ่าน ระบบจะรีเซ็ตประวัติสอบทั้งหมด (ก่อนเรียน + หลังเรียน + แบบฝึกหัด) เพื่อให้เริ่มต้นใหม่</p>
+      <p class="text-xs text-orange-600">หากนักเรียนสอบหลังเรียนของหน่วยนี้ครบจำนวนครั้งแล้วยังไม่ผ่าน ระบบจะรีเซ็ตประวัติสอบของหน่วยนี้ (ก่อนเรียน + หลังเรียน + แบบฝึกหัดของหน่วยนี้) เพื่อให้เริ่มต้นใหม่</p>
     </div>
   </div>
 </div>

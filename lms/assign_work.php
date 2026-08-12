@@ -3,6 +3,7 @@ session_start();
 require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 if (!in_array($_SESSION['llw_role'], ['super_admin','att_teacher'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
+require_once __DIR__ . '/_helpers.php';
 
 $pdo        = getPdo();
 $teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
@@ -23,6 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$title)      throw new Exception('กรุณาระบุชื่อใบงาน');
         if (!$subject_id) throw new Exception('กรุณาเลือกวิชา');
         if (empty($classrooms)) throw new Exception('กรุณาเลือกห้องเรียนอย่างน้อย 1 ห้อง');
+        if (!lms_get_owned_subject($pdo, $subject_id, $is_admin, $teacher_id)) throw new Exception('ไม่มีสิทธิ์ใช้งานวิชานี้');
+        if ($unit_id && !lms_get_owned_unit($pdo, $unit_id, $is_admin, $teacher_id)) throw new Exception('ไม่มีสิทธิ์ใช้งานหน่วยนี้');
 
         $pdo->beginTransaction();
 
@@ -83,7 +86,7 @@ if ($sel_subject_id) {
     $r = $pdo->prepare("SELECT classroom FROM lms_subject_classrooms WHERE subject_id=? ORDER BY classroom");
     $r->execute([$sel_subject_id]); $sel_classrooms = $r->fetchAll(PDO::FETCH_COLUMN);
 
-    $r = $pdo->prepare("SELECT id, unit_name, order_no FROM lms_units WHERE subject_id=? ORDER BY order_no");
+    $r = $pdo->prepare("SELECT id, unit_name, order_no FROM lms_units WHERE subject_id=? AND deleted_at IS NULL ORDER BY order_no");
     $r->execute([$sel_subject_id]); $sel_units = $r->fetchAll();
 
     if (!empty($sel_classrooms)) {
@@ -102,7 +105,7 @@ if ($sel_subject_id) {
             JOIN lms_units u ON u.id = e.unit_id
             LEFT JOIN lms_exercise_classrooms ec ON ec.exercise_id = e.id
             LEFT JOIN lms_student_exercises se ON se.exercise_id = e.id
-            WHERE u.subject_id = ?
+            WHERE u.subject_id = ? AND e.deleted_at IS NULL AND u.deleted_at IS NULL
             GROUP BY e.id
             ORDER BY u.order_no, e.id DESC
         ");

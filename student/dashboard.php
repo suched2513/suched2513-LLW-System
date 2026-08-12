@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/_guard.php';
@@ -37,10 +37,10 @@ try {
     $stmt = $pdo->prepare("
         SELECT status, COUNT(*) as cnt
         FROM att_attendance
-        WHERE student_id = ? AND date BETWEEN ? AND ?
+        WHERE (student_id = ? OR student_id = ?) AND date BETWEEN ? AND ?
         GROUP BY status
     ");
-    $stmt->execute([$code, $dateFrom, $dateTo]);
+    $stmt->execute([$uid, $code, $dateFrom, $dateTo]);
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $attStats['total'] += (int)$row['cnt'];
         $map = ['มา'=>'present','ขาด'=>'absent','สาย'=>'late','ลา'=>'leave','โดด'=>'absent'];
@@ -113,7 +113,7 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
 <!-- ── Header ──────────────────────────────────────────────────── -->
 <header class="bg-gradient-to-r from-teal-600 to-cyan-600 text-white sticky top-0 z-50 shadow-lg"
         style="padding-top:env(safe-area-inset-top)">
-    <div class="max-w-lg mx-auto flex items-center justify-between px-4 py-3">
+    <div class="max-w-2xl mx-auto flex items-center justify-between px-4 py-3">
         <div class="flex items-center gap-3">
             <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center border border-white/20">
                 <i class="bi bi-mortarboard-fill text-base"></i>
@@ -130,7 +130,7 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
     </div>
 </header>
 
-<div class="max-w-lg mx-auto px-4 py-5 space-y-4">
+<div class="max-w-2xl mx-auto px-4 py-5 space-y-4">
 
 <?php if ($flashMsg): ?>
 <div class="rounded-2xl px-4 py-3 text-sm font-bold flex items-center gap-2
@@ -228,19 +228,7 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
         </div>
         <div>
             <p class="font-black text-slate-700 text-sm leading-tight">บทเรียน</p>
-            <p class="text-violet-500 text-sm font-bold mt-0.5">เนื้อหา & ทดสอบ</p>
-        </div>
-    </a>
-
-    <!-- การบ้าน -->
-    <a href="/student/homework.php"
-       class="bg-white rounded-3xl p-4 shadow-sm border border-indigo-100 active:scale-95 transition-transform flex flex-col gap-3">
-        <div class="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center">
-            <i class="bi bi-book-fill text-indigo-500 text-2xl"></i>
-        </div>
-        <div>
-            <p class="font-black text-slate-700 text-sm leading-tight">การบ้าน</p>
-            <p class="text-indigo-500 text-sm font-bold mt-0.5">ดูและส่งงาน</p>
+            <p class="text-violet-500 text-sm font-bold mt-0.5">เนื้อหา · งาน · ทดสอบ</p>
         </div>
     </a>
 

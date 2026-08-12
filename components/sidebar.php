@@ -150,6 +150,7 @@ $subMenus = [
         ['icon' => 'fas fa-table',             'label' => 'สมุดคะแนน',            'url' => $base_path . '/lms/grade_book.php', 'roles' => ['super_admin','att_teacher']],
         ['icon' => 'fas fa-chart-line',        'label' => 'ความคืบหน้านักเรียน',  'url' => $base_path . '/lms/progress.php', 'roles' => ['super_admin','att_teacher']],
         ['icon' => 'fas fa-pen-fancy',         'label' => 'ตรวจข้อสอบอัตนัย',    'url' => $base_path . '/lms/exam_answers.php', 'roles' => ['super_admin','att_teacher'], 'badge' => 'lms_essay_pending'],
+        ['icon' => 'fas fa-chart-pie',         'label' => 'รายงานผล',            'url' => $base_path . '/lms/reports.php'],
     ],
     'duty' => [
         ['icon' => 'fas fa-camera',              'label' => 'ส่งรายงานเวร (ครู)', 'url' => $base_path . '/duty/index.php',          'roles' => ['att_teacher','super_admin','wfh_admin']],

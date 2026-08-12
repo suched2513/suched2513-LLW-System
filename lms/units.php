@@ -3,24 +3,29 @@ session_start();
 require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 if (!in_array($_SESSION['llw_role'], ['super_admin','att_teacher'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
+require_once __DIR__ . '/_helpers.php';
 
-$pdo = getPdo();
+$pdo        = getPdo();
+$is_admin   = $_SESSION['llw_role'] === 'super_admin';
+$teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
 $msg = '';
 
 $subject_id = (int)($_GET['subject_id'] ?? $_POST['subject_id'] ?? 0);
 if (!$subject_id) { header('Location: subjects.php'); exit(); }
-$subject_stmt = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $subject_stmt->execute([$subject_id]); $subject = $subject_stmt->fetch();
+$subject = lms_get_owned_subject($pdo, $subject_id, $is_admin, $teacher_id);
 if (!$subject) { header('Location: subjects.php'); exit(); }
+$view_trash = isset($_GET['view']) && $_GET['view'] === 'trash';
 
-function saveExRows(PDO $pdo, int $unit_id, array $titles, array $descs, array $scores, array $dues): void {
+function saveExRows(PDO $pdo, int $unit_id, array $titles, array $descs, array $scores, array $dues, array $remedials = []): void {
     foreach ($titles as $i => $title) {
         $title = trim($title);
         if (!$title) continue;
-        $desc  = trim($descs[$i]  ?? '') ?: null;
-        $score = ($scores[$i] ?? '') !== '' ? max(1, (int)$scores[$i]) : null;
-        $due   = !empty($dues[$i]) ? $dues[$i] : null;
-        $pdo->prepare("INSERT INTO lms_unit_exercises (unit_id, exercise_title, description, max_score, due_date) VALUES (?,?,?,?,?)")
-            ->execute([$unit_id, $title, $desc, $score, $due]);
+        $desc      = trim($descs[$i]  ?? '') ?: null;
+        $score     = ($scores[$i] ?? '') !== '' ? max(1, (int)$scores[$i]) : null;
+        $due       = !empty($dues[$i]) ? $dues[$i] : null;
+        $remedial  = !empty($remedials[$i]) ? 1 : 0;
+        $pdo->prepare("INSERT INTO lms_unit_exercises (unit_id, exercise_title, description, max_score, due_date, is_remedial) VALUES (?,?,?,?,?,?)")
+            ->execute([$unit_id, $title, $desc, $score, $due, $remedial]);
     }
 }
 
@@ -33,29 +38,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if ($action === 'add') {
             if (!$unit_name) throw new Exception('กรุณาระบุชื่อหน่วย');
-            $pdo->prepare("INSERT INTO lms_units (subject_id, order_no, unit_number, unit_name) VALUES (?,?,?,?)")
-                ->execute([$subject_id, $order_no, $order_no, $unit_name]);
+            $status = ($_POST['status'] ?? 'published') === 'draft' ? 'draft' : 'published';
+            $pdo->prepare("INSERT INTO lms_units (subject_id, order_no, unit_number, unit_name, status) VALUES (?,?,?,?,?)")
+                ->execute([$subject_id, $order_no, $order_no, $unit_name, $status]);
             $new_id = (int)$pdo->lastInsertId();
+            lms_log_activity($pdo, 'create', 'lms_unit', $new_id, null, ['unit_name' => $unit_name, 'status' => $status]);
             saveExRows($pdo, $new_id,
                 $_POST['exercises']    ?? [],
                 $_POST['descriptions'] ?? [],
                 $_POST['max_scores']   ?? [],
-                $_POST['due_dates']    ?? []
+                $_POST['due_dates']    ?? [],
+                $_POST['remedials']    ?? []
             );
             $msg = 'success:เพิ่มหน่วยการเรียนรู้สำเร็จ';
         } elseif ($action === 'edit') {
             if (!$unit_name) throw new Exception('กรุณาระบุชื่อหน่วย');
+            if (!lms_get_owned_unit($pdo, $id, $is_admin, $teacher_id)) throw new Exception('ไม่มีสิทธิ์แก้ไขหน่วยนี้');
             $pdo->prepare("UPDATE lms_units SET order_no=?, unit_number=?, unit_name=? WHERE id=?")->execute([$order_no, $order_no, $unit_name, $id]);
             $existing_ids = [];
             foreach ($_POST['exercises'] ?? [] as $ex_id => $title) {
                 $ex_id = (int)$ex_id; $title = trim($title);
                 if ($title && $ex_id > 0) {
                     $existing_ids[] = $ex_id;
-                    $desc  = trim($_POST['descriptions'][$ex_id]  ?? '') ?: null;
-                    $score = ($_POST['max_scores'][$ex_id] ?? '') !== '' ? max(1, (int)$_POST['max_scores'][$ex_id]) : null;
-                    $due   = !empty($_POST['due_dates'][$ex_id]) ? $_POST['due_dates'][$ex_id] : null;
-                    $pdo->prepare("UPDATE lms_unit_exercises SET exercise_title=?, description=?, max_score=?, due_date=? WHERE id=? AND unit_id=?")
-                        ->execute([$title, $desc, $score, $due, $ex_id, $id]);
+                    $desc     = trim($_POST['descriptions'][$ex_id]  ?? '') ?: null;
+                    $score    = ($_POST['max_scores'][$ex_id] ?? '') !== '' ? max(1, (int)$_POST['max_scores'][$ex_id]) : null;
+                    $due      = !empty($_POST['due_dates'][$ex_id]) ? $_POST['due_dates'][$ex_id] : null;
+                    $remedial = !empty($_POST['remedials'][$ex_id]) ? 1 : 0;
+                    $pdo->prepare("UPDATE lms_unit_exercises SET exercise_title=?, description=?, max_score=?, due_date=?, is_remedial=? WHERE id=? AND unit_id=?")
+                        ->execute([$title, $desc, $score, $due, $remedial, $ex_id, $id]);
                 }
             }
             if (!empty($existing_ids)) {
@@ -68,7 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_POST['new_exercises']    ?? [],
                 $_POST['new_descriptions'] ?? [],
                 $_POST['new_max_scores']   ?? [],
-                $_POST['new_due_dates']    ?? []
+                $_POST['new_due_dates']    ?? [],
+                $_POST['new_remedials']    ?? []
             );
             $msg = 'success:แก้ไขสำเร็จ';
         }
@@ -80,24 +91,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if (isset($_GET['action']) && $_GET['action'] === 'delete') {
     $id = (int)$_GET['id'];
-    $pdo->prepare("DELETE FROM lms_units WHERE id=? AND subject_id=?")->execute([$id, $subject_id]);
+    if (lms_get_owned_unit($pdo, $id, $is_admin, $teacher_id)) {
+        $pdo->prepare("UPDATE lms_units SET deleted_at=NOW() WHERE id=? AND subject_id=?")->execute([$id, $subject_id]);
+        lms_log_activity($pdo, 'soft_delete', 'lms_unit', $id);
+    }
     header('Location: units.php?subject_id=' . $subject_id . '&msg=' . urlencode('success:ลบหน่วยการเรียนรู้สำเร็จ')); exit();
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'restore') {
+    $id = (int)$_GET['id'];
+    if (lms_get_owned_unit($pdo, $id, $is_admin, $teacher_id)) {
+        $pdo->prepare("UPDATE lms_units SET deleted_at=NULL WHERE id=? AND subject_id=?")->execute([$id, $subject_id]);
+        lms_log_activity($pdo, 'restore', 'lms_unit', $id);
+    }
+    header('Location: units.php?subject_id=' . $subject_id . '&view=trash&msg=' . urlencode('success:กู้คืนหน่วยการเรียนรู้สำเร็จ')); exit();
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'toggle_publish') {
+    $id = (int)$_GET['id'];
+    if (lms_get_owned_unit($pdo, $id, $is_admin, $teacher_id)) {
+        $cur = $pdo->prepare("SELECT status FROM lms_units WHERE id=?"); $cur->execute([$id]); $cur = $cur->fetchColumn();
+        $new_status = $cur === 'published' ? 'draft' : 'published';
+        $pdo->prepare("UPDATE lms_units SET status=? WHERE id=?")->execute([$new_status, $id]);
+        lms_log_activity($pdo, $new_status === 'published' ? 'publish' : 'unpublish', 'lms_unit', $id);
+    }
+    header('Location: units.php?subject_id=' . $subject_id . '&msg=' . urlencode('success:อัปเดตสถานะสำเร็จ')); exit();
 }
 
 if (isset($_GET['ajax']) && $_GET['ajax'] === 'exercises') {
     header('Content-Type: application/json');
     $uid  = (int)($_GET['unit_id'] ?? 0);
-    $rows = $pdo->prepare("SELECT id, exercise_title, description, max_score, due_date FROM lms_unit_exercises WHERE unit_id=? ORDER BY id");
+    $rows = $pdo->prepare("SELECT id, exercise_title, description, max_score, due_date, is_remedial FROM lms_unit_exercises WHERE unit_id=? AND deleted_at IS NULL ORDER BY id");
     $rows->execute([$uid]);
     echo json_encode($rows->fetchAll()); exit();
 }
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
+$trash_count_stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_units WHERE subject_id=? AND deleted_at IS NOT NULL");
+$trash_count_stmt->execute([$subject_id]);
+$trash_count = (int)$trash_count_stmt->fetchColumn();
+
 $units_stmt = $pdo->prepare("
     SELECT u.*, COUNT(DISTINCT t.id) topic_count
     FROM lms_units u
-    LEFT JOIN lms_topics t ON t.unit_id = u.id
-    WHERE u.subject_id=?
+    LEFT JOIN lms_topics t ON t.unit_id = u.id AND t.deleted_at IS NULL
+    WHERE u.subject_id=? AND u.deleted_at IS " . ($view_trash ? "NOT NULL" : "NULL") . "
     GROUP BY u.id ORDER BY u.order_no
 ");
 $units_stmt->execute([$subject_id]);
@@ -127,13 +165,21 @@ document.addEventListener('DOMContentLoaded', () => {
     <div>
       <a href="<?=$base_path?>/lms/subjects.php" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>วิชาทั้งหมด</a>
       <h2 class="text-lg font-black text-slate-800"><?=htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8')?></h2>
-      <p class="text-xs text-slate-400">หน่วยการเรียนรู้และแบบฝึกหัด</p>
+      <p class="text-xs text-slate-400"><?=$view_trash?'กำลังดูถังขยะ':'หน่วยการเรียนรู้และแบบฝึกหัด'?></p>
     </div>
   </div>
-  <button onclick="openModal('addModal')"
-    class="px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-violet-200 hover:bg-violet-700 transition-all flex items-center gap-2">
-    <i class="fas fa-plus"></i> เพิ่มหน่วย
-  </button>
+  <div class="flex gap-2">
+    <a href="units.php?subject_id=<?=$subject_id?><?=$view_trash?'':'&view=trash'?>"
+      class="px-4 py-2 <?=$view_trash?'bg-violet-600 text-white':'bg-slate-100 text-slate-600'?> text-xs font-bold rounded-xl hover:opacity-90 transition-all flex items-center gap-2">
+      <i class="fas fa-<?=$view_trash?'arrow-left':'trash-restore'?>"></i> <?=$view_trash?'กลับหน้าหน่วยการเรียนรู้':'ถังขยะ ('.$trash_count.')'?>
+    </a>
+    <?php if (!$view_trash): ?>
+    <button onclick="openModal('addModal')"
+      class="px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-violet-200 hover:bg-violet-700 transition-all flex items-center gap-2">
+      <i class="fas fa-plus"></i> เพิ่มหน่วย
+    </button>
+    <?php endif; ?>
+  </div>
 </div>
 
 <!-- Table -->
@@ -143,17 +189,21 @@ document.addEventListener('DOMContentLoaded', () => {
       <tr>
         <th class="px-5 py-3 text-center w-16">ลำดับ</th>
         <th class="px-5 py-3 text-left">ชื่อหน่วยการเรียนรู้</th>
+        <th class="px-5 py-3 text-center w-24">สถานะ</th>
         <th class="px-5 py-3 text-center w-28">จำนวนเรื่อง</th>
-        <th class="px-5 py-3 text-center w-44">จัดการ</th>
+        <th class="px-5 py-3 text-center" style="min-width:22rem">จัดการ</th>
       </tr>
     </thead>
     <tbody class="divide-y divide-slate-50">
       <?php if (empty($units)): ?>
-      <tr><td colspan="4" class="py-16 text-center text-slate-300"><i class="fas fa-book text-4xl mb-3 block opacity-30"></i>ยังไม่มีหน่วยการเรียนรู้</td></tr>
+      <tr><td colspan="5" class="py-16 text-center text-slate-300"><i class="fas fa-book text-4xl mb-3 block opacity-30"></i><?=$view_trash?'ถังขยะว่าง':'ยังไม่มีหน่วยการเรียนรู้'?></td></tr>
       <?php endif; ?>
       <?php foreach ($units as $u):
-        $exs = $pdo->prepare("SELECT id, exercise_title, max_score, due_date FROM lms_unit_exercises WHERE unit_id=? ORDER BY id");
+        $exs = $pdo->prepare("SELECT id, exercise_title, max_score, due_date, is_remedial FROM lms_unit_exercises WHERE unit_id=? AND deleted_at IS NULL ORDER BY id");
         $exs->execute([$u['id']]); $exs = $exs->fetchAll();
+        $is_published = ($u['status'] ?? 'published') === 'published';
+        $pqc = $pdo->prepare("SELECT COUNT(*) FROM lms_pre_questions WHERE unit_id=?"); $pqc->execute([$u['id']]); $pre_q_count = (int)$pqc->fetchColumn();
+        $poqc = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE unit_id=?"); $poqc->execute([$u['id']]); $post_q_count = (int)$poqc->fetchColumn();
       ?>
       <tr class="hover:bg-slate-50/50 transition-colors">
         <td class="px-5 py-4 text-center">
@@ -163,8 +213,9 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="font-bold text-slate-800"><?=htmlspecialchars($u['unit_name'],ENT_QUOTES,'UTF-8')?></div>
           <div class="flex flex-wrap gap-1 mt-1.5">
             <?php foreach ($exs as $ex): ?>
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-full">
-              <i class="fas fa-tasks text-[10px]"></i><?=htmlspecialchars($ex['exercise_title'],ENT_QUOTES,'UTF-8')?>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 <?=$ex['is_remedial']?'bg-orange-50 text-orange-600':'bg-emerald-50 text-emerald-600'?> text-xs font-bold rounded-full">
+              <i class="fas fa-<?=$ex['is_remedial']?'life-ring':'tasks'?> text-[10px]"></i><?=htmlspecialchars($ex['exercise_title'],ENT_QUOTES,'UTF-8')?>
+              <?php if ($ex['is_remedial']): ?><span class="bg-orange-100 text-orange-700 px-1.5 rounded-full">ซ่อมเสริม</span><?php endif; ?>
               <?php if ($ex['max_score']): ?><span class="bg-amber-100 text-amber-600 px-1.5 rounded-full"><?=$ex['max_score']?>pts</span><?php endif; ?>
               <?php if ($ex['due_date']): ?><span class="bg-rose-50 text-rose-400 px-1 rounded-full" title="<?=htmlspecialchars(date('d/m/Y H:i',strtotime($ex['due_date'])),ENT_QUOTES,'UTF-8')?>"><i class="fas fa-clock text-[9px]"></i></span><?php endif; ?>
             </span>
@@ -172,14 +223,46 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </td>
         <td class="px-5 py-4 text-center">
+          <?php if ($view_trash): ?>
+          <span class="px-2.5 py-1 bg-slate-100 text-slate-400 text-xs font-black rounded-full"><i class="fas fa-trash mr-1"></i>ลบแล้ว</span>
+          <?php elseif ($is_published): ?>
+          <span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 text-xs font-black rounded-full"><i class="fas fa-check-circle mr-1"></i>เผยแพร่</span>
+          <?php else: ?>
+          <span class="px-2.5 py-1 bg-amber-50 text-amber-600 text-xs font-black rounded-full"><i class="fas fa-pencil-ruler mr-1"></i>ร่าง</span>
+          <?php endif; ?>
+        </td>
+        <td class="px-5 py-4 text-center">
           <span class="px-2.5 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full"><?=$u['topic_count']?> เรื่อง</span>
         </td>
         <td class="px-5 py-4">
-          <div class="flex gap-2 justify-center">
+          <div class="flex gap-2 justify-center flex-wrap">
+            <?php if ($view_trash): ?>
+            <button onclick="confirmDel('units.php?action=restore&id=<?=$u['id']?>&subject_id=<?=$subject_id?>','กู้คืนหน่วยนี้?','กู้คืน','#7C3AED')"
+              class="px-3 py-1.5 bg-violet-600 text-white text-xs font-bold rounded-lg hover:bg-violet-700 transition-all">
+              <i class="fas fa-trash-restore mr-1"></i>กู้คืน
+            </button>
+            <?php else: ?>
             <a href="<?=$base_path?>/lms/topics.php?unit_id=<?=$u['id']?>&subject_id=<?=$subject_id?>"
                class="px-3 py-1.5 bg-teal-500 text-white text-xs font-bold rounded-lg hover:bg-teal-600 transition-all">
               <i class="fas fa-folder-open"></i> เรื่อง
             </a>
+            <a href="<?=$base_path?>/lms/pre_exam.php?unit_id=<?=$u['id']?>"
+               class="px-3 py-1.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-100 transition-all" title="ข้อสอบก่อนเรียนของหน่วยนี้">
+              <i class="fas fa-clipboard-list"></i> ก่อนเรียน<?=$pre_q_count?' ('.$pre_q_count.')':''?>
+            </a>
+            <a href="<?=$base_path?>/lms/post_exam.php?unit_id=<?=$u['id']?>"
+               class="px-3 py-1.5 bg-rose-50 text-rose-700 text-xs font-bold rounded-lg hover:bg-rose-100 transition-all" title="ข้อสอบหลังเรียนของหน่วยนี้">
+              <i class="fas fa-clipboard-check"></i> หลังเรียน<?=$post_q_count?' ('.$post_q_count.')':''?>
+            </a>
+            <a href="<?=$base_path?>/lms/exam_settings.php?unit_id=<?=$u['id']?>"
+               class="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all" title="ตั้งค่าเกณฑ์ผ่าน/จำนวนครั้ง">
+              <i class="fas fa-cog"></i>
+            </a>
+            <button onclick="location.href='units.php?action=toggle_publish&id=<?=$u['id']?>&subject_id=<?=$subject_id?>'"
+              class="px-3 py-1.5 <?=$is_published?'bg-slate-400 hover:bg-slate-500':'bg-emerald-500 hover:bg-emerald-600'?> text-white text-xs font-bold rounded-lg transition-all"
+              title="<?=$is_published?'ยกเลิกการเผยแพร่':'เผยแพร่'?>">
+              <i class="fas fa-<?=$is_published?'eye-slash':'upload'?>"></i>
+            </button>
             <button onclick="openEditModal(<?=$u['id']?>, <?=$u['order_no']?>, '<?=addslashes(htmlspecialchars($u['unit_name'],ENT_QUOTES,'UTF-8'))?>')"
               class="px-3 py-1.5 bg-amber-400 text-white text-xs font-bold rounded-lg hover:bg-amber-500 transition-all">
               <i class="fas fa-edit"></i>
@@ -188,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
               class="px-3 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-all">
               <i class="fas fa-trash"></i>
             </button>
+            <?php endif; ?>
           </div>
         </td>
       </tr>
@@ -214,6 +298,19 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="col-span-2">
           <label class="block text-xs font-black text-slate-500 mb-1">ชื่อหน่วยการเรียนรู้ <span class="text-rose-500">*</span></label>
           <input type="text" name="unit_name" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-violet-400 outline-none" placeholder="เช่น หน่วยที่ 1: พื้นฐานคอมพิวเตอร์" required>
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-black text-slate-500 mb-2">สถานะ</label>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="status" value="published" class="accent-emerald-600" checked>
+              <span class="text-sm font-bold text-emerald-700">เผยแพร่ทันที</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="status" value="draft" class="accent-amber-600">
+              <span class="text-sm font-bold text-amber-700">บันทึกเป็นร่าง</span>
+            </label>
+          </div>
         </div>
       </div>
       <div>
@@ -281,9 +378,9 @@ function escH(s) {
   return d.innerHTML;
 }
 
-function buildExRow(idx, isNew, title, desc, score, due) {
+function buildExRow(idx, isNew, title, desc, score, due, remedial) {
   const p       = isNew ? 'new_' : '';
-  const hasEx   = !!(desc || score || due);
+  const hasEx   = !!(desc || score || due || remedial);
   const dueDisp = due ? due.replace('T',' ').substring(0,16) : '';
   return `<div class="exercise-row rounded-xl border border-slate-200 overflow-hidden">
     <div class="flex items-center gap-2 px-3 py-2.5 bg-slate-50">
@@ -319,6 +416,10 @@ function buildExRow(idx, isNew, title, desc, score, due) {
             class="w-full text-xs border border-slate-200 rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-violet-400 outline-none">
         </div>
       </div>
+      <label class="flex items-center gap-2 cursor-pointer pt-1">
+        <input type="checkbox" name="${p}remedials[${idx}]" value="1" class="accent-orange-500" ${remedial ? 'checked' : ''}>
+        <span class="text-xs font-bold text-orange-600"><i class="fas fa-life-ring mr-1"></i>แบบฝึกซ่อมเสริม (แนะนำเมื่อสอบหลังเรียนไม่ผ่าน)</span>
+      </label>
     </div>
   </div>`;
 }
@@ -328,11 +429,11 @@ function toggleExExtra(btn) {
 }
 
 function addExRow(cid) {
-  document.getElementById(cid).insertAdjacentHTML('beforeend', buildExRow(exC++, false, '', '', '', ''));
+  document.getElementById(cid).insertAdjacentHTML('beforeend', buildExRow(exC++, false, '', '', '', '', false));
 }
 
 function addNewExRow(cid) {
-  document.getElementById(cid).insertAdjacentHTML('beforeend', buildExRow(eExC++, true, '', '', '', ''));
+  document.getElementById(cid).insertAdjacentHTML('beforeend', buildExRow(eExC++, true, '', '', '', '', false));
 }
 
 function openModal(id) { const el=document.getElementById(id); el.classList.remove('hidden'); el.classList.add('flex'); }
@@ -351,14 +452,20 @@ async function openEditModal(id, order, name) {
   data.forEach(ex => {
     const dueVal = ex.due_date ? ex.due_date.replace(' ', 'T').substring(0, 16) : '';
     const tmp = document.createElement('div');
-    tmp.innerHTML = buildExRow(ex.id, false, ex.exercise_title, ex.description || '', ex.max_score || '', dueVal);
+    tmp.innerHTML = buildExRow(ex.id, false, ex.exercise_title, ex.description || '', ex.max_score || '', dueVal, ex.is_remedial);
     c.appendChild(tmp.firstElementChild);
   });
 }
 
-function confirmDel(url, msg) {
-  Swal.fire({ icon:'warning', title: msg, text:'ข้อมูลที่เกี่ยวข้องจะถูกลบด้วย', showCancelButton:true, confirmButtonColor:'#ef4444', cancelButtonText:'ยกเลิก', confirmButtonText:'ลบ' })
-    .then(r => { if (r.isConfirmed) location.href = url; });
+function confirmDel(url, msg, okText, okColor) {
+  Swal.fire({
+    icon:'warning', title: msg,
+    text: okText ? '' : 'ย้ายไปถังขยะ กู้คืนได้ภายหลัง',
+    showCancelButton:true,
+    confirmButtonColor: okColor || '#ef4444',
+    cancelButtonText:'ยกเลิก',
+    confirmButtonText: okText || 'ลบ',
+  }).then(r => { if (r.isConfirmed) location.href = url; });
 }
 </script>
 

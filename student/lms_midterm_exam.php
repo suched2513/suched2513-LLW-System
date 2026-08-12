@@ -9,63 +9,47 @@ $uid  = (int)$_SESSION['student_uid'];
 $name = $_SESSION['student_name'];
 $class= $_SESSION['student_class'];
 
-$unit_id = (int)($_GET['unit_id'] ?? $_POST['unit_id'] ?? 0);
-if (!$unit_id) { header('Location: /student/lms.php'); exit(); }
+$subject_id = (int)($_GET['subject_id'] ?? $_POST['subject_id'] ?? 0);
+if (!$subject_id) { header('Location: /student/lms.php'); exit(); }
 
-$us = $pdo->prepare("
-    SELECT u.*, s.subject_name FROM lms_units u
-    JOIN lms_subjects s ON s.id = u.subject_id
+$ss = $pdo->prepare("
+    SELECT s.* FROM lms_subjects s
     JOIN lms_subject_classrooms sc ON sc.subject_id = s.id
-    WHERE u.id=? AND sc.classroom=? AND u.status='published' AND u.deleted_at IS NULL
-    LIMIT 1
+    WHERE s.id=? AND sc.classroom=? LIMIT 1
 ");
-$us->execute([$unit_id, $class]); $unit = $us->fetch();
-if (!$unit) { header('Location: /student/lms.php'); exit(); }
-$subject_id = (int)$unit['subject_id'];
-$back_url   = '/student/lms_subject.php?subject_id='.$subject_id;
+$ss->execute([$subject_id, $class]); $subject = $ss->fetch();
+if (!$subject) { header('Location: /student/lms.php'); exit(); }
+$back_url = '/student/lms_subject.php?subject_id='.$subject_id;
 
-$es = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE unit_id=?"); $es->execute([$unit_id]); $settings = $es->fetch();
-$post_pass = $settings['post_pass_score'] ?? 6;
-$max_att   = $settings['post_max_attempts'] ?? 3;
+$es = $pdo->prepare("SELECT * FROM lms_subject_settings WHERE subject_id=?"); $es->execute([$subject_id]); $settings = $es->fetch();
+$midterm_pass = $settings['midterm_pass_score']   ?? 6;
+$max_att      = $settings['midterm_max_attempts'] ?? 1;
 
-// Check post-exam time window
-$now_ts    = time();
-$open_ts   = !empty($settings['post_exam_open_at'])  ? strtotime($settings['post_exam_open_at'])  : null;
-$close_ts  = !empty($settings['post_exam_close_at']) ? strtotime($settings['post_exam_close_at']) : null;
+// Check exam time window
+$now_ts     = time();
+$open_ts    = !empty($settings['midterm_open_at'])  ? strtotime($settings['midterm_open_at'])  : null;
+$close_ts   = !empty($settings['midterm_close_at']) ? strtotime($settings['midterm_close_at']) : null;
 $window_set = ($open_ts || $close_ts);
 $in_window  = (!$open_ts || $now_ts >= $open_ts) && (!$close_ts || $now_ts <= $close_ts);
 
 // Already passed?
-$already_passed = $pdo->prepare("SELECT id FROM lms_student_post_exam WHERE student_uid=? AND unit_id=? AND passed=1 LIMIT 1");
-$already_passed->execute([$uid,$unit_id]);
+$already_passed = $pdo->prepare("SELECT id FROM lms_student_midterm_exam WHERE student_uid=? AND subject_id=? AND passed=1 LIMIT 1");
+$already_passed->execute([$uid,$subject_id]);
 if ($already_passed->fetch()) { header('Location: '.$back_url); exit(); }
 
-// Must have done this unit's pre-exam (passed=1 since pre always passes now)
-$pre_done = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND unit_id=? AND passed=1 LIMIT 1");
-$pre_done->execute([$uid,$unit_id]);
-if (!$pre_done->fetch()) { header('Location: '.$back_url); exit(); }
-
-// Block if outside time window (skip block if student already passed — let redirect above handle it)
+// Block if outside time window
 if ($window_set && !$in_window) {
     header('Location: '.$back_url.'&exam_closed=1'); exit();
 }
 
 // Attempt count
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_post_exam WHERE student_uid=? AND unit_id=?");
-$stmt->execute([$uid,$unit_id]);
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_midterm_exam WHERE student_uid=? AND subject_id=?");
+$stmt->execute([$uid,$subject_id]);
 $attempt_count = (int)$stmt->fetchColumn();
 
-// Max attempts reached — reset this unit only
+// Max attempts reached — reset midterm history only (does not touch unit progress)
 if ($attempt_count >= $max_att) {
-    try {
-        $pdo->beginTransaction();
-        $pdo->prepare("DELETE FROM lms_student_pre_exam  WHERE student_uid=? AND unit_id=?")->execute([$uid,$unit_id]);
-        $pdo->prepare("DELETE FROM lms_student_post_exam WHERE student_uid=? AND unit_id=?")->execute([$uid,$unit_id]);
-        $pdo->prepare("DELETE FROM lms_student_exercises WHERE student_uid=? AND unit_id=?")->execute([$uid,$unit_id]);
-        $pdo->commit();
-    } catch (Exception $e) {
-        $pdo->rollBack(); error_log($e->getMessage());
-    }
+    $pdo->prepare("DELETE FROM lms_student_midterm_exam WHERE student_uid=? AND subject_id=?")->execute([$uid,$subject_id]);
     header('Location: '.$back_url.'&reset=1'); exit();
 }
 
@@ -96,10 +80,10 @@ function lms_save_upload_answer(int $qid, int $uid): ?string {
 // Handle submit
 $result = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $qs = $pdo->prepare("SELECT * FROM lms_post_questions WHERE unit_id=? ORDER BY id");
-    $qs->execute([$unit_id]); $questions_post = $qs->fetchAll();
+    $qs = $pdo->prepare("SELECT * FROM lms_midterm_questions WHERE subject_id=? ORDER BY id");
+    $qs->execute([$subject_id]); $questions_mid = $qs->fetchAll();
     $score = 0; $total_auto = 0; $answers = [];
-    foreach ($questions_post as $q) {
+    foreach ($questions_mid as $q) {
         $qtype = $q['question_type'] ?? 'choice';
         $g = lms_grade_exam_answer($q);
         if ($qtype === 'upload') {
@@ -111,28 +95,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $answers[] = ['id' => $q['id']] + $g;
     }
-    $passed = ($total_auto === 0 || $score >= $post_pass) ? 1 : 0;
-    $pdo->prepare("INSERT INTO lms_student_post_exam (student_uid,subject_id,unit_id,score,total,passed,attempt_no) VALUES (?,?,?,?,?,?,?)")
-        ->execute([$uid,$subject_id,$unit_id,$score,$total_auto,$passed,$attempt_no]);
+    $passed = ($total_auto === 0 || $score >= $midterm_pass) ? 1 : 0;
+    $pdo->prepare("INSERT INTO lms_student_midterm_exam (student_uid,subject_id,score,total,passed,attempt_no) VALUES (?,?,?,?,?,?)")
+        ->execute([$uid,$subject_id,$score,$total_auto,$passed,$attempt_no]);
     $exam_record_id = (int)$pdo->lastInsertId();
-    // Save manually-graded answers (text / upload) for teacher review
-    // Save item-level results for auto-graded types (feeds item-analysis reports)
-    $itemStmt = $pdo->prepare("INSERT INTO lms_exam_item_results (student_uid,subject_id,exam_type,exam_record_id,question_id,is_correct) VALUES (?,?,'post',?,?,?)");
+    $itemStmt = $pdo->prepare("INSERT INTO lms_exam_item_results (student_uid,subject_id,exam_type,exam_record_id,question_id,is_correct) VALUES (?,?,'midterm',?,?,?)");
     foreach ($answers as $a) {
         if (!$a['auto'] && (!empty($a['text']) || !empty($a['file_path']))) {
-            $pdo->prepare("INSERT INTO lms_student_exam_answers (student_uid,subject_id,exam_type,exam_record_id,question_id,answer_text,file_path) VALUES (?,?,'post',?,?,?,?)")
+            $pdo->prepare("INSERT INTO lms_student_exam_answers (student_uid,subject_id,exam_type,exam_record_id,question_id,answer_text,file_path) VALUES (?,?,'midterm',?,?,?,?)")
                 ->execute([$uid,$subject_id,$exam_record_id,$a['id'],$a['text'] ?? '',$a['file_path'] ?? null]);
         }
         if ($a['auto']) {
             $itemStmt->execute([$uid,$subject_id,$exam_record_id,$a['id'],$a['correct'] ? 1 : 0]);
         }
     }
-    $result = ['score'=>$score,'total'=>$total_auto,'passed'=>$passed,'answers'=>$answers,'questions'=>$questions_post,
+    $result = ['score'=>$score,'total'=>$total_auto,'passed'=>$passed,'answers'=>$answers,'questions'=>$questions_mid,
                'attempt_no'=>$attempt_no,'max_att'=>$max_att];
 }
 
-$qs = $pdo->prepare("SELECT * FROM lms_post_questions WHERE unit_id=? ORDER BY id");
-$qs->execute([$unit_id]); $questions = $qs->fetchAll();
+$qs = $pdo->prepare("SELECT * FROM lms_midterm_questions WHERE subject_id=? ORDER BY id");
+$qs->execute([$subject_id]); $questions = $qs->fetchAll();
 $total_q   = count($questions);
 $remaining = $max_att - $attempt_count;
 
@@ -143,25 +125,13 @@ foreach ($questions as $q) {
     shuffle($order);
     $shuffled_orders[$q['id']] = $order;
 }
-
-// Remedial exercises (of this unit) to suggest when the student has exhausted their attempts
-$remedial_exs = [];
-if ($result && !$result['passed'] && $result['attempt_no'] >= $result['max_att']) {
-    $re = $pdo->prepare("
-        SELECT exercise_title FROM lms_unit_exercises
-        WHERE unit_id=? AND is_remedial=1 AND status='published' AND deleted_at IS NULL
-        ORDER BY id
-    ");
-    $re->execute([$unit_id]);
-    $remedial_exs = $re->fetchAll();
-}
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>แบบทดสอบหลังเรียน | โรงเรียนละลมวิทยา</title>
-<meta name="theme-color" content="#E11D48">
+<title>แบบทดสอบกลางภาค | โรงเรียนละลมวิทยา</title>
+<meta name="theme-color" content="#4F46E5">
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -169,25 +139,25 @@ if ($result && !$result['passed'] && $result['attempt_no'] >= $result['max_att']
 <style>
 body { font-family: 'Prompt', sans-serif; }
 .choice-label { cursor: pointer; transition: all .15s; }
-.choice-label:has(input:checked) { background: #E11D48; color: white; border-color: #E11D48; }
-.choice-label:has(input:checked) .choice-letter { background: white; color: #E11D48; }
+.choice-label:has(input:checked) { background: #4F46E5; color: white; border-color: #4F46E5; }
+.choice-label:has(input:checked) .choice-letter { background: white; color: #4F46E5; }
 </style>
 </head>
 <body class="min-h-screen bg-slate-50" style="padding-top:env(safe-area-inset-top)">
 
-<div class="text-white px-5 pt-5 pb-6 shadow-xl" style="background:linear-gradient(135deg,#E11D48,#9F1239)">
+<div class="text-white px-5 pt-5 pb-6 shadow-xl" style="background:linear-gradient(135deg,#4F46E5,#3730A3)">
   <div class="flex items-center gap-3 mb-1">
     <a href="<?=$back_url?>" class="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/25">
       <i class="bi bi-arrow-left"></i>
     </a>
     <div>
-      <h1 class="font-black text-lg leading-tight">แบบทดสอบหลังเรียน</h1>
-      <p class="text-rose-200 text-xs font-bold"><?=htmlspecialchars($unit['unit_name'],ENT_QUOTES,'UTF-8')?> · ครั้งที่ <?=$attempt_no?> / <?=$max_att?></p>
+      <h1 class="font-black text-lg leading-tight">แบบทดสอบกลางภาค</h1>
+      <p class="text-indigo-200 text-xs font-bold"><?=htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8')?> · ครั้งที่ <?=$attempt_no?> / <?=$max_att?></p>
     </div>
   </div>
   <?php if (!$result): ?>
   <div class="mt-4 bg-white/15 rounded-2xl px-4 py-3 flex items-center justify-between border border-white/20">
-    <span class="text-sm font-bold"><?=$total_q?> ข้อ · ผ่านเกณฑ์ <?=$post_pass?> ข้อ</span>
+    <span class="text-sm font-bold"><?=$total_q?> ข้อ · ผ่านเกณฑ์ <?=$midterm_pass?> ข้อ</span>
     <span class="text-xs opacity-75">เหลือ <?=$remaining?> ครั้ง</span>
   </div>
   <?php endif; ?>
@@ -208,28 +178,12 @@ body { font-family: 'Prompt', sans-serif; }
     <p class="text-4xl font-black mt-2 <?=$result['passed']?'text-emerald-600':($exhausted?'text-slate-500':'text-rose-500')?>">
       <?=$result['score']?> <span class="text-lg text-slate-400 font-bold">/ <?=$result['total']?></span>
     </p>
-    <p class="text-sm text-slate-500 mt-1">เกณฑ์ผ่าน <?=$post_pass?> ข้อ</p>
+    <p class="text-sm text-slate-500 mt-1">เกณฑ์ผ่าน <?=$midterm_pass?> ข้อ</p>
     <?php endif; ?>
     <?php if ($exhausted): ?>
-    <p class="text-xs text-slate-400 mt-3 bg-white/70 rounded-xl p-2">เมื่อกลับหน้าบทเรียน ระบบจะรีเซ็ตประวัติของหน่วยนี้เพื่อเริ่มใหม่</p>
+    <p class="text-xs text-slate-400 mt-3 bg-white/70 rounded-xl p-2">เมื่อกลับหน้าบทเรียน ระบบจะรีเซ็ตประวัติสอบกลางภาคเพื่อเริ่มใหม่</p>
     <?php endif; ?>
   </div>
-
-  <?php if ($exhausted && !empty($remedial_exs)): ?>
-  <div class="rounded-2xl border-2 border-orange-200 bg-orange-50 p-5">
-    <p class="font-black text-orange-700 text-sm mb-1"><i class="bi bi-life-preserver mr-1"></i>แนะนำให้ทบทวนแบบฝึกซ่อมเสริมก่อนสอบใหม่</p>
-    <p class="text-xs text-orange-600 mb-3">ครูจัดแบบฝึกเหล่านี้ไว้ช่วยทบทวนก่อนลองสอบหลังเรียนอีกครั้ง</p>
-    <div class="space-y-1.5">
-      <?php foreach ($remedial_exs as $rex): ?>
-      <div class="flex items-center gap-2 bg-white border border-orange-100 rounded-xl px-3 py-2">
-        <i class="bi bi-life-preserver text-orange-400 flex-shrink-0"></i>
-        <p class="text-xs font-bold text-slate-700 truncate"><?=htmlspecialchars($rex['exercise_title'],ENT_QUOTES,'UTF-8')?></p>
-      </div>
-      <?php endforeach; ?>
-    </div>
-    <p class="text-[10px] text-orange-500 mt-3">แบบฝึกซ่อมเสริมเหล่านี้จะยังอยู่ในหน้าบทเรียนหลังรีเซ็ต — ไปทำได้จากแท็บ "งาน"</p>
-  </div>
-  <?php endif; ?>
 
   <p class="text-xs font-black text-slate-400 uppercase tracking-wider px-1">เฉลย</p>
   <?php
@@ -258,11 +212,11 @@ body { font-family: 'Prompt', sans-serif; }
 </div>
 <?php else: ?>
 <form method="POST" id="examForm" class="px-4 py-5 max-w-2xl mx-auto space-y-4 pb-24" enctype="multipart/form-data">
-  <input type="hidden" name="unit_id" value="<?=$unit_id?>">
+  <input type="hidden" name="subject_id" value="<?=$subject_id?>">
   <?php $qtypes = lms_question_types(); foreach ($questions as $i => $q): $qtype = $q['question_type'] ?? 'choice'; ?>
   <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <p class="text-sm font-bold text-slate-800 mb-1 leading-snug">
-      <span class="text-rose-600 font-black mr-1"><?=$i+1?>.</span>
+      <span class="text-indigo-600 font-black mr-1"><?=$i+1?>.</span>
       <?=htmlspecialchars($q['question_text'],ENT_QUOTES,'UTF-8')?>
       <?php if (!($qtypes[$qtype]['auto'] ?? true)): ?>
       <span class="ml-1 px-1.5 py-0.5 bg-violet-100 text-violet-600 text-[10px] font-black rounded-full"><?=htmlspecialchars($qtypes[$qtype]['label'] ?? '',ENT_QUOTES,'UTF-8')?></span>
@@ -280,10 +234,10 @@ body { font-family: 'Prompt', sans-serif; }
     <div class="flex-1">
       <div class="text-xs text-slate-400 font-bold mb-1">ตอบแล้ว <span id="answered">0</span> / <?=$total_q?> ข้อ</div>
       <div class="w-full bg-slate-100 rounded-full h-1.5">
-        <div id="progressBar" class="h-1.5 rounded-full bg-rose-500 transition-all" style="width:0%"></div>
+        <div id="progressBar" class="h-1.5 rounded-full bg-indigo-500 transition-all" style="width:0%"></div>
       </div>
     </div>
-    <button type="button" onclick="submitExam()" class="px-6 py-2.5 bg-rose-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-rose-200/50 active:scale-95 transition-transform">
+    <button type="button" onclick="submitExam()" class="px-6 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-200/50 active:scale-95 transition-transform">
       ส่งคำตอบ
     </button>
   </div>
@@ -294,12 +248,12 @@ body { font-family: 'Prompt', sans-serif; }
 <?=lms_exam_js_helpers()?>
 <?php if ($result && $result['passed']): ?>
 window.addEventListener('load', () => {
-  Swal.fire({icon:'success',title:'ผ่านแล้ว!',text:'<?php if($result["total"]>0): ?>คะแนน <?=$result['score']?>/<?=$result['total']?> ข้อ — ยินดีด้วย!<?php else: ?>ผ่านอัตโนมัติ<?php endif; ?>',confirmButtonColor:'#7C3AED',timer:3000,showConfirmButton:false});
+  Swal.fire({icon:'success',title:'ผ่านแล้ว!',text:'<?php if($result["total"]>0): ?>คะแนน <?=$result['score']?>/<?=$result['total']?> ข้อ — ยินดีด้วย!<?php else: ?>ผ่านอัตโนมัติ<?php endif; ?>',confirmButtonColor:'#4F46E5',timer:3000,showConfirmButton:false});
 });
 <?php elseif ($result && !$result['passed'] && $result['attempt_no'] >= $result['max_att']): ?>
 window.addEventListener('load', () => {
   Swal.fire({icon:'info',title:'ครบจำนวนครั้งแล้ว',
-    text:'ระบบจะรีเซ็ตประวัติของหน่วยนี้เมื่อกลับหน้าบทเรียน เพื่อให้เริ่มต้นใหม่',
+    text:'ระบบจะรีเซ็ตประวัติสอบกลางภาคเมื่อกลับหน้าบทเรียน เพื่อให้เริ่มต้นใหม่',
     confirmButtonColor:'#64748b',confirmButtonText:'รับทราบ'});
 });
 <?php elseif ($result && !$result['passed']): ?>
@@ -307,7 +261,7 @@ window.addEventListener('load', () => {
   const left = <?=$result['max_att']?> - <?=$result['attempt_no']?>;
   Swal.fire({icon:'error',title:'ยังไม่ผ่าน',
     text:`คะแนน <?=$result['score']?>/<?=$result['total']?> ข้อ · เหลืออีก ${left} ครั้ง`,
-    confirmButtonColor:'#E11D48'});
+    confirmButtonColor:'#4F46E5'});
 });
 <?php else: ?>
 const total = <?=$total_q?>;
@@ -322,13 +276,13 @@ document.querySelectorAll('textarea[data-qid], input[type=text][data-qid]').forE
 function submitExam() {
   const cnt = countAnswered();
   if (cnt < total) {
-    Swal.fire({icon:'warning',title:'ยังไม่ครบ',text:`กรุณาตอบให้ครบทุกข้อ (ตอบแล้ว ${cnt}/${total} ข้อ)`,confirmButtonColor:'#E11D48'});
+    Swal.fire({icon:'warning',title:'ยังไม่ครบ',text:`กรุณาตอบให้ครบทุกข้อ (ตอบแล้ว ${cnt}/${total} ข้อ)`,confirmButtonColor:'#4F46E5'});
     return;
   }
   Swal.fire({
     icon:'question', title:'ส่งคำตอบ?',
     text:`ครั้งที่ <?=$attempt_no?> จาก <?=$max_att?> ครั้ง`,
-    showCancelButton:true, confirmButtonColor:'#E11D48',
+    showCancelButton:true, confirmButtonColor:'#4F46E5',
     cancelButtonText:'ตรวจสอบอีกครั้ง', confirmButtonText:'ส่งเลย'
   }).then(r => { if (r.isConfirmed) document.getElementById('examForm').submit(); });
 }

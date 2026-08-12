@@ -10,28 +10,26 @@ $is_admin   = $_SESSION['llw_role'] === 'super_admin';
 $teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
 $msg = '';
 
-$unit_id = (int)($_GET['unit_id'] ?? $_POST['unit_id'] ?? 0);
-if (!$unit_id) { header('Location: subjects.php'); exit(); }
-$unit = lms_get_owned_unit($pdo, $unit_id, $is_admin, $teacher_id);
-if (!$unit) { header('Location: subjects.php'); exit(); }
-$subject_id = (int)$unit['subject_id'];
-$subject = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $subject->execute([$subject_id]); $subject = $subject->fetch();
+$subject_id = (int)($_GET['subject_id'] ?? $_POST['subject_id'] ?? 0);
+if (!$subject_id) { header('Location: subjects.php'); exit(); }
+$subject = lms_get_owned_subject($pdo, $subject_id, $is_admin, $teacher_id);
+if (!$subject) { header('Location: subjects.php'); exit(); }
 
 $question_types = lms_question_types();
 
 if (isset($_GET['export']) || isset($_GET['template'])) {
-    $fn = isset($_GET['export']) ? 'lms_post_exam_'.$unit_id.'_'.date('YmdHis').'.csv' : 'lms_post_exam_template.csv';
+    $fn = isset($_GET['export']) ? 'lms_final_exam_'.$subject_id.'_'.date('YmdHis').'.csv' : 'lms_final_exam_template.csv';
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="'.$fn.'"');
     $out = fopen('php://output', 'w');
     fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
     fputcsv($out, ['คำถาม','ตัวเลือก1','ตัวเลือก2','ตัวเลือก3','ตัวเลือก4','เฉลย(1-5)','ตัวเลือก5(ไม่บังคับ)']);
     if (isset($_GET['export'])) {
-        $st = $pdo->prepare("SELECT question_text,choice1,choice2,choice3,choice4,correct_answer,choice5 FROM lms_post_questions WHERE unit_id=? AND question_type='choice' ORDER BY id");
-        $st->execute([$unit_id]);
+        $st = $pdo->prepare("SELECT question_text,choice1,choice2,choice3,choice4,correct_answer,choice5 FROM lms_final_questions WHERE subject_id=? AND question_type='choice' ORDER BY id");
+        $st->execute([$subject_id]);
         foreach ($st->fetchAll() as $r) fputcsv($out, $r);
     } else {
-        fputcsv($out, ['PHP ย่อมาจากอะไร?','Personal Home Page','PHP: Hypertext Preprocessor','Preprocessor Home Page','PHP Home Page','2','']);
+        fputcsv($out, ['1+1 เท่ากับเท่าไหร่?','1','2','3','4','2','']);
     }
     fclose($out); exit();
 }
@@ -51,19 +49,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $choice5 = trim($row[6] ?? '');
             $ansNum  = (int)($row[5] ?? 0);
             if (count($row) >= 6 && trim($row[0]) && $ansNum >= 1 && $ansNum <= 5 && !($ansNum === 5 && $choice5 === '')) {
-                $pdo->prepare("INSERT INTO lms_post_questions (subject_id,unit_id,question_text,choice1,choice2,choice3,choice4,choice5,correct_answer) VALUES (?,?,?,?,?,?,?,?,?)")
-                    ->execute([$subject_id,$unit_id,trim($row[0]),trim($row[1]),trim($row[2]),trim($row[3]),trim($row[4]),$choice5,$ansNum]);
+                $pdo->prepare("INSERT INTO lms_final_questions (subject_id,question_text,choice1,choice2,choice3,choice4,choice5,correct_answer) VALUES (?,?,?,?,?,?,?,?)")
+                    ->execute([$subject_id,trim($row[0]),trim($row[1]),trim($row[2]),trim($row[3]),trim($row[4]),$choice5,$ansNum]);
                 $cnt++;
             }
         }
         fclose($h);
-        header('Location: post_exam.php?unit_id='.$unit_id.'&msg='.urlencode("success:นำเข้าสำเร็จ $cnt ข้อ")); exit();
+        header('Location: final_exam.php?subject_id='.$subject_id.'&msg='.urlencode("success:นำเข้าสำเร็จ $cnt ข้อ")); exit();
     }
 
     $qtext = trim($_POST['question_text'] ?? '');
     $qtype = array_key_exists($_POST['question_type'] ?? '', $question_types) ? $_POST['question_type'] : 'choice';
     $id    = (int)($_POST['id'] ?? 0);
 
+    $qimg = $_POST['old_qimg'] ?? null;
+    if (!empty($_FILES['question_img']['name'])) {
+        $ext = pathinfo($_FILES['question_img']['name'], PATHINFO_EXTENSION);
+        $qimg = uniqid('fq_').'.'.$ext;
+        $dir = __DIR__.'/../uploads/lms/questions/';
+        if (!is_dir($dir)) mkdir($dir, 0777, true);
+        move_uploaded_file($_FILES['question_img']['tmp_name'], $dir.$qimg);
+    }
+
+    // Per-type field extraction
     $c = [1=>'',2=>'',3=>'',4=>'',5=>''];
     $ans = null; $options_json = null; $correct_json = null;
 
@@ -99,30 +107,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // text / upload: no extra fields needed
 
         if ($action === 'add') {
-            $pdo->prepare("INSERT INTO lms_post_questions (subject_id,unit_id,question_text,question_type,choice1,choice2,choice3,choice4,choice5,correct_answer,options_json,correct_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
-                ->execute([$subject_id,$unit_id,$qtext,$qtype,$c[1],$c[2],$c[3],$c[4],$c[5],$ans,$options_json,$correct_json]);
+            $pdo->prepare("INSERT INTO lms_final_questions (subject_id,question_text,question_type,question_img,choice1,choice2,choice3,choice4,choice5,correct_answer,options_json,correct_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
+                ->execute([$subject_id,$qtext,$qtype,$qimg,$c[1],$c[2],$c[3],$c[4],$c[5],$ans,$options_json,$correct_json]);
             $msg = 'success:เพิ่มข้อสอบสำเร็จ';
         } elseif ($action === 'edit') {
-            $pdo->prepare("UPDATE lms_post_questions SET question_text=?,question_type=?,choice1=?,choice2=?,choice3=?,choice4=?,choice5=?,correct_answer=?,options_json=?,correct_json=? WHERE id=? AND unit_id=?")
-                ->execute([$qtext,$qtype,$c[1],$c[2],$c[3],$c[4],$c[5],$ans,$options_json,$correct_json,$id,$unit_id]);
+            $pdo->prepare("UPDATE lms_final_questions SET question_text=?,question_type=?,question_img=?,choice1=?,choice2=?,choice3=?,choice4=?,choice5=?,correct_answer=?,options_json=?,correct_json=? WHERE id=? AND subject_id=?")
+                ->execute([$qtext,$qtype,$qimg,$c[1],$c[2],$c[3],$c[4],$c[5],$ans,$options_json,$correct_json,$id,$subject_id]);
             $msg = 'success:แก้ไขสำเร็จ';
         }
     } catch (Exception $e) { $msg = 'error:'.$e->getMessage(); }
-    header('Location: post_exam.php?unit_id='.$unit_id.'&msg='.urlencode($msg)); exit();
+    header('Location: final_exam.php?subject_id='.$subject_id.'&msg='.urlencode($msg)); exit();
 }
 if (isset($_GET['action']) && $_GET['action'] === 'delete') {
-    $pdo->prepare("DELETE FROM lms_post_questions WHERE id=? AND unit_id=?")->execute([(int)$_GET['id'],$unit_id]);
-    header('Location: post_exam.php?unit_id='.$unit_id.'&msg='.urlencode('success:ลบสำเร็จ')); exit();
+    $pdo->prepare("DELETE FROM lms_final_questions WHERE id=? AND subject_id=?")->execute([(int)$_GET['id'],$subject_id]);
+    header('Location: final_exam.php?subject_id='.$subject_id.'&msg='.urlencode('success:ลบสำเร็จ')); exit();
 }
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
-$st = $pdo->prepare("SELECT * FROM lms_post_questions WHERE unit_id=? ORDER BY id");
-$st->execute([$unit_id]);
+$st = $pdo->prepare("SELECT * FROM lms_final_questions WHERE subject_id=? ORDER BY id");
+$st->execute([$subject_id]);
 $questions = $st->fetchAll();
 $total = count($questions);
 
-$pageTitle    = 'ข้อสอบหลังเรียน';
-$pageSubtitle = htmlspecialchars($unit['unit_name'],ENT_QUOTES,'UTF-8');
+$pageTitle    = 'ข้อสอบปลายภาค';
+$pageSubtitle = htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8');
 $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
@@ -130,32 +138,32 @@ require_once __DIR__ . '/../components/layout_start.php';
 <?php if ($msg): ?>
 <script>document.addEventListener('DOMContentLoaded',()=>{
   const p='<?=addslashes($msg)?>'.split(':');
-  Swal.fire({icon:p[0]==='success'?'success':'error',title:p[0]==='success'?'สำเร็จ':'ผิดพลาด',text:p[1],confirmButtonColor:'#7C3AED',timer:p[0]==='success'?2000:undefined,showConfirmButton:p[0]!=='success'});
+  Swal.fire({icon:p[0]==='success'?'success':'error',title:p[0]==='success'?'สำเร็จ':'ผิดพลาด',text:p[1],confirmButtonColor:'#D97706',timer:p[0]==='success'?2000:undefined,showConfirmButton:p[0]!=='success'});
 });</script>
 <?php endif; ?>
 
 <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
   <div class="flex items-center gap-3">
-    <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-rose-500 to-red-600">
-      <i class="fas fa-clipboard-check text-white"></i>
+    <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-amber-500 to-amber-700">
+      <i class="fas fa-clipboard-list text-white"></i>
     </div>
     <div>
-      <a href="<?=$base_path?>/lms/units.php?subject_id=<?=$subject_id?>" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>หน่วยการเรียนรู้</a>
-      <h2 class="text-lg font-black text-slate-800">ข้อสอบหลังเรียน</h2>
-      <p class="text-xs text-slate-400"><?=$total?> ข้อ · หน่วย: <?=htmlspecialchars($unit['unit_name'],ENT_QUOTES,'UTF-8')?> · <?=htmlspecialchars($subject['subject_name'] ?? '',ENT_QUOTES,'UTF-8')?></p>
+      <a href="<?=$base_path?>/lms/subject_dashboard.php?subject_id=<?=$subject_id?>&tab=exam" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>ข้อสอบ</a>
+      <h2 class="text-lg font-black text-slate-800">ข้อสอบปลายภาค</h2>
+      <p class="text-xs text-slate-400"><?=$total?> ข้อ · <?=htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8')?></p>
     </div>
   </div>
   <div class="flex gap-2 flex-wrap">
-    <a href="post_exam.php?unit_id=<?=$unit_id?>&template=1" class="px-3 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200 transition-all">
+    <a href="final_exam.php?subject_id=<?=$subject_id?>&template=1" class="px-3 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200 transition-all">
       <i class="fas fa-download mr-1"></i> Template CSV
     </a>
     <button onclick="openModal('importModal')" class="px-3 py-2 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">
       <i class="fas fa-file-import mr-1"></i> Import CSV
     </button>
-    <a href="post_exam.php?unit_id=<?=$unit_id?>&export=1" class="px-3 py-2 bg-slate-500 text-white text-xs font-bold rounded-xl hover:bg-slate-600 transition-all">
+    <a href="final_exam.php?subject_id=<?=$subject_id?>&export=1" class="px-3 py-2 bg-slate-500 text-white text-xs font-bold rounded-xl hover:bg-slate-600 transition-all">
       <i class="fas fa-file-export mr-1"></i> Export
     </a>
-    <button onclick="openAddModal()" class="px-3 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all">
+    <button onclick="openAddModal()" class="px-3 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-amber-200 hover:bg-amber-700 transition-all">
       <i class="fas fa-plus mr-1"></i> เพิ่มข้อสอบ
     </button>
   </div>
@@ -174,7 +182,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     </thead>
     <tbody class="divide-y divide-slate-50">
       <?php if (empty($questions)): ?>
-      <tr><td colspan="4" class="py-16 text-center text-slate-300"><i class="fas fa-clipboard-check text-4xl mb-3 block opacity-30"></i>ยังไม่มีข้อสอบ</td></tr>
+      <tr><td colspan="4" class="py-16 text-center text-slate-300"><i class="fas fa-clipboard text-4xl mb-3 block opacity-30"></i>ยังไม่มีข้อสอบ</td></tr>
       <?php endif; ?>
       <?php foreach ($questions as $i => $q):
         $qtype = $q['question_type'] ?? 'choice';
@@ -197,13 +205,13 @@ require_once __DIR__ . '/../components/layout_start.php';
           <?php endif; ?>
         </td>
         <td class="px-5 py-3 text-center">
-          <span class="px-2.5 py-1 bg-rose-50 text-rose-600 text-xs font-black rounded-full"><i class="<?=htmlspecialchars($meta['icon'],ENT_QUOTES,'UTF-8')?> mr-1"></i><?=htmlspecialchars($meta['label'],ENT_QUOTES,'UTF-8')?></span>
+          <span class="px-2.5 py-1 bg-amber-50 text-amber-600 text-xs font-black rounded-full"><i class="<?=htmlspecialchars($meta['icon'],ENT_QUOTES,'UTF-8')?> mr-1"></i><?=htmlspecialchars($meta['label'],ENT_QUOTES,'UTF-8')?></span>
         </td>
         <td class="px-5 py-3">
           <div class="flex gap-2 justify-center">
             <button onclick="openEdit(<?=htmlspecialchars(json_encode($q),ENT_QUOTES,'UTF-8')?>)"
               class="px-2.5 py-1.5 bg-amber-400 text-white text-xs font-bold rounded-lg hover:bg-amber-500 transition-all"><i class="fas fa-edit"></i></button>
-            <button onclick="confirmDel('post_exam.php?action=delete&id=<?=$q['id']?>&unit_id=<?=$unit_id?>')"
+            <button onclick="confirmDel('final_exam.php?action=delete&id=<?=$q['id']?>&subject_id=<?=$subject_id?>')"
               class="px-2.5 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-lg hover:bg-rose-600 transition-all"><i class="fas fa-trash"></i></button>
           </div>
         </td>
@@ -213,20 +221,23 @@ require_once __DIR__ . '/../components/layout_start.php';
   </table>
 </div>
 
-<?php foreach ([['add','เพิ่มข้อสอบหลังเรียน'],['edit','แก้ไขข้อสอบ']] as [$mid,$mtitle]): ?>
+<?php foreach ([['add','เพิ่มข้อสอบปลายภาค'],['edit','แก้ไขข้อสอบ']] as [$mid,$mtitle]): ?>
 <div id="<?=$mid?>Modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="background:rgba(0,0,0,0.4)">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
-      <h3 class="font-black text-slate-800"><i class="fas fa-clipboard-check mr-2 text-rose-500"></i><?=$mtitle?></h3>
+      <h3 class="font-black text-slate-800"><i class="fas fa-clipboard-list mr-2 text-amber-500"></i><?=$mtitle?></h3>
       <button onclick="closeModal('<?=$mid?>Modal')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-lg"></i></button>
     </div>
-    <form method="POST" class="p-6 space-y-4">
+    <form method="POST" enctype="multipart/form-data" class="p-6 space-y-4">
       <input type="hidden" name="action" value="<?=$mid?>">
-      <input type="hidden" name="unit_id" value="<?=$unit_id?>">
-      <?php if ($mid==='edit'): ?><input type="hidden" name="id" id="peq_id"><?php endif; ?>
+      <input type="hidden" name="subject_id" value="<?=$subject_id?>">
+      <?php if ($mid==='edit'): ?>
+      <input type="hidden" name="id" id="eq_id">
+      <input type="hidden" name="old_qimg" id="eq_qimg">
+      <?php endif; ?>
       <div>
         <label class="block text-xs font-black text-slate-500 mb-2">ประเภทคำถาม</label>
-        <select name="question_type" id="<?=$mid?>_qtype" onchange="renderQFields('<?=$mid?>')" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400 outline-none" <?=$mid==='edit'?'disabled':''?>>
+        <select name="question_type" id="<?=$mid?>_qtype" onchange="renderQFields('<?=$mid?>')" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400 outline-none" <?=$mid==='edit'?'disabled':''?>>
           <?php foreach ($question_types as $key => $meta): ?>
           <option value="<?=$key?>"><?=htmlspecialchars($meta['label'],ENT_QUOTES,'UTF-8')?></option>
           <?php endforeach; ?>
@@ -238,12 +249,12 @@ require_once __DIR__ . '/../components/layout_start.php';
       </div>
       <div>
         <label class="block text-xs font-black text-slate-500 mb-1">คำถาม <span class="text-rose-500">*</span></label>
-        <textarea name="question_text" id="<?=$mid?>_pqtext" rows="3" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400 outline-none resize-none" placeholder="พิมพ์คำถาม..."></textarea>
+        <textarea name="question_text" id="<?=$mid?>_qtext" rows="3" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400 outline-none resize-none" placeholder="พิมพ์คำถาม..."></textarea>
       </div>
       <div id="<?=$mid?>_fields"></div>
       <div class="flex justify-end gap-3 pt-2">
         <button type="button" onclick="closeModal('<?=$mid?>Modal')" class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50 transition-all">ยกเลิก</button>
-        <button type="submit" class="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all"><i class="fas fa-save mr-1"></i>บันทึก</button>
+        <button type="submit" class="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-amber-200 hover:bg-amber-700 transition-all"><i class="fas fa-save mr-1"></i>บันทึก</button>
       </div>
     </form>
   </div>
@@ -258,7 +269,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     </div>
     <form method="POST" enctype="multipart/form-data" class="p-6">
       <input type="hidden" name="action" value="import">
-      <input type="hidden" name="unit_id" value="<?=$unit_id?>">
+      <input type="hidden" name="subject_id" value="<?=$subject_id?>">
       <input type="file" name="csv_file" accept=".csv" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm mb-4">
       <div class="flex justify-end gap-3">
         <button type="button" onclick="closeModal('importModal')" class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl">ยกเลิก</button>
@@ -273,14 +284,15 @@ require_once __DIR__ . '/../components/layout_start.php';
 
 function openAddModal() {
   document.getElementById('add_qtype').value = 'choice';
-  document.getElementById('add_pqtext').value = '';
+  document.getElementById('add_qtext').value = '';
   renderQFields('add');
   openModal('addModal');
 }
 
 function openEdit(q){
-  document.getElementById('peq_id').value=q.id;
-  document.getElementById('edit_pqtext').value=q.question_text;
+  document.getElementById('eq_id').value=q.id;
+  document.getElementById('eq_qimg').value=q.question_img||'';
+  document.getElementById('edit_qtext').value=q.question_text;
   const qtype = q.question_type || 'choice';
   document.getElementById('edit_qtype').value = qtype;
   document.getElementById('edit_qtype_hidden').value = qtype;

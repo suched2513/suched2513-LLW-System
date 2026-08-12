@@ -3,6 +3,7 @@ session_start();
 require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 if (!in_array($_SESSION['llw_role'], ['super_admin','att_teacher'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
+require_once __DIR__ . '/_helpers.php';
 
 $pdo        = getPdo();
 $is_admin   = $_SESSION['llw_role'] === 'super_admin';
@@ -39,7 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'edit') {
-        $id   = (int)$_POST['id'];
+        $id = (int)$_POST['id'];
+        if (!lms_get_owned_subject($pdo, $id, $is_admin, $teacher_id)) {
+            header('Location: subjects.php?msg=' . urlencode('error:ไม่มีสิทธิ์แก้ไขวิชานี้')); exit();
+        }
         $name = trim($_POST['subject_name'] ?? '');
         $code = trim($_POST['subject_code'] ?? '');
         $pdo->prepare("UPDATE lms_subjects SET subject_name=?, subject_code=? WHERE id=?")->execute([$name, $code ?: null, $id]);
@@ -48,6 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'set_classrooms') {
         $sid = (int)$_POST['subject_id'];
+        if (!lms_get_owned_subject($pdo, $sid, $is_admin, $teacher_id)) {
+            header('Location: subjects.php?msg=' . urlencode('error:ไม่มีสิทธิ์แก้ไขวิชานี้')); exit();
+        }
         $classrooms = array_filter(array_map('trim', $_POST['classrooms'] ?? []));
         $pdo->prepare("DELETE FROM lms_subject_classrooms WHERE subject_id=?")->execute([$sid]);
         $stmt = $pdo->prepare("INSERT IGNORE INTO lms_subject_classrooms (subject_id, classroom) VALUES (?,?)");
@@ -59,13 +66,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // GET: delete
 if (isset($_GET['action']) && $_GET['action'] === 'delete') {
     $sid = (int)$_GET['id'];
+    if (!lms_get_owned_subject($pdo, $sid, $is_admin, $teacher_id)) {
+        header('Location: subjects.php?msg=' . urlencode('error:ไม่มีสิทธิ์ลบวิชานี้')); exit();
+    }
     $units = $pdo->prepare("SELECT id FROM lms_units WHERE subject_id=?"); $units->execute([$sid]); $units = $units->fetchAll();
     foreach ($units as $u) {
         $topics = $pdo->prepare("SELECT id FROM lms_topics WHERE unit_id=?"); $topics->execute([$u['id']]); $topics = $topics->fetchAll();
         foreach ($topics as $t) {
             $files = $pdo->prepare("SELECT filename FROM lms_topic_files WHERE topic_id=?"); $files->execute([$t['id']]); $files = $files->fetchAll();
             foreach ($files as $f) { @unlink(__DIR__ . '/../uploads/lms/' . $f['filename']); }
-            foreach (['lms_topic_files','lms_topic_links','lms_topic_youtube'] as $tbl)
+            $blockFiles = $pdo->prepare("SELECT media_path FROM lms_topic_blocks WHERE topic_id=? AND media_path IS NOT NULL"); $blockFiles->execute([$t['id']]); $blockFiles = $blockFiles->fetchAll();
+            foreach ($blockFiles as $bf) { @unlink(__DIR__ . '/../' . $bf['media_path']); }
+            foreach (['lms_topic_files','lms_topic_links','lms_topic_youtube','lms_topic_blocks'] as $tbl)
                 $pdo->prepare("DELETE FROM `{$tbl}` WHERE topic_id=?")->execute([$t['id']]);
         }
         $pdo->prepare("DELETE FROM lms_topics WHERE unit_id=?")->execute([$u['id']]);
@@ -76,6 +88,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
               'lms_subject_classrooms'] as $tbl)
         $pdo->prepare("DELETE FROM `{$tbl}` WHERE subject_id=?")->execute([$sid]);
     $pdo->prepare("DELETE FROM lms_subjects WHERE id=?")->execute([$sid]);
+    lms_log_activity($pdo, 'delete', 'lms_subject', $sid);
     header('Location: subjects.php?msg=' . urlencode('success:ลบวิชาสำเร็จ')); exit();
 }
 
@@ -100,12 +113,24 @@ $subject_data = [];
 foreach ($subjects as $s) {
     $sid = $s['id'];
     $sc = $pdo->prepare("SELECT classroom FROM lms_subject_classrooms WHERE subject_id=? ORDER BY classroom"); $sc->execute([$sid]); $classrooms = $sc->fetchAll(PDO::FETCH_COLUMN);
-    $uc = $pdo->prepare("SELECT COUNT(*) FROM lms_units WHERE subject_id=?"); $uc->execute([$sid]); $unit_count = (int)$uc->fetchColumn();
+    $uc = $pdo->prepare("SELECT COUNT(*) FROM lms_units WHERE subject_id=? AND deleted_at IS NULL"); $uc->execute([$sid]); $unit_count = (int)$uc->fetchColumn();
     $pq = $pdo->prepare("SELECT COUNT(*) FROM lms_pre_questions WHERE subject_id=?"); $pq->execute([$sid]); $pre_q = (int)$pq->fetchColumn();
     $poq = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE subject_id=?"); $poq->execute([$sid]); $post_q = (int)$poq->fetchColumn();
     $stud = $pdo->prepare("SELECT COUNT(DISTINCT student_uid) FROM lms_student_pre_exam WHERE subject_id=?"); $stud->execute([$sid]); $stud_count = (int)$stud->fetchColumn();
-    $exq = $pdo->prepare("SELECT COUNT(e.id) FROM lms_unit_exercises e JOIN lms_units u ON u.id=e.unit_id WHERE u.subject_id=?"); $exq->execute([$sid]); $ex_count = (int)$exq->fetchColumn();
-    $subject_data[$sid] = compact('classrooms','unit_count','pre_q','post_q','stud_count','ex_count');
+    $exq = $pdo->prepare("SELECT COUNT(e.id) FROM lms_unit_exercises e JOIN lms_units u ON u.id=e.unit_id WHERE u.subject_id=? AND e.deleted_at IS NULL AND u.deleted_at IS NULL"); $exq->execute([$sid]); $ex_count = (int)$exq->fetchColumn();
+    $um = $pdo->prepare("SELECT unlock_mode FROM lms_subject_settings WHERE subject_id=?"); $um->execute([$sid]); $unlock_mode = $um->fetchColumn() ?: 'open_all';
+    $subject_data[$sid] = compact('classrooms','unit_count','pre_q','post_q','stud_count','ex_count','unlock_mode');
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'set_unlock_mode') {
+    $sid = (int)$_POST['subject_id'];
+    if (lms_get_owned_subject($pdo, $sid, $is_admin, $teacher_id)) {
+        $mode = ($_POST['unlock_mode'] ?? 'open_all') === 'sequential' ? 'sequential' : 'open_all';
+        $pdo->prepare("INSERT INTO lms_subject_settings (subject_id, unlock_mode) VALUES (?,?) ON DUPLICATE KEY UPDATE unlock_mode=?")
+            ->execute([$sid, $mode, $mode]);
+        lms_log_activity($pdo, 'update', 'lms_subject_settings', $sid, null, ['unlock_mode' => $mode]);
+    }
+    header('Location: subjects.php?msg=' . urlencode('success:บันทึกการตั้งค่าสำเร็จ')); exit();
 }
 
 $pageTitle    = 'วิชา LMS';
@@ -234,20 +259,17 @@ require_once __DIR__ . '/../components/layout_start.php';
     <a href="units.php?subject_id=<?=$s['id']?>" class="px-3 py-1.5 bg-violet-50 text-violet-700 text-xs font-bold rounded-lg hover:bg-violet-100 transition-all">
       <i class="fas fa-book-open mr-1"></i>หน่วยการเรียน
     </a>
-    <a href="pre_exam.php?subject_id=<?=$s['id']?>" class="px-3 py-1.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-lg hover:bg-blue-100 transition-all">
-      <i class="fas fa-play-circle mr-1"></i>ก่อนเรียน
-    </a>
-    <a href="post_exam.php?subject_id=<?=$s['id']?>" class="px-3 py-1.5 bg-rose-50 text-rose-700 text-xs font-bold rounded-lg hover:bg-rose-100 transition-all">
-      <i class="fas fa-flag-checkered mr-1"></i>หลังเรียน
-    </a>
-    <a href="exam_settings.php?subject_id=<?=$s['id']?>" class="px-3 py-1.5 bg-slate-50 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-100 transition-all">
-      <i class="fas fa-cog mr-1"></i>ตั้งค่า
-    </a>
+    <button onclick="openUnlockModal(<?=$s['id']?>,'<?=($d['unlock_mode'] ?? 'open_all')?>')" class="px-3 py-1.5 bg-slate-50 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-100 transition-all">
+      <i class="fas fa-random mr-1"></i>ลำดับหน่วย
+    </button>
     <a href="progress.php?subject_id=<?=$s['id']?>" class="px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-bold rounded-lg hover:bg-amber-100 transition-all">
       <i class="fas fa-chart-line mr-1"></i>ความคืบหน้า
     </a>
     <a href="exam_answers.php?subject_id=<?=$s['id']?>" class="px-3 py-1.5 bg-violet-50 text-violet-700 text-xs font-bold rounded-lg hover:bg-violet-100 transition-all">
       <i class="fas fa-pen-fancy mr-1"></i>ตรวจอัตนัย
+    </a>
+    <a href="reports.php?subject_id=<?=$s['id']?>" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-all">
+      <i class="fas fa-chart-pie mr-1"></i>รายงานผล
     </a>
   </div>
   <!-- Dashboard Entry -->
@@ -392,6 +414,32 @@ require_once __DIR__ . '/../components/layout_start.php';
   </div>
 </div>
 
+<!-- Unlock Mode Modal -->
+<div id="unlockModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="background:rgba(0,0,0,0.4)">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-black text-slate-800"><i class="fas fa-random mr-2 text-slate-500"></i>เงื่อนไขปลดล็อกหน่วยการเรียนรู้</h3>
+      <button onclick="closeModal('unlockModal')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-lg"></i></button>
+    </div>
+    <form method="POST" class="p-6 space-y-4">
+      <input type="hidden" name="action" value="set_unlock_mode">
+      <input type="hidden" name="subject_id" id="unlock_subject_id">
+      <label class="flex items-start gap-2 cursor-pointer">
+        <input type="radio" name="unlock_mode" value="open_all" id="unlock_open_all" class="mt-0.5 accent-violet-600">
+        <span class="text-xs"><span class="font-bold text-slate-700">เปิดทุกหน่วยพร้อมกัน</span><br><span class="text-slate-400">นักเรียนเลือกเรียนหน่วยไหนก่อนก็ได้</span></span>
+      </label>
+      <label class="flex items-start gap-2 cursor-pointer">
+        <input type="radio" name="unlock_mode" value="sequential" id="unlock_sequential" class="mt-0.5 accent-violet-600">
+        <span class="text-xs"><span class="font-bold text-slate-700">เรียงตามลำดับหน่วย</span><br><span class="text-slate-400">หน่วยถัดไปจะปลดล็อกเมื่อผ่านแบบทดสอบหลังเรียนของหน่วยก่อนหน้าแล้ว — ครูปลดล็อกเป็นรายบุคคลได้จากหน้าความคืบหน้า</span></span>
+      </label>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeModal('unlockModal')" class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl">ยกเลิก</button>
+        <button type="submit" class="px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-violet-200"><i class="fas fa-save mr-1"></i>บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 function openModal(id){const el=document.getElementById(id);el.classList.remove('hidden');el.classList.add('flex');}
 function closeModal(id){
@@ -444,6 +492,13 @@ function openClassrooms(sid, assigned) {
     else label.classList.remove('bg-violet-50','border-violet-400');
   });
   openModal('classModal');
+}
+
+function openUnlockModal(sid, mode) {
+  document.getElementById('unlock_subject_id').value = sid;
+  document.getElementById('unlock_open_all').checked = (mode !== 'sequential');
+  document.getElementById('unlock_sequential').checked = (mode === 'sequential');
+  openModal('unlockModal');
 }
 
 function confirmDel(id, name) {
