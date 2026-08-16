@@ -121,9 +121,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $answers[] = ['id' => $q['id']] + $g;
     }
+    $tab_switch_count = max(0, (int)($_POST['tab_switch_count'] ?? 0));
     // Pre-exam always passes — it's before-learning assessment only
-    $pdo->prepare("INSERT INTO lms_student_pre_exam (student_uid,subject_id,unit_id,score,total,passed,attempt_no) VALUES (?,?,?,?,?,1,?)")
-        ->execute([$uid,$subject_id,$unit_id,$score,$total_auto,$attempt_no]);
+    $pdo->prepare("INSERT INTO lms_student_pre_exam (student_uid,subject_id,unit_id,score,total,passed,attempt_no,tab_switch_count) VALUES (?,?,?,?,?,1,?,?)")
+        ->execute([$uid,$subject_id,$unit_id,$score,$total_auto,$attempt_no,$tab_switch_count]);
     $exam_record_id = (int)$pdo->lastInsertId();
     // Save manually-graded answers (text / upload) for teacher review
     // Save item-level results for auto-graded types (feeds item-analysis reports)
@@ -231,6 +232,7 @@ body { font-family: 'Prompt', sans-serif; }
 <?php else: ?>
 <form method="POST" id="examForm" class="px-4 py-5 max-w-2xl mx-auto space-y-4 pb-24" enctype="multipart/form-data">
   <input type="hidden" name="unit_id" value="<?=$unit_id?>">
+  <input type="hidden" name="tab_switch_count" id="tab_switch_count" value="0">
   <?php $qtypes = lms_question_types(); foreach ($questions as $i => $q): $qtype = $q['question_type'] ?? 'choice'; ?>
   <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <p class="text-sm font-bold text-slate-800 mb-1 leading-snug">
@@ -269,6 +271,7 @@ window.addEventListener('load', () => {
   Swal.fire({icon:'success',title:'ส่งคำตอบแล้ว',<?php if($result['total']>0): ?>text:'คะแนนข้อที่ตรวจอัตโนมัติ <?=$result['score']?>/<?=$result['total']?> ข้อ',<?php endif; ?>confirmButtonColor:'#7C3AED',timer:2500,showConfirmButton:false});
 });
 <?php else: ?>
+lmsInitTabSwitchGuard();
 const total = <?=$total_q?>;
 function countAnswered() {
   const cnt = lmsCountAnsweredQids();

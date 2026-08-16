@@ -425,6 +425,31 @@ function lmsCountAnsweredQids() {
   });
   return cnt;
 }
+// Soft anti-cheat: detect when the exam tab/window loses focus (tab switch, app
+// switch, minimize) and log a count into a hidden field — warns the student and
+// lets the teacher review it later, since a web page can't truly block this.
+// Ignores the brief visibility loss a native file-picker dialog causes on upload
+// questions, so attaching a photo doesn't get flagged as leaving the screen.
+function lmsInitTabSwitchGuard() {
+  let count = 0;
+  let filePickerOpen = false;
+  document.querySelectorAll('input[type=file]').forEach(el => {
+    el.addEventListener('click', () => { filePickerOpen = true; setTimeout(() => { filePickerOpen = false; }, 3000); });
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden || filePickerOpen) return;
+    count++;
+    const input = document.getElementById('tab_switch_count');
+    if (input) input.value = count;
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'warning', title: 'ออกนอกหน้าจอระหว่างสอบ!',
+        text: 'ระบบบันทึกไว้แล้ว (ครั้งที่ ' + count + ') กรุณาอยู่ในหน้าสอบจนกว่าจะส่งคำตอบ',
+        confirmButtonColor: '#7C3AED', timer: 3500, showConfirmButton: false,
+      });
+    }
+  });
+}
 JS;
 }
 

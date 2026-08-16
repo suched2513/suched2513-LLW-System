@@ -112,8 +112,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $answers[] = ['id' => $q['id']] + $g;
     }
     $passed = ($total_auto === 0 || $score >= $post_pass) ? 1 : 0;
-    $pdo->prepare("INSERT INTO lms_student_post_exam (student_uid,subject_id,unit_id,score,total,passed,attempt_no) VALUES (?,?,?,?,?,?,?)")
-        ->execute([$uid,$subject_id,$unit_id,$score,$total_auto,$passed,$attempt_no]);
+    $tab_switch_count = max(0, (int)($_POST['tab_switch_count'] ?? 0));
+    $pdo->prepare("INSERT INTO lms_student_post_exam (student_uid,subject_id,unit_id,score,total,passed,attempt_no,tab_switch_count) VALUES (?,?,?,?,?,?,?,?)")
+        ->execute([$uid,$subject_id,$unit_id,$score,$total_auto,$passed,$attempt_no,$tab_switch_count]);
     $exam_record_id = (int)$pdo->lastInsertId();
     // Save manually-graded answers (text / upload) for teacher review
     // Save item-level results for auto-graded types (feeds item-analysis reports)
@@ -259,6 +260,7 @@ body { font-family: 'Prompt', sans-serif; }
 <?php else: ?>
 <form method="POST" id="examForm" class="px-4 py-5 max-w-2xl mx-auto space-y-4 pb-24" enctype="multipart/form-data">
   <input type="hidden" name="unit_id" value="<?=$unit_id?>">
+  <input type="hidden" name="tab_switch_count" id="tab_switch_count" value="0">
   <?php $qtypes = lms_question_types(); foreach ($questions as $i => $q): $qtype = $q['question_type'] ?? 'choice'; ?>
   <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <p class="text-sm font-bold text-slate-800 mb-1 leading-snug">
@@ -310,6 +312,7 @@ window.addEventListener('load', () => {
     confirmButtonColor:'#E11D48'});
 });
 <?php else: ?>
+lmsInitTabSwitchGuard();
 const total = <?=$total_q?>;
 function countAnswered() {
   const cnt = lmsCountAnsweredQids();

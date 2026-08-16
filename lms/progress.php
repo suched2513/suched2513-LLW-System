@@ -161,10 +161,10 @@ foreach ($students as $s) {
     $any_activity = false; $completed_units = 0; $per_unit = [];
     foreach ($units as $u) {
         $un = $u['id'];
-        $pre  = $pdo->prepare("SELECT score,total FROM lms_student_pre_exam  WHERE student_uid=? AND unit_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $pre->execute([$uid,$un]); $pre=$pre->fetch();
-        $pre_latest = $pdo->prepare("SELECT score,total FROM lms_student_pre_exam  WHERE student_uid=? AND unit_id=? ORDER BY taken_at DESC LIMIT 1"); $pre_latest->execute([$uid,$un]); $pre_latest=$pre_latest->fetch();
-        $post = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND unit_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $post->execute([$uid,$un]); $post=$post->fetch();
-        $post_latest = $pdo->prepare("SELECT score,total FROM lms_student_post_exam WHERE student_uid=? AND unit_id=? ORDER BY taken_at DESC LIMIT 1"); $post_latest->execute([$uid,$un]); $post_latest=$post_latest->fetch();
+        $pre  = $pdo->prepare("SELECT score,total,tab_switch_count FROM lms_student_pre_exam  WHERE student_uid=? AND unit_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $pre->execute([$uid,$un]); $pre=$pre->fetch();
+        $pre_latest = $pdo->prepare("SELECT score,total,tab_switch_count FROM lms_student_pre_exam  WHERE student_uid=? AND unit_id=? ORDER BY taken_at DESC LIMIT 1"); $pre_latest->execute([$uid,$un]); $pre_latest=$pre_latest->fetch();
+        $post = $pdo->prepare("SELECT score,total,tab_switch_count FROM lms_student_post_exam WHERE student_uid=? AND unit_id=? AND passed=1 ORDER BY taken_at DESC LIMIT 1"); $post->execute([$uid,$un]); $post=$post->fetch();
+        $post_latest = $pdo->prepare("SELECT score,total,tab_switch_count FROM lms_student_post_exam WHERE student_uid=? AND unit_id=? ORDER BY taken_at DESC LIMIT 1"); $post_latest->execute([$uid,$un]); $post_latest=$post_latest->fetch();
         if ($pre || $pre_latest || $post || $post_latest) $any_activity = true;
         if ($post) $completed_units++;
         $per_unit[$un] = compact('pre','pre_latest','post','post_latest');
@@ -320,8 +320,10 @@ require_once __DIR__ . '/../components/layout_start.php';
             <div class="flex flex-col items-center gap-1">
               <?php if ($pre): ?>
               <span class="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full" title="ก่อนเรียน"><?=$pre['score']?>/<?=$pre['total']?></span>
+              <?php if (!empty($pre['tab_switch_count'])): ?><i class="fas fa-exclamation-triangle text-amber-500 text-[9px]" title="ออกนอกหน้าจอระหว่างสอบ <?=$pre['tab_switch_count']?> ครั้ง"></i><?php endif; ?>
               <?php else: ?>
               <span class="px-1.5 py-0.5 bg-slate-50 text-slate-400 text-[10px] rounded-full" title="ก่อนเรียน"><?=$pre_latest?$pre_latest['score'].'/'.$pre_latest['total']:'—'?></span>
+              <?php if (!empty($pre_latest['tab_switch_count'])): ?><i class="fas fa-exclamation-triangle text-amber-500 text-[9px]" title="ออกนอกหน้าจอระหว่างสอบ <?=$pre_latest['tab_switch_count']?> ครั้ง"></i><?php endif; ?>
               <?php endif; ?>
 
               <?php if ($ex_total===0): ?>
@@ -342,8 +344,10 @@ require_once __DIR__ . '/../components/layout_start.php';
 
               <?php if ($post): ?>
               <span class="px-1.5 py-0.5 bg-violet-50 text-violet-600 text-[10px] font-black rounded-full" title="หลังเรียน"><?=$post['score']?>/<?=$post['total']?></span>
+              <?php if (!empty($post['tab_switch_count'])): ?><i class="fas fa-exclamation-triangle text-amber-500 text-[9px]" title="ออกนอกหน้าจอระหว่างสอบ <?=$post['tab_switch_count']?> ครั้ง"></i><?php endif; ?>
               <?php else: ?>
               <span class="px-1.5 py-0.5 bg-slate-50 text-slate-400 text-[10px] rounded-full" title="หลังเรียน"><?=$post_latest?$post_latest['score'].'/'.$post_latest['total']:'—'?></span>
+              <?php if (!empty($post_latest['tab_switch_count'])): ?><i class="fas fa-exclamation-triangle text-amber-500 text-[9px]" title="ออกนอกหน้าจอระหว่างสอบ <?=$post_latest['tab_switch_count']?> ครั้ง"></i><?php endif; ?>
               <?php endif; ?>
             </div>
             <?php endif; ?>
