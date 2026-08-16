@@ -274,12 +274,31 @@ foreach ($units as $u) {
     $unit_pre_needed[$un] = !$unit_locked[$un] && empty($unit_exam[$un]['pre_result']);
 }
 
+// ── Exam tab: count of exams actionable right now (badge) ──
+$exam_ready_count = 0;
+foreach ($units as $u) {
+    $un = $u['id'];
+    if (!empty($unit_locked[$un])) continue;
+    $uex = $unit_exam[$un] ?? [];
+    if (!empty($unit_pre_needed[$un])) { $exam_ready_count++; continue; }
+    if (($uex['post_total'] ?? 0) > 0 && empty($uex['post_result'])) {
+        $prg        = $unit_ex_progress[$un] ?? ['regular_total'=>0,'regular_done'=>0];
+        $ex_ready   = $prg['regular_total'] === 0 || $prg['regular_done'] >= $prg['regular_total'];
+        $post_locked= !($uex['in_window'] ?? true);
+        $post_maxed = ($uex['post_att_count'] ?? 0) >= ($uex['max_att'] ?? 3);
+        if ($ex_ready && !$post_locked && !$post_maxed) $exam_ready_count++;
+    }
+}
+foreach ($mf_exam as $mfx) {
+    if ($mfx['total'] > 0 && !$mfx['result'] && $mfx['in_window']) $exam_ready_count++;
+}
+
 $total_ex  = count($all_exercises);
 $total_sub = count(array_filter($all_exercises, fn($e) => isset($submissions[$e['id']])));
 
 // Default active tab
 $default_tab = 'content';
-if (isset($_GET['tab']) && in_array($_GET['tab'], ['work', 'content', 'progress']))
+if (isset($_GET['tab']) && in_array($_GET['tab'], ['work', 'content', 'exam', 'progress']))
     $default_tab = $_GET['tab'];
 ?><!DOCTYPE html>
 <html lang="th">
@@ -354,6 +373,11 @@ body { font-family: 'Prompt', sans-serif; }
     <button onclick="switchTab('content')" id="tab-content"
       class="tab-btn <?=$default_tab==='content'?'active':''?> flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5">
       <i class="bi bi-book-half"></i> เนื้อหา
+    </button>
+    <button onclick="switchTab('exam')" id="tab-exam"
+      class="tab-btn <?=$default_tab==='exam'?'active':''?> flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5">
+      <i class="bi bi-pencil-square"></i> สอบ
+      <?php if ($exam_ready_count > 0): ?><span class="bg-rose-400 text-white text-[10px] px-1.5 py-0.5 rounded-full leading-none"><?=$exam_ready_count?></span><?php endif; ?>
     </button>
     <button onclick="switchTab('progress')" id="tab-progress"
       class="tab-btn <?=$default_tab==='progress'?'active':''?> flex-1 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5">
@@ -782,6 +806,148 @@ body { font-family: 'Prompt', sans-serif; }
 </div><!-- /pane-content -->
 
 <!-- ════════════════════════════════════════════════════════
+     TAB: สอบ (แบบทดสอบก่อน/หลังเรียนทุกหน่วย + กลางภาค/ปลายภาค)
+     ════════════════════════════════════════════════════════ -->
+<div id="pane-exam" class="tab-pane <?=$default_tab==='exam'?'active':''?> space-y-3">
+
+  <?php foreach ($mf_meta as $etype => $meta):
+    $mfx = $mf_exam[$etype];
+    if ($mfx['total'] === 0) continue;
+  ?>
+  <div class="bg-white rounded-2xl border border-<?=$meta['color']?>-100 shadow-sm p-4 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-10 h-10 rounded-xl bg-<?=$meta['color']?>-50 flex items-center justify-center flex-shrink-0">
+        <i class="bi <?=$meta['icon']?> text-<?=$meta['color']?>-500"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="font-black text-slate-800 text-sm truncate"><?=$meta['label']?></p>
+        <?php if ($mfx['result']): ?>
+        <p class="text-xs text-emerald-600 font-bold mt-0.5">ผ่านแล้ว · <?=$mfx['result']['score']?>/<?=$mfx['result']['total']?></p>
+        <?php elseif ($mfx['window_set'] && !$mfx['in_window'] && (!$mfx['open_ts'] || $now_ts < $mfx['open_ts'])): ?>
+        <p class="text-xs text-slate-400 mt-0.5">ยังไม่เปิดสอบ<?=$mfx['open_ts']?' · เปิด '.date('d/m/Y H:i',$mfx['open_ts']):''?></p>
+        <?php elseif ($mfx['window_set'] && !$mfx['in_window']): ?>
+        <p class="text-xs text-slate-400 mt-0.5">ปิดสอบแล้ว</p>
+        <?php else: ?>
+        <p class="text-xs text-slate-400 mt-0.5"><?=$mfx['total']?> ข้อ · เหลือ <?=max(0,$mfx['max_att']-$mfx['att_count'])?> ครั้ง</p>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php if (!$mfx['result'] && $mfx['in_window']): ?>
+    <a href="/student/<?=$meta['url']?>?subject_id=<?=$subject_id?>"
+       class="px-4 py-2 bg-<?=$meta['color']?>-600 text-white font-bold text-xs rounded-xl shadow-md flex-shrink-0 active:scale-95 transition-transform">
+      ทำข้อสอบ
+    </a>
+    <?php elseif ($mfx['result']): ?>
+    <i class="bi bi-check-circle-fill text-emerald-500 text-xl flex-shrink-0"></i>
+    <?php else: ?>
+    <i class="bi bi-lock-fill text-slate-300 text-xl flex-shrink-0"></i>
+    <?php endif; ?>
+  </div>
+  <?php endforeach; ?>
+
+  <?php if (empty($units)): ?>
+  <div class="bg-white rounded-2xl border border-slate-100 p-12 text-center shadow-sm">
+    <i class="bi bi-pencil-square text-slate-200 text-5xl mb-3 block"></i>
+    <p class="text-slate-400 font-bold text-sm">ยังไม่มีแบบทดสอบ</p>
+  </div>
+  <?php endif; ?>
+
+  <?php foreach ($units as $u):
+    $un        = $u['id'];
+    $is_locked = $unit_locked[$un] ?? false;
+    $needs_pre = $unit_pre_needed[$un] ?? false;
+    $uex       = $unit_exam[$un] ?? [];
+    if (($uex['pre_total'] ?? 0) === 0 && ($uex['post_total'] ?? 0) === 0) continue; // no exam set up for this unit
+  ?>
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden <?=$is_locked?'opacity-60':''?>">
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-50">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-black text-xs
+        <?=$is_locked?'bg-slate-100 text-slate-400':'bg-violet-100 text-violet-600'?>">
+        <?=$is_locked?'<i class="bi bi-lock-fill"></i>':$u['order_no']?>
+      </div>
+      <p class="font-black text-<?=$is_locked?'slate-400':'slate-800'?> text-sm truncate flex-1"><?=htmlspecialchars($u['unit_name'],ENT_QUOTES,'UTF-8')?></p>
+    </div>
+
+    <?php if ($is_locked): ?>
+    <div class="px-4 py-3 text-xs text-slate-400">
+      <i class="bi bi-lock-fill mr-1"></i>
+      <?=($unit_lock_reason[$un] ?? null)==='sequential'?'ผ่านแบบทดสอบหลังเรียนของหน่วยก่อนหน้าเพื่อปลดล็อก':'หน่วยนี้ยังไม่ปลดล็อก'?>
+    </div>
+    <?php else: ?>
+    <div class="divide-y divide-slate-50">
+
+      <?php if (($uex['pre_total'] ?? 0) > 0): $pre_r = $uex['pre_result'] ?? null; ?>
+      <div class="px-4 py-3 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2 min-w-0">
+          <i class="bi bi-play-circle-fill text-blue-500 flex-shrink-0"></i>
+          <div class="min-w-0">
+            <p class="text-xs font-bold text-slate-700">ก่อนเรียน</p>
+            <?php if ($pre_r && empty($pre_r['auto'])): ?>
+            <p class="text-[10px] text-emerald-600 font-bold">ผ่านแล้ว · <?=$pre_r['score']?>/<?=$pre_r['total']?></p>
+            <?php elseif ($pre_r): ?>
+            <p class="text-[10px] text-emerald-600 font-bold">ผ่านแล้ว</p>
+            <?php else: ?>
+            <p class="text-[10px] text-slate-400">ยังไม่ทำ</p>
+            <?php endif; ?>
+          </div>
+        </div>
+        <?php if (!$pre_r): ?>
+        <a href="/student/lms_pre_exam.php?unit_id=<?=$un?>"
+           class="px-3 py-1.5 bg-blue-500 text-white text-xs font-bold rounded-lg shadow-sm flex-shrink-0 active:scale-95 transition-transform">ทำแบบทดสอบ</a>
+        <?php else: ?>
+        <i class="bi bi-check-circle-fill text-emerald-500 flex-shrink-0"></i>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
+
+      <?php if (($uex['post_total'] ?? 0) > 0):
+        $post_r      = $uex['post_result'] ?? null;
+        $prg         = $unit_ex_progress[$un] ?? ['regular_total'=>0,'regular_done'=>0];
+        $ex_ready    = $prg['regular_total'] === 0 || $prg['regular_done'] >= $prg['regular_total'];
+        $post_locked = !($uex['in_window'] ?? true);
+        $post_maxed  = !$post_r && ($uex['post_att_count'] ?? 0) >= ($uex['max_att'] ?? 3);
+      ?>
+      <div class="px-4 py-3 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2 min-w-0">
+          <i class="bi bi-flag-fill text-rose-500 flex-shrink-0"></i>
+          <div class="min-w-0">
+            <p class="text-xs font-bold text-slate-700">หลังเรียน</p>
+            <?php if ($needs_pre): ?>
+            <p class="text-[10px] text-slate-400">ทำก่อนเรียนก่อน</p>
+            <?php elseif ($post_r && empty($post_r['auto'])): ?>
+            <p class="text-[10px] text-emerald-600 font-bold">ผ่านแล้ว · <?=$post_r['score']?>/<?=$post_r['total']?></p>
+            <?php elseif ($post_r): ?>
+            <p class="text-[10px] text-emerald-600 font-bold">ผ่านแล้ว</p>
+            <?php elseif (!$ex_ready): ?>
+            <p class="text-[10px] text-slate-400">ทำใบงานให้ครบก่อน</p>
+            <?php elseif ($post_locked): ?>
+            <p class="text-[10px] text-slate-400">ยังไม่ถึงเวลาสอบ/หมดเวลาแล้ว</p>
+            <?php elseif ($post_maxed): ?>
+            <p class="text-[10px] text-rose-500">สอบครบจำนวนครั้งแล้ว</p>
+            <?php else: ?>
+            <p class="text-[10px] text-slate-400">พร้อมสอบ</p>
+            <?php endif; ?>
+          </div>
+        </div>
+        <?php if (!$needs_pre && !$post_r && $ex_ready && !$post_locked && !$post_maxed): ?>
+        <a href="/student/lms_post_exam.php?unit_id=<?=$un?>"
+           class="px-3 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-lg shadow-sm flex-shrink-0 active:scale-95 transition-transform">ทำแบบทดสอบ</a>
+        <?php elseif ($post_r): ?>
+        <i class="bi bi-check-circle-fill text-emerald-500 flex-shrink-0"></i>
+        <?php else: ?>
+        <i class="bi bi-lock-fill text-slate-300 flex-shrink-0"></i>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
+
+    </div>
+    <?php endif; ?>
+  </div>
+  <?php endforeach; ?>
+
+</div><!-- /pane-exam -->
+
+<!-- ════════════════════════════════════════════════════════
      TAB: ผลงาน
      ════════════════════════════════════════════════════════ -->
 <div id="pane-progress" class="tab-pane <?=$default_tab==='progress'?'active':''?> space-y-3">
@@ -858,7 +1024,7 @@ body { font-family: 'Prompt', sans-serif; }
 
 <script>
 function switchTab(name) {
-  ['work','content','progress'].forEach(t => {
+  ['work','content','exam','progress'].forEach(t => {
     document.getElementById('tab-' + t).classList.toggle('active', t === name);
     document.getElementById('pane-' + t).classList.toggle('active', t === name);
   });
