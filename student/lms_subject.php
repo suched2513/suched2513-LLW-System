@@ -250,9 +250,8 @@ foreach (['midterm','final'] as $etype) {
 
 // ── Unit locking ─────────────────────────────────────────────
 // sequential: gate on previous unit's post-test passed (fixed order)
-// open_all:   free to pick order, but only one "in-progress" unit at a time —
-//             must finish (exercises done + post-test passed) whichever unit
-//             was started before beginning a different, not-yet-started unit.
+// open_all:   no cross-unit locking at all — every published unit is open;
+//             the pre-test-first rule below still applies per unit.
 $manual_unlocks = [];
 if (!empty($units)) {
     $uids = array_column($units, 'id');
@@ -262,31 +261,14 @@ if (!empty($units)) {
     $manual_unlocks = array_flip($mu->fetchAll(PDO::FETCH_COLUMN));
 }
 
-$unit_started = []; $unit_complete = [];
-foreach ($units as $u) {
-    $un  = $u['id'];
-    $prg = $unit_ex_progress[$un] ?? ['regular_total'=>0,'regular_done'=>0];
-    $unit_started[$un]  = !empty($unit_exam[$un]['pre_result']);
-    $unit_complete[$un] = $unit_started[$un]
-        && $prg['regular_done'] >= $prg['regular_total']
-        && !empty($unit_exam[$un]['post_result']);
-}
-$other_in_progress_unit = null;
-foreach ($units as $u) {
-    if ($unit_started[$u['id']] && !$unit_complete[$u['id']]) { $other_in_progress_unit = $u['id']; break; }
-}
-
 $unit_locked = []; $unit_lock_reason = []; $unit_pre_needed = [];
 $prev_unit_ok = true;
 foreach ($units as $u) {
     $un = $u['id'];
-    $seq_locked  = $unlock_mode === 'sequential' && !$prev_unit_ok && !isset($manual_unlocks[$un]);
-    $open_locked = $unlock_mode !== 'sequential' && !$unit_started[$un]
-        && $other_in_progress_unit !== null && $other_in_progress_unit !== $un
-        && !isset($manual_unlocks[$un]);
+    $seq_locked = $unlock_mode === 'sequential' && !$prev_unit_ok && !isset($manual_unlocks[$un]);
 
-    $unit_locked[$un]      = $seq_locked || $open_locked;
-    $unit_lock_reason[$un] = $seq_locked ? 'sequential' : ($open_locked ? 'in_progress' : null);
+    $unit_locked[$un]      = $seq_locked;
+    $unit_lock_reason[$un] = $seq_locked ? 'sequential' : null;
     $prev_unit_ok = (bool)($unit_exam[$un]['post_result'] ?? false);
     // A unit's own content/exercises need its own pre-test passed first, regardless of unlock_mode
     $unit_pre_needed[$un] = !$unit_locked[$un] && empty($unit_exam[$un]['pre_result']);
