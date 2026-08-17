@@ -139,6 +139,28 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </button>
             </div>
         </div>
+
+        <!-- Per-student table — shown only when one classroom is picked -->
+        <div id="adm-student-wrap" class="hidden mt-6">
+            <p class="text-sm font-black text-slate-700 mb-3"><i class="bi bi-people-fill text-amber-500 mr-1"></i>รายคน — ห้อง <span id="adm-student-classroom"></span></p>
+            <div class="rounded-2xl border border-slate-100 overflow-hidden">
+                <div class="overflow-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">รหัส</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ชื่อ–สกุล</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-emerald-600">มา</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-rose-500">ขาด</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-amber-500">ลา</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-purple-500">โดด</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adm-student-table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -380,6 +402,24 @@ async function loadAdminOverview() {
             <td class="px-4 py-3 text-center text-rose-500 font-bold">${r.noteCount}</td>
         </tr>
     `).join('') || `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">ไม่พบข้อมูล</td></tr>`;
+
+    const studentWrap = document.getElementById('adm-student-wrap');
+    if (classroom !== 'all' && (res.students ?? []).length > 0) {
+        document.getElementById('adm-student-classroom').textContent = classroom;
+        document.getElementById('adm-student-table').innerHTML = res.students.map(s => `
+            <tr class="border-b border-slate-50 hover:bg-amber-50/30 transition-colors">
+                <td class="px-4 py-3 text-slate-500">${esc(s.studentId)}</td>
+                <td class="px-4 py-3 font-bold text-slate-700">${esc(s.name)}</td>
+                <td class="px-4 py-3 text-center font-bold text-emerald-600">${s.present}</td>
+                <td class="px-4 py-3 text-center font-bold ${s.absent > 0 ? 'text-rose-600' : 'text-slate-400'}">${s.absent}</td>
+                <td class="px-4 py-3 text-center font-bold ${s.leave > 0 ? 'text-amber-600' : 'text-slate-400'}">${s.leave}</td>
+                <td class="px-4 py-3 text-center font-bold ${s.skip > 0 ? 'text-purple-600' : 'text-slate-400'}">${s.skip}</td>
+            </tr>
+        `).join('');
+        studentWrap.classList.remove('hidden');
+    } else {
+        studentWrap.classList.add('hidden');
+    }
 }
 
 function highlightLow() {

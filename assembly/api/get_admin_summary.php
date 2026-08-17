@@ -99,7 +99,38 @@ try {
         $totals['noteCount']  = array_sum(array_column($rooms, 'noteCount'));
     }
 
-    echo json_encode(['status' => 'success', 'rooms' => $rooms, 'totals' => $totals]);
+    // Per-student breakdown — only when one specific classroom is picked, to
+    // avoid dumping every student in the school onto one response.
+    $students = [];
+    if ($classroom !== 'all') {
+        $stmt2 = $pdo->prepare("
+            SELECT
+                a.student_id,
+                COALESCE(s.name, a.student_id) AS name,
+                SUM(a.status = 'ม') AS present_count,
+                SUM(a.status = 'ข') AS absent_count,
+                SUM(a.status = 'ล') AS leave_count,
+                SUM(a.status = 'ด') AS skip_count
+            FROM assembly_attendance a
+            LEFT JOIN assembly_students s ON s.student_id = a.student_id
+            WHERE $whereStr
+            GROUP BY a.student_id, s.name
+            ORDER BY a.student_id
+        ");
+        $stmt2->execute($params);
+        foreach ($stmt2->fetchAll() as $r) {
+            $students[] = [
+                'studentId' => $r['student_id'],
+                'name'      => $r['name'],
+                'present'   => (int)$r['present_count'],
+                'absent'    => (int)$r['absent_count'],
+                'leave'     => (int)$r['leave_count'],
+                'skip'      => (int)$r['skip_count'],
+            ];
+        }
+    }
+
+    echo json_encode(['status' => 'success', 'rooms' => $rooms, 'totals' => $totals, 'students' => $students]);
 } catch (Exception $e) {
     error_log('[Assembly] get_admin_summary: ' . $e->getMessage());
     http_response_code(500);
