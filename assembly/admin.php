@@ -49,11 +49,17 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
 
         <!-- Filters -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-5">
             <div>
-                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เดือน</label>
-                <select id="adm-month" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all">
-                    <?php echo renderMonthOptions(true); ?>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">จากเดือน</label>
+                <select id="adm-month-from" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all">
+                    <?php echo renderMonthOptions(); ?>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ถึงเดือน</label>
+                <select id="adm-month-to" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all">
+                    <?php echo renderMonthOptions(); ?>
                 </select>
             </div>
             <div>
@@ -74,9 +80,10 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </button>
             </div>
         </div>
+        <p class="text-xs text-slate-400 -mt-3 mb-5"><i class="bi bi-info-circle mr-1"></i>เลือกเดือนเริ่มต้น–สิ้นสุดให้เหมือนกันเพื่อดูรายเดือน หรือเลือกช่วงกว้างขึ้นเพื่อดูสรุปทั้งเทอม</p>
 
         <!-- KPI Cards -->
-        <div id="adm-kpi" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 hidden">
+        <div id="adm-kpi" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 hidden">
             <div class="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-5 shadow-lg shadow-emerald-200/50">
                 <p class="text-xs font-black uppercase tracking-wider opacity-80">การมาเฉลี่ย</p>
                 <p id="kpi-present" class="text-4xl font-black mt-1">- %</p>
@@ -84,6 +91,10 @@ require_once __DIR__ . '/../components/layout_start.php';
             <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl p-5 shadow-lg shadow-blue-200/50">
                 <p class="text-xs font-black uppercase tracking-wider opacity-80">แต่งกายถูกเฉลี่ย</p>
                 <p id="kpi-uniform" class="text-4xl font-black mt-1">- %</p>
+            </div>
+            <div class="bg-gradient-to-br from-purple-500 to-fuchsia-600 text-white rounded-2xl p-5 shadow-lg shadow-purple-200/50">
+                <p class="text-xs font-black uppercase tracking-wider opacity-80">หลบแถวทั้งหมด (ครั้ง)</p>
+                <p id="kpi-skip" class="text-4xl font-black mt-1">-</p>
             </div>
             <div class="bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-2xl p-5 shadow-lg shadow-rose-200/50">
                 <p class="text-xs font-black uppercase tracking-wider opacity-80">หมายเหตุทั้งหมด</p>
@@ -114,6 +125,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                                 <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ครูที่ปรึกษา</th>
                                 <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-green-600">การมา %</th>
                                 <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-blue-500">แต่งกายถูก %</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-purple-500">หลบแถว</th>
                                 <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-rose-500">หมายเหตุ</th>
                             </tr>
                         </thead>
@@ -319,12 +331,13 @@ async function initRooms() {
 let admBarChart = null, admUniChart = null;
 
 async function loadAdminOverview() {
-    const month     = document.getElementById('adm-month').value || 'all';
+    const monthFrom = document.getElementById('adm-month-from').value;
+    const monthTo   = document.getElementById('adm-month-to').value;
     const grade     = document.getElementById('adm-grade').value || 'all';
     const classroom = document.getElementById('adm-classroom').value || 'all';
 
     Swal.fire({ title: 'กำลังโหลด...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    const res = await api(`/assembly/api/get_admin_summary.php?month=${month}&grade=${encodeURIComponent(grade)}&classroom=${encodeURIComponent(classroom)}`);
+    const res = await api(`/assembly/api/get_admin_summary.php?month_from=${monthFrom}&month_to=${monthTo}&grade=${encodeURIComponent(grade)}&classroom=${encodeURIComponent(classroom)}`);
     Swal.close();
     if (res.status !== 'success') { Swal.fire('ผิดพลาด', res.message, 'error'); return; }
 
@@ -334,6 +347,7 @@ async function loadAdminOverview() {
 
     document.getElementById('kpi-present').textContent = (res.totals.presentPct ?? 0) + ' %';
     document.getElementById('kpi-uniform').textContent = (res.totals.uniformPct ?? 0) + ' %';
+    document.getElementById('kpi-skip').textContent    = res.totals.skipCount ?? 0;
     document.getElementById('kpi-notes').textContent   = res.totals.noteCount ?? 0;
 
     const labels     = res.rooms.map(r => r.classroom);
@@ -362,9 +376,10 @@ async function loadAdminOverview() {
             <td class="px-4 py-3 text-slate-500">${esc(r.teacher || '-')}</td>
             <td class="px-4 py-3 text-center font-bold ${r.presentPct >= 80 ? 'text-emerald-600' : 'text-rose-500'}">${r.presentPct}%</td>
             <td class="px-4 py-3 text-center font-bold ${r.uniformPct >= 80 ? 'text-blue-600' : 'text-amber-500'}">${r.uniformPct}%</td>
+            <td class="px-4 py-3 text-center font-bold ${r.skipCount > 0 ? 'text-purple-600' : 'text-slate-400'}">${r.skipCount}</td>
             <td class="px-4 py-3 text-center text-rose-500 font-bold">${r.noteCount}</td>
         </tr>
-    `).join('') || `<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">ไม่พบข้อมูล</td></tr>`;
+    `).join('') || `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-400">ไม่พบข้อมูล</td></tr>`;
 }
 
 function highlightLow() {

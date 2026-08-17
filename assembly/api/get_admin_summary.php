@@ -18,9 +18,11 @@ if ($_SESSION['llw_role'] !== 'super_admin') {
     exit;
 }
 
-$month     = trim($_GET['month']     ?? 'all');
-$grade     = trim($_GET['grade']     ?? 'all');
-$classroom = trim($_GET['classroom'] ?? 'all');
+$monthFrom = trim($_GET['month_from'] ?? '');
+$monthTo   = trim($_GET['month_to']   ?? '');
+$month     = trim($_GET['month']      ?? 'all'); // legacy single-month param, still supported
+$grade     = trim($_GET['grade']      ?? 'all');
+$classroom = trim($_GET['classroom']  ?? 'all');
 
 try {
     $pdo = getPdo();
@@ -28,7 +30,11 @@ try {
     $where  = ['1=1'];
     $params = [];
 
-    if ($month !== 'all') {
+    if ($monthFrom !== '' && $monthTo !== '') {
+        $where[]  = "DATE_FORMAT(a.date, '%m') BETWEEN ? AND ?";
+        $params[] = $monthFrom;
+        $params[] = $monthTo;
+    } elseif ($month !== 'all') {
         $where[]  = "DATE_FORMAT(a.date, '%m') = ?";
         $params[] = $month;
     }
@@ -58,6 +64,7 @@ try {
             SUM(a.pants = 'ถูก') AS pants_ok,
             SUM(a.socks = 'ถูก') AS socks_ok,
             SUM(a.shoes = 'ถูก') AS shoes_ok,
+            SUM(a.status = 'ด') AS skip_count,
             SUM(CASE WHEN a.note IS NOT NULL AND a.note != '' THEN 1 ELSE 0 END) AS note_count
         FROM assembly_attendance a
         WHERE $whereStr
@@ -79,14 +86,16 @@ try {
             'teacher'    => $r['teacher_name'] ?? '-',
             'presentPct' => $presentPct,
             'uniformPct' => $uniformPct,
+            'skipCount'  => (int)$r['skip_count'],
             'noteCount'  => (int)$r['note_count'],
         ];
     }
 
-    $totals = ['presentPct' => 0, 'uniformPct' => 0, 'noteCount' => 0, 'roomCount' => count($rooms)];
+    $totals = ['presentPct' => 0, 'uniformPct' => 0, 'skipCount' => 0, 'noteCount' => 0, 'roomCount' => count($rooms)];
     if (count($rooms) > 0) {
         $totals['presentPct'] = round(array_sum(array_column($rooms, 'presentPct')) / count($rooms));
         $totals['uniformPct'] = round(array_sum(array_column($rooms, 'uniformPct')) / count($rooms));
+        $totals['skipCount']  = array_sum(array_column($rooms, 'skipCount'));
         $totals['noteCount']  = array_sum(array_column($rooms, 'noteCount'));
     }
 
