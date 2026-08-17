@@ -394,7 +394,7 @@ require_once '../components/layout_start.php';
          at the bottom of the viewport even while scrolled down through a tall
          table, so horizontal scrolling doesn't require finding the table's
          own (possibly far-below) scrollbar first. -->
-    <div class="sticky bottom-2 z-30 mx-auto bg-white/95 backdrop-blur border border-slate-200 rounded-full shadow-lg overflow-x-auto"
+    <div class="sticky bottom-2 z-30 bg-white/95 backdrop-blur border border-slate-200 rounded-full shadow-lg overflow-x-auto"
          id="matrixBottomScrollbar" style="height:14px">
         <div id="matrixBottomScrollbarInner" style="height:1px"></div>
     </div>
@@ -409,16 +409,24 @@ require_once '../components/layout_start.php';
         // Tailwind's CDN build applies utility classes asynchronously, so the
         // table's real width isn't known on the first tick — re-check on load,
         // after a short delay, and whenever the table's size actually changes.
+        // The proxy bar is forced to the exact same width as the real
+        // scrollable area so a full drag on either one reaches the other's
+        // max scroll position too (mapping by scrollLeft ratio isn't enough
+        // if the two widths ever drift apart).
         function sync() {
             const overflowing = table.scrollWidth > wrap.clientWidth + 1;
             bar.classList.toggle('hidden', !overflowing);
+            bar.style.width  = wrap.clientWidth + 'px';
             inner.style.width = table.scrollWidth + 'px';
         }
         sync();
         window.addEventListener('load', sync);
         setTimeout(sync, 500);
         window.addEventListener('resize', sync);
-        if (window.ResizeObserver) new ResizeObserver(sync).observe(table);
+        if (window.ResizeObserver) {
+            new ResizeObserver(sync).observe(table);
+            new ResizeObserver(sync).observe(wrap);
+        }
 
         let syncing = false;
         wrap.addEventListener('scroll', () => {
