@@ -279,8 +279,8 @@ require_once '../components/layout_start.php';
             <?php endif; ?>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-xs">
+        <div class="overflow-x-auto" id="matrixScrollWrap">
+            <table class="min-w-full text-xs" id="matrixTable">
                 <thead>
                     <tr class="bg-slate-50 border-b border-slate-100">
                         <th class="px-5 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest sticky left-0 bg-slate-50 z-10 min-w-[180px]">นักเรียน</th>
@@ -374,6 +374,44 @@ require_once '../components/layout_start.php';
             </table>
         </div>
     </div>
+
+    <!-- Sticky bottom scrollbar for the matrix table above — stays reachable
+         at the bottom of the viewport even while scrolled down through a tall
+         table, so horizontal scrolling doesn't require finding the table's
+         own (possibly far-below) scrollbar first. -->
+    <div class="sticky bottom-2 z-30 mx-auto hidden bg-white/95 backdrop-blur border border-slate-200 rounded-full shadow-lg overflow-x-auto"
+         id="matrixBottomScrollbar" style="height:14px">
+        <div id="matrixBottomScrollbarInner" style="height:1px"></div>
+    </div>
+    <script>
+    (function() {
+        const wrap  = document.getElementById('matrixScrollWrap');
+        const table = document.getElementById('matrixTable');
+        const bar   = document.getElementById('matrixBottomScrollbar');
+        const inner = document.getElementById('matrixBottomScrollbarInner');
+        if (!wrap || !table || !bar) return;
+
+        function sync() {
+            const overflowing = table.scrollWidth > wrap.clientWidth + 1;
+            bar.classList.toggle('hidden', !overflowing);
+            inner.style.width = table.scrollWidth + 'px';
+        }
+        sync();
+        window.addEventListener('resize', sync);
+
+        let syncing = false;
+        wrap.addEventListener('scroll', () => {
+            if (syncing) return; syncing = true;
+            bar.scrollLeft = wrap.scrollLeft;
+            syncing = false;
+        });
+        bar.addEventListener('scroll', () => {
+            if (syncing) return; syncing = true;
+            wrap.scrollLeft = bar.scrollLeft;
+            syncing = false;
+        });
+    })();
+    </script>
 
     <?php elseif ($selected_class): ?>
     <div class="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center text-amber-800">
