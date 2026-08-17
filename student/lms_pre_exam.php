@@ -43,33 +43,8 @@ if (!$mu->fetch()) {
                 if (!$ppost->fetch()) { header('Location: /student/lms_subject.php?subject_id='.$subject_id.'&locked=1'); exit(); }
             }
         }
-    } else {
-        // open_all: only one in-progress unit at a time — must finish (exercises done +
-        // post-test passed) any other unit already started before beginning a new one
-        $ou = $pdo->prepare("SELECT id FROM lms_units WHERE subject_id=? AND id<>? AND status='published' AND deleted_at IS NULL");
-        $ou->execute([$subject_id, $unit_id]);
-        foreach ($ou->fetchAll(PDO::FETCH_COLUMN) as $other_id) {
-            $started = $pdo->prepare("SELECT id FROM lms_student_pre_exam WHERE student_uid=? AND unit_id=? LIMIT 1");
-            $started->execute([$uid, $other_id]);
-            if (!$started->fetch()) continue;
-
-            $exq = $pdo->prepare("SELECT COUNT(*) FROM lms_unit_exercises WHERE unit_id=? AND is_remedial=0 AND status='published' AND deleted_at IS NULL");
-            $exq->execute([$other_id]); $ex_total = (int)$exq->fetchColumn();
-            $exd = $pdo->prepare("SELECT COUNT(DISTINCT se.exercise_id) FROM lms_student_exercises se JOIN lms_unit_exercises e ON e.id=se.exercise_id WHERE se.student_uid=? AND e.unit_id=? AND e.is_remedial=0");
-            $exd->execute([$uid, $other_id]); $ex_done = (int)$exd->fetchColumn();
-
-            $ptq = $pdo->prepare("SELECT COUNT(*) FROM lms_post_questions WHERE unit_id=?"); $ptq->execute([$other_id]);
-            $post_ok = true;
-            if ((int)$ptq->fetchColumn() > 0) {
-                $ppost = $pdo->prepare("SELECT id FROM lms_student_post_exam WHERE student_uid=? AND unit_id=? AND passed=1 LIMIT 1");
-                $ppost->execute([$uid, $other_id]); $post_ok = (bool)$ppost->fetch();
-            }
-
-            if (!(($ex_total === 0 || $ex_done >= $ex_total) && $post_ok)) {
-                header('Location: /student/lms_subject.php?subject_id='.$subject_id.'&locked=1'); exit();
-            }
-        }
     }
+    // open_all: no cross-unit gate at all — every published unit's pre-test is reachable.
 }
 
 // Already submitted pre-exam? Redirect back (pre-exam is once-only)
