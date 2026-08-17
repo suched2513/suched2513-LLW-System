@@ -76,27 +76,39 @@ if ($selected_class) {
     }
 
     // --- คำนวณ KPI ---
-    $total_rate = 0; $ms_count = 0; $total_skip_all = 0;
+    $total_rate = 0; $ms_count = 0; $total_skip_all = 0; $skippers = [];
     foreach ($students as $stu) {
         $s_id = $stu['id'];
         $total_come = 0; $total_possible = 0; $total_skip = 0;
+        $skip_by_subject = [];
         foreach ($subjects as $sub) {
             $come = $matrix[$s_id][$sub['id']]['มา'] ?? 0;
             $sess = $subj_sessions[$sub['id']];
+            $sk   = $matrix[$s_id][$sub['id']]['โดด'] ?? 0;
             $total_come     += $come;
             $total_possible += $sess;
-            $total_skip     += $matrix[$s_id][$sub['id']]['โดด'] ?? 0;
+            $total_skip     += $sk;
+            if ($sk > 0) $skip_by_subject[] = $sub['subject_code'] . ' (' . $sk . ')';
         }
         $rate = $total_possible > 0 ? round(($total_come / $total_possible) * 100, 1) : 0;
         $total_rate += $rate;
         if ($total_possible > 0 && $rate < 80) $ms_count++;
         $total_skip_all += $total_skip;
+        if ($total_skip > 0) {
+            $skippers[] = [
+                'student_id' => $stu['student_id'],
+                'name'       => $stu['name'],
+                'skip_total' => $total_skip,
+                'subjects'   => implode(', ', $skip_by_subject),
+            ];
+        }
 
         // Chart data
         $chart_labels[] = $stu['student_id'];
         $chart_rates[]  = $rate;
         $chart_colors[] = $rate >= 80 ? 'rgba(16,185,129,0.8)' : ($rate >= 60 ? 'rgba(245,158,11,0.8)' : 'rgba(239,68,68,0.8)');
     }
+    usort($skippers, fn($a, $b) => $b['skip_total'] <=> $a['skip_total']);
     $kpi = [
         'total'     => count($students),
         'avg_rate'  => count($students) > 0 ? round($total_rate / count($students), 1) : 0,
@@ -204,6 +216,43 @@ require_once '../components/layout_start.php';
             <p class="text-xs opacity-60 mt-1">วิชาในห้องนี้</p>
         </div>
     </div>
+
+    <!-- ── รายชื่อนักเรียนที่โดดเรียน (เฉพาะคนที่โดด) ── -->
+    <?php if (!empty($skippers)): ?>
+    <div class="bg-white rounded-2xl shadow-sm border border-purple-100 overflow-hidden">
+        <div class="px-6 py-5 border-b border-purple-100 bg-purple-50/50 flex items-center justify-between">
+            <div>
+                <h3 class="font-black text-slate-800 flex items-center gap-2"><i class="bi bi-exclamation-triangle-fill text-purple-500"></i>นักเรียนที่โดดเรียน</h3>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">เฉพาะคนที่มีประวัติโดด · เรียงจากโดดมากไปน้อย</p>
+            </div>
+            <span class="bg-purple-600 text-white px-4 py-2 rounded-xl text-xs font-black"><?= count($skippers) ?> คน</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-xs">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-100">
+                        <th class="px-5 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-widest">รหัส</th>
+                        <th class="px-5 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-widest">ชื่อ–สกุล</th>
+                        <th class="px-3 py-3 text-center text-xs font-black text-purple-600 uppercase tracking-widest">โดดรวม</th>
+                        <th class="px-5 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-widest">โดดวิชาไหนบ้าง</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    <?php foreach ($skippers as $sk): ?>
+                    <tr class="hover:bg-purple-50/30 transition">
+                        <td class="px-5 py-3 font-mono font-bold text-blue-600"><?= htmlspecialchars($sk['student_id']) ?></td>
+                        <td class="px-5 py-3 font-bold text-slate-700"><?= htmlspecialchars($sk['name']) ?></td>
+                        <td class="px-3 py-3 text-center">
+                            <span class="inline-flex items-center gap-1 bg-purple-600 text-white px-2.5 py-1 rounded-xl text-xs font-black"><?= $sk['skip_total'] ?></span>
+                        </td>
+                        <td class="px-5 py-3 text-slate-500"><?= htmlspecialchars($sk['subjects']) ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- ── Chart ── -->
     <?php if (!empty($chart_labels)): ?>
