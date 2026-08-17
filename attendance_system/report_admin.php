@@ -225,7 +225,12 @@ require_once '../components/layout_start.php';
                 <h3 class="font-black text-slate-800 flex items-center gap-2"><i class="bi bi-exclamation-triangle-fill text-purple-500"></i>นักเรียนที่โดดเรียน</h3>
                 <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">เฉพาะคนที่มีประวัติโดด · เรียงจากโดดมากไปน้อย</p>
             </div>
-            <span class="bg-purple-600 text-white px-4 py-2 rounded-xl text-xs font-black"><?= count($skippers) ?> คน</span>
+            <div class="flex items-center gap-2">
+                <span class="bg-purple-600 text-white px-4 py-2 rounded-xl text-xs font-black"><?= count($skippers) ?> คน</span>
+                <button onclick="printSkippers()" class="bg-white border border-purple-200 text-purple-700 px-4 py-2 rounded-xl text-xs font-black hover:bg-purple-50 transition flex items-center gap-1.5">
+                    <i class="bi bi-printer-fill"></i> ปริ้นรายงาน
+                </button>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full text-xs">
@@ -252,6 +257,16 @@ require_once '../components/layout_start.php';
             </table>
         </div>
     </div>
+    <script>
+    function printSkippers() {
+        const params = new URLSearchParams({
+            classroom:  <?= json_encode($selected_class, JSON_UNESCAPED_UNICODE) ?>,
+            start_date: <?= json_encode($start_date) ?>,
+            end_date:   <?= json_encode($end_date) ?>,
+        });
+        window.open('report_skippers_print.php?' + params.toString(), '_blank');
+    }
+    </script>
     <?php endif; ?>
 
     <!-- ── Chart ── -->
@@ -379,7 +394,7 @@ require_once '../components/layout_start.php';
          at the bottom of the viewport even while scrolled down through a tall
          table, so horizontal scrolling doesn't require finding the table's
          own (possibly far-below) scrollbar first. -->
-    <div class="sticky bottom-2 z-30 mx-auto hidden bg-white/95 backdrop-blur border border-slate-200 rounded-full shadow-lg overflow-x-auto"
+    <div class="sticky bottom-2 z-30 mx-auto bg-white/95 backdrop-blur border border-slate-200 rounded-full shadow-lg overflow-x-auto"
          id="matrixBottomScrollbar" style="height:14px">
         <div id="matrixBottomScrollbarInner" style="height:1px"></div>
     </div>
@@ -391,13 +406,19 @@ require_once '../components/layout_start.php';
         const inner = document.getElementById('matrixBottomScrollbarInner');
         if (!wrap || !table || !bar) return;
 
+        // Tailwind's CDN build applies utility classes asynchronously, so the
+        // table's real width isn't known on the first tick — re-check on load,
+        // after a short delay, and whenever the table's size actually changes.
         function sync() {
             const overflowing = table.scrollWidth > wrap.clientWidth + 1;
             bar.classList.toggle('hidden', !overflowing);
             inner.style.width = table.scrollWidth + 'px';
         }
         sync();
+        window.addEventListener('load', sync);
+        setTimeout(sync, 500);
         window.addEventListener('resize', sync);
+        if (window.ResizeObserver) new ResizeObserver(sync).observe(table);
 
         let syncing = false;
         wrap.addEventListener('scroll', () => {
