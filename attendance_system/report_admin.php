@@ -76,19 +76,21 @@ if ($selected_class) {
     }
 
     // --- คำนวณ KPI ---
-    $total_rate = 0; $ms_count = 0;
+    $total_rate = 0; $ms_count = 0; $total_skip_all = 0;
     foreach ($students as $stu) {
         $s_id = $stu['id'];
-        $total_come = 0; $total_possible = 0;
+        $total_come = 0; $total_possible = 0; $total_skip = 0;
         foreach ($subjects as $sub) {
             $come = $matrix[$s_id][$sub['id']]['มา'] ?? 0;
             $sess = $subj_sessions[$sub['id']];
             $total_come     += $come;
             $total_possible += $sess;
+            $total_skip     += $matrix[$s_id][$sub['id']]['โดด'] ?? 0;
         }
         $rate = $total_possible > 0 ? round(($total_come / $total_possible) * 100, 1) : 0;
         $total_rate += $rate;
         if ($total_possible > 0 && $rate < 80) $ms_count++;
+        $total_skip_all += $total_skip;
 
         // Chart data
         $chart_labels[] = $stu['student_id'];
@@ -96,10 +98,11 @@ if ($selected_class) {
         $chart_colors[] = $rate >= 80 ? 'rgba(16,185,129,0.8)' : ($rate >= 60 ? 'rgba(245,158,11,0.8)' : 'rgba(239,68,68,0.8)');
     }
     $kpi = [
-        'total'    => count($students),
-        'avg_rate' => count($students) > 0 ? round($total_rate / count($students), 1) : 0,
-        'ms_count' => $ms_count,
-        'subjects' => count($subjects),
+        'total'     => count($students),
+        'avg_rate'  => count($students) > 0 ? round($total_rate / count($students), 1) : 0,
+        'ms_count'  => $ms_count,
+        'subjects'  => count($subjects),
+        'skip_all'  => $total_skip_all,
     ];
 }
 
@@ -112,19 +115,20 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv' && $selected_class && !e
     $out = fopen('php://output', 'w');
     $hdr = ['รหัส', 'ชื่อ-สกุล'];
     foreach ($subjects as $s) $hdr[] = $s['subject_code'];
-    $hdr[] = 'รวม %'; $hdr[] = 'มส.';
+    $hdr[] = 'รวม %'; $hdr[] = 'รวมโดด'; $hdr[] = 'มส.';
     fputcsv($out, $hdr);
     foreach ($students as $stu) {
         $row = [$stu['student_id'], $stu['name']];
-        $tc=0; $tp=0;
+        $tc=0; $tp=0; $tsk=0;
         foreach ($subjects as $sub) {
             $c = $matrix[$stu['id']][$sub['id']]['มา'] ?? 0;
             $ss = $subj_sessions[$sub['id']];
             $row[] = $ss > 0 ? round(($c/$ss)*100,0).'%' : '-';
-            $tc+=$c; $tp+=$ss;
+            $tc+=$c; $tp+=$ss; $tsk += $matrix[$stu['id']][$sub['id']]['โดด'] ?? 0;
         }
         $or = $tp>0 ? round(($tc/$tp)*100,1) : 0;
         $row[] = $or.'%';
+        $row[] = $tsk;
         $row[] = ($tp>0 && $or<80) ? 'มส.' : 'ผ่าน';
         fputcsv($out, $row);
     }
@@ -173,7 +177,7 @@ require_once '../components/layout_start.php';
     <?php if ($selected_class && !empty($students)): ?>
 
     <!-- ── KPI Cards ── -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl p-5 text-white shadow-xl shadow-indigo-200/50">
             <p class="text-xs font-black opacity-70 uppercase tracking-widest">นักเรียนทั้งหมด</p>
             <p class="text-4xl font-black mt-2"><?= $kpi['total'] ?></p>
@@ -188,6 +192,11 @@ require_once '../components/layout_start.php';
             <p class="text-xs font-black opacity-70 uppercase tracking-widest">เสี่ยงติด มส.</p>
             <p class="text-4xl font-black mt-2"><?= $kpi['ms_count'] ?></p>
             <p class="text-xs opacity-60 mt-1">มาเรียน&lt;80%</p>
+        </div>
+        <div class="bg-gradient-to-br from-purple-500 to-fuchsia-700 rounded-2xl p-5 text-white shadow-xl shadow-purple-200/50">
+            <p class="text-xs font-black opacity-70 uppercase tracking-widest">โดดเรียนทั้งหมด</p>
+            <p class="text-4xl font-black mt-2"><?= $kpi['skip_all'] ?></p>
+            <p class="text-xs opacity-60 mt-1">ครั้ง ทุกวิชารวมกัน</p>
         </div>
         <div class="bg-gradient-to-br from-slate-600 to-slate-800 rounded-2xl p-5 text-white shadow-xl shadow-slate-200/50">
             <p class="text-xs font-black opacity-70 uppercase tracking-widest">จำนวนวิชา</p>
@@ -233,16 +242,18 @@ require_once '../components/layout_start.php';
                         </th>
                         <?php endforeach; ?>
                         <th class="px-5 py-4 text-center text-xs font-black text-indigo-500 uppercase tracking-widest">รวม %</th>
+                        <th class="px-3 py-4 text-center text-xs font-black text-purple-600 uppercase tracking-widest">รวมโดด</th>
                         <th class="px-3 py-4 text-center text-xs font-black text-rose-600 uppercase tracking-widest">มส.</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
                     <?php foreach ($students as $stu):
                         $s_id = $stu['id'];
-                        $total_come = 0; $total_possible = 0;
+                        $total_come = 0; $total_possible = 0; $row_total_skip = 0;
                         foreach ($subjects as $sub) {
                             $total_come     += $matrix[$s_id][$sub['id']]['มา'] ?? 0;
                             $total_possible += $subj_sessions[$sub['id']];
+                            $row_total_skip += $matrix[$s_id][$sub['id']]['โดด'] ?? 0;
                         }
                         $overall_rate = $total_possible > 0 ? round(($total_come / $total_possible) * 100, 1) : 0;
                         $is_ms = $total_possible > 0 && $overall_rate < 80;
@@ -268,6 +279,9 @@ require_once '../components/layout_start.php';
                             <div class="inline-flex flex-col items-center gap-1">
                                 <span class="font-black <?= $tc ?> rounded-lg px-2.5 py-1"><?= $r ?>%</span>
                                 <span class="text-xs text-slate-400"><?= $come ?>/<?= $sess ?></span>
+                                <?php if ($skip > 0): ?>
+                                <span class="text-xs font-black text-purple-600" title="โดดวิชานี้ <?= $skip ?> ครั้ง"><i class="bi bi-exclamation-triangle-fill"></i> โดด <?= $skip ?></span>
+                                <?php endif; ?>
                             </div>
                             <?php else: ?>
                             <span class="text-slate-200 font-bold">—</span>
@@ -282,6 +296,14 @@ require_once '../components/layout_start.php';
                                     <div class="h-full bg-<?= $orc ?>-500 rounded-full" style="width:<?= min($overall_rate,100) ?>%"></div>
                                 </div>
                             </div>
+                        </td>
+                        <!-- รวมโดด -->
+                        <td class="px-3 py-3.5 text-center">
+                            <?php if ($row_total_skip > 0): ?>
+                            <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-600 border border-purple-100 px-2.5 py-1 rounded-xl text-xs font-black"><?= $row_total_skip ?></span>
+                            <?php else: ?>
+                            <span class="text-slate-200 font-bold">0</span>
+                            <?php endif; ?>
                         </td>
                         <!-- มส. -->
                         <td class="px-3 py-3.5 text-center">
