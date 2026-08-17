@@ -294,20 +294,21 @@ require_once '../components/layout_start.php';
             <?php endif; ?>
         </div>
 
-        <div class="overflow-x-auto" id="matrixScrollWrap">
+        <p class="px-6 pt-4 text-xs text-slate-400 font-bold flex items-center gap-1.5"><i class="bi bi-arrows-move"></i>เลื่อนในตารางได้ทั้งแนวตั้งและแนวนอน — แถบเลื่อนแนวนอนอยู่ด้านล่างกรอบตารางเสมอ</p>
+        <div class="overflow-auto" id="matrixScrollWrap" style="max-height:65vh">
             <table class="min-w-full text-xs" id="matrixTable">
                 <thead>
-                    <tr class="bg-slate-50 border-b border-slate-100">
-                        <th class="px-5 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest sticky left-0 bg-slate-50 z-10 min-w-[180px]">นักเรียน</th>
+                    <tr class="border-b border-slate-100">
+                        <th class="px-5 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest sticky top-0 left-0 bg-slate-50 z-30 min-w-[180px]">นักเรียน</th>
                         <?php foreach ($subjects as $sub): ?>
-                        <th class="px-3 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                        <th class="px-3 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest whitespace-nowrap sticky top-0 bg-slate-50 z-20">
                             <?= htmlspecialchars($sub['subject_code']) ?><br>
                             <span class="text-xs normal-case font-medium opacity-60"><?= mb_substr($sub['subject_name'],0,12) ?>…</span>
                         </th>
                         <?php endforeach; ?>
-                        <th class="px-5 py-4 text-center text-xs font-black text-indigo-500 uppercase tracking-widest">รวม %</th>
-                        <th class="px-3 py-4 text-center text-xs font-black text-purple-600 uppercase tracking-widest">รวมโดด</th>
-                        <th class="px-3 py-4 text-center text-xs font-black text-rose-600 uppercase tracking-widest">มส.</th>
+                        <th class="px-5 py-4 text-center text-xs font-black text-indigo-500 uppercase tracking-widest sticky top-0 bg-slate-50 z-20">รวม %</th>
+                        <th class="px-3 py-4 text-center text-xs font-black text-purple-600 uppercase tracking-widest sticky top-0 bg-slate-50 z-20">รวมโดด</th>
+                        <th class="px-3 py-4 text-center text-xs font-black text-rose-600 uppercase tracking-widest sticky top-0 bg-slate-50 z-20">มส.</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
@@ -341,7 +342,10 @@ require_once '../components/layout_start.php';
                         <td class="px-3 py-3.5 text-center">
                             <?php if ($sess > 0): ?>
                             <div class="inline-flex flex-col items-center gap-1">
-                                <span class="font-black <?= $tc ?> rounded-lg px-2.5 py-1"><?= $r ?>%</span>
+                                <span class="font-black <?= $tc ?> rounded-lg px-2.5 py-1 inline-flex items-center gap-1">
+                                    <?php if ($r < 60): ?><i class="bi bi-exclamation-triangle-fill"></i><?php endif; ?>
+                                    <?= $r ?>%
+                                </span>
                                 <span class="text-xs text-slate-400"><?= $come ?>/<?= $sess ?></span>
                                 <?php if ($skip > 0): ?>
                                 <span class="text-xs font-black text-purple-600" title="โดดวิชานี้ <?= $skip ?> ครั้ง"><i class="bi bi-exclamation-triangle-fill"></i> โดด <?= $skip ?></span>
@@ -355,7 +359,10 @@ require_once '../components/layout_start.php';
                         <!-- Overall -->
                         <td class="px-5 py-3.5 text-center">
                             <div class="flex flex-col items-center gap-1">
-                                <span class="font-black text-<?= $orc ?>-600 text-sm"><?= $overall_rate ?>%</span>
+                                <span class="font-black text-<?= $orc ?>-600 text-sm inline-flex items-center gap-1">
+                                    <?php if ($overall_rate < 60): ?><i class="bi bi-exclamation-triangle-fill"></i><?php endif; ?>
+                                    <?= $overall_rate ?>%
+                                </span>
                                 <div class="w-14 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                     <div class="h-full bg-<?= $orc ?>-500 rounded-full" style="width:<?= min($overall_rate,100) ?>%"></div>
                                 </div>
@@ -389,58 +396,6 @@ require_once '../components/layout_start.php';
             </table>
         </div>
     </div>
-
-    <!-- Sticky bottom scrollbar for the matrix table above — stays reachable
-         at the bottom of the viewport even while scrolled down through a tall
-         table, so horizontal scrolling doesn't require finding the table's
-         own (possibly far-below) scrollbar first. -->
-    <div class="sticky bottom-2 z-30 bg-white/95 backdrop-blur border border-slate-200 rounded-full shadow-lg overflow-x-auto"
-         id="matrixBottomScrollbar" style="height:14px">
-        <div id="matrixBottomScrollbarInner" style="height:1px"></div>
-    </div>
-    <script>
-    (function() {
-        const wrap  = document.getElementById('matrixScrollWrap');
-        const table = document.getElementById('matrixTable');
-        const bar   = document.getElementById('matrixBottomScrollbar');
-        const inner = document.getElementById('matrixBottomScrollbarInner');
-        if (!wrap || !table || !bar) return;
-
-        // Tailwind's CDN build applies utility classes asynchronously, so the
-        // table's real width isn't known on the first tick — re-check on load,
-        // after a short delay, and whenever the table's size actually changes.
-        // The proxy bar is forced to the exact same width as the real
-        // scrollable area so a full drag on either one reaches the other's
-        // max scroll position too (mapping by scrollLeft ratio isn't enough
-        // if the two widths ever drift apart).
-        function sync() {
-            const overflowing = table.scrollWidth > wrap.clientWidth + 1;
-            bar.classList.toggle('hidden', !overflowing);
-            bar.style.width  = wrap.clientWidth + 'px';
-            inner.style.width = table.scrollWidth + 'px';
-        }
-        sync();
-        window.addEventListener('load', sync);
-        setTimeout(sync, 500);
-        window.addEventListener('resize', sync);
-        if (window.ResizeObserver) {
-            new ResizeObserver(sync).observe(table);
-            new ResizeObserver(sync).observe(wrap);
-        }
-
-        let syncing = false;
-        wrap.addEventListener('scroll', () => {
-            if (syncing) return; syncing = true;
-            bar.scrollLeft = wrap.scrollLeft;
-            syncing = false;
-        });
-        bar.addEventListener('scroll', () => {
-            if (syncing) return; syncing = true;
-            wrap.scrollLeft = bar.scrollLeft;
-            syncing = false;
-        });
-    })();
-    </script>
 
     <?php elseif ($selected_class): ?>
     <div class="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center text-amber-800">
