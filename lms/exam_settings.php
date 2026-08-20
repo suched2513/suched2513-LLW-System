@@ -18,9 +18,10 @@ $subject_id = (int)$unit['subject_id'];
 $subject = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?"); $subject->execute([$subject_id]); $subject = $subject->fetch();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $pre_pass  = max(1, (int)$_POST['pre_pass_score']);
-    $post_pass = max(1, (int)$_POST['post_pass_score']);
-    $max_att   = max(1, (int)$_POST['post_max_attempts']);
+    $pre_pass     = max(1, (int)$_POST['pre_pass_score']);
+    $post_pass    = max(1, (int)$_POST['post_pass_score']);
+    $max_att      = max(1, (int)$_POST['post_max_attempts']);
+    $show_answer  = isset($_POST['post_show_answer']) ? 1 : 0;
 
     $open_raw  = trim($_POST['post_exam_open_at']  ?? '');
     $close_raw = trim($_POST['post_exam_close_at'] ?? '');
@@ -33,10 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $pdo->prepare("
-        INSERT INTO lms_exam_settings (subject_id, unit_id, pre_pass_score, post_pass_score, post_max_attempts, post_exam_open_at, post_exam_close_at)
-        VALUES (?,?,?,?,?,?,?)
-        ON DUPLICATE KEY UPDATE pre_pass_score=?, post_pass_score=?, post_max_attempts=?, post_exam_open_at=?, post_exam_close_at=?
-    ")->execute([$subject_id, $unit_id, $pre_pass, $post_pass, $max_att, $open_at, $close_at, $pre_pass, $post_pass, $max_att, $open_at, $close_at]);
+        INSERT INTO lms_exam_settings (subject_id, unit_id, pre_pass_score, post_pass_score, post_max_attempts, post_exam_open_at, post_exam_close_at, post_show_answer)
+        VALUES (?,?,?,?,?,?,?,?)
+        ON DUPLICATE KEY UPDATE pre_pass_score=?, post_pass_score=?, post_max_attempts=?, post_exam_open_at=?, post_exam_close_at=?, post_show_answer=?
+    ")->execute([$subject_id, $unit_id, $pre_pass, $post_pass, $max_att, $open_at, $close_at, $show_answer, $pre_pass, $post_pass, $max_att, $open_at, $close_at, $show_answer]);
     $msg = 'success:บันทึกการตั้งค่าสำเร็จ';
     header('Location: exam_settings.php?unit_id='.$unit_id.'&msg='.urlencode($msg)); exit();
 }
@@ -130,6 +131,14 @@ require_once __DIR__ . '/../components/layout_start.php';
             </div>
           </div>
           <p class="text-xs text-rose-500 mt-2"><i class="fas fa-info-circle mr-1"></i>นักเรียนจะเข้าสอบได้เฉพาะในช่วงเวลาที่กำหนด ลบค่าออกทั้งสองช่องเพื่อเปิดตลอดเวลา</p>
+        </div>
+        <div class="border-t border-rose-200 pt-3">
+          <label class="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" name="post_show_answer" value="1" <?=($s['post_show_answer']??1)?'checked':''?>
+              class="mt-0.5 accent-rose-600">
+            <span class="text-xs"><span class="font-bold text-slate-700">แสดงเฉลยให้นักเรียนเห็นหลังสอบ</span><br>
+            <span class="text-slate-400">ถ้าปิด นักเรียนจะเห็นแค่คะแนน ไม่เห็นว่าข้อไหนถูก/ผิด หรือคำตอบที่ถูกต้อง</span></span>
+          </label>
         </div>
       </div>
 

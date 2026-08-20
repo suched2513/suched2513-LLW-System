@@ -20,6 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $midterm_att  = max(1, (int)$_POST['midterm_max_attempts']);
     $final_pass   = max(1, (int)$_POST['final_pass_score']);
     $final_att    = max(1, (int)$_POST['final_max_attempts']);
+    $midterm_show = isset($_POST['midterm_show_answer']) ? 1 : 0;
+    $final_show   = isset($_POST['final_show_answer'])   ? 1 : 0;
 
     $m_open_raw  = trim($_POST['midterm_open_at']  ?? '');
     $m_close_raw = trim($_POST['midterm_close_at'] ?? '');
@@ -37,15 +39,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $pdo->prepare("
         INSERT INTO lms_subject_settings
-            (subject_id, unlock_mode, midterm_pass_score, midterm_max_attempts, midterm_open_at, midterm_close_at,
-             final_pass_score, final_max_attempts, final_open_at, final_close_at)
-        VALUES (?, 'open_all', ?,?,?,?, ?,?,?,?)
+            (subject_id, unlock_mode, midterm_pass_score, midterm_max_attempts, midterm_open_at, midterm_close_at, midterm_show_answer,
+             final_pass_score, final_max_attempts, final_open_at, final_close_at, final_show_answer)
+        VALUES (?, 'open_all', ?,?,?,?,?, ?,?,?,?,?)
         ON DUPLICATE KEY UPDATE
-            midterm_pass_score=?, midterm_max_attempts=?, midterm_open_at=?, midterm_close_at=?,
-            final_pass_score=?, final_max_attempts=?, final_open_at=?, final_close_at=?
+            midterm_pass_score=?, midterm_max_attempts=?, midterm_open_at=?, midterm_close_at=?, midterm_show_answer=?,
+            final_pass_score=?, final_max_attempts=?, final_open_at=?, final_close_at=?, final_show_answer=?
     ")->execute([
-        $subject_id, $midterm_pass, $midterm_att, $m_open, $m_close, $final_pass, $final_att, $f_open, $f_close,
-        $midterm_pass, $midterm_att, $m_open, $m_close, $final_pass, $final_att, $f_open, $f_close,
+        $subject_id, $midterm_pass, $midterm_att, $m_open, $m_close, $midterm_show, $final_pass, $final_att, $f_open, $f_close, $final_show,
+        $midterm_pass, $midterm_att, $m_open, $m_close, $midterm_show, $final_pass, $final_att, $f_open, $f_close, $final_show,
     ]);
     $msg = 'success:บันทึกการตั้งค่าสำเร็จ';
     header('Location: midterm_final_settings.php?subject_id='.$subject_id.'&msg='.urlencode($msg)); exit();
@@ -126,6 +128,14 @@ require_once __DIR__ . '/../components/layout_start.php';
             </div>
           </div>
         </div>
+        <div class="border-t border-indigo-200 pt-3">
+          <label class="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" name="midterm_show_answer" value="1" <?=($s['midterm_show_answer']??1)?'checked':''?>
+              class="mt-0.5 accent-indigo-600">
+            <span class="text-xs"><span class="font-bold text-slate-700">แสดงเฉลยให้นักเรียนเห็นหลังสอบ</span><br>
+            <span class="text-slate-400">ถ้าปิด นักเรียนจะเห็นแค่คะแนน ไม่เห็นว่าข้อไหนถูก/ผิด</span></span>
+          </label>
+        </div>
       </div>
 
       <div class="rounded-xl p-4 bg-amber-50 border border-amber-100 space-y-3">
@@ -165,6 +175,14 @@ require_once __DIR__ . '/../components/layout_start.php';
                 class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-amber-400 outline-none">
             </div>
           </div>
+        </div>
+        <div class="border-t border-amber-200 pt-3">
+          <label class="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" name="final_show_answer" value="1" <?=($s['final_show_answer']??1)?'checked':''?>
+              class="mt-0.5 accent-amber-600">
+            <span class="text-xs"><span class="font-bold text-slate-700">แสดงเฉลยให้นักเรียนเห็นหลังสอบ</span><br>
+            <span class="text-slate-400">ถ้าปิด นักเรียนจะเห็นแค่คะแนน ไม่เห็นว่าข้อไหนถูก/ผิด</span></span>
+          </label>
         </div>
       </div>
 

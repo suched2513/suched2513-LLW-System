@@ -25,8 +25,9 @@ $subject_id = (int)$unit['subject_id'];
 $back_url   = '/student/lms_subject.php?subject_id='.$subject_id;
 
 $es = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE unit_id=?"); $es->execute([$unit_id]); $settings = $es->fetch();
-$post_pass = $settings['post_pass_score'] ?? 6;
-$max_att   = $settings['post_max_attempts'] ?? 3;
+$post_pass   = $settings['post_pass_score'] ?? 6;
+$max_att     = $settings['post_max_attempts'] ?? 3;
+$show_answer = ($settings['post_show_answer'] ?? 1) ? true : false;
 
 // Check post-exam time window
 $now_ts    = time();
@@ -232,6 +233,7 @@ body { font-family: 'Prompt', sans-serif; }
   </div>
   <?php endif; ?>
 
+  <?php if ($show_answer): ?>
   <p class="text-xs font-black text-slate-400 uppercase tracking-wider px-1">เฉลย</p>
   <?php
   $ans_map = [];
@@ -252,6 +254,12 @@ body { font-family: 'Prompt', sans-serif; }
     <?=lms_render_exam_result_review($q, $ans)?>
   </div>
   <?php endforeach; ?>
+  <?php else: ?>
+  <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center">
+    <i class="bi bi-eye-slash text-slate-300 text-3xl block mb-2"></i>
+    <p class="text-xs text-slate-400 font-bold">ครูปิดการแสดงเฉลยสำหรับข้อสอบชุดนี้</p>
+  </div>
+  <?php endif; ?>
   <a href="<?=$back_url?>"
      class="flex items-center justify-center gap-2 py-3 <?=$result['passed']?'bg-violet-600 shadow-violet-200/50':'bg-slate-600'?> text-white font-bold text-sm rounded-xl shadow-lg">
     <i class="bi bi-arrow-left"></i> กลับหน้าบทเรียน
