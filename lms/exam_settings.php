@@ -22,6 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $post_pass    = max(1, (int)$_POST['post_pass_score']);
     $max_att      = max(1, (int)$_POST['post_max_attempts']);
     $show_answer  = isset($_POST['post_show_answer']) ? 1 : 0;
+    $pre_random   = max(0, (int)($_POST['pre_random_count']  ?? 0));
+    $post_random  = max(0, (int)($_POST['post_random_count'] ?? 0));
 
     $open_raw  = trim($_POST['post_exam_open_at']  ?? '');
     $close_raw = trim($_POST['post_exam_close_at'] ?? '');
@@ -34,10 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $pdo->prepare("
-        INSERT INTO lms_exam_settings (subject_id, unit_id, pre_pass_score, post_pass_score, post_max_attempts, post_exam_open_at, post_exam_close_at, post_show_answer)
-        VALUES (?,?,?,?,?,?,?,?)
-        ON DUPLICATE KEY UPDATE pre_pass_score=?, post_pass_score=?, post_max_attempts=?, post_exam_open_at=?, post_exam_close_at=?, post_show_answer=?
-    ")->execute([$subject_id, $unit_id, $pre_pass, $post_pass, $max_att, $open_at, $close_at, $show_answer, $pre_pass, $post_pass, $max_att, $open_at, $close_at, $show_answer]);
+        INSERT INTO lms_exam_settings (subject_id, unit_id, pre_pass_score, post_pass_score, post_max_attempts, post_exam_open_at, post_exam_close_at, post_show_answer, pre_random_count, post_random_count)
+        VALUES (?,?,?,?,?,?,?,?,?,?)
+        ON DUPLICATE KEY UPDATE pre_pass_score=?, post_pass_score=?, post_max_attempts=?, post_exam_open_at=?, post_exam_close_at=?, post_show_answer=?, pre_random_count=?, post_random_count=?
+    ")->execute([
+        $subject_id, $unit_id, $pre_pass, $post_pass, $max_att, $open_at, $close_at, $show_answer, $pre_random, $post_random,
+        $pre_pass, $post_pass, $max_att, $open_at, $close_at, $show_answer, $pre_random, $post_random,
+    ]);
     $msg = 'success:บันทึกการตั้งค่าสำเร็จ';
     header('Location: exam_settings.php?unit_id='.$unit_id.'&msg='.urlencode($msg)); exit();
 }
@@ -80,30 +85,58 @@ require_once __DIR__ . '/../components/layout_start.php';
       <input type="hidden" name="unit_id" value="<?=$unit_id?>">
       <h3 class="font-black text-slate-700 text-sm mb-4">กำหนดค่า</h3>
 
-      <div class="rounded-xl p-4 bg-blue-50 border border-blue-100">
-        <div class="font-bold text-blue-800 text-xs mb-3"><i class="fas fa-play-circle mr-1"></i> แบบทดสอบก่อนเรียน (หน่วยนี้)</div>
-        <label class="block text-xs font-black text-slate-500 mb-1">จำนวนข้อที่ผ่านขึ้นไป
-          <span class="font-normal text-slate-400">(จาก <?=$pre_total?> ข้อ)</span></label>
-        <div class="flex items-center gap-3">
-          <input type="number" name="pre_pass_score" value="<?=$s['pre_pass_score']??6?>"
-            min="1" max="<?=$pre_total?:100?>" required
-            class="w-24 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-blue-400 outline-none">
-          <span class="text-xs text-slate-400">ข้อขึ้นไป</span>
+      <?php
+        $pre_effective  = ($s['pre_random_count']  ?? 0) > 0 ? min($s['pre_random_count'],  $pre_total)  : $pre_total;
+        $post_effective = ($s['post_random_count'] ?? 0) > 0 ? min($s['post_random_count'], $post_total) : $post_total;
+      ?>
+      <div class="rounded-xl p-4 bg-blue-50 border border-blue-100 space-y-3">
+        <div class="font-bold text-blue-800 text-xs mb-1"><i class="fas fa-play-circle mr-1"></i> แบบทดสอบก่อนเรียน (หน่วยนี้)</div>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-1">จำนวนข้อที่ผ่านขึ้นไป
+            <span class="font-normal text-slate-400">(จาก <?=$pre_effective?> ข้อ)</span></label>
+          <div class="flex items-center gap-3">
+            <input type="number" name="pre_pass_score" value="<?=$s['pre_pass_score']??6?>"
+              min="1" max="<?=$pre_effective?:100?>" required
+              class="w-24 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-blue-400 outline-none">
+            <span class="text-xs text-slate-400">ข้อขึ้นไป</span>
+          </div>
         </div>
-        <p class="text-xs text-blue-600 mt-2"><i class="fas fa-info-circle mr-1"></i>สอบได้ไม่จำกัดครั้ง จนกว่าจะผ่าน</p>
+        <div class="border-t border-blue-200 pt-3">
+          <label class="block text-xs font-black text-slate-500 mb-1">จำนวนข้อที่จะสุ่มให้ทำ
+            <span class="font-normal text-slate-400">(คลังมี <?=$pre_total?> ข้อ)</span></label>
+          <div class="flex items-center gap-3">
+            <input type="number" name="pre_random_count" value="<?=$s['pre_random_count']??0?>"
+              min="0" max="<?=$pre_total?>"
+              class="w-24 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-blue-400 outline-none">
+            <span class="text-xs text-slate-400">ข้อ (0 = ใช้ทั้งหมด)</span>
+          </div>
+          <p class="text-xs text-blue-500 mt-1">สุ่มชุดใหม่ทุกครั้งที่นักเรียนเข้าทำข้อสอบ</p>
+        </div>
+        <p class="text-xs text-blue-600"><i class="fas fa-info-circle mr-1"></i>สอบได้ไม่จำกัดครั้ง จนกว่าจะผ่าน</p>
       </div>
 
       <div class="rounded-xl p-4 bg-rose-50 border border-rose-100 space-y-3">
         <div class="font-bold text-rose-800 text-xs mb-1"><i class="fas fa-flag-checkered mr-1"></i> แบบทดสอบหลังเรียน (หน่วยนี้)</div>
         <div>
           <label class="block text-xs font-black text-slate-500 mb-1">จำนวนข้อที่ผ่านขึ้นไป
-            <span class="font-normal text-slate-400">(จาก <?=$post_total?> ข้อ)</span></label>
+            <span class="font-normal text-slate-400">(จาก <?=$post_effective?> ข้อ)</span></label>
           <div class="flex items-center gap-3">
             <input type="number" name="post_pass_score" value="<?=$s['post_pass_score']??6?>"
-              min="1" max="<?=$post_total?:100?>" required
+              min="1" max="<?=$post_effective?:100?>" required
               class="w-24 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-rose-400 outline-none">
             <span class="text-xs text-slate-400">ข้อขึ้นไป</span>
           </div>
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-1">จำนวนข้อที่จะสุ่มให้ทำ
+            <span class="font-normal text-slate-400">(คลังมี <?=$post_total?> ข้อ)</span></label>
+          <div class="flex items-center gap-3">
+            <input type="number" name="post_random_count" value="<?=$s['post_random_count']??0?>"
+              min="0" max="<?=$post_total?>"
+              class="w-24 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-rose-400 outline-none">
+            <span class="text-xs text-slate-400">ข้อ (0 = ใช้ทั้งหมด)</span>
+          </div>
+          <p class="text-xs text-rose-500 mt-1">สุ่มชุดใหม่ทุกครั้งที่นักเรียนเข้าทำข้อสอบ</p>
         </div>
         <div>
           <label class="block text-xs font-black text-slate-500 mb-1">สอบได้กี่ครั้ง</label>

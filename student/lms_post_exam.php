@@ -25,9 +25,10 @@ $subject_id = (int)$unit['subject_id'];
 $back_url   = '/student/lms_subject.php?subject_id='.$subject_id;
 
 $es = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE unit_id=?"); $es->execute([$unit_id]); $settings = $es->fetch();
-$post_pass   = $settings['post_pass_score'] ?? 6;
-$max_att     = $settings['post_max_attempts'] ?? 3;
-$show_answer = ($settings['post_show_answer'] ?? 1) ? true : false;
+$post_pass    = $settings['post_pass_score'] ?? 6;
+$max_att      = $settings['post_max_attempts'] ?? 3;
+$show_answer  = ($settings['post_show_answer'] ?? 1) ? true : false;
+$random_count = (int)($settings['post_random_count'] ?? 0);
 
 // Check post-exam time window
 $now_ts    = time();
@@ -97,8 +98,19 @@ function lms_save_upload_answer(int $qid, int $uid): ?string {
 // Handle submit
 $result = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $qs = $pdo->prepare("SELECT * FROM lms_post_questions WHERE unit_id=? ORDER BY id");
-    $qs->execute([$unit_id]); $questions_post = $qs->fetchAll();
+    // Grade only the exact questions shown to this student (random subset, if
+    // enabled) — not the whole bank, so the score denominator matches what
+    // they actually saw.
+    $shown_ids = array_filter(array_map('intval', explode(',', $_POST['shown_question_ids'] ?? '')));
+    if (!empty($shown_ids)) {
+        $ph = implode(',', array_fill(0, count($shown_ids), '?'));
+        $qs = $pdo->prepare("SELECT * FROM lms_post_questions WHERE unit_id=? AND id IN ($ph)");
+        $qs->execute(array_merge([$unit_id], $shown_ids));
+    } else {
+        $qs = $pdo->prepare("SELECT * FROM lms_post_questions WHERE unit_id=? ORDER BY id");
+        $qs->execute([$unit_id]);
+    }
+    $questions_post = $qs->fetchAll();
     $score = 0; $total_auto = 0; $answers = [];
     foreach ($questions_post as $q) {
         $qtype = $q['question_type'] ?? 'choice';
@@ -134,7 +146,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $qs = $pdo->prepare("SELECT * FROM lms_post_questions WHERE unit_id=? ORDER BY id");
-$qs->execute([$unit_id]); $questions = $qs->fetchAll();
+$qs->execute([$unit_id]); $all_questions = $qs->fetchAll();
+
+// Random subset — re-drawn every time the student opens this page.
+if ($random_count > 0 && $random_count < count($all_questions)) {
+    shuffle($all_questions);
+    $questions = array_slice($all_questions, 0, $random_count);
+} else {
+    $questions = $all_questions;
+}
 $total_q   = count($questions);
 $remaining = $max_att - $attempt_count;
 
@@ -269,6 +289,7 @@ body { font-family: 'Prompt', sans-serif; }
 <form method="POST" id="examForm" class="px-4 py-5 max-w-2xl mx-auto space-y-4 pb-24" enctype="multipart/form-data">
   <input type="hidden" name="unit_id" value="<?=$unit_id?>">
   <input type="hidden" name="tab_switch_count" id="tab_switch_count" value="0">
+  <input type="hidden" name="shown_question_ids" value="<?=implode(',', array_column($questions, 'id'))?>">
   <?php $qtypes = lms_question_types(); foreach ($questions as $i => $q): $qtype = $q['question_type'] ?? 'choice'; ?>
   <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <p class="text-sm font-bold text-slate-800 mb-1 leading-snug">

@@ -20,8 +20,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $midterm_att  = max(1, (int)$_POST['midterm_max_attempts']);
     $final_pass   = max(1, (int)$_POST['final_pass_score']);
     $final_att    = max(1, (int)$_POST['final_max_attempts']);
-    $midterm_show = isset($_POST['midterm_show_answer']) ? 1 : 0;
-    $final_show   = isset($_POST['final_show_answer'])   ? 1 : 0;
+    $midterm_show   = isset($_POST['midterm_show_answer']) ? 1 : 0;
+    $final_show     = isset($_POST['final_show_answer'])   ? 1 : 0;
+    $midterm_random = max(0, (int)($_POST['midterm_random_count'] ?? 0));
+    $final_random   = max(0, (int)($_POST['final_random_count']   ?? 0));
 
     $m_open_raw  = trim($_POST['midterm_open_at']  ?? '');
     $m_close_raw = trim($_POST['midterm_close_at'] ?? '');
@@ -39,15 +41,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $pdo->prepare("
         INSERT INTO lms_subject_settings
-            (subject_id, unlock_mode, midterm_pass_score, midterm_max_attempts, midterm_open_at, midterm_close_at, midterm_show_answer,
-             final_pass_score, final_max_attempts, final_open_at, final_close_at, final_show_answer)
-        VALUES (?, 'open_all', ?,?,?,?,?, ?,?,?,?,?)
+            (subject_id, unlock_mode, midterm_pass_score, midterm_max_attempts, midterm_open_at, midterm_close_at, midterm_show_answer, midterm_random_count,
+             final_pass_score, final_max_attempts, final_open_at, final_close_at, final_show_answer, final_random_count)
+        VALUES (?, 'open_all', ?,?,?,?,?,?, ?,?,?,?,?,?)
         ON DUPLICATE KEY UPDATE
-            midterm_pass_score=?, midterm_max_attempts=?, midterm_open_at=?, midterm_close_at=?, midterm_show_answer=?,
-            final_pass_score=?, final_max_attempts=?, final_open_at=?, final_close_at=?, final_show_answer=?
+            midterm_pass_score=?, midterm_max_attempts=?, midterm_open_at=?, midterm_close_at=?, midterm_show_answer=?, midterm_random_count=?,
+            final_pass_score=?, final_max_attempts=?, final_open_at=?, final_close_at=?, final_show_answer=?, final_random_count=?
     ")->execute([
-        $subject_id, $midterm_pass, $midterm_att, $m_open, $m_close, $midterm_show, $final_pass, $final_att, $f_open, $f_close, $final_show,
-        $midterm_pass, $midterm_att, $m_open, $m_close, $midterm_show, $final_pass, $final_att, $f_open, $f_close, $final_show,
+        $subject_id, $midterm_pass, $midterm_att, $m_open, $m_close, $midterm_show, $midterm_random, $final_pass, $final_att, $f_open, $f_close, $final_show, $final_random,
+        $midterm_pass, $midterm_att, $m_open, $m_close, $midterm_show, $midterm_random, $final_pass, $final_att, $f_open, $f_close, $final_show, $final_random,
     ]);
     $msg = 'success:บันทึกการตั้งค่าสำเร็จ';
     header('Location: midterm_final_settings.php?subject_id='.$subject_id.'&msg='.urlencode($msg)); exit();
@@ -90,17 +92,32 @@ require_once __DIR__ . '/../components/layout_start.php';
     <form method="POST" class="space-y-5">
       <input type="hidden" name="subject_id" value="<?=$subject_id?>">
 
+      <?php
+        $midterm_effective = ($s['midterm_random_count'] ?? 0) > 0 ? min($s['midterm_random_count'], $midterm_total) : $midterm_total;
+        $final_effective   = ($s['final_random_count']   ?? 0) > 0 ? min($s['final_random_count'],   $final_total)   : $final_total;
+      ?>
       <div class="rounded-xl p-4 bg-indigo-50 border border-indigo-100 space-y-3">
         <div class="font-bold text-indigo-800 text-xs mb-1"><i class="fas fa-clipboard-list mr-1"></i> สอบกลางภาค</div>
         <div>
           <label class="block text-xs font-black text-slate-500 mb-1">จำนวนข้อที่ผ่านขึ้นไป
-            <span class="font-normal text-slate-400">(จาก <?=$midterm_total?> ข้อ)</span></label>
+            <span class="font-normal text-slate-400">(จาก <?=$midterm_effective?> ข้อ)</span></label>
           <div class="flex items-center gap-3">
             <input type="number" name="midterm_pass_score" value="<?=$s['midterm_pass_score']??6?>"
-              min="1" max="<?=$midterm_total?:100?>" required
+              min="1" max="<?=$midterm_effective?:100?>" required
               class="w-24 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-indigo-400 outline-none">
             <span class="text-xs text-slate-400">ข้อขึ้นไป</span>
           </div>
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-1">จำนวนข้อที่จะสุ่มให้ทำ
+            <span class="font-normal text-slate-400">(คลังมี <?=$midterm_total?> ข้อ)</span></label>
+          <div class="flex items-center gap-3">
+            <input type="number" name="midterm_random_count" value="<?=$s['midterm_random_count']??0?>"
+              min="0" max="<?=$midterm_total?>"
+              class="w-24 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-indigo-400 outline-none">
+            <span class="text-xs text-slate-400">ข้อ (0 = ใช้ทั้งหมด)</span>
+          </div>
+          <p class="text-xs text-indigo-500 mt-1">สุ่มชุดใหม่ทุกครั้งที่นักเรียนเข้าทำข้อสอบ</p>
         </div>
         <div>
           <label class="block text-xs font-black text-slate-500 mb-1">สอบได้กี่ครั้ง</label>
@@ -142,13 +159,24 @@ require_once __DIR__ . '/../components/layout_start.php';
         <div class="font-bold text-amber-800 text-xs mb-1"><i class="fas fa-flag-checkered mr-1"></i> สอบปลายภาค</div>
         <div>
           <label class="block text-xs font-black text-slate-500 mb-1">จำนวนข้อที่ผ่านขึ้นไป
-            <span class="font-normal text-slate-400">(จาก <?=$final_total?> ข้อ)</span></label>
+            <span class="font-normal text-slate-400">(จาก <?=$final_effective?> ข้อ)</span></label>
           <div class="flex items-center gap-3">
             <input type="number" name="final_pass_score" value="<?=$s['final_pass_score']??6?>"
-              min="1" max="<?=$final_total?:100?>" required
+              min="1" max="<?=$final_effective?:100?>" required
               class="w-24 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-amber-400 outline-none">
             <span class="text-xs text-slate-400">ข้อขึ้นไป</span>
           </div>
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-1">จำนวนข้อที่จะสุ่มให้ทำ
+            <span class="font-normal text-slate-400">(คลังมี <?=$final_total?> ข้อ)</span></label>
+          <div class="flex items-center gap-3">
+            <input type="number" name="final_random_count" value="<?=$s['final_random_count']??0?>"
+              min="0" max="<?=$final_total?>"
+              class="w-24 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-center focus:ring-2 focus:ring-amber-400 outline-none">
+            <span class="text-xs text-slate-400">ข้อ (0 = ใช้ทั้งหมด)</span>
+          </div>
+          <p class="text-xs text-amber-500 mt-1">สุ่มชุดใหม่ทุกครั้งที่นักเรียนเข้าทำข้อสอบ</p>
         </div>
         <div>
           <label class="block text-xs font-black text-slate-500 mb-1">สอบได้กี่ครั้ง</label>
