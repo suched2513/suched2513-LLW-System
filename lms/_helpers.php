@@ -1,13 +1,19 @@
 <?php
 // lms/_helpers.php — shared ownership checks + activity log for the LMS module
 
+// NOTE: a subject with teacher_id NULL (created by an admin without assigning
+// a teacher yet) is intentionally NOT visible to regular teachers — only
+// super_admin can see/manage it until it's assigned to someone via
+// lms/subjects.php. Don't add "OR teacher_id IS NULL" back here; that
+// previously let every teacher see and edit every unassigned subject.
+
 function lms_get_owned_subject(PDO $pdo, int $subject_id, bool $is_admin, int $teacher_id): ?array {
     if (!$subject_id) return null;
     if ($is_admin) {
         $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?");
         $st->execute([$subject_id]);
     } else {
-        $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=? AND (teacher_id=? OR teacher_id IS NULL)");
+        $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=? AND teacher_id=?");
         $st->execute([$subject_id, $teacher_id]);
     }
     $row = $st->fetch();
@@ -17,7 +23,7 @@ function lms_get_owned_subject(PDO $pdo, int $subject_id, bool $is_admin, int $t
 function lms_get_owned_unit(PDO $pdo, int $unit_id, bool $is_admin, int $teacher_id): ?array {
     if (!$unit_id) return null;
     $sql = "SELECT u.* FROM lms_units u JOIN lms_subjects s ON s.id = u.subject_id WHERE u.id=?";
-    if (!$is_admin) $sql .= " AND (s.teacher_id=? OR s.teacher_id IS NULL)";
+    if (!$is_admin) $sql .= " AND s.teacher_id=?";
     $st = $pdo->prepare($sql);
     $is_admin ? $st->execute([$unit_id]) : $st->execute([$unit_id, $teacher_id]);
     $row = $st->fetch();
@@ -27,7 +33,7 @@ function lms_get_owned_unit(PDO $pdo, int $unit_id, bool $is_admin, int $teacher
 function lms_get_owned_topic(PDO $pdo, int $topic_id, bool $is_admin, int $teacher_id): ?array {
     if (!$topic_id) return null;
     $sql = "SELECT t.* FROM lms_topics t JOIN lms_units u ON u.id = t.unit_id JOIN lms_subjects s ON s.id = u.subject_id WHERE t.id=?";
-    if (!$is_admin) $sql .= " AND (s.teacher_id=? OR s.teacher_id IS NULL)";
+    if (!$is_admin) $sql .= " AND s.teacher_id=?";
     $st = $pdo->prepare($sql);
     $is_admin ? $st->execute([$topic_id]) : $st->execute([$topic_id, $teacher_id]);
     $row = $st->fetch();
@@ -38,7 +44,7 @@ function lms_owned_subject_ids(PDO $pdo, bool $is_admin, int $teacher_id): array
     if ($is_admin) {
         return $pdo->query("SELECT id FROM lms_subjects")->fetchAll(PDO::FETCH_COLUMN);
     }
-    $st = $pdo->prepare("SELECT id FROM lms_subjects WHERE teacher_id=? OR teacher_id IS NULL");
+    $st = $pdo->prepare("SELECT id FROM lms_subjects WHERE teacher_id=?");
     $st->execute([$teacher_id]);
     return $st->fetchAll(PDO::FETCH_COLUMN);
 }

@@ -11,6 +11,7 @@ $teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
 $msg = '';
 
 $_has_tid = (bool)$pdo->query("SHOW COLUMNS FROM `lms_subjects` LIKE 'teacher_id'")->fetch();
+$teachers_list = $is_admin ? $pdo->query("SELECT id, name FROM att_teachers ORDER BY name")->fetchAll() : [];
 
 // POST: add / edit / set_classrooms
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -22,8 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$name) { $msg = 'error:กรุณาระบุชื่อวิชา'; }
         else {
             if ($_has_tid) {
+                $assigned_teacher_id = $is_admin ? ((int)($_POST['assigned_teacher_id'] ?? 0) ?: null) : $teacher_id;
                 $pdo->prepare("INSERT INTO lms_subjects (subject_name, subject_code, teacher_id) VALUES (?,?,?)")
-                    ->execute([$name, $code ?: null, $is_admin ? null : $teacher_id]);
+                    ->execute([$name, $code ?: null, $assigned_teacher_id]);
             } else {
                 $pdo->prepare("INSERT INTO lms_subjects (subject_name, subject_code) VALUES (?,?)")->execute([$name, $code ?: null]);
             }
@@ -46,7 +48,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $name = trim($_POST['subject_name'] ?? '');
         $code = trim($_POST['subject_code'] ?? '');
-        $pdo->prepare("UPDATE lms_subjects SET subject_name=?, subject_code=? WHERE id=?")->execute([$name, $code ?: null, $id]);
+        if ($is_admin && $_has_tid) {
+            $assigned_teacher_id = (int)($_POST['assigned_teacher_id'] ?? 0) ?: null;
+            $pdo->prepare("UPDATE lms_subjects SET subject_name=?, subject_code=?, teacher_id=? WHERE id=?")
+                ->execute([$name, $code ?: null, $assigned_teacher_id, $id]);
+        } else {
+            $pdo->prepare("UPDATE lms_subjects SET subject_name=?, subject_code=? WHERE id=?")->execute([$name, $code ?: null, $id]);
+        }
         header('Location: subjects.php?msg=' . urlencode('success:แก้ไขสำเร็จ')); exit();
     }
 
@@ -95,7 +103,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
 if ($_has_tid && !$is_admin) {
-    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? OR teacher_id IS NULL ORDER BY created_at");
+    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY created_at");
     $st->execute([$teacher_id]); $subjects = $st->fetchAll();
 } else {
     $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY created_at")->fetchAll();
@@ -195,6 +203,9 @@ require_once __DIR__ . '/../components/layout_start.php';
         <span class="font-black text-slate-800 text-base"><?=htmlspecialchars($s['subject_name'],ENT_QUOTES,'UTF-8')?></span>
         <?php if ($s['subject_code']): ?>
         <span class="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-bold rounded-full"><?=htmlspecialchars($s['subject_code'],ENT_QUOTES,'UTF-8')?></span>
+        <?php endif; ?>
+        <?php if ($is_admin && empty($s['teacher_id'])): ?>
+        <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full" title="ครูคนอื่นจะไม่เห็นวิชานี้จนกว่าจะมอบหมายครูผู้สอน"><i class="fas fa-user-slash mr-1"></i>ยังไม่มอบหมายครู</span>
         <?php endif; ?>
       </div>
       <!-- Classrooms -->
@@ -315,6 +326,18 @@ require_once __DIR__ . '/../components/layout_start.php';
             class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-400 outline-none"
             placeholder="เช่น ว21101">
         </div>
+        <?php if ($is_admin): ?>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-1.5">ครูผู้สอน <span class="text-slate-300">(ไม่บังคับ — ถ้าไม่เลือก จะเห็นเฉพาะแอดมิน)</span></label>
+          <select name="assigned_teacher_id"
+            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-400 outline-none">
+            <option value="">-- ไม่ระบุ --</option>
+            <?php foreach ($teachers_list as $t): ?>
+            <option value="<?=$t['id']?>"><?=htmlspecialchars($t['name'],ENT_QUOTES,'UTF-8')?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <?php endif; ?>
         <div class="flex gap-3 pt-1">
           <button type="button" onclick="closeModal('addModal')"
             class="px-4 py-2.5 border border-slate-200 text-slate-500 text-xs font-bold rounded-xl hover:bg-slate-50 transition-all">
@@ -379,6 +402,17 @@ require_once __DIR__ . '/../components/layout_start.php';
         <label class="block text-xs font-black text-slate-500 mb-1">รหัสวิชา</label>
         <input type="text" name="subject_code" id="edit_code" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400 outline-none">
       </div>
+      <?php if ($is_admin): ?>
+      <div>
+        <label class="block text-xs font-black text-slate-500 mb-1">ครูผู้สอน <span class="text-slate-300">(ไม่บังคับ — ถ้าไม่เลือก จะเห็นเฉพาะแอดมิน)</span></label>
+        <select name="assigned_teacher_id" id="edit_teacher_id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400 outline-none">
+          <option value="">-- ไม่ระบุ --</option>
+          <?php foreach ($teachers_list as $t): ?>
+          <option value="<?=$t['id']?>"><?=htmlspecialchars($t['name'],ENT_QUOTES,'UTF-8')?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <?php endif; ?>
       <div class="flex justify-end gap-3 pt-2">
         <button type="button" onclick="closeModal('editModal')" class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl">ยกเลิก</button>
         <button type="submit" class="px-4 py-2 bg-amber-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-amber-200"><i class="fas fa-save mr-1"></i>บันทึก</button>
@@ -480,6 +514,8 @@ function openEdit(s) {
   document.getElementById('edit_id').value   = s.id;
   document.getElementById('edit_name').value = s.subject_name;
   document.getElementById('edit_code').value = s.subject_code || '';
+  const teacherSel = document.getElementById('edit_teacher_id');
+  if (teacherSel) teacherSel.value = s.teacher_id || '';
   openModal('editModal');
 }
 

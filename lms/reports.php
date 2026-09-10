@@ -16,7 +16,7 @@ $sel_unit    = (int)($_GET['unit_id'] ?? 0);
 if ($is_admin) {
     $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
 } else {
-    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? OR teacher_id IS NULL ORDER BY subject_name");
+    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
     $st->execute([$teacher_id]); $subjects = $st->fetchAll();
 }
 

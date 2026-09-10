@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/_helpers.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 if (!in_array($_SESSION['llw_role'], ['super_admin','att_teacher'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 
@@ -8,11 +9,11 @@ $pdo        = getPdo();
 $is_admin   = $_SESSION['llw_role'] === 'super_admin';
 $teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
 
-$subject_id = (int)($_GET['subject_id'] ?? 0);
+$subject_id = (int)($_GET['subject_id'] ?? $_POST['subject_id'] ?? 0);
 if (!$subject_id) { header('Location: subjects.php'); exit(); }
 
-$subject = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?");
-$subject->execute([$subject_id]); $subject = $subject->fetch();
+// Ownership check — a teacher may only open/manage their own subjects.
+$subject = lms_get_owned_subject($pdo, $subject_id, $is_admin, $teacher_id);
 if (!$subject) { header('Location: subjects.php'); exit(); }
 
 $tab = $_GET['tab'] ?? 'overview';
@@ -132,6 +133,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ajax'] ?? '') === 'save') 
         $sub_id   = (int)$_POST['sub_id'];
         $grade    = $_POST['grade'] !== '' ? max(0, (float)$_POST['grade']) : null;
         $feedback = trim($_POST['feedback'] ?? '') ?: null;
+        // Confirm this submission actually belongs to the subject validated
+        // above — $subject_id alone isn't enough, since sub_id is client-supplied.
+        $own = $pdo->prepare("
+            SELECT se.id FROM lms_student_exercises se
+            JOIN lms_unit_exercises e ON e.id = se.exercise_id
+            JOIN lms_units u ON u.id = e.unit_id
+            WHERE se.id = ? AND u.subject_id = ?
+        ");
+        $own->execute([$sub_id, $subject_id]);
+        if (!$own->fetch()) {
+            http_response_code(403);
+            echo json_encode(['ok' => false]); exit();
+        }
         if ($_has_grade) {
             $pdo->prepare("UPDATE lms_student_exercises SET grade=?, feedback=?, reviewed_at=NOW() WHERE id=?")
                 ->execute([$grade, $feedback, $sub_id]);
