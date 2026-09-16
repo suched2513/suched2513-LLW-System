@@ -49,13 +49,19 @@ $stmt = $pdo->prepare("SELECT COUNT(*) FROM lms_student_final_exam WHERE student
 $stmt->execute([$uid,$subject_id]);
 $attempt_count = (int)$stmt->fetchColumn();
 
-// Max attempts reached — reset final-exam history only (does not touch unit progress)
-if ($attempt_count >= $max_att) {
-    $pdo->prepare("DELETE FROM lms_student_final_exam WHERE student_uid=? AND subject_id=?")->execute([$uid,$subject_id]);
-    header('Location: '.$back_url.'&reset=1'); exit();
-}
-
+// Max attempts reached — keep all attempt history (used for best-score grading),
+// just block further attempts. No more deleting on exhaustion.
+$attempts_exhausted = ($attempt_count >= $max_att);
 $attempt_no = $attempt_count + 1;
+
+function lms_best_final_attempt(PDO $pdo, int $uid, int $subject_id, int $pass_score): ?array {
+    $st = $pdo->prepare("SELECT * FROM lms_student_final_exam WHERE student_uid=? AND subject_id=? ORDER BY score DESC, id ASC LIMIT 1");
+    $st->execute([$uid,$subject_id]);
+    $best = $st->fetch();
+    if (!$best) return null;
+    $best['best_passed'] = ($best['total'] == 0 || $best['score'] >= $pass_score) ? 1 : 0;
+    return $best;
+}
 
 function lms_save_upload_answer(int $qid, int $uid): ?string {
     $key = 'qf_' . $qid;
@@ -81,7 +87,7 @@ function lms_save_upload_answer(int $qid, int $uid): ?string {
 
 // Handle submit
 $result = null;
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$attempts_exhausted) {
     // Grade only the exact questions shown to this student (random subset, if
     // enabled) — not the whole bank, so the score denominator matches what
     // they actually saw.
@@ -124,7 +130,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     $result = ['score'=>$score,'total'=>$total_auto,'passed'=>$passed,'answers'=>$answers,'questions'=>$questions_mid,
-               'attempt_no'=>$attempt_no,'max_att'=>$max_att];
+               'attempt_no'=>$attempt_no,'max_att'=>$max_att,'is_final'=>($attempt_no >= $max_att)];
+    if ($result['is_final']) {
+        $best = lms_best_final_attempt($pdo, $uid, $subject_id, $final_pass);
+        if ($best) {
+            $result['best_score'] = (int)$best['score'];
+            $result['best_total'] = (int)$best['total'];
+            $result['best_passed'] = (int)$best['best_passed'];
+        }
+    }
+}
+
+// Revisiting after all attempts are used up — show the best score on record
+// (no new attempt is taken; history is never deleted).
+if ($attempts_exhausted && !$result) {
+    $best = lms_best_final_attempt($pdo, $uid, $subject_id, $final_pass);
+    if ($best) {
+        $result = ['score'=>(int)$best['score'],'total'=>(int)$best['total'],'passed'=>(int)$best['best_passed'],
+                   'answers'=>[],'questions'=>[],'attempt_no'=>$max_att,'max_att'=>$max_att,'is_final'=>true,
+                   'best_score'=>(int)$best['score'],'best_total'=>(int)$best['total'],'best_passed'=>(int)$best['best_passed']];
+    } else {
+        header('Location: '.$back_url); exit();
+    }
 }
 
 $qs = $pdo->prepare("SELECT * FROM lms_final_questions WHERE subject_id=? ORDER BY id");
@@ -174,7 +201,7 @@ body { font-family: 'Prompt', sans-serif; }
     </a>
     <div>
       <h1 class="font-black text-lg leading-tight">แบบทดสอบปลายภาค</h1>
-      <p class="text-amber-200 text-xs font-bold"><?=htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8')?> · ครั้งที่ <?=$attempt_no?> / <?=$max_att?></p>
+      <p class="text-amber-200 text-xs font-bold"><?=htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8')?> · ครั้งที่ <?=min($attempt_no,$max_att)?> / <?=$max_att?></p>
     </div>
   </div>
   <?php if (!$result): ?>
@@ -192,21 +219,37 @@ body { font-family: 'Prompt', sans-serif; }
 </div>
 <?php elseif ($result): ?>
 <div class="px-4 py-5 max-w-2xl mx-auto space-y-4">
-  <?php $exhausted = !$result['passed'] && $result['attempt_no'] >= $result['max_att']; ?>
-  <div class="rounded-2xl p-6 text-center shadow-sm <?=$result['passed']?'border-2 border-emerald-300 bg-emerald-50':($exhausted?'border-2 border-slate-300 bg-slate-50':'border-2 border-rose-300 bg-rose-50')?>">
-    <div class="text-5xl mb-3"><?=$result['passed']?'🎉':($exhausted?'🔄':'😢')?></div>
-    <p class="font-black text-xl text-slate-800"><?=$result['passed']?'ผ่านแล้ว!':($exhausted?'ครบจำนวนครั้ง — รีเซ็ต':'ยังไม่ผ่าน')?></p>
+  <?php
+    $is_final     = !empty($result['is_final']);
+    $final_passed = $is_final ? (bool)($result['best_passed'] ?? $result['passed']) : (bool)$result['passed'];
+    $card_passed  = $result['passed'] || ($is_final && $final_passed);
+  ?>
+  <div class="rounded-2xl p-6 text-center shadow-sm <?=$card_passed?'border-2 border-emerald-300 bg-emerald-50':($is_final?'border-2 border-slate-300 bg-slate-50':'border-2 border-rose-300 bg-rose-50')?>">
+    <div class="text-5xl mb-3"><?=$card_passed?'🎉':($is_final?'📋':'😢')?></div>
+    <p class="font-black text-xl text-slate-800">
+      <?php if ($result['passed']): ?>ผ่านแล้ว!
+      <?php elseif ($is_final && $final_passed): ?>ผ่านแล้ว! (นับจากคะแนนสูงสุด)
+      <?php elseif ($is_final): ?>หมดโอกาสสอบแล้ว
+      <?php else: ?>ยังไม่ผ่าน
+      <?php endif; ?>
+    </p>
     <?php if ($result['total'] > 0): ?>
-    <p class="text-4xl font-black mt-2 <?=$result['passed']?'text-emerald-600':($exhausted?'text-slate-500':'text-rose-500')?>">
+    <p class="text-4xl font-black mt-2 <?=$card_passed?'text-emerald-600':($is_final?'text-slate-500':'text-rose-500')?>">
       <?=$result['score']?> <span class="text-lg text-slate-400 font-bold">/ <?=$result['total']?></span>
     </p>
     <p class="text-sm text-slate-500 mt-1">เกณฑ์ผ่าน <?=$final_pass?> ข้อ</p>
     <?php endif; ?>
-    <?php if ($exhausted): ?>
-    <p class="text-xs text-slate-400 mt-3 bg-white/70 rounded-xl p-2">เมื่อกลับหน้าบทเรียน ระบบจะรีเซ็ตประวัติสอบปลายภาคเพื่อเริ่มใหม่</p>
+    <?php if ($is_final && isset($result['best_score'])): ?>
+    <div class="mt-3 bg-white/70 rounded-xl p-3">
+      <p class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">คะแนนจริง (สูงสุดจาก <?=$max_att?> ครั้ง)</p>
+      <p class="text-2xl font-black <?=$final_passed?'text-emerald-600':'text-slate-600'?> mt-1">
+        <?=$result['best_score']?><?php if ($result['best_total'] > 0): ?> <span class="text-sm text-slate-400 font-bold">/ <?=$result['best_total']?></span><?php endif; ?>
+      </p>
+    </div>
     <?php endif; ?>
   </div>
 
+  <?php if (!empty($result['questions'])): ?>
   <?php if ($show_answer): ?>
   <p class="text-xs font-black text-slate-400 uppercase tracking-wider px-1">เฉลย</p>
   <?php
@@ -233,6 +276,7 @@ body { font-family: 'Prompt', sans-serif; }
     <i class="bi bi-eye-slash text-slate-300 text-3xl block mb-2"></i>
     <p class="text-xs text-slate-400 font-bold">ครูปิดการแสดงเฉลยสำหรับข้อสอบชุดนี้</p>
   </div>
+  <?php endif; ?>
   <?php endif; ?>
   <a href="<?=$back_url?>"
      class="flex items-center justify-center gap-2 py-3 <?=$result['passed']?'bg-violet-600 shadow-violet-200/50':'bg-slate-600'?> text-white font-bold text-sm rounded-xl shadow-lg">
@@ -277,14 +321,14 @@ body { font-family: 'Prompt', sans-serif; }
 
 <script>
 <?=lms_exam_js_helpers()?>
-<?php if ($result && $result['passed']): ?>
+<?php if ($result && ($result['passed'] || (!empty($result['is_final']) && !empty($result['best_passed'])))): ?>
 window.addEventListener('load', () => {
   Swal.fire({icon:'success',title:'ผ่านแล้ว!',text:'<?php if($result["total"]>0): ?>คะแนน <?=$result['score']?>/<?=$result['total']?> ข้อ — ยินดีด้วย!<?php else: ?>ผ่านอัตโนมัติ<?php endif; ?>',confirmButtonColor:'#D97706',timer:3000,showConfirmButton:false});
 });
-<?php elseif ($result && !$result['passed'] && $result['attempt_no'] >= $result['max_att']): ?>
+<?php elseif ($result && !empty($result['is_final'])): ?>
 window.addEventListener('load', () => {
-  Swal.fire({icon:'info',title:'ครบจำนวนครั้งแล้ว',
-    text:'ระบบจะรีเซ็ตประวัติสอบปลายภาคเมื่อกลับหน้าบทเรียน เพื่อให้เริ่มต้นใหม่',
+  Swal.fire({icon:'info',title:'หมดโอกาสสอบแล้ว',
+    text:'คะแนนสูงสุดจากทั้งหมด <?=$max_att?> ครั้ง จะถูกบันทึกเป็นคะแนนจริงของคุณ',
     confirmButtonColor:'#64748b',confirmButtonText:'รับทราบ'});
 });
 <?php elseif ($result && !$result['passed']): ?>

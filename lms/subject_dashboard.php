@@ -668,6 +668,10 @@ require_once __DIR__ . '/../components/layout_start.php';
             <?=$midterm_q_count?> ข้อ · ผ่าน ≥ <?=$mf_settings['midterm_pass_score'] ?? 6?> · ผ่านแล้ว <?=$midterm_passed?> คน
           </p>
         </div>
+        <a href="<?=$base_path?>/lms/exam_scores.php?subject_id=<?=$subject_id?>&type=midterm"
+           class="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all flex-shrink-0">
+          <i class="fas fa-list-ol mr-1"></i>ดูคะแนน
+        </a>
         <a href="<?=$base_path?>/lms/midterm_exam.php?subject_id=<?=$subject_id?>"
            class="px-3 py-1.5 bg-indigo-500 text-white text-xs font-bold rounded-lg hover:bg-indigo-600 transition-all flex-shrink-0">
           <i class="fas fa-edit mr-1"></i>จัดการ
@@ -680,6 +684,10 @@ require_once __DIR__ . '/../components/layout_start.php';
             <?=$final_q_count?> ข้อ · ผ่าน ≥ <?=$mf_settings['final_pass_score'] ?? 6?> · ผ่านแล้ว <?=$final_passed?> คน
           </p>
         </div>
+        <a href="<?=$base_path?>/lms/exam_scores.php?subject_id=<?=$subject_id?>&type=final"
+           class="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all flex-shrink-0">
+          <i class="fas fa-list-ol mr-1"></i>ดูคะแนน
+        </a>
         <a href="<?=$base_path?>/lms/final_exam.php?subject_id=<?=$subject_id?>"
            class="px-3 py-1.5 bg-amber-500 text-white text-xs font-bold rounded-lg hover:bg-amber-600 transition-all flex-shrink-0">
           <i class="fas fa-edit mr-1"></i>จัดการ
