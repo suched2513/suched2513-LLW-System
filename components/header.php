@@ -221,6 +221,47 @@
             });
         })();
     </script>
+
+    <style>
+    @media print {
+        /* ซ่อน sidebar, navbar, banner ทั้งหมด */
+        .app-sidebar,
+        .app-header,
+        nav,
+        .sidebar-overlay,
+        .llw-page-banner,
+        .no-print { display: none !important; }
+
+        /* ให้ main content ขยายเต็มหน้ากระดาษ */
+        body {
+            background: #fff !important;
+            overflow: visible !important;
+            height: auto !important;
+        }
+        .app-wrapper {
+            display: block !important;
+            overflow: visible !important;
+        }
+        .app-main {
+            margin-left: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            height: auto !important;
+        }
+        .app-content {
+            padding: 0 !important;
+            background: #fff !important;
+            overflow: visible !important;
+            height: auto !important;
+        }
+        .container-fluid {
+            margin-top: 0 !important;
+            padding: 0 !important;
+        }
+
+        @page { size: A4 portrait; margin: 12mm; }
+    }
+    </style>
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
     <div class="app-wrapper">
