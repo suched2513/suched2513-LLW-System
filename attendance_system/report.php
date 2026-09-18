@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once 'functions.php';
 checkLogin();
 
@@ -85,6 +85,37 @@ if (isset($_GET['export']) && $_GET['export'] == 'csv' && $selected_subject_id) 
 require_once '../components/layout_start.php';
 ?>
 
+<style>
+@media print {
+    .no-print { display: none !important; }
+    body { background: #fff !important; font-family: 'Sarabun', sans-serif; }
+    @page { size: A4 portrait; margin: 12mm; }
+    .print-header { display: block !important; }
+    .bg-rose-50\/40 { background: #fff5f5 !important; }
+    table { font-size: 11px; }
+    th, td { padding: 4px 8px !important; }
+    .rounded-3xl, .rounded-2xl, .rounded-xl { border-radius: 0 !important; }
+    .shadow-sm, .shadow-lg { box-shadow: none !important; }
+    .overflow-x-auto { overflow: visible !important; }
+    .divide-y > * { border-top: 1px solid #e2e8f0 !important; }
+    thead { background: #f1f5f9 !important; }
+    .text-rose-700 { color: #be123c !important; }
+    .text-emerald-600 { color: #16a34a !important; }
+    .text-rose-600 { color: #dc2626 !important; }
+    .text-amber-600 { color: #d97706 !important; }
+    .text-violet-600 { color: #7c3aed !important; }
+    .text-orange-600 { color: #ea580c !important; }
+    .text-blue-600 { color: #2563eb !important; }
+    .bg-rose-600 { background: #dc2626 !important; color: #fff !important; }
+    .bg-emerald-50 { background: #ecfdf5 !important; }
+    .border-emerald-100 { border-color: #d1fae5 !important; }
+    .w-16.h-1 { display: none !important; } /* ซ่อน progress bar */
+    .px-8 { padding-left: 8px !important; padding-right: 8px !important; }
+    .px-4 { padding-left: 4px !important; padding-right: 4px !important; }
+}
+.print-header { display: none; }
+</style>
+
 <div class="flex flex-col gap-8">
     <!-- Filter -->
     <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 no-print">
@@ -128,8 +159,24 @@ require_once '../components/layout_start.php';
     </div>
     <?php endif; ?>
 
-    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
+    <!-- Print Header (แสดงเฉพาะตอนพิมพ์) -->
+    <div class="print-header" style="border:2px solid #dc2626;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
+        <div style="text-align:center;font-size:16px;font-weight:900;color:#1e293b;margin-bottom:4px;">
+            รายงานสรุปนักเรียนที่ติด มส. (เวลาเรียนไม่ถึง 80%)
+        </div>
+        <div style="text-align:center;font-size:12px;color:#475569;">
+            วิชา <?= htmlspecialchars($subject_info['subject_code'] . ' ' . $subject_info['subject_name']) ?>
+            &nbsp;|&nbsp; ห้อง <?= htmlspecialchars($subject_info['classroom']) ?>
+            &nbsp;|&nbsp; เรียนไปแล้ว <?= $total_sessions ?> คาบ
+            &nbsp;|&nbsp; ช่วงเวลา <?= date('d/m/Y', strtotime($start_date)) ?> – <?= date('d/m/Y', strtotime($end_date)) ?>
+        </div>
+        <div style="text-align:center;font-size:11px;color:#dc2626;margin-top:4px;font-weight:700;">
+            มีนักเรียนติด มส. จำนวน <?= $ms_count ?> คน
+        </div>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden" id="report-table-wrap">
+        <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between no-print">
             <div>
                 <h3 class="font-bold text-slate-800 text-lg"><?= htmlspecialchars($subject_info['subject_name']) ?></h3>
                 <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">ห้อง <?= $subject_info['classroom'] ?> — สรุปยอดสะสม | เรียนไปแล้ว <?= $total_sessions ?> คาบ | เกณฑ์ มส. &lt; 80%</p>
@@ -138,6 +185,12 @@ require_once '../components/layout_start.php';
                 <a href="report.php?subject_id=<?= $selected_subject_id ?>&start_date=<?= $start_date ?>&end_date=<?= $end_date ?>&export=csv" class="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-100 transition border border-emerald-100 flex items-center gap-2">
                     <i class="bi bi-file-earmark-spreadsheet-fill"></i> Export CSV
                 </a>
+                <button onclick="printMasOnly()" class="bg-rose-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-rose-700 transition flex items-center gap-2 shadow-md shadow-rose-100">
+                    <i class="bi bi-printer-fill"></i> พิมพ์เฉพาะ มส.
+                </button>
+                <button onclick="window.print()" class="bg-slate-700 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition flex items-center gap-2">
+                    <i class="bi bi-printer"></i> พิมพ์ทั้งหมด
+                </button>
             </div>
         </div>
 
@@ -162,7 +215,7 @@ require_once '../components/layout_start.php';
                         $rc   = $rate >= 80 ? 'emerald' : ($rate >= 60 ? 'amber' : 'rose');
                         $is_ms = $rate < 80 && $total_sessions > 0;
                     ?>
-                    <tr class="hover:bg-slate-50 transition <?= $is_ms ? 'bg-rose-50/40' : '' ?>">
+                    <tr class="hover:bg-slate-50 transition <?= $is_ms ? 'bg-rose-50/40' : '' ?>" data-ms="<?= $is_ms ? '1' : '0' ?>">
                         <td class="px-8 py-4 font-mono font-bold text-slate-500 uppercase"><?= $row['student_id'] ?></td>
                         <td class="px-8 py-4 font-bold <?= $is_ms ? 'text-rose-700' : 'text-slate-700' ?>"><?= htmlspecialchars($row['name']) ?></td>
                         <td class="px-4 py-4 text-center font-bold text-emerald-600"><?= $row['count_come'] ?></td>
@@ -199,5 +252,19 @@ require_once '../components/layout_start.php';
     </div>
     <?php endif; ?>
 </div>
+
+<script>
+function printMasOnly() {
+    // ซ่อนแถวที่ไม่ใช่ มส.
+    const rows = document.querySelectorAll('tr[data-ms="0"]');
+    rows.forEach(r => r.style.display = 'none');
+
+    // พิมพ์
+    window.print();
+
+    // คืนกลับหลังพิมพ์เสร็จ
+    rows.forEach(r => r.style.display = '');
+}
+</script>
 
 <?php require_once '../components/layout_end.php'; ?>
