@@ -787,9 +787,13 @@ body { font-family: 'Prompt', sans-serif; }
           <i class="bi bi-calendar-x mr-1"></i>ยังไม่ถึงเวลาสอบหรือหมดเวลาสอบแล้ว
         </div>
         <?php elseif ($post_maxed): ?>
-        <div class="bg-rose-50 rounded-xl px-4 py-3 text-center text-xs text-rose-500">
-          <i class="bi bi-x-circle mr-1"></i>สอบครบจำนวนครั้งแล้ว — กลับมาทำใหม่ในหน่วยนี้เพื่อรีเซ็ต
+        <div class="bg-rose-50 rounded-xl px-4 py-3 text-center text-xs text-rose-500 mb-2">
+          <i class="bi bi-x-circle mr-1"></i>สอบครบจำนวนครั้งแล้ว
         </div>
+        <button type="button" onclick="lmsConfirmResetUnit(<?=$u['id']?>)"
+           class="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-600 text-white font-bold text-sm rounded-xl shadow-md active:scale-95 transition-transform">
+          <i class="bi bi-arrow-clockwise"></i> รีเซ็ตและสอบใหม่
+        </button>
         <?php else: ?>
         <a href="/student/lms_post_exam.php?unit_id=<?=$u['id']?>"
            class="w-full flex items-center justify-center gap-2 py-2.5 bg-rose-600 text-white font-bold text-sm rounded-xl shadow-md shadow-rose-200 active:scale-95 transition-transform">
@@ -934,6 +938,9 @@ body { font-family: 'Prompt', sans-serif; }
            class="px-3 py-1.5 bg-rose-500 text-white text-xs font-bold rounded-lg shadow-sm flex-shrink-0 active:scale-95 transition-transform">ทำแบบทดสอบ</a>
         <?php elseif ($post_r): ?>
         <i class="bi bi-check-circle-fill text-emerald-500 flex-shrink-0"></i>
+        <?php elseif ($post_maxed): ?>
+        <button type="button" onclick="lmsConfirmResetUnit(<?=$un?>)"
+           class="px-3 py-1.5 bg-slate-600 text-white text-xs font-bold rounded-lg shadow-sm flex-shrink-0 active:scale-95 transition-transform">รีเซ็ต</button>
         <?php else: ?>
         <i class="bi bi-lock-fill text-slate-300 flex-shrink-0"></i>
         <?php endif; ?>
@@ -1045,6 +1052,14 @@ function toggleTopic(id) {
   const open = body.style.display === 'block';
   body.style.display = open ? 'none' : 'block';
   chev.style.transform = open ? '' : 'rotate(90deg)';
+}
+
+function lmsConfirmResetUnit(unitId) {
+  Swal.fire({
+    icon: 'warning', title: 'รีเซ็ตหน่วยนี้?',
+    text: 'สอบหลังเรียนครบจำนวนครั้งแล้ว การรีเซ็ตจะลบผลก่อนเรียน/หลังเรียน และงานที่ส่งไว้ของหน่วยนี้ทั้งหมด เพื่อเริ่มทำใหม่',
+    showCancelButton: true, confirmButtonColor: '#dc2626', cancelButtonText: 'ยกเลิก', confirmButtonText: 'รีเซ็ตและสอบใหม่'
+  }).then(r => { if (r.isConfirmed) window.location.href = '/student/lms_post_exam.php?unit_id=' + unitId; });
 }
 
 function toggleForm(id) {
