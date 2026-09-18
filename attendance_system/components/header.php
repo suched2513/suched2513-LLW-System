@@ -37,7 +37,20 @@
         @media print {
             .no-print { display: none !important; }
             .print-only { display: block !important; }
-            body { background: white; }
+            body { 
+                background: white !important; 
+                overflow: visible !important;
+                height: auto !important;
+            }
+            /* ซ่อน sidebar และ layout wrapper */
+            aside, #sidebar { display: none !important; }
+            /* ให้ main content ขยายเต็มหน้า */
+            body > .flex { display: block !important; height: auto !important; overflow: visible !important; }
+            #main-content { 
+                overflow: visible !important; 
+                height: auto !important;
+                padding: 0 !important;
+            }
             .shadow-none-print { box-shadow: none !important; border: 1px solid #eee; }
         }
     </style>
