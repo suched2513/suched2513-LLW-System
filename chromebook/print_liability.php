@@ -166,74 +166,86 @@ body { font-family: 'Sarabun', sans-serif; font-size: 13pt; color: #1a1a1a; back
 .note { font-size:8.5pt; color:#94a3b8; font-style:italic; margin-top:3px; }
 
 /* ════════════════════════════════
-   PRINT — 1 หน้า A4 พอดี
+   PRINT — เต็มหน้า A4 แนวตั้ง
    ════════════════════════════════ */
 @media print {
     .screen-bar { display:none !important; }
 
     @page {
         size: A4 portrait;
-        margin: 9mm 11mm 8mm 11mm;
+        margin: 8mm 12mm 8mm 12mm;
     }
 
     html, body {
-        font-size: 9pt !important;
+        font-size: 11.5pt !important;
         background: #fff !important;
         color: #000 !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        height: 100%;
     }
 
-    .page-wrap { margin:0 !important; padding:0 !important; max-width:100% !important; }
+    .page-wrap {
+        margin: 0 !important; padding: 0 !important;
+        max-width: 100% !important;
+        height: 100% !important;
+    }
 
     .doc {
-        border:none !important; border-radius:0 !important;
-        box-shadow:none !important; padding:0 !important;
-        page-break-inside:avoid; break-inside:avoid;
+        border: none !important; border-radius: 0 !important;
+        box-shadow: none !important; padding: 0 !important;
+        page-break-inside: avoid; break-inside: avoid;
+        min-height: calc(297mm - 16mm) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
     }
 
     /* Header */
-    .doc-header { padding-bottom:5px !important; margin-bottom:3px !important; }
-    .logo-box   { width:46px !important; height:46px !important; font-size:6pt !important; }
-    .school-block .s-name { font-size:9.5pt !important; }
-    .school-block .s-sub  { font-size:7.5pt !important; }
-    .title-block h1       { font-size:12pt !important; }
-    .title-block .t-date  { font-size:8pt !important; margin-top:2px !important; }
-    .title-block .t-no    { font-size:7.5pt !important; }
+    .doc-header { padding-bottom: 8px !important; margin-bottom: 4px !important; }
+    .logo-box   { width: 56px !important; height: 56px !important; font-size: 7.5pt !important; }
+    .school-block .s-name { font-size: 11pt !important; }
+    .school-block .s-sub  { font-size: 8.5pt !important; }
+    .title-block h1       { font-size: 13.5pt !important; }
+    .title-block .t-date  { font-size: 9.5pt !important; margin-top: 4px !important; }
+    .title-block .t-no    { font-size: 8.5pt !important; }
 
     /* Sections */
-    .sec       { margin-top:6px !important; }
-    .sec-title { font-size:8.5pt !important; padding:2px 9px !important; margin-bottom:4px !important; }
+    .sec       { margin-top: 0 !important; }
+    .sec-title { font-size: 10pt !important; padding: 3px 11px !important; margin-bottom: 6px !important; }
 
     /* Fields */
-    .frow { margin-bottom:3px !important; font-size:8.5pt !important; gap:1px 4px !important; line-height:1.4 !important; }
-    .lbl  { font-size:8.5pt !important; }
-    .val  { min-height:13px !important; font-size:8.5pt !important; }
+    .frow { margin-bottom: 5px !important; font-size: 10pt !important; gap: 2px 6px !important; line-height: 1.55 !important; }
+    .lbl  { font-size: 10pt !important; }
+    .val  { min-height: 16px !important; font-size: 10pt !important; }
 
     /* Checkboxes */
-    .crow { margin-bottom:3px !important; font-size:8.5pt !important; gap:2px 12px !important; }
-    .cb   { width:10px !important; height:10px !important; }
-    .cb.on::after { font-size:7px !important; }
+    .crow { margin-bottom: 5px !important; font-size: 10pt !important; gap: 3px 14px !important; }
+    .cb   { width: 12px !important; height: 12px !important; }
+    .cb.on::after { font-size: 8.5px !important; }
 
     /* Desc box */
     .dbox {
-        font-size:8pt !important; padding:4px 7px !important;
-        min-height:24px !important; margin-bottom:3px !important;
+        font-size: 9.5pt !important;
+        padding: 7px 10px !important;
+        min-height: 42px !important;
+        margin-bottom: 5px !important;
+        line-height: 1.6 !important;
     }
 
     /* Amount */
-    .arow  { margin-top:3px !important; font-size:8.5pt !important; }
-    .aline { min-height:13px !important; }
+    .arow  { margin-top: 5px !important; font-size: 10pt !important; }
+    .aline { min-height: 16px !important; }
 
     /* Signatures */
-    .sgrid { margin-top:7px !important; padding-top:6px !important; gap:8px !important; }
-    .sline { height:28px !important; margin:2px 8px !important; }
-    .slbl  { font-size:7.5pt !important; }
-    .sname { font-size:8.5pt !important; }
-    .srole { font-size:8pt !important; }
-    .sdate { font-size:8.5pt !important; }
+    .sgrid { margin-top: 10px !important; padding-top: 10px !important; gap: 16px !important; }
+    .sline { height: 46px !important; margin: 4px 14px !important; }
+    .slbl  { font-size: 9pt !important; }
+    .sname { font-size: 10.5pt !important; }
+    .srole { font-size: 9.5pt !important; }
+    .sdate { font-size: 10pt !important; }
 
-    .note  { font-size:7.5pt !important; margin-top:1px !important; }
+    .note { font-size: 8.5pt !important; margin-top: 3px !important; }
 }
 </style>
 </head>
