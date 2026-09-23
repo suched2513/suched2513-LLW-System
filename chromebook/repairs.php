@@ -99,7 +99,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             </a>
         </div>
         <!-- Table -->
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto" id="tbl-wrap">
             <table class="min-w-full w-full text-sm" id="repair-table">
                 <thead class="bg-slate-50 text-xs font-black text-slate-400 uppercase tracking-widest">
                     <tr>
@@ -316,6 +316,97 @@ async function doDelete(id) {
 
 // Activate "all" filter on load
 document.addEventListener('DOMContentLoaded', () => filterRepairs('all'));
+
+// ── Scroll buttons ────────────────────────────────────────────
+(function () {
+    const wrap = document.getElementById('tbl-wrap');
+    if (!wrap) return;
+
+    // สร้างแถบปุ่มเลื่อน
+    const bar = document.createElement('div');
+    bar.id = 'scroll-bar';
+    bar.style.cssText = `
+        position: fixed;
+        bottom: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        z-index: 500;
+        pointer-events: none;
+        width: min(680px, calc(100vw - 40px));
+        justify-content: space-between;
+    `;
+
+    const btnStyle = `
+        pointer-events: auto;
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px;
+        background: rgba(14,116,144,0.92);
+        color: #fff;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+        backdrop-filter: blur(6px);
+        transition: background .2s, opacity .2s;
+        opacity: 0;
+    `;
+
+    const btnL = document.createElement('button');
+    btnL.innerHTML = '&#8592;';
+    btnL.title = 'เลื่อนซ้าย';
+    btnL.style.cssText = btnStyle;
+
+    const btnR = document.createElement('button');
+    btnR.innerHTML = '&#8594;';
+    btnR.title = 'เลื่อนขวา';
+    btnR.style.cssText = btnStyle;
+
+    btnL.addEventListener('mouseenter', () => btnL.style.background = 'rgba(8,145,178,1)');
+    btnL.addEventListener('mouseleave', () => btnL.style.background = 'rgba(14,116,144,0.92)');
+    btnR.addEventListener('mouseenter', () => btnR.style.background = 'rgba(8,145,178,1)');
+    btnR.addEventListener('mouseleave', () => btnR.style.background = 'rgba(14,116,144,0.92)');
+
+    let scrollTimer;
+    function startScroll(dir) {
+        clearInterval(scrollTimer);
+        scrollTimer = setInterval(() => { wrap.scrollLeft += dir * 18; }, 16);
+    }
+    function stopScroll() { clearInterval(scrollTimer); }
+
+    btnL.addEventListener('mousedown', () => startScroll(-1));
+    btnR.addEventListener('mousedown', () => startScroll(1));
+    document.addEventListener('mouseup', stopScroll);
+    btnL.addEventListener('touchstart', (e) => { e.preventDefault(); startScroll(-1); }, {passive:false});
+    btnR.addEventListener('touchstart', (e) => { e.preventDefault(); startScroll(1);  }, {passive:false});
+    document.addEventListener('touchend', stopScroll);
+
+    // กด click ครั้งเดียว เลื่อน 200px
+    btnL.addEventListener('click', () => wrap.scrollBy({left: -200, behavior: 'smooth'}));
+    btnR.addEventListener('click', () => wrap.scrollBy({left:  200, behavior: 'smooth'}));
+
+    function updateButtons() {
+        const canLeft  = wrap.scrollLeft > 5;
+        const canRight = wrap.scrollLeft < wrap.scrollWidth - wrap.clientWidth - 5;
+        const hasScroll = wrap.scrollWidth > wrap.clientWidth + 10;
+        btnL.style.opacity = (hasScroll && canLeft)  ? '1' : (hasScroll ? '0.3' : '0');
+        btnR.style.opacity = (hasScroll && canRight) ? '1' : (hasScroll ? '0.3' : '0');
+        btnL.style.pointerEvents = (hasScroll && canLeft)  ? 'auto' : 'none';
+        btnR.style.pointerEvents = (hasScroll && canRight) ? 'auto' : 'none';
+        bar.style.display = hasScroll ? 'flex' : 'none';
+    }
+
+    wrap.addEventListener('scroll', updateButtons);
+    window.addEventListener('resize', updateButtons);
+    setTimeout(updateButtons, 300);
+
+    bar.appendChild(btnL);
+    bar.appendChild(btnR);
+    document.body.appendChild(bar);
+})();
 </script>
 <?php endif; ?>
 
