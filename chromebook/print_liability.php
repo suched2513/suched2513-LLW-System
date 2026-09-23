@@ -11,21 +11,22 @@ if (!$id) { http_response_code(404); exit('ไม่พบรายการ'); 
 
 $pdo = getPdo();
 
+// ── ตรวจ column images ──
 $hasImgCol = !empty($pdo->query("SHOW COLUMNS FROM cb_repairs LIKE 'images'")->fetchAll());
 $imgSql    = $hasImgCol ? 'r.images,' : "'' AS images,";
 
+// ── ดึงข้อมูลการซ่อมหลัก ──
 $stmt = $pdo->prepare("
     SELECT r.id, r.borrow_log_id, r.chromebook_id, r.chromebook_serial,
            r.description, {$imgSql} r.status, r.repair_notes, r.reported_by,
            r.created_at, r.updated_at,
            b.borrower_type, b.borrower_id, b.class_name, b.date_borrowed,
            COALESCE(t.name, s.name, b.borrower_id) AS borrower_name,
-           c.model, c.brand,
-           s.student_id
+           c.model
     FROM cb_repairs r
     LEFT JOIN cb_borrow_logs b ON b.entry_id = r.borrow_log_id
-    LEFT JOIN cb_teachers t ON b.borrower_type='Teacher' AND t.teacher_id = b.borrower_id
-    LEFT JOIN cb_students s ON b.borrower_type='Student' AND s.student_id = b.borrower_id
+    LEFT JOIN cb_teachers t   ON b.borrower_type='Teacher' AND t.teacher_id = b.borrower_id
+    LEFT JOIN cb_students s   ON b.borrower_type='Student' AND s.student_id = b.borrower_id
     LEFT JOIN cb_chromebooks c ON c.chromebook_id = r.chromebook_id
     WHERE r.id = ?
 ");
@@ -34,44 +35,32 @@ $rep = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$rep) { http_response_code(404); exit('ไม่พบรายการ'); }
 
-// ดึงข้อมูลนักเรียนเพิ่มเติมจาก att_students
-$studentExtra = null;
+// ── ดึงชื่อนักเรียนเพิ่มเติมจาก att_students (เฉพาะ column ที่มีจริง) ──
+$attStudentName = null;
+$attClassroom   = null;
 if ($rep['borrower_type'] === 'Student' && $rep['borrower_id']) {
     $stmtS = $pdo->prepare("
-        SELECT name, classroom, phone, parent_name
+        SELECT name, classroom
         FROM att_students
         WHERE student_id = LPAD(?, 5, '0') AND academic_year = 2569
         LIMIT 1
     ");
     $stmtS->execute([$rep['borrower_id']]);
-    $studentExtra = $stmtS->fetch(PDO::FETCH_ASSOC);
+    $attRow = $stmtS->fetch(PDO::FETCH_ASSOC);
+    if ($attRow) {
+        $attStudentName = $attRow['name'];
+        $attClassroom   = $attRow['classroom'];
+    }
 }
 
-// ดึงข้อมูลครูประจำชั้น (homeroom teacher) จากห้องเรียน
-$homeroomTeacher = null;
-if ($rep['class_name']) {
-    $stmtH = $pdo->prepare("
-        SELECT t.name
-        FROM cb_teachers t
-        WHERE t.teacher_id IN (
-            SELECT DISTINCT borrower_id FROM cb_borrow_logs
-            WHERE class_name = ? AND borrower_type = 'Teacher'
-            LIMIT 1
-        )
-        LIMIT 1
-    ");
-    $stmtH->execute([$rep['class_name']]);
-    $homeroomTeacher = $stmtH->fetchColumn();
-}
-
-$printDate  = date('d/m/Y H:i');
-$repairDate = (new DateTime($rep['created_at']))->format('d/m/Y');
-$docNo      = str_pad($rep['id'], 4, '0', STR_PAD_LEFT);
-$borrowerName = $studentExtra['name'] ?? $rep['borrower_name'] ?? '—';
-$className    = $studentExtra['classroom'] ?? $rep['class_name'] ?? '—';
-$parentName   = $studentExtra['parent_name'] ?? '';
-$deviceBrand  = trim(($rep['brand'] ?? '') . ' ' . ($rep['model'] ?? '')) ?: '—';
+$printDate    = date('d/m/Y H:i');
+$repairDate   = (new DateTime($rep['created_at']))->format('d/m/Y');
+$repairTime   = (new DateTime($rep['created_at']))->format('H:i');
+$docNo        = str_pad($rep['id'], 4, '0', STR_PAD_LEFT);
+$borrowerName = $attStudentName ?? $rep['borrower_name'] ?? '—';
+$className    = $attClassroom   ?? $rep['class_name']    ?? '—';
 $isStudent    = $rep['borrower_type'] === 'Student';
+$deviceModel  = $rep['model'] ?: '—';
 ?><!DOCTYPE html>
 <html lang="th">
 <head>
@@ -135,7 +124,7 @@ body {
     justify-content: space-between;
     margin-bottom: 8px;
     padding-bottom: 14px;
-    border-bottom: 2px solid #1e293b;
+    border-bottom: 2.5px solid #1e293b;
 }
 .school-logo-area { display: flex; align-items: center; gap: 12px; }
 .school-logo-box {
@@ -143,25 +132,24 @@ body {
     border: 2.5px solid #1e293b;
     border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 8.5pt; font-weight: 700; color: #334155; text-align: center;
-    padding: 4px; line-height: 1.3; letter-spacing: .03em;
+    font-size: 8pt; font-weight: 800; color: #1e293b; text-align: center;
+    padding: 4px; line-height: 1.35; letter-spacing: .03em;
 }
 .school-name-block { display: flex; flex-direction: column; gap: 2px; }
-.school-name-block .school-main  { font-size: 12.5pt; font-weight: 800; color: #0f172a; }
-.school-name-block .school-sub   { font-size: 9pt; color: #64748b; font-weight: 600; }
+.school-name-block .school-main { font-size: 12.5pt; font-weight: 800; color: #0f172a; }
+.school-name-block .school-sub  { font-size: 9pt; color: #64748b; font-weight: 600; }
 .doc-title-block { text-align: center; }
-.doc-title-block h1 { font-size: 17pt; font-weight: 800; color: #1e293b; letter-spacing: .01em; line-height: 1.25; }
-.doc-title-block .doc-date-line  { font-size: 11pt; color: #475569; margin-top: 6px; }
-.doc-title-block .doc-no         { font-size: 9.5pt; color: #94a3b8; margin-top: 3px; font-weight: 600; }
-
-/* ── Section headers ── */
-.section {
-    margin-top: 20px;
+.doc-title-block h1 {
+    font-size: 17pt; font-weight: 800; color: #1e293b;
+    letter-spacing: .01em; line-height: 1.25;
 }
+.doc-title-block .doc-date-line { font-size: 11pt; color: #475569; margin-top: 6px; }
+.doc-title-block .doc-no        { font-size: 9.5pt; color: #94a3b8; margin-top: 3px; font-weight: 600; }
+
+/* ── Section ── */
+.section { margin-top: 20px; }
 .section-title {
-    font-size: 12.5pt;
-    font-weight: 800;
-    color: #fff;
+    font-size: 12.5pt; font-weight: 800; color: #fff;
     background: #1e293b;
     padding: 5px 14px;
     border-radius: 6px;
@@ -169,14 +157,15 @@ body {
     margin-bottom: 12px;
 }
 
-/* ── Field row ── */
+/* ── Field rows ── */
 .field-row {
     display: flex;
     align-items: baseline;
     flex-wrap: wrap;
     gap: 4px 8px;
-    margin-bottom: 9px;
+    margin-bottom: 10px;
     font-size: 13pt;
+    line-height: 1.6;
 }
 .field-label {
     font-weight: 700;
@@ -186,39 +175,20 @@ body {
 }
 .field-value {
     flex: 1;
-    border-bottom: 1.5px solid #334155;
+    border-bottom: 1.5px solid #475569;
     min-width: 80px;
     padding-bottom: 2px;
     min-height: 22px;
     color: #0f172a;
     font-weight: 600;
 }
-.field-value.blank { color: transparent; } /* blank field */
-.field-fixed {
-    /* Pre-filled from DB */
-    color: #1e40af;
-    font-weight: 700;
-}
-.field-unit {
-    white-space: nowrap;
-    font-weight: 700;
-    color: #1e293b;
-    flex-shrink: 0;
-}
+.field-filled { color: #1d4ed8; font-weight: 700; }
 
 /* ── Checkbox row ── */
-.checkbox-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 28px;
-    align-items: center;
-    margin-bottom: 9px;
-    font-size: 13pt;
-    font-weight: 600;
-}
-.cb-item { display: flex; align-items: center; gap: 6px; cursor: default; }
+.cb-row { display: flex; flex-wrap: wrap; gap: 6px 24px; align-items: center; margin-bottom: 10px; font-size: 13pt; font-weight: 600; }
+.cb-item { display: flex; align-items: center; gap: 6px; }
 .cb-box {
-    width: 16px; height: 16px;
+    width: 17px; height: 17px;
     border: 2px solid #334155;
     border-radius: 3px;
     display: inline-flex; align-items: center; justify-content: center;
@@ -236,15 +206,18 @@ body {
     min-height: 52px;
     font-size: 12.5pt;
     color: #334155;
-    line-height: 1.6;
-    margin-bottom: 9px;
+    line-height: 1.65;
+    margin-bottom: 10px;
 }
-.desc-area.blank-lines {
-    color: transparent;
-    background: repeating-linear-gradient(
-        to bottom, transparent, transparent 27px, #e2e8f0 27px, #e2e8f0 28.5px
-    );
-    min-height: 72px;
+
+/* ── Amount row ── */
+.amount-row {
+    display: flex; align-items: baseline; gap: 8px;
+    margin-top: 10px; font-size: 13pt; font-weight: 700;
+}
+.amount-line {
+    flex: 1; border-bottom: 1.5px solid #475569;
+    min-height: 22px; min-width: 100px;
 }
 
 /* ── Signature grid ── */
@@ -257,20 +230,13 @@ body {
     border-top: 1.5px solid #cbd5e1;
 }
 .sign-box { text-align: center; }
-.sign-label { font-size: 10.5pt; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.sign-label { font-size: 10pt; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
 .sign-line  { height: 56px; border-bottom: 1.5px dashed #94a3b8; margin: 6px 16px; }
 .sign-name  { font-size: 12pt; color: #1e293b; font-weight: 600; }
 .sign-role  { font-size: 10pt; color: #64748b; margin-top: 2px; }
 .sign-date  { font-size: 10.5pt; color: #94a3b8; margin-top: 2px; }
 
-/* ── Divider ── */
-.section-divider {
-    border: none;
-    border-top: 1px dashed #cbd5e1;
-    margin: 16px 0;
-}
-
-/* ── Note (italic small text) ── */
+/* ── Note ── */
 .note-text { font-size: 10pt; color: #94a3b8; font-style: italic; margin-top: 6px; }
 
 /* ── Print styles ── */
@@ -280,7 +246,7 @@ body {
     .page-wrap { margin: 0; padding: 0; max-width: 100%; }
     .doc {
         border: none; border-radius: 0; box-shadow: none;
-        padding: 12mm 14mm;
+        padding: 10mm 14mm;
         page-break-inside: avoid;
     }
     @page { size: A4 portrait; margin: 8mm 6mm; }
@@ -293,7 +259,7 @@ body {
 <div class="screen-bar">
     <div class="title-area">
         <strong>หนังสือรับรองรับผิดชอบความเสียหาย</strong>
-        <span>เลขที่อ้างอิง #<?= $docNo ?> · พิมพ์ ณ <?= $printDate ?></span>
+        <span>เลขที่ #<?= $docNo ?> &middot; พิมพ์ ณ <?= $printDate ?></span>
     </div>
     <div class="actions">
         <button class="btn-print" onclick="window.print()">🖨️ พิมพ์</button>
@@ -304,7 +270,7 @@ body {
 <div class="page-wrap">
 <div class="doc">
 
-    <!-- ── Document Header ── -->
+    <!-- ── Header ── -->
     <div class="doc-header">
         <div class="school-logo-area">
             <div class="school-logo-box">
@@ -317,45 +283,36 @@ body {
         </div>
         <div class="doc-title-block">
             <h1>หนังสือรับรองรับผิดชอบ<br>ความเสียหาย</h1>
-            <div class="doc-date-line">
-                วันที่บันทึกรายการ&nbsp;&nbsp;<?= $repairDate ?>
-            </div>
+            <div class="doc-date-line">วันที่บันทึก &nbsp;<?= $repairDate ?></div>
             <div class="doc-no">เลขที่เอกสาร #<?= $docNo ?></div>
         </div>
     </div>
 
-    <!-- ── Section 1: ผู้ทำเสียหาย / ลูกหนาย ── -->
+    <!-- ── 1. ผู้ทำเสียหาย / ลูกหนาย ── -->
     <div class="section">
         <div class="section-title">1. ผู้ทำเสียหาย / ลูกหนาย</div>
 
-        <!-- 1.1 ผู้ปกครอง -->
         <div class="field-row">
             <span class="field-label">1.1 ชื่อผู้ปกครอง</span>
-            <span class="field-value"><?= htmlspecialchars($parentName ?: '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="field-value">&nbsp;</span>
             <span class="field-label">นักศึกษาประจำตัว</span>
-            <span class="field-value" style="max-width:120px"><?= htmlspecialchars($rep['borrower_id'] ?? '—', ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="field-value field-filled" style="max-width:130px"><?= htmlspecialchars($rep['borrower_id'] ?? '—', ENT_QUOTES, 'UTF-8') ?></span>
             <span class="field-label">ตำแหน่ง</span>
-            <div class="checkbox-row" style="margin-bottom:0;">
-                <div class="cb-item">
-                    <div class="cb-box <?= $isStudent ? '' : 'checked' ?>"></div>
-                    <span>ครู</span>
-                </div>
-                <div class="cb-item">
-                    <div class="cb-box <?= $isStudent ? 'checked' : '' ?>"></div>
-                    <span>นักเรียน</span>
-                </div>
-            </div>
-        </div>
-        <div class="field-row">
-            <span class="field-label">โรงเรียน</span>
-            <span class="field-value field-fixed">โรงเรียนละลมวิทยา</span>
-            <span class="field-label">ระดับชั้น</span>
-            <span class="field-value field-fixed" style="max-width:90px"><?= htmlspecialchars($className, ENT_QUOTES, 'UTF-8') ?></span>
-            <span class="field-label">โทร</span>
-            <span class="field-value" style="max-width:160px">&nbsp;</span>
+            <span class="cb-row" style="margin-bottom:0">
+                <span class="cb-item"><span class="cb-box <?= $isStudent ? '' : 'checked' ?>"></span><span>ครู</span></span>
+                <span class="cb-item"><span class="cb-box <?= $isStudent ? 'checked' : '' ?>"></span><span>นักเรียน</span></span>
+            </span>
         </div>
 
-        <!-- 1.2 ชื่อผู้ปกครอง contact -->
+        <div class="field-row">
+            <span class="field-label">โรงเรียน</span>
+            <span class="field-value field-filled">โรงเรียนละลมวิทยา</span>
+            <span class="field-label">ระดับชั้น</span>
+            <span class="field-value field-filled" style="max-width:90px"><?= htmlspecialchars($className, ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="field-label">โทร</span>
+            <span class="field-value" style="max-width:170px">&nbsp;</span>
+        </div>
+
         <div class="field-row">
             <span class="field-label">1.2 ชื่อผู้ปกครอง</span>
             <span class="field-value">&nbsp;</span>
@@ -365,10 +322,9 @@ body {
             <span class="field-value" style="max-width:160px">&nbsp;</span>
         </div>
 
-        <!-- 1.3 ครูประจำชั้น -->
         <div class="field-row">
             <span class="field-label">1.3 ชื่อครูประจำชั้น</span>
-            <span class="field-value field-fixed"><?= htmlspecialchars($homeroomTeacher ?: '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="field-value">&nbsp;</span>
             <span class="field-label">เบอร์โทรติดต่อ</span>
             <span class="field-value" style="max-width:180px">&nbsp;</span>
             <span class="field-label">Line ID</span>
@@ -376,101 +332,87 @@ body {
         </div>
     </div>
 
-    <!-- ── Section 2: อุปกรณ์เสียหาย / ลูกหนาย ── -->
+    <!-- ── 2. อุปกรณ์เสียหาย / ลูกหนาย ── -->
     <div class="section">
         <div class="section-title">2. อุปกรณ์เสียหาย / ลูกหนาย</div>
 
         <div class="field-row">
             <span class="field-label">ชื่ออุปกรณ์</span>
-            <span class="field-value field-fixed">Chromebook</span>
+            <span class="field-value field-filled">Chromebook</span>
             <span class="field-label">ยี่ห้อ</span>
-            <span class="field-value field-fixed"><?= htmlspecialchars($rep['brand'] ?: '—', ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="field-value" style="max-width:140px">&nbsp;</span>
             <span class="field-label">รุ่น</span>
-            <span class="field-value field-fixed"><?= htmlspecialchars($rep['model'] ?: '—', ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="field-value field-filled"><?= htmlspecialchars($deviceModel, ENT_QUOTES, 'UTF-8') ?></span>
         </div>
         <div class="field-row">
             <span class="field-label">หมายเลขเครื่อง</span>
-            <span class="field-value field-fixed" style="font-family:monospace;font-size:12.5pt;letter-spacing:.04em;">
+            <span class="field-value field-filled" style="font-family:monospace;font-size:12.5pt;letter-spacing:.04em">
                 <?= htmlspecialchars($rep['chromebook_id'], ENT_QUOTES, 'UTF-8') ?>
-                <?= $rep['chromebook_serial'] ? ' / ' . htmlspecialchars($rep['chromebook_serial'], ENT_QUOTES, 'UTF-8') : '' ?>
+                <?= $rep['chromebook_serial'] ? '&nbsp;/&nbsp;' . htmlspecialchars($rep['chromebook_serial'], ENT_QUOTES, 'UTF-8') : '' ?>
             </span>
         </div>
     </div>
 
-    <!-- ── Section 3: จำนวนเงินชดเชย/สาเหตุ ── -->
+    <!-- ── 3. จำนวนเงินชดเชยและสาเหตุ ── -->
     <div class="section">
         <div class="section-title">3. จำนวนเงินชดเชยและสาเหตุ</div>
 
         <div class="field-row">
             <span class="field-label">เลขรับวันที่</span>
-            <span class="field-value field-fixed"><?= $repairDate ?></span>
+            <span class="field-value field-filled" style="max-width:110px"><?= $repairDate ?></span>
             <span class="field-label">เวลา</span>
-            <span class="field-value field-fixed"><?= (new DateTime($rep['created_at']))->format('H:i') ?></span>
+            <span class="field-value field-filled" style="max-width:70px"><?= $repairTime ?></span>
             <span class="field-label">น. สถานะความเสียหาย</span>
-            <span class="field-value field-fixed"><?= htmlspecialchars($rep['status'], ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="field-value field-filled" style="max-width:140px"><?= htmlspecialchars($rep['status'], ENT_QUOTES, 'UTF-8') ?></span>
         </div>
 
-        <div class="checkbox-row">
-            <div class="cb-item">
-                <div class="cb-box<?= ($rep['status'] !== 'รับกลับ') ? ' checked' : '' ?>"></div>
+        <div class="cb-row">
+            <span class="cb-item">
+                <span class="cb-box <?= ($rep['status'] === 'รับกลับ') ? '' : 'checked' ?>"></span>
                 <span>ซ่อมหาย</span>
-            </div>
-            <div class="cb-item">
-                <div class="cb-box<?= ($rep['status'] === 'รับกลับ') ? ' checked' : '' ?>"></div>
+            </span>
+            <span class="cb-item">
+                <span class="cb-box <?= ($rep['status'] !== 'รับกลับ') ? '' : 'checked' ?>"></span>
                 <span>เสียหาย (สภาพความเสียหาย)</span>
-            </div>
-            <span class="field-value" style="max-width:300px"><?= htmlspecialchars(mb_substr($rep['description'] ?? '', 0, 60), ENT_QUOTES, 'UTF-8') ?></span>
+            </span>
+            <span class="field-value" style="max-width:260px">&nbsp;</span>
         </div>
 
         <div class="field-label" style="margin-bottom:6px;">รายละเอียดของอุปกรณ์</div>
-        <div class="desc-area"><?= nl2br(htmlspecialchars($rep['description'] ?? '—', ENT_QUOTES, 'UTF-8')) ?></div>
+        <div class="desc-area"><?= $rep['description'] ? nl2br(htmlspecialchars($rep['description'], ENT_QUOTES, 'UTF-8')) : '&nbsp;' ?></div>
 
         <?php if ($rep['repair_notes']): ?>
         <div class="field-label" style="margin-bottom:6px;">หมายเหตุการซ่อม / ผลการซ่อม</div>
         <div class="desc-area"><?= nl2br(htmlspecialchars($rep['repair_notes'], ENT_QUOTES, 'UTF-8')) ?></div>
         <?php endif; ?>
 
-        <div class="field-row" style="margin-top:10px;">
+        <div class="amount-row">
             <span class="field-label">จำนวนเงินที่ต้องชำระ</span>
-            <span class="field-value" style="max-width:200px">&nbsp;</span>
+            <span class="amount-line">&nbsp;</span>
             <span class="field-label">บาท</span>
         </div>
     </div>
 
-    <!-- ── Section 4: ผู้รับผิดชอบความเสียหาย ── -->
+    <!-- ── 4. ผู้รับผิดชอบความเสียหาย ── -->
     <div class="section">
         <div class="section-title">4. ผู้รับผิดชอบความเสียหาย</div>
 
-        <div class="checkbox-row" style="margin-bottom:10px;">
-            <div class="cb-item">
-                <div class="cb-box"></div>
-                <span>รับผิดชอบโดยแจ้งผ่านแอ็คเคาท์ผู้ปกครอง</span>
-                <span class="field-value" style="max-width:220px">&nbsp;</span>
-            </div>
+        <div class="cb-row">
+            <span class="cb-item"><span class="cb-box"></span><span>รับผิดชอบโดยแจ้งผ่านแอ็คเคาท์ผู้ปกครอง</span></span>
+            <span class="field-value" style="max-width:200px">&nbsp;</span>
         </div>
-        <div class="checkbox-row" style="margin-bottom:10px;">
-            <div class="cb-item">
-                <div class="cb-box"></div>
-                <span>รับผิดชอบโดยบุคคล</span>
-            </div>
+        <div class="cb-row">
+            <span class="cb-item"><span class="cb-box"></span><span>รับผิดชอบโดยบุคคล</span></span>
         </div>
 
         <div class="field-row">
             <span class="field-label">ชื่อ</span>
-            <span class="field-value field-fixed"><?= htmlspecialchars($borrowerName, ENT_QUOTES, 'UTF-8') ?></span>
-            <span class="field-label">นามสกุล</span>
-            <span class="field-value">&nbsp;</span>
+            <span class="field-value field-filled"><?= htmlspecialchars($borrowerName, ENT_QUOTES, 'UTF-8') ?></span>
             <span class="field-label">ตำแหน่ง</span>
-            <div class="checkbox-row" style="margin-bottom:0;">
-                <div class="cb-item">
-                    <div class="cb-box <?= $isStudent ? '' : 'checked' ?>"></div>
-                    <span>ครู</span>
-                </div>
-                <div class="cb-item">
-                    <div class="cb-box <?= $isStudent ? 'checked' : '' ?>"></div>
-                    <span>นักเรียน</span>
-                </div>
-            </div>
+            <span class="cb-row" style="margin-bottom:0">
+                <span class="cb-item"><span class="cb-box <?= $isStudent ? '' : 'checked' ?>"></span><span>ครู</span></span>
+                <span class="cb-item"><span class="cb-box <?= $isStudent ? 'checked' : '' ?>"></span><span>นักเรียน</span></span>
+            </span>
         </div>
         <div class="field-row">
             <span class="field-label">เบอร์โทรติดต่อ</span>
@@ -481,31 +423,29 @@ body {
             <span class="field-value">&nbsp;</span>
         </div>
 
-        <p class="note-text">* ผู้รับผิดชอบนี้มีหน้าที่ดำเนินการในส่วนของแต่ละโดยลำดับดังต่อไปนี้ตามที่ระบุ</p>
+        <p class="note-text">* ผู้รับผิดชอบนี้มีหน้าที่ดำเนินการตามที่ระบุในเอกสารฉบับนี้</p>
     </div>
 
-    <!-- ── Section 5: ลงนามรับทราบ ── -->
+    <!-- ── 5. ลงนามรับทราบ ── -->
     <div class="section">
         <div class="section-title">5. ลงนามรับทราบความเสียหายและตรวจรับผิดชอบ</div>
 
         <div class="sign-grid">
-            <!-- ลายเซ็นซ้าย -->
             <div class="sign-box">
                 <div class="sign-label">ผู้รับผิดชอบความเสียหาย</div>
                 <div class="sign-line"></div>
                 <div class="sign-name">(<?= htmlspecialchars($borrowerName, ENT_QUOTES, 'UTF-8') ?>)</div>
                 <div class="sign-role">
                     <?= $isStudent
-                        ? htmlspecialchars('นักเรียน ชั้น ' . ($className ?: ''), ENT_QUOTES, 'UTF-8')
+                        ? 'นักเรียน ชั้น ' . htmlspecialchars($className, ENT_QUOTES, 'UTF-8')
                         : 'ครู/บุคลากรทางการศึกษา' ?>
                 </div>
                 <div class="sign-date">วันที่ ......./......./......</div>
             </div>
-            <!-- ลายเซ็นขวา -->
             <div class="sign-box">
                 <div class="sign-label">ครูประจำชั้น / ผู้ดูแลระบบ</div>
                 <div class="sign-line"></div>
-                <div class="sign-name">(<?= htmlspecialchars($homeroomTeacher ?: '...........................', ENT_QUOTES, 'UTF-8') ?>)</div>
+                <div class="sign-name">(....................................)</div>
                 <div class="sign-role">ครูประจำชั้น / ครูผู้รับผิดชอบระบบ</div>
                 <div class="sign-date">วันที่ ......./......./......</div>
             </div>
