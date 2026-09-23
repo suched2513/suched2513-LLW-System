@@ -137,7 +137,7 @@ function _redirect_by_role(string $role): void {
     if (!empty($_SESSION['login_redirect'])) {
         $rd = $_SESSION['login_redirect'];
         unset($_SESSION['login_redirect']);
-        if (str_starts_with($rd, '/') && $base_path !== '' && !str_starts_with($rd, $base_path)) {
+        if (str_starts_with($rd, '/') && $base_path !== '' && !str_starts_with($rd, $base_path . '/') && $rd !== $base_path) {
             $rd = $base_path . $rd;
         }
         header('Location: ' . $rd); exit();
