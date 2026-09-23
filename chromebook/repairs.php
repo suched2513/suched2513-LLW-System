@@ -202,6 +202,30 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </tbody>
             </table>
         </div>
+
+        <!-- ── Scroll Navigation Bar ── -->
+        <div id="scroll-nav" class="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center gap-3">
+            <button id="btn-scroll-left"
+                onclick="document.getElementById('tbl-wrap').scrollBy({left:-300,behavior:'smooth'})"
+                class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-black rounded-xl shadow-sm shadow-cyan-200/50 hover:opacity-90 transition select-none">
+                <i class="bi bi-chevron-double-left"></i> เลื่อนซ้าย
+            </button>
+
+            <!-- Progress track -->
+            <div class="flex-1 relative h-2 bg-slate-200 rounded-full overflow-hidden cursor-pointer" id="scroll-track"
+                 onclick="scrollToClick(event)">
+                <div id="scroll-thumb"
+                     class="absolute top-0 left-0 h-2 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full transition-all duration-150"
+                     style="width:100%"></div>
+            </div>
+
+            <button id="btn-scroll-right"
+                onclick="document.getElementById('tbl-wrap').scrollBy({left:300,behavior:'smooth'})"
+                class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-black rounded-xl shadow-sm shadow-cyan-200/50 hover:opacity-90 transition select-none">
+                เลื่อนขวา <i class="bi bi-chevron-double-right"></i>
+            </button>
+        </div>
+
     </div>
 </div>
 
@@ -315,98 +339,63 @@ async function doDelete(id) {
 }
 
 // Activate "all" filter on load
-document.addEventListener('DOMContentLoaded', () => filterRepairs('all'));
+document.addEventListener('DOMContentLoaded', () => {
+    filterRepairs('all');
+    initScrollNav();
+});
 
-// ── Scroll buttons ────────────────────────────────────────────
-(function () {
-    const wrap = document.getElementById('tbl-wrap');
-    if (!wrap) return;
+// ── Scroll Navigation Bar ─────────────────────────────────────
+function initScrollNav() {
+    const wrap  = document.getElementById('tbl-wrap');
+    const thumb = document.getElementById('scroll-thumb');
+    const track = document.getElementById('scroll-track');
+    const btnL  = document.getElementById('btn-scroll-left');
+    const btnR  = document.getElementById('btn-scroll-right');
+    if (!wrap || !thumb) return;
 
-    // สร้างแถบปุ่มเลื่อน
-    const bar = document.createElement('div');
-    bar.id = 'scroll-bar';
-    bar.style.cssText = `
-        position: fixed;
-        bottom: 18px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        z-index: 500;
-        pointer-events: none;
-        width: min(680px, calc(100vw - 40px));
-        justify-content: space-between;
-    `;
+    function updateThumb() {
+        const ratio = wrap.scrollWidth > wrap.clientWidth
+            ? wrap.scrollLeft / (wrap.scrollWidth - wrap.clientWidth)
+            : 0;
+        const thumbW = Math.max(16, (wrap.clientWidth / wrap.scrollWidth) * 100);
+        thumb.style.width = thumbW + '%';
+        thumb.style.left  = (ratio * (100 - thumbW)) + '%';
 
-    const btnStyle = `
-        pointer-events: auto;
-        width: 44px; height: 44px;
-        border-radius: 50%;
-        border: none;
-        cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 18px;
-        background: rgba(14,116,144,0.92);
-        color: #fff;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-        backdrop-filter: blur(6px);
-        transition: background .2s, opacity .2s;
-        opacity: 0;
-    `;
-
-    const btnL = document.createElement('button');
-    btnL.innerHTML = '&#8592;';
-    btnL.title = 'เลื่อนซ้าย';
-    btnL.style.cssText = btnStyle;
-
-    const btnR = document.createElement('button');
-    btnR.innerHTML = '&#8594;';
-    btnR.title = 'เลื่อนขวา';
-    btnR.style.cssText = btnStyle;
-
-    btnL.addEventListener('mouseenter', () => btnL.style.background = 'rgba(8,145,178,1)');
-    btnL.addEventListener('mouseleave', () => btnL.style.background = 'rgba(14,116,144,0.92)');
-    btnR.addEventListener('mouseenter', () => btnR.style.background = 'rgba(8,145,178,1)');
-    btnR.addEventListener('mouseleave', () => btnR.style.background = 'rgba(14,116,144,0.92)');
-
-    let scrollTimer;
-    function startScroll(dir) {
-        clearInterval(scrollTimer);
-        scrollTimer = setInterval(() => { wrap.scrollLeft += dir * 18; }, 16);
-    }
-    function stopScroll() { clearInterval(scrollTimer); }
-
-    btnL.addEventListener('mousedown', () => startScroll(-1));
-    btnR.addEventListener('mousedown', () => startScroll(1));
-    document.addEventListener('mouseup', stopScroll);
-    btnL.addEventListener('touchstart', (e) => { e.preventDefault(); startScroll(-1); }, {passive:false});
-    btnR.addEventListener('touchstart', (e) => { e.preventDefault(); startScroll(1);  }, {passive:false});
-    document.addEventListener('touchend', stopScroll);
-
-    // กด click ครั้งเดียว เลื่อน 200px
-    btnL.addEventListener('click', () => wrap.scrollBy({left: -200, behavior: 'smooth'}));
-    btnR.addEventListener('click', () => wrap.scrollBy({left:  200, behavior: 'smooth'}));
-
-    function updateButtons() {
-        const canLeft  = wrap.scrollLeft > 5;
-        const canRight = wrap.scrollLeft < wrap.scrollWidth - wrap.clientWidth - 5;
-        const hasScroll = wrap.scrollWidth > wrap.clientWidth + 10;
-        btnL.style.opacity = (hasScroll && canLeft)  ? '1' : (hasScroll ? '0.3' : '0');
-        btnR.style.opacity = (hasScroll && canRight) ? '1' : (hasScroll ? '0.3' : '0');
-        btnL.style.pointerEvents = (hasScroll && canLeft)  ? 'auto' : 'none';
-        btnR.style.pointerEvents = (hasScroll && canRight) ? 'auto' : 'none';
-        bar.style.display = hasScroll ? 'flex' : 'none';
+        // dim buttons at edges
+        if (btnL) btnL.style.opacity = wrap.scrollLeft < 5 ? '0.4' : '1';
+        if (btnR) btnR.style.opacity = wrap.scrollLeft >= wrap.scrollWidth - wrap.clientWidth - 5 ? '0.4' : '1';
     }
 
-    wrap.addEventListener('scroll', updateButtons);
-    window.addEventListener('resize', updateButtons);
-    setTimeout(updateButtons, 300);
+    // คลิกบน track เพื่อ jump
+    window.scrollToClick = function(e) {
+        const rect  = track.getBoundingClientRect();
+        const ratio = (e.clientX - rect.left) / rect.width;
+        wrap.scrollLeft = ratio * (wrap.scrollWidth - wrap.clientWidth);
+    };
 
-    bar.appendChild(btnL);
-    bar.appendChild(btnR);
-    document.body.appendChild(bar);
-})();
+    // กดค้างปุ่มเพื่อเลื่อนต่อเนื่อง
+    let holdTimer;
+    function holdScroll(dir) {
+        clearInterval(holdTimer);
+        holdTimer = setInterval(() => { wrap.scrollLeft += dir * 20; }, 16);
+    }
+    function stopHold() { clearInterval(holdTimer); }
+
+    if (btnL) {
+        btnL.addEventListener('mousedown', () => holdScroll(-1));
+        btnL.addEventListener('touchstart', (e) => { e.preventDefault(); holdScroll(-1); }, {passive:false});
+    }
+    if (btnR) {
+        btnR.addEventListener('mousedown', () => holdScroll(1));
+        btnR.addEventListener('touchstart', (e) => { e.preventDefault(); holdScroll(1); }, {passive:false});
+    }
+    document.addEventListener('mouseup', stopHold);
+    document.addEventListener('touchend', stopHold);
+
+    wrap.addEventListener('scroll', updateThumb);
+    window.addEventListener('resize', updateThumb);
+    updateThumb();
+}
 </script>
 <?php endif; ?>
 
