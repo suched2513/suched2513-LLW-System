@@ -190,7 +190,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <p class="text-xs text-slate-400">สถิติการเข้าแถวและแต่งกายรายห้อง</p>
             </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
             <div>
                 <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ห้องเรียน</label>
                 <select id="ov-classroom" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-400 outline-none transition-all">
@@ -198,9 +198,15 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </select>
             </div>
             <div>
-                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">เดือน</label>
-                <select id="ov-month" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-400 outline-none transition-all">
-                    <?php echo renderMonthOptions(true); ?>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">จากเดือน</label>
+                <select id="ov-month-from" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-400 outline-none transition-all">
+                    <?php echo renderMonthOptions(); ?>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ถึงเดือน</label>
+                <select id="ov-month-to" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-400 outline-none transition-all">
+                    <?php echo renderMonthOptions(); ?>
                 </select>
             </div>
             <div class="flex items-end">
@@ -209,6 +215,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </button>
             </div>
         </div>
+        <p class="text-xs text-slate-400 -mt-3 mb-5"><i class="bi bi-info-circle mr-1"></i>เลือกเดือนเริ่มต้น–สิ้นสุดให้เหมือนกันเพื่อดูรายเดือน หรือเลือกช่วงกว้างขึ้นเพื่อดูสรุปทั้งเทอม</p>
 
         <div id="ov-content" class="hidden">
             <!-- Charts -->
@@ -650,11 +657,12 @@ let ovAttChart = null, ovUniChart = null;
 
 async function loadOverview() {
     const classroom = document.getElementById('ov-classroom').value;
-    const month     = document.getElementById('ov-month').value || 'all';
+    const monthFrom = document.getElementById('ov-month-from').value;
+    const monthTo   = document.getElementById('ov-month-to').value;
     if (!classroom) { Swal.fire('กรุณาเลือกห้องเรียน','','warning'); return; }
 
     Swal.fire({ title: 'กำลังโหลด...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    const res = await api(`/assembly/api/get_overview.php?classroom=${encodeURIComponent(classroom)}&month=${month}`);
+    const res = await api(`/assembly/api/get_overview.php?classroom=${encodeURIComponent(classroom)}&month_from=${monthFrom}&month_to=${monthTo}`);
     Swal.close();
     if (res.status !== 'success') { Swal.fire('ผิดพลาด', res.message, 'error'); return; }
 
@@ -693,7 +701,7 @@ async function loadOverview() {
     `).join('');
 
     // CSV link
-    document.getElementById('ov-export-btn').href = BASE + `/assembly/api/export_csv.php?classroom=${encodeURIComponent(classroom)}&month=${month}`;
+    document.getElementById('ov-export-btn').href = BASE + `/assembly/api/export_csv.php?classroom=${encodeURIComponent(classroom)}&month_from=${monthFrom}&month_to=${monthTo}`;
 }
 
 // ─── INDIVIDUAL ───

@@ -13,8 +13,10 @@ if (!isset($_SESSION['llw_role'])) {
     exit;
 }
 
-$classroom = trim($_GET['classroom'] ?? '');
-$month     = trim($_GET['month']     ?? 'all');
+$classroom = trim($_GET['classroom']  ?? '');
+$monthFrom = trim($_GET['month_from'] ?? '');
+$monthTo   = trim($_GET['month_to']   ?? '');
+$month     = trim($_GET['month']      ?? 'all'); // legacy single-month param, still supported
 
 if ($classroom === '') {
     http_response_code(400);
@@ -36,10 +38,14 @@ try {
     $sStmt->execute([$classroom]);
     $students = $sStmt->fetchAll();
 
-    // สร้าง condition สำหรับ month
+    // สร้าง condition สำหรับช่วงเดือน (รองรับทั้งช่วงเดือนใหม่ และ month เดี่ยวแบบเดิม)
     $monthCond = '';
     $params    = [$classroom];
-    if ($month !== 'all') {
+    if ($monthFrom !== '' && $monthTo !== '') {
+        $monthCond = "AND DATE_FORMAT(a.date, '%m') BETWEEN ? AND ?";
+        $params[]  = $monthFrom;
+        $params[]  = $monthTo;
+    } elseif ($month !== 'all') {
         $monthCond = "AND DATE_FORMAT(a.date, '%m') = ?";
         $params[]  = $month;
     }

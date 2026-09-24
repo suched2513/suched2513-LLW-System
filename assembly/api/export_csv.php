@@ -12,8 +12,10 @@ if (!isset($_SESSION['llw_role'])) {
     exit;
 }
 
-$classroom = trim($_GET['classroom'] ?? '');
-$month     = trim($_GET['month']     ?? 'all');
+$classroom = trim($_GET['classroom']  ?? '');
+$monthFrom = trim($_GET['month_from'] ?? '');
+$monthTo   = trim($_GET['month_to']   ?? '');
+$month     = trim($_GET['month']      ?? 'all'); // legacy single-month param, still supported
 
 if ($classroom === '') {
     http_response_code(400);
@@ -27,7 +29,11 @@ try {
     $monthNames = ['01'=>'มกราคม','02'=>'กุมภาพันธ์','03'=>'มีนาคม','04'=>'เมษายน',
                    '05'=>'พฤษภาคม','06'=>'มิถุนายน','07'=>'กรกฎาคม','08'=>'สิงหาคม',
                    '09'=>'กันยายน','10'=>'ตุลาคม','11'=>'พฤศจิกายน','12'=>'ธันวาคม'];
-    $monthLabel = ($month === 'all') ? 'ทุกเดือน' : ($monthNames[$month] ?? $month);
+    if ($monthFrom !== '' && $monthTo !== '') {
+        $monthLabel = ($monthNames[$monthFrom] ?? $monthFrom) . '-' . ($monthNames[$monthTo] ?? $monthTo);
+    } else {
+        $monthLabel = ($month === 'all') ? 'ทุกเดือน' : ($monthNames[$month] ?? $month);
+    }
 
     $sStmt = $pdo->prepare("
         SELECT student_id, name FROM att_students
@@ -41,7 +47,11 @@ try {
 
     $monthCond = '';
     $params    = [$classroom];
-    if ($month !== 'all') {
+    if ($monthFrom !== '' && $monthTo !== '') {
+        $monthCond = "AND DATE_FORMAT(date,'%m') BETWEEN ? AND ?";
+        $params[]  = $monthFrom;
+        $params[]  = $monthTo;
+    } elseif ($month !== 'all') {
         $monthCond = "AND DATE_FORMAT(date,'%m') = ?";
         $params[]  = $month;
     }
@@ -60,7 +70,7 @@ try {
     }
 
     $filename = "assembly_{$classroom}_{$monthLabel}_" . date('Ymd') . ".csv";
-    $filename  = preg_replace('/[^\w\-.]/', '_', $filename);
+    $filename  = preg_replace('/[^\p{L}\p{N}\p{M}\-_.]/u', '_', $filename);
 
     header('Content-Type: text/csv; charset=utf-8');
     header("Content-Disposition: attachment; filename=\"$filename\"");
