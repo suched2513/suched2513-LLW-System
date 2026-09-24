@@ -119,13 +119,16 @@ try {
         ");
         $stmt2->execute($params);
         foreach ($stmt2->fetchAll() as $r) {
+            $present = (int)$r['present_count'];
+            $total   = $present + (int)$r['absent_count'] + (int)$r['leave_count'] + (int)$r['skip_count'];
             $students[] = [
-                'studentId' => $r['student_id'],
-                'name'      => $r['name'],
-                'present'   => (int)$r['present_count'],
-                'absent'    => (int)$r['absent_count'],
-                'leave'     => (int)$r['leave_count'],
-                'skip'      => (int)$r['skip_count'],
+                'studentId'  => $r['student_id'],
+                'name'       => $r['name'],
+                'present'    => $present,
+                'presentPct' => $total > 0 ? round($present / $total * 100) : 0,
+                'absent'     => (int)$r['absent_count'],
+                'leave'      => (int)$r['leave_count'],
+                'skip'       => (int)$r['skip_count'],
             ];
         }
     }

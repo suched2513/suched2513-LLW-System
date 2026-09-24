@@ -197,6 +197,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                                 <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-rose-500">ขาด</th>
                                 <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-amber-500">ลา</th>
                                 <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-purple-500">โดด</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-teal-600">% มา</th>
                             </tr>
                         </thead>
                         <tbody id="adm-student-table"></tbody>
@@ -457,6 +458,7 @@ async function loadAdminOverview() {
                 <td class="px-4 py-3 text-center font-bold ${s.absent > 0 ? 'text-rose-600' : 'text-slate-400'}">${s.absent}</td>
                 <td class="px-4 py-3 text-center font-bold ${s.leave > 0 ? 'text-amber-600' : 'text-slate-400'}">${s.leave}</td>
                 <td class="px-4 py-3 text-center font-bold ${s.skip > 0 ? 'text-purple-600' : 'text-slate-400'}">${s.skip}</td>
+                <td class="px-4 py-3 text-center font-black ${s.presentPct >= 80 ? 'text-emerald-600' : (s.presentPct >= 60 ? 'text-amber-500' : 'text-rose-600')}">${s.presentPct}%</td>
             </tr>
         `).join('');
         studentWrap.classList.remove('hidden');
@@ -496,7 +498,7 @@ function exportAdmTable() {
 function exportAdmStudentTable() {
     const classroom = document.getElementById('adm-student-classroom').textContent || 'room';
     exportTableToCsv('adm-student-table',
-        ['รหัส', 'ชื่อ-สกุล', 'มา', 'ขาด', 'ลา', 'โดด'],
+        ['รหัส', 'ชื่อ-สกุล', 'มา', 'ขาด', 'ลา', 'โดด', '% มา'],
         `assembly_students_${classroom}_${new Date().toISOString().slice(0, 10)}.csv`);
 }
 
