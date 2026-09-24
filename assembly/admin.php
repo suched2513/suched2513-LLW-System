@@ -134,6 +134,9 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </div>
             </div>
             <div class="flex justify-end gap-3">
+                <button onclick="exportAdmTable()" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-2xl font-bold text-sm shadow-sm hover:bg-emerald-100 transition-all flex items-center gap-2">
+                    <i class="bi bi-file-earmark-spreadsheet-fill"></i> Export CSV
+                </button>
                 <button onclick="highlightLow()" class="bg-rose-500 text-white px-5 py-2.5 rounded-2xl font-bold text-sm shadow-lg shadow-rose-200/50 hover:bg-rose-600 transition-all flex items-center gap-2">
                     <i class="bi bi-exclamation-triangle-fill"></i> ห้องคะแนนต่ำสุด
                 </button>
@@ -142,7 +145,12 @@ require_once __DIR__ . '/../components/layout_start.php';
 
         <!-- Per-student table — shown only when one classroom is picked -->
         <div id="adm-student-wrap" class="hidden mt-6">
-            <p class="text-sm font-black text-slate-700 mb-3"><i class="bi bi-people-fill text-amber-500 mr-1"></i>รายคน — ห้อง <span id="adm-student-classroom"></span></p>
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-black text-slate-700"><i class="bi bi-people-fill text-amber-500 mr-1"></i>รายคน — ห้อง <span id="adm-student-classroom"></span></p>
+                <button onclick="exportAdmStudentTable()" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-xl font-bold text-xs shadow-sm hover:bg-emerald-100 transition-all flex items-center gap-2">
+                    <i class="bi bi-file-earmark-spreadsheet-fill"></i> Export CSV
+                </button>
+            </div>
             <div class="rounded-2xl border border-slate-100 overflow-hidden">
                 <div class="overflow-auto">
                     <table class="w-full text-sm">
@@ -420,6 +428,41 @@ async function loadAdminOverview() {
     } else {
         studentWrap.classList.add('hidden');
     }
+}
+
+function exportTableToCsv(tableBodyId, headers, filename) {
+    const rows = Array.from(document.querySelectorAll(`#${tableBodyId} tr`));
+    if (!rows.length || rows[0].children.length < headers.length) {
+        Swal.fire('ไม่มีข้อมูลให้ส่งออก', 'กรุณาแสดงข้อมูลก่อน', 'info'); return;
+    }
+    const lines = [headers.map(h => `"${h}"`).join(',')];
+    rows.forEach(tr => {
+        const cells = Array.from(tr.children).slice(0, headers.length).map(td => {
+            const text = td.textContent.trim().replace(/"/g, '""');
+            return `"${text}"`;
+        });
+        lines.push(cells.join(','));
+    });
+    const csv  = '﻿' + lines.join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+function exportAdmTable() {
+    exportTableToCsv('adm-table',
+        ['ห้อง', 'ครูที่ปรึกษา', 'การมา %', 'แต่งกายถูก %', 'หลบแถว', 'หมายเหตุ'],
+        `assembly_overview_${new Date().toISOString().slice(0, 10)}.csv`);
+}
+
+function exportAdmStudentTable() {
+    const classroom = document.getElementById('adm-student-classroom').textContent || 'room';
+    exportTableToCsv('adm-student-table',
+        ['รหัส', 'ชื่อ-สกุล', 'มา', 'ขาด', 'ลา', 'โดด'],
+        `assembly_students_${classroom}_${new Date().toISOString().slice(0, 10)}.csv`);
 }
 
 function highlightLow() {
