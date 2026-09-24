@@ -133,13 +133,48 @@ require_once __DIR__ . '/../components/layout_start.php';
                     </table>
                 </div>
             </div>
-            <div class="flex justify-end gap-3">
+            <div class="flex flex-wrap items-center justify-end gap-3">
+                <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-1.5">
+                    <label class="text-xs font-bold text-slate-500">นักเรียนที่มาไม่ถึง</label>
+                    <input id="adm-low-threshold" type="number" min="0" max="100" value="60"
+                        class="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1 text-sm font-bold text-center outline-none focus:ring-2 focus:ring-rose-400">
+                    <span class="text-xs font-bold text-slate-500">%</span>
+                </div>
+                <button onclick="loadLowAttendance()" class="bg-rose-50 text-rose-700 border border-rose-200 px-5 py-2.5 rounded-2xl font-bold text-sm shadow-sm hover:bg-rose-100 transition-all flex items-center gap-2">
+                    <i class="bi bi-person-exclamation"></i> ดูรายชื่อ
+                </button>
                 <button onclick="exportAdmTable()" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-2xl font-bold text-sm shadow-sm hover:bg-emerald-100 transition-all flex items-center gap-2">
                     <i class="bi bi-file-earmark-spreadsheet-fill"></i> Export CSV
                 </button>
                 <button onclick="highlightLow()" class="bg-rose-500 text-white px-5 py-2.5 rounded-2xl font-bold text-sm shadow-lg shadow-rose-200/50 hover:bg-rose-600 transition-all flex items-center gap-2">
                     <i class="bi bi-exclamation-triangle-fill"></i> ห้องคะแนนต่ำสุด
                 </button>
+            </div>
+        </div>
+
+        <!-- Low-attendance student list — school-wide (or narrowed by the grade/room filters above) -->
+        <div id="adm-low-wrap" class="hidden mt-6">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-black text-slate-700"><i class="bi bi-person-exclamation text-rose-500 mr-1"></i>นักเรียนที่มาไม่ถึง <span id="adm-low-threshold-label"></span>% (<span id="adm-low-count"></span> คน)</p>
+                <button onclick="exportAdmLowTable()" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-xl font-bold text-xs shadow-sm hover:bg-emerald-100 transition-all flex items-center gap-2">
+                    <i class="bi bi-file-earmark-spreadsheet-fill"></i> Export CSV
+                </button>
+            </div>
+            <div class="rounded-2xl border border-slate-100 overflow-hidden">
+                <div class="overflow-auto max-h-96">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">รหัส</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ชื่อ–สกุล</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b">ห้อง</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-rose-500">% มา</th>
+                                <th class="px-4 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">มา/ทั้งหมด</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adm-low-table"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -463,6 +498,39 @@ function exportAdmStudentTable() {
     exportTableToCsv('adm-student-table',
         ['รหัส', 'ชื่อ-สกุล', 'มา', 'ขาด', 'ลา', 'โดด'],
         `assembly_students_${classroom}_${new Date().toISOString().slice(0, 10)}.csv`);
+}
+
+async function loadLowAttendance() {
+    const monthFrom = document.getElementById('adm-month-from').value;
+    const monthTo   = document.getElementById('adm-month-to').value;
+    const grade     = document.getElementById('adm-grade').value || 'all';
+    const classroom = document.getElementById('adm-classroom').value || 'all';
+    const threshold = document.getElementById('adm-low-threshold').value || 60;
+
+    Swal.fire({ title: 'กำลังโหลด...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    const res = await api(`/assembly/api/get_admin_summary.php?month_from=${monthFrom}&month_to=${monthTo}&grade=${encodeURIComponent(grade)}&classroom=${encodeURIComponent(classroom)}&low_attendance=1&threshold=${threshold}`);
+    Swal.close();
+    if (res.status !== 'success') { Swal.fire('ผิดพลาด', res.message, 'error'); return; }
+
+    document.getElementById('adm-low-threshold-label').textContent = res.lowThreshold;
+    document.getElementById('adm-low-count').textContent = res.lowAttendance.length;
+    document.getElementById('adm-low-table').innerHTML = res.lowAttendance.map(s => `
+        <tr class="border-b border-slate-50 hover:bg-rose-50/30 transition-colors">
+            <td class="px-4 py-3 text-slate-500">${esc(s.studentId)}</td>
+            <td class="px-4 py-3 font-bold text-slate-700">${esc(s.name)}</td>
+            <td class="px-4 py-3 text-slate-500">${esc(s.classroom)}</td>
+            <td class="px-4 py-3 text-center font-black text-rose-600">${s.presentPct}%</td>
+            <td class="px-4 py-3 text-center text-slate-500">${s.present}/${s.total}</td>
+        </tr>
+    `).join('') || `<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">ไม่พบนักเรียนที่มาต่ำกว่าเกณฑ์นี้</td></tr>`;
+    document.getElementById('adm-low-wrap').classList.remove('hidden');
+}
+
+function exportAdmLowTable() {
+    const threshold = document.getElementById('adm-low-threshold-label').textContent || '60';
+    exportTableToCsv('adm-low-table',
+        ['รหัส', 'ชื่อ-สกุล', 'ห้อง', '% มา', 'มา/ทั้งหมด'],
+        `assembly_low_attendance_${threshold}pct_${new Date().toISOString().slice(0, 10)}.csv`);
 }
 
 function highlightLow() {

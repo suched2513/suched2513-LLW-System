@@ -130,7 +130,45 @@ try {
         }
     }
 
-    echo json_encode(['status' => 'success', 'rooms' => $rooms, 'totals' => $totals, 'students' => $students]);
+    // Low-attendance student list — opt-in (heavier query across every student
+    // in the current filter scope), used by the "นักเรียนที่มาไม่ถึง X%" panel.
+    $lowAttendance = [];
+    $lowThreshold  = null;
+    if (isset($_GET['low_attendance']) && $_GET['low_attendance'] === '1') {
+        $lowThreshold = max(0, min(100, (int)($_GET['threshold'] ?? 60)));
+        $stmt3 = $pdo->prepare("
+            SELECT
+                a.student_id,
+                COALESCE(s.name, a.student_id) AS name,
+                a.classroom,
+                COUNT(*) AS total_checks,
+                SUM(a.status = 'ม') AS present_count
+            FROM assembly_attendance a
+            LEFT JOIN assembly_students s ON s.student_id = a.student_id
+            WHERE $whereStr
+            GROUP BY a.student_id, s.name, a.classroom
+        ");
+        $stmt3->execute($params);
+        foreach ($stmt3->fetchAll() as $r) {
+            $tc = (int)$r['total_checks'];
+            if ($tc === 0) continue;
+            $pct = round($r['present_count'] / $tc * 100);
+            if ($pct < $lowThreshold) {
+                $lowAttendance[] = [
+                    'studentId'  => $r['student_id'],
+                    'name'       => $r['name'],
+                    'classroom'  => $r['classroom'],
+                    'presentPct' => $pct,
+                    'present'    => (int)$r['present_count'],
+                    'total'      => $tc,
+                ];
+            }
+        }
+        usort($lowAttendance, fn($a, $b) => $a['presentPct'] <=> $b['presentPct']);
+    }
+
+    echo json_encode(['status' => 'success', 'rooms' => $rooms, 'totals' => $totals, 'students' => $students,
+                       'lowAttendance' => $lowAttendance, 'lowThreshold' => $lowThreshold]);
 } catch (Exception $e) {
     error_log('[Assembly] get_admin_summary: ' . $e->getMessage());
     http_response_code(500);
