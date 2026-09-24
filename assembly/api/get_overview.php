@@ -105,6 +105,7 @@ try {
             'name'        => $s['name'],
             'totalDays'   => $totalDays,
             'present'     => $present,
+            'presentPct'  => $totalDays > 0 ? round($present / $totalDays * 100) : 0,
             'absent'      => $absent + $skip,
             'leave'       => $leave,
             'nailCorrect' => $nail,

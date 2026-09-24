@@ -240,6 +240,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                                 <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">วันที่เช็ค</th>
                                 <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-green-600">มา</th>
                                 <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-red-500">ขาด</th>
+                                <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b text-teal-600">% มา</th>
                                 <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">เล็บ</th>
                                 <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">ผม</th>
                                 <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b">เสื้อ</th>
@@ -695,6 +696,7 @@ async function loadOverview() {
             <td class="px-3 py-2.5 text-center text-sm font-bold text-slate-500">${s.totalDays}</td>
             <td class="px-3 py-2.5 text-center text-sm font-bold text-emerald-600">${s.present}</td>
             <td class="px-3 py-2.5 text-center text-sm font-bold text-rose-500">${s.absent}</td>
+            <td class="px-3 py-2.5 text-center text-sm font-black ${s.presentPct >= 80 ? 'text-emerald-600' : (s.presentPct >= 60 ? 'text-amber-500' : 'text-rose-600')}">${s.presentPct}%</td>
             ${[s.nailCorrect, s.hairCorrect, s.shirtCorrect, s.pantsCorrect, s.socksCorrect, s.shoesCorrect].map(v => `<td class="px-3 py-2.5 text-center text-xs text-slate-500">${v}</td>`).join('')}
             <td class="px-3 py-2.5 text-xs text-slate-400">${esc(s.notes || '')}</td>
         </tr>

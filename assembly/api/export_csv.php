@@ -78,7 +78,7 @@ try {
     echo "\xEF\xBB\xBF";
 
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['รหัส','ชื่อ-สกุล','วันมา','วันขาด','วันลา','วันโดด','เล็บถูก','ทรงผมถูก','เสื้อถูก','กางเกงถูก','ถุงเท้าถูก','รองเท้าถูก','หมายเหตุ']);
+    fputcsv($out, ['รหัส','ชื่อ-สกุล','วันมา','วันขาด','วันลา','วันโดด','% มา','เล็บถูก','ทรงผมถูก','เสื้อถูก','กางเกงถูก','ถุงเท้าถูก','รองเท้าถูก','หมายเหตุ']);
 
     foreach ($students as $s) {
         $recs = $attByStudent[$s['student_id']] ?? [];
@@ -95,9 +95,11 @@ try {
             if ($r['shoes'] === 'ถูก') $shoes++;
             if (!empty($r['note'])) $notes[] = $r['note'];
         }
+        $totalDays  = count($recs);
+        $presentPct = $totalDays > 0 ? round($present / $totalDays * 100) : 0;
         fputcsv($out, [
             $s['student_id'], $s['name'],
-            $present, $absent, $leave, $skip,
+            $present, $absent, $leave, $skip, $presentPct . '%',
             $nail, $hair, $shirt, $pants, $socks, $shoes,
             implode('; ', $notes),
         ]);
