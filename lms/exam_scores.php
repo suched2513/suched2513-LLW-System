@@ -82,9 +82,9 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         for ($i = 1; $i <= $max_att; $i++) {
             $a = null;
             foreach ($r['attempts'] as $att) { if ((int)$att['attempt_no'] === $i) { $a = $att; break; } }
-            $row[] = $a ? "{$a['score']}/{$a['total']}" : '';
+            $row[] = $a ? "{$a['score']} จาก {$a['total']}" : '';
         }
-        $row[] = $r['best'] ? "{$r['best']['score']}/{$r['best']['total']}" : 'ยังไม่สอบ';
+        $row[] = $r['best'] ? "{$r['best']['score']} จาก {$r['best']['total']}" : 'ยังไม่สอบ';
         $row[] = $r['best_passed'] === 1 ? 'ผ่าน' : ($r['best_passed'] === 0 ? 'ไม่ผ่าน' : 'ยังไม่สอบ');
         fputcsv($out, $row);
     }
