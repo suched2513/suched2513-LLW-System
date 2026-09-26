@@ -63,6 +63,34 @@ if (!empty($students)) {
     }
 }
 
+// ── CSV Export (ต้องทำก่อน output ใดๆ) ──
+if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+    $filename = "คะแนนสอบ{$label}_" . ($sel_class !== '' ? $sel_class . '_' : '') . date('Ymd') . ".csv";
+    $filename = preg_replace('/[^\p{L}\p{N}\p{M}\-_.]/u', '_', $filename);
+    header('Content-Type: text/csv; charset=utf-8');
+    header("Content-Disposition: attachment; filename=\"$filename\"");
+    echo "\xEF\xBB\xBF";
+    $out = fopen('php://output', 'w');
+    $hdr = ['รหัส', 'ชื่อ-สกุล', 'ห้อง'];
+    for ($i = 1; $i <= $max_att; $i++) $hdr[] = "ครั้งที่ $i";
+    $hdr[] = 'คะแนนจริง (สูงสุด)';
+    $hdr[] = 'สถานะ';
+    fputcsv($out, $hdr);
+    foreach ($rows as $r) {
+        $s   = $r['student'];
+        $row = [$s['student_id'], $s['student_name'], $s['classroom']];
+        for ($i = 1; $i <= $max_att; $i++) {
+            $a = null;
+            foreach ($r['attempts'] as $att) { if ((int)$att['attempt_no'] === $i) { $a = $att; break; } }
+            $row[] = $a ? "{$a['score']}/{$a['total']}" : '';
+        }
+        $row[] = $r['best'] ? "{$r['best']['score']}/{$r['best']['total']}" : 'ยังไม่สอบ';
+        $row[] = $r['best_passed'] === 1 ? 'ผ่าน' : ($r['best_passed'] === 0 ? 'ไม่ผ่าน' : 'ยังไม่สอบ');
+        fputcsv($out, $row);
+    }
+    fclose($out); exit();
+}
+
 $pageTitle    = 'คะแนนสอบ' . $label;
 $pageSubtitle = htmlspecialchars($subject['subject_name'], ENT_QUOTES, 'UTF-8');
 $activeSystem = 'lms';
@@ -105,6 +133,12 @@ require_once __DIR__ . '/../components/layout_start.php';
       </option>
       <?php endforeach; ?>
     </select>
+    <?php endif; ?>
+    <?php if (!empty($rows)): ?>
+    <a href="exam_scores.php?subject_id=<?=$subject_id?>&type=<?=$type?>&class=<?=urlencode($sel_class)?>&export=csv"
+       class="ml-auto px-3 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-bold rounded-xl hover:bg-emerald-100 transition-all flex items-center gap-2">
+      <i class="fas fa-file-csv"></i> Export CSV
+    </a>
     <?php endif; ?>
   </form>
 </div>
