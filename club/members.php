@@ -30,8 +30,11 @@ $stmt->execute([$club_id]);
 $club = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$club) { header('Location: /club/index.php'); exit(); }
 
-if ($userRole === 'att_teacher' && (int)$club['teacher_id'] !== $teacherId) {
-    header('Location: /club/index.php'); exit();
+if ($userRole === 'att_teacher') {
+    $advisorIds = array_filter([(int)$club['teacher_id'], (int)$club['teacher_id_2'], (int)$club['teacher_id_3']]);
+    if (!in_array($teacherId, $advisorIds, true)) {
+        header('Location: /club/index.php'); exit();
+    }
 }
 
 // Total done sessions
