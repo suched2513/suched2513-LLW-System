@@ -52,7 +52,9 @@ try {
                    cg.status, cg.pass_threshold, cg.created_at,
                    (SELECT COUNT(*) FROM club_registrations cr
                     JOIN att_students s ON s.student_id = cr.student_id
-                    WHERE cr.club_id = cg.id AND cr.semester = cg.semester AND cr.year = cg.year AND s.status = 'active') AS registered_count
+                    WHERE cr.club_id = cg.id AND cr.semester = cg.semester AND cr.year = cg.year AND s.status = 'active') AS registered_count,
+                   (SELECT COUNT(*) FROM club_sessions cs
+                    WHERE cs.club_id = cg.id AND cs.status = 'done') AS session_count
             FROM club_groups cg
             LEFT JOIN att_teachers t1 ON t1.id = cg.teacher_id
             LEFT JOIN att_teachers t2 ON t2.id = cg.teacher_id_2
@@ -64,7 +66,12 @@ try {
     $stmt->execute($params);
     $clubs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode(['status' => 'success', 'data' => $clubs]);
+    $totalStudents = (int)$pdo->query("
+        SELECT COUNT(*) FROM att_students
+        WHERE classroom REGEXP '^ม\\.[1-6]/' AND status = 'active'
+    ")->fetchColumn();
+
+    echo json_encode(['status' => 'success', 'data' => $clubs, 'total_students' => $totalStudents]);
 } catch (Exception $e) {
     error_log('[clubs_list] ' . $e->getMessage());
     http_response_code(500);
