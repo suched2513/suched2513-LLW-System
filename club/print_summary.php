@@ -13,10 +13,12 @@ $settRow = $pdo->query("SELECT semester, year FROM club_settings WHERE is_active
 $activeSemester = $settRow['semester'] ?? '-';
 $activeYear = $settRow['year'] ?? '-';
 
-$sql = "SELECT cg.name, cg.room, cg.max_capacity, cg.semester, cg.year,
+$sql = "SELECT cg.name, cg.room, cg.max_capacity, cg.semester, cg.year, cg.obstacles,
                t1.name AS teacher_name, t2.name AS teacher_name_2, t3.name AS teacher_name_3,
                (SELECT COUNT(*) FROM club_registrations cr WHERE cr.club_id = cg.id AND cr.semester = cg.semester AND cr.year = cg.year) AS registered_count,
-               (SELECT COUNT(*) FROM club_sessions cs WHERE cs.club_id = cg.id AND cs.status = 'done') AS session_count
+               (SELECT COUNT(*) FROM club_sessions cs WHERE cs.club_id = cg.id AND cs.status = 'done') AS session_count,
+               (SELECT COUNT(*) FROM club_results r WHERE r.club_id = cg.id AND r.semester = cg.semester AND r.year = cg.year AND r.result = 'pass') AS pass_count,
+               (SELECT COUNT(*) FROM club_results r WHERE r.club_id = cg.id AND r.semester = cg.semester AND r.year = cg.year AND r.result = 'fail') AS fail_count
         FROM club_groups cg
         LEFT JOIN att_teachers t1 ON t1.id = cg.teacher_id
         LEFT JOIN att_teachers t2 ON t2.id = cg.teacher_id_2
@@ -32,6 +34,7 @@ $totalMembers = 0;
 foreach ($clubs as $c) {
     $totalMembers += (int)$c['registered_count'];
 }
+$clubsWithObstacles = array_filter($clubs, fn($c) => trim((string)$c['obstacles']) !== '');
 
 // Summary By Class
 $stmtByClass = $pdo->prepare("
@@ -54,6 +57,7 @@ $byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
     <meta charset="UTF-8">
     <title>สรุปข้อมูลชุมนุม</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Sarabun', sans-serif; margin: 40px; font-size: 11pt; line-height: 1.4; }
         h2 { text-align: center; margin-bottom: 5px; font-size: 16pt; }
@@ -91,18 +95,20 @@ $byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
     <table>
         <thead>
             <tr>
-                <th width="6%">ที่</th>
-                <th width="28%">ชื่อชุมนุม</th>
-                <th width="26%">ครูผู้สอน / ที่ปรึกษา</th>
-                <th width="12%">ห้องเรียน</th>
-                <th width="13%">สมาชิก (คน)</th>
-                <th width="15%">คาบที่จัดแล้ว</th>
+                <th width="4%">ที่</th>
+                <th width="20%">ชื่อชุมนุม</th>
+                <th width="17%">ครูผู้สอน / ที่ปรึกษา</th>
+                <th width="8%">ห้องเรียน</th>
+                <th width="10%">สมาชิก (คน)</th>
+                <th width="11%">คาบที่จัดแล้ว</th>
+                <th width="8%">ผ่าน</th>
+                <th width="8%">ไม่ผ่าน</th>
             </tr>
         </thead>
         <tbody>
             <?php if (count($clubs) === 0): ?>
             <tr>
-                <td colspan="6" class="text-center">ไม่พบข้อมูลชุมนุม</td>
+                <td colspan="8" class="text-center">ไม่พบข้อมูลชุมนุม</td>
             </tr>
             <?php else: ?>
                 <?php foreach ($clubs as $idx => $c): ?>
@@ -118,6 +124,8 @@ $byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
                     <td class="text-center"><?= htmlspecialchars($c['room'] ?: '-') ?></td>
                     <td class="text-center"><?= $c['registered_count'] ?> / <?= $c['max_capacity'] ?></td>
                     <td class="text-center"><?= (int)$c['session_count'] === 0 ? 'ยังไม่จัด' : $c['session_count'] ?></td>
+                    <td class="text-center"><?= (int)$c['pass_count'] ?></td>
+                    <td class="text-center"><?= (int)$c['fail_count'] ?></td>
                 </tr>
                 <?php endforeach; ?>
             <?php endif; ?>
@@ -162,6 +170,35 @@ $byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
         </tfoot>
     </table>
 
+    <div style="page-break-before: auto;"></div>
+
+    <h3>3. ปัญหาและอุปสรรคของแต่ละชุมนุม</h3>
+    <?php if (empty($clubsWithObstacles)): ?>
+    <p style="color:#666">— ไม่มีชุมนุมใดรายงานปัญหาหรืออุปสรรค —</p>
+    <?php else: ?>
+    <table>
+        <thead>
+            <tr>
+                <th width="25%">ชื่อชุมนุม</th>
+                <th width="75%">ปัญหาและอุปสรรค</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($clubsWithObstacles as $c): ?>
+            <tr>
+                <td><?= htmlspecialchars($c['name']) ?></td>
+                <td><?= nl2br(htmlspecialchars($c['obstacles'])) ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php endif; ?>
+
+    <h3>4. กราฟเปรียบเทียบผลการประเมินรายชุมนุม</h3>
+    <div style="max-width:100%">
+        <canvas id="resultChart" height="90"></canvas>
+    </div>
+
     <div class="footer">
         <div class="signature-box">
             ลงชื่อ......................................................<br>
@@ -175,5 +212,24 @@ $byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
             แอดมินผู้ดูแลระบบ / ผู้อำนวยการ
         </div>
     </div>
+
+    <script>
+    const ctx = document.getElementById('resultChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: <?= json_encode(array_column($clubs, 'name'), JSON_UNESCAPED_UNICODE) ?>,
+            datasets: [
+                { label: 'ผ่าน', data: <?= json_encode(array_map('intval', array_column($clubs, 'pass_count'))) ?>, backgroundColor: '#16a34a' },
+                { label: 'ไม่ผ่าน', data: <?= json_encode(array_map('intval', array_column($clubs, 'fail_count'))) ?>, backgroundColor: '#dc2626' }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+    </script>
 </body>
 </html>

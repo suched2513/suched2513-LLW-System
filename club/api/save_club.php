@@ -22,6 +22,7 @@ $id            = isset($input['id']) ? (int)$input['id'] : 0;
 $name          = trim($input['name'] ?? '');
 $description   = trim($input['description'] ?? '');
 $objectives    = trim($input['objectives'] ?? '');
+$obstacles     = trim($input['obstacles'] ?? '');
 $teacher_id    = isset($input['teacher_id'])   && $input['teacher_id']   !== '' ? (int)$input['teacher_id']   : null;
 $teacher_id_2  = isset($input['teacher_id_2']) && $input['teacher_id_2'] !== '' ? (int)$input['teacher_id_2'] : null;
 $teacher_id_3  = isset($input['teacher_id_3']) && $input['teacher_id_3'] !== '' ? (int)$input['teacher_id_3'] : null;
@@ -101,12 +102,12 @@ try {
     $pdo = getPdo();
 
     if ($id > 0) {
-        $stmt = $pdo->prepare("UPDATE club_groups SET name=?, description=?, objectives=?, teacher_id=?, teacher_id_2=?, teacher_id_3=?, room=?, max_capacity=?, semester=?, year=?, status=?, pass_threshold=? WHERE id=?");
-        $stmt->execute([$name, $description, $objectives, $teacher_id, $teacher_id_2, $teacher_id_3, $room, $max_capacity, $semester, $year, $status, $pass_threshold, $id]);
+        $stmt = $pdo->prepare("UPDATE club_groups SET name=?, description=?, objectives=?, obstacles=?, teacher_id=?, teacher_id_2=?, teacher_id_3=?, room=?, max_capacity=?, semester=?, year=?, status=?, pass_threshold=? WHERE id=?");
+        $stmt->execute([$name, $description, $objectives, $obstacles, $teacher_id, $teacher_id_2, $teacher_id_3, $room, $max_capacity, $semester, $year, $status, $pass_threshold, $id]);
         echo json_encode(['status' => 'success', 'message' => 'แก้ไขข้อมูลชุมนุมสำเร็จ', 'id' => $id]);
     } else {
-        $stmt = $pdo->prepare("INSERT INTO club_groups (name, description, objectives, teacher_id, teacher_id_2, teacher_id_3, room, max_capacity, semester, year, status, pass_threshold) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$name, $description, $objectives, $teacher_id, $teacher_id_2, $teacher_id_3, $room, $max_capacity, $semester, $year, $status, $pass_threshold]);
+        $stmt = $pdo->prepare("INSERT INTO club_groups (name, description, objectives, obstacles, teacher_id, teacher_id_2, teacher_id_3, room, max_capacity, semester, year, status, pass_threshold) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        $stmt->execute([$name, $description, $objectives, $obstacles, $teacher_id, $teacher_id_2, $teacher_id_3, $room, $max_capacity, $semester, $year, $status, $pass_threshold]);
         $newId = (int)$pdo->lastInsertId();
         echo json_encode(['status' => 'success', 'message' => 'สร้างชุมนุมสำเร็จ', 'id' => $newId]);
     }

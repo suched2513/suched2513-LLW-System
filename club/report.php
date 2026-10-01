@@ -28,7 +28,7 @@ if ($userRole === 'att_teacher' && $teacherId > 0) {
     $clubParams[] = $teacherId;
 }
 $stmtClubs = $pdo->prepare("
-    SELECT cg.id, cg.name, cg.max_capacity, cg.pass_threshold,
+    SELECT cg.id, cg.name, cg.max_capacity, cg.pass_threshold, cg.obstacles,
            t1.name AS teacher_name, t2.name AS teacher_name_2, t3.name AS teacher_name_3,
            COUNT(DISTINCT cr.id) AS reg_count,
            COUNT(DISTINCT CASE WHEN cr2.result='pass' THEN cr2.id END) AS pass_count,
@@ -149,6 +149,16 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
     </div>
 
+    <!-- Chart: pass/fail per club -->
+    <?php if (!empty($clubs)): ?>
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-body">
+            <h6 class="fw-bold mb-3">กราฟเปรียบเทียบผลการประเมินรายชุมนุม</h6>
+            <canvas id="resultChart" height="90"></canvas>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Tabs -->
     <ul class="nav nav-tabs border-0 mb-3">
         <li class="nav-item"><a href="#tab-clubs"   class="nav-link active" data-bs-toggle="tab">รายชุมนุม</a></li>
@@ -171,6 +181,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">คาบที่จัดแล้ว</th>
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">ผ่าน</th>
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">ไม่ผ่าน</th>
+                                    <th class="fw-bold text-uppercase small text-muted px-3 py-3">ปัญหา/อุปสรรค</th>
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">จัดการ</th>
                                 </tr>
                             </thead>
@@ -194,6 +205,15 @@ require_once __DIR__ . '/../components/layout_start.php';
                                 </td>
                                 <td class="px-3 py-3 text-center"><span class="badge bg-success rounded-pill"><?= $c['pass_count'] ?></span></td>
                                 <td class="px-3 py-3 text-center"><span class="badge bg-danger rounded-pill"><?= $c['fail_count'] ?></span></td>
+                                <td class="px-3 py-3 small text-muted" style="max-width:220px">
+                                    <?php if (trim((string)$c['obstacles']) !== ''): ?>
+                                    <span title="<?= htmlspecialchars($c['obstacles'], ENT_QUOTES, 'UTF-8') ?>">
+                                        <?= htmlspecialchars(mb_substr($c['obstacles'], 0, 40), ENT_QUOTES, 'UTF-8') ?><?= mb_strlen($c['obstacles']) > 40 ? '…' : '' ?>
+                                    </span>
+                                    <?php else: ?>
+                                    <span class="text-muted">—</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="px-3 py-3 text-center text-nowrap">
                                     <a href="/club/members.php?club_id=<?= $c['id'] ?>" class="btn btn-outline-secondary btn-sm rounded-2 me-1"><i class="fas fa-users"></i></a>
                                     <a href="/club/results.php?club_id=<?= $c['id'] ?>" class="btn btn-outline-primary btn-sm rounded-2"><i class="fas fa-star"></i></a>
@@ -303,5 +323,26 @@ require_once __DIR__ . '/../components/layout_start.php';
     </div>
 
 </div>
+
+<?php if (!empty($clubs)): ?>
+<script>
+const ctx = document.getElementById('resultChart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: <?= json_encode(array_column($clubs, 'name'), JSON_UNESCAPED_UNICODE) ?>,
+        datasets: [
+            { label: 'ผ่าน', data: <?= json_encode(array_map('intval', array_column($clubs, 'pass_count'))) ?>, backgroundColor: '#16a34a' },
+            { label: 'ไม่ผ่าน', data: <?= json_encode(array_map('intval', array_column($clubs, 'fail_count'))) ?>, backgroundColor: '#dc2626' }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+</script>
+<?php endif; ?>
 
 <?php require_once __DIR__ . '/../components/layout_end.php'; ?>

@@ -86,6 +86,10 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <label class="form-label fw-bold small text-uppercase text-muted">วัตถุประสงค์</label>
                 <textarea id="f_objectives" class="form-control rounded-3" rows="2"><?= htmlspecialchars($club['objectives'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
             </div>
+            <div class="col-12">
+                <label class="form-label fw-bold small text-uppercase text-muted">ปัญหาและอุปสรรค</label>
+                <textarea id="f_obstacles" class="form-control rounded-3" rows="2" placeholder="เช่น นักเรียนมาไม่ครบ, สถานที่ไม่พร้อม, ขาดอุปกรณ์ ฯลฯ (ใส่ตอนไหนก็ได้ กลับมาแก้ไขทีหลังได้)"><?= htmlspecialchars($club['obstacles'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+            </div>
             <!-- Teacher 1 -->
             <div class="col-md-4">
                 <label class="form-label fw-bold small text-uppercase text-muted">ครูที่ปรึกษาคนที่ 1 <span class="text-danger">*</span></label>
@@ -193,6 +197,7 @@ async function saveClub() {
         name,
         description:    document.getElementById('f_description').value.trim(),
         objectives:     document.getElementById('f_objectives').value.trim(),
+        obstacles:      document.getElementById('f_obstacles').value.trim(),
         teacher_id:     document.getElementById('f_teacher_id').value,
         teacher_id_2:   document.getElementById('f_teacher_id_2').value,
         teacher_id_3:   document.getElementById('f_teacher_id_3').value,
