@@ -15,7 +15,8 @@ $activeYear = $settRow['year'] ?? '-';
 
 $sql = "SELECT cg.name, cg.room, cg.max_capacity, cg.semester, cg.year,
                t1.name AS teacher_name, t2.name AS teacher_name_2, t3.name AS teacher_name_3,
-               (SELECT COUNT(*) FROM club_registrations cr WHERE cr.club_id = cg.id AND cr.semester = cg.semester AND cr.year = cg.year) AS registered_count
+               (SELECT COUNT(*) FROM club_registrations cr WHERE cr.club_id = cg.id AND cr.semester = cg.semester AND cr.year = cg.year) AS registered_count,
+               (SELECT COUNT(*) FROM club_sessions cs WHERE cs.club_id = cg.id AND cs.status = 'done') AS session_count
         FROM club_groups cg
         LEFT JOIN att_teachers t1 ON t1.id = cg.teacher_id
         LEFT JOIN att_teachers t2 ON t2.id = cg.teacher_id_2
@@ -90,17 +91,18 @@ $byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
     <table>
         <thead>
             <tr>
-                <th width="7%">ที่</th>
-                <th width="33%">ชื่อชุมนุม</th>
-                <th width="30%">ครูผู้สอน / ที่ปรึกษา</th>
-                <th width="15%">ห้องเรียน</th>
-                <th width="15%">สมาชิก (คน)</th>
+                <th width="6%">ที่</th>
+                <th width="28%">ชื่อชุมนุม</th>
+                <th width="26%">ครูผู้สอน / ที่ปรึกษา</th>
+                <th width="12%">ห้องเรียน</th>
+                <th width="13%">สมาชิก (คน)</th>
+                <th width="15%">คาบที่จัดแล้ว</th>
             </tr>
         </thead>
         <tbody>
             <?php if (count($clubs) === 0): ?>
             <tr>
-                <td colspan="5" class="text-center">ไม่พบข้อมูลชุมนุม</td>
+                <td colspan="6" class="text-center">ไม่พบข้อมูลชุมนุม</td>
             </tr>
             <?php else: ?>
                 <?php foreach ($clubs as $idx => $c): ?>
@@ -115,6 +117,7 @@ $byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
                     </td>
                     <td class="text-center"><?= htmlspecialchars($c['room'] ?: '-') ?></td>
                     <td class="text-center"><?= $c['registered_count'] ?> / <?= $c['max_capacity'] ?></td>
+                    <td class="text-center"><?= (int)$c['session_count'] === 0 ? 'ยังไม่จัด' : $c['session_count'] ?></td>
                 </tr>
                 <?php endforeach; ?>
             <?php endif; ?>

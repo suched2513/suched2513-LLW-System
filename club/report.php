@@ -28,11 +28,12 @@ if ($userRole === 'att_teacher' && $teacherId > 0) {
     $clubParams[] = $teacherId;
 }
 $stmtClubs = $pdo->prepare("
-    SELECT cg.id, cg.name, cg.max_capacity, cg.pass_threshold, 
+    SELECT cg.id, cg.name, cg.max_capacity, cg.pass_threshold,
            t1.name AS teacher_name, t2.name AS teacher_name_2, t3.name AS teacher_name_3,
            COUNT(DISTINCT cr.id) AS reg_count,
            COUNT(DISTINCT CASE WHEN cr2.result='pass' THEN cr2.id END) AS pass_count,
-           COUNT(DISTINCT CASE WHEN cr2.result='fail' THEN cr2.id END) AS fail_count
+           COUNT(DISTINCT CASE WHEN cr2.result='fail' THEN cr2.id END) AS fail_count,
+           (SELECT COUNT(*) FROM club_sessions cs WHERE cs.club_id = cg.id AND cs.status = 'done') AS session_count
     FROM club_groups cg
     LEFT JOIN att_teachers t1 ON t1.id = cg.teacher_id
     LEFT JOIN att_teachers t2 ON t2.id = cg.teacher_id_2
@@ -100,9 +101,10 @@ require_once __DIR__ . '/../components/layout_start.php';
 
     <!-- Summary KPIs -->
     <?php
-    $totalReg  = array_sum(array_column($clubs, 'reg_count'));
-    $totalPass = array_sum(array_column($clubs, 'pass_count'));
-    $totalFail = array_sum(array_column($clubs, 'fail_count'));
+    $totalReg      = array_sum(array_column($clubs, 'reg_count'));
+    $totalPass     = array_sum(array_column($clubs, 'pass_count'));
+    $totalFail     = array_sum(array_column($clubs, 'fail_count'));
+    $clubsNoSession = count(array_filter($clubs, fn($c) => (int)$c['session_count'] === 0));
     ?>
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
@@ -137,6 +139,14 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </div>
             </div>
         </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-3 text-white h-100" style="background:linear-gradient(135deg,#d97706,#b45309)">
+                <div class="card-body py-3">
+                    <div class="small fw-bold opacity-75 text-uppercase">ชุมนุมที่ยังไม่จัดกิจกรรม</div>
+                    <div class="fs-2 fw-black"><?= $clubsNoSession ?></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Tabs -->
@@ -158,6 +168,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3">ชุมนุม</th>
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3">ครูที่ปรึกษา</th>
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">สมาชิก/ความจุ</th>
+                                    <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">คาบที่จัดแล้ว</th>
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">ผ่าน</th>
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">ไม่ผ่าน</th>
                                     <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">จัดการ</th>
@@ -174,6 +185,13 @@ require_once __DIR__ . '/../components/layout_start.php';
                                     ?>
                                 </td>
                                 <td class="px-3 py-3 text-center small"><?= $c['reg_count'] ?>/<?= $c['max_capacity'] ?></td>
+                                <td class="px-3 py-3 text-center">
+                                    <?php if ((int)$c['session_count'] === 0): ?>
+                                    <span class="badge bg-danger rounded-pill" title="ยังไม่จัดกิจกรรมเลยสักครั้ง"><i class="fas fa-exclamation-triangle me-1"></i>ยังไม่จัด</span>
+                                    <?php else: ?>
+                                    <span class="fw-bold small"><?= $c['session_count'] ?></span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="px-3 py-3 text-center"><span class="badge bg-success rounded-pill"><?= $c['pass_count'] ?></span></td>
                                 <td class="px-3 py-3 text-center"><span class="badge bg-danger rounded-pill"><?= $c['fail_count'] ?></span></td>
                                 <td class="px-3 py-3 text-center text-nowrap">

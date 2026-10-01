@@ -84,6 +84,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                             <th class="fw-bold text-uppercase small text-muted px-3 py-3">ครูที่ปรึกษา</th>
                             <th class="fw-bold text-uppercase small text-muted px-3 py-3">ห้อง</th>
                             <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">สมาชิก</th>
+                            <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">คาบที่จัดแล้ว</th>
                             <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">สถานะ</th>
                             <th class="fw-bold text-uppercase small text-muted px-3 py-3 text-center">จัดการ</th>
                         </tr>
@@ -150,6 +151,11 @@ async function loadClubs() {
                     <div class="progress mt-1" style="height:4px;width:80px;margin:0 auto">
                         <div class="progress-bar ${barCls}" style="width:${pct}%"></div>
                     </div>
+                </td>
+                <td class="px-3 py-3 text-center">
+                    ${parseInt(c.session_count) > 0
+                        ? `<span class="fw-bold">${c.session_count}</span>`
+                        : `<span class="badge bg-danger rounded-pill" title="ยังไม่จัดกิจกรรมเลยสักครั้ง"><i class="fas fa-exclamation-triangle me-1"></i>ยังไม่จัด</span>`}
                 </td>
                 <td class="px-3 py-3 text-center">
                     <span class="badge rounded-pill ${STATUS_CLS[c.status] || 'bg-secondary'}">${STATUS_LABEL[c.status] || c.status}</span>
