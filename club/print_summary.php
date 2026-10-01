@@ -50,6 +50,29 @@ $stmtByClass = $pdo->prepare("
 ");
 $stmtByClass->execute([$activeSemester, $activeYear]);
 $byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
+
+// Students who failed — which club
+$stmtFailed = $pdo->prepare("
+    SELECT s.name, s.classroom, cg.name AS club_name
+    FROM club_results r
+    JOIN att_students s ON s.student_id = r.student_id
+    JOIN club_groups cg ON cg.id = r.club_id
+    WHERE r.result = 'fail' AND r.semester = ? AND r.year = ?
+    ORDER BY cg.name, s.classroom, s.name
+");
+$stmtFailed->execute([$activeSemester, $activeYear]);
+$failedStudents = $stmtFailed->fetchAll(PDO::FETCH_ASSOC);
+
+// Students not registered to any club
+$stmtUnreg = $pdo->prepare("
+    SELECT s.student_id, s.name, s.classroom
+    FROM att_students s
+    WHERE s.classroom REGEXP '^ม\\.[1-6]/'
+      AND s.student_id NOT IN (SELECT student_id FROM club_registrations WHERE semester = ? AND year = ?)
+    ORDER BY s.classroom, s.name
+");
+$stmtUnreg->execute([$activeSemester, $activeYear]);
+$unregStudents = $stmtUnreg->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -194,9 +217,72 @@ $byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
     </table>
     <?php endif; ?>
 
-    <h3>4. กราฟเปรียบเทียบผลการประเมินรายชุมนุม</h3>
+    <div style="page-break-before: auto;"></div>
+
+    <h3>4. รายชื่อนักเรียนที่ไม่ผ่านการประเมิน</h3>
+    <?php if (empty($failedStudents)): ?>
+    <p style="color:#666">— ไม่มีนักเรียนที่ไม่ผ่านการประเมิน —</p>
+    <?php else: ?>
+    <table>
+        <thead>
+            <tr>
+                <th width="6%">ที่</th>
+                <th width="34%">ชื่อ-สกุล</th>
+                <th width="20%">ห้อง</th>
+                <th width="40%">ชุมนุม</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($failedStudents as $idx => $f): ?>
+            <tr>
+                <td class="text-center"><?= $idx + 1 ?></td>
+                <td><?= htmlspecialchars($f['name']) ?></td>
+                <td class="text-center"><?= htmlspecialchars($f['classroom']) ?></td>
+                <td><?= htmlspecialchars($f['club_name']) ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php endif; ?>
+
+    <div style="page-break-before: auto;"></div>
+
+    <h3>5. รายชื่อนักเรียนที่ยังไม่ลงทะเบียนชุมนุม (<?= count($unregStudents) ?> คน)</h3>
+    <?php if (empty($unregStudents)): ?>
+    <p style="color:#666">— นักเรียนทุกคนลงทะเบียนชุมนุมแล้ว —</p>
+    <?php else: ?>
+    <table>
+        <thead>
+            <tr>
+                <th width="6%">ที่</th>
+                <th width="16%">รหัส</th>
+                <th width="48%">ชื่อ-สกุล</th>
+                <th width="30%">ห้อง</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($unregStudents as $idx => $u): ?>
+            <tr>
+                <td class="text-center"><?= $idx + 1 ?></td>
+                <td class="text-center"><?= htmlspecialchars($u['student_id']) ?></td>
+                <td><?= htmlspecialchars($u['name']) ?></td>
+                <td class="text-center"><?= htmlspecialchars($u['classroom']) ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    <?php endif; ?>
+
+    <div style="page-break-before: auto;"></div>
+
+    <h3>6. กราฟเปรียบเทียบผลการประเมินรายชุมนุม</h3>
     <div style="max-width:100%">
         <canvas id="resultChart" height="90"></canvas>
+    </div>
+
+    <h3>7. กราฟเปรียบเทียบการลงทะเบียนแยกตามห้องเรียน</h3>
+    <div style="max-width:100%">
+        <canvas id="classChart" height="90"></canvas>
     </div>
 
     <div class="footer">
@@ -228,6 +314,23 @@ $byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
             responsive: true,
             plugins: { legend: { position: 'bottom' } },
             scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    const classCtx = document.getElementById('classChart').getContext('2d');
+    new Chart(classCtx, {
+        type: 'bar',
+        data: {
+            labels: <?= json_encode(array_column($byClass, 'classroom'), JSON_UNESCAPED_UNICODE) ?>,
+            datasets: [
+                { label: 'ลงทะเบียนแล้ว', data: <?= json_encode(array_map('intval', array_column($byClass, 'registered'))) ?>, backgroundColor: '#2563eb' },
+                { label: 'ยังไม่ลงทะเบียน', data: <?= json_encode(array_map(fn($r) => (int)$r['total'] - (int)$r['registered'], $byClass)) ?>, backgroundColor: '#dc2626' }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } },
+            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
         }
     });
     </script>
