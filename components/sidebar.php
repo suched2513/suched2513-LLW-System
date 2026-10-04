@@ -98,6 +98,7 @@ $subMenus = [
     ],
     'teacher_leave' => [
         ['icon' => 'fas fa-chart-pie',      'label' => 'ภาพรวมการลา', 'url' => $base_path . '/teacher_leave/admin_overview.php', 'roles' => ['super_admin','wfh_admin']],
+        ['icon' => 'fas fa-calendar-check', 'label' => 'รายงานปีงบประมาณ', 'url' => $base_path . '/teacher_leave/fiscal_report.php', 'roles' => ['super_admin','wfh_admin']],
         ['icon' => 'fas fa-tachometer-alt', 'label' => 'สรุปการลา', 'url' => $base_path . '/teacher_leave/index.php'],
         ['icon' => 'fas fa-plus-circle',    'label' => 'ยื่นใบลาใหม่', 'url' => $base_path . '/teacher_leave/form.php'],
     ],
