@@ -125,13 +125,94 @@ if ($action === 'add_student') {
 }
 
 // --- CRUD: SUBJECTS ---
-if ($action === 'add_subject') {
+// --- CRUD: SUBJECTS & TERM SETTINGS ---
+llw_ensure_semester_schema($pdo);
+$filter_year = (int)($_GET['year'] ?? llw_current_academic_year());
+$filter_sem  = isset($_GET['sem']) ? (int)$_GET['sem'] : llw_current_semester();
+
+if ($action === 'save_term_settings') {
+    $yr       = (int)($_POST['academic_year'] ?? llw_current_academic_year());
+    $s1_start = trim($_POST['sem1_start'] ?? '');
+    $s1_end   = trim($_POST['sem1_end']   ?? '');
+    $s2_start = trim($_POST['sem2_start'] ?? '');
+    $s2_end   = trim($_POST['sem2_end']   ?? '');
+    $active_m = (int)($_POST['active_mode'] ?? 0); // 0=auto, 1=force sem1, 2=force sem2
+    if ($s1_start && $s1_end && $s2_start && $s2_end) {
+        $pdo->exec("UPDATE llw_academic_terms SET is_active = 0");
+        $up = $pdo->prepare("
+            INSERT INTO llw_academic_terms (academic_year, semester, start_date, end_date, is_active)
+            VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE start_date=VALUES(start_date), end_date=VALUES(end_date), is_active=VALUES(is_active)
+        ");
+        $up->execute([$yr, 1, $s1_start, $s1_end, $active_m === 1 ? 1 : 0]);
+        $up->execute([$yr, 2, $s2_start, $s2_end, $active_m === 2 ? 1 : 0]);
+        $msg = "บันทึกการตั้งค่าภาคเรียนปีการศึกษา $yr สำเร็จ";
+    } else {
+        $msg = 'กรุณาระบุวันเปิด–ปิดภาคเรียนให้ครบ'; $msgType = 'error';
+    }
+} elseif ($action === 'copy_subjects_to_sem2') {
+    $yr        = (int)($_POST['academic_year'] ?? llw_current_academic_year());
+    $auto_code = !empty($_POST['auto_increment_code']);
+    try {
+        $pdo->beginTransaction();
+        $srcStmt = $pdo->prepare("SELECT * FROM att_subjects WHERE academic_year = ? AND semester = 1 ORDER BY id");
+        $srcStmt->execute([$yr]);
+        $sem1Subjects = $srcStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $chkStmt = $pdo->prepare("SELECT id FROM att_subjects WHERE academic_year = ? AND semester = 2 AND subject_code = ? AND classroom = ? LIMIT 1");
+        $insStmt = $pdo->prepare("INSERT INTO att_subjects (subject_code, subject_name, classroom, telegram_chat_id, is_elective, teacher_id, academic_year, semester) VALUES (?, ?, ?, ?, ?, ?, ?, 2)");
+        $enrSrc  = $pdo->prepare("SELECT student_id FROM att_subject_students WHERE subject_id = ?");
+        $enrIns  = $pdo->prepare("INSERT IGNORE INTO att_subject_students (subject_id, student_id) VALUES (?, ?)");
+
+        $copied = 0; $skipped = 0;
+        foreach ($sem1Subjects as $sub) {
+            $newCode = $sub['subject_code'];
+            $newName = $sub['subject_name'];
+            if ($auto_code && preg_match('/^(.+\d{4})1$/u', $newCode, $m)) {
+                $newCode = $m[1] . '2';
+                $newName = preg_replace('/(\s*)1$/u', '${1}2', $newName);
+            }
+            $chkStmt->execute([$yr, $newCode, $sub['classroom']]);
+            if ($chkStmt->fetchColumn()) {
+                $skipped++;
+                continue;
+            }
+            $insStmt->execute([
+                $newCode,
+                $newName,
+                $sub['classroom'],
+                $sub['telegram_chat_id'] ?? null,
+                (int)($sub['is_elective'] ?? 0),
+                (int)$sub['teacher_id'],
+                $yr,
+            ]);
+            $newSubId = (int)$pdo->lastInsertId();
+            if (!empty($sub['is_elective']) && $newSubId > 0) {
+                $enrSrc->execute([$sub['id']]);
+                foreach ($enrSrc->fetchAll(PDO::FETCH_COLUMN) as $stuId) {
+                    $enrIns->execute([$newSubId, $stuId]);
+                }
+            }
+            $copied++;
+        }
+        $pdo->commit();
+        $filter_sem = 2;
+        $msg = "คัดลอกรายวิชาสู่ภาคเรียนที่ 2 สำเร็จ $copied วิชา" . ($skipped ? " (ข้ามที่มีอยู่แล้ว $skipped วิชา)" : '');
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        $msg = 'เกิดข้อผิดพลาดในการคัดลอกวิชา: ' . $e->getMessage();
+        $msgType = 'error';
+    }
+} elseif ($action === 'add_subject') {
     $tid = (int)$_POST['teacher_id']; $code = trim($_POST['subject_code']); $name = trim($_POST['subject_name']); $cls = trim($_POST['classroom']);
     $is_elective = isset($_POST['is_elective']) ? 1 : 0;
     if (!$tid || !$code || !$name || !$cls) { $msg = 'ข้อมูลไม่ครบ'; $msgType = 'error'; } 
     else {
         try {
-            $pdo->prepare("INSERT INTO att_subjects (subject_code,subject_name,classroom,teacher_id,is_elective) VALUES (?,?,?,?,?)")->execute([$code, $name, $cls, $tid, $is_elective]);
+            $sem_in = max(1, min(2, (int)($_POST['semester'] ?? $filter_sem)));
+            $yr_in  = (int)($_POST['academic_year'] ?? $filter_year);
+            $pdo->prepare("INSERT INTO att_subjects (subject_code,subject_name,classroom,teacher_id,is_elective,academic_year,semester) VALUES (?,?,?,?,?,?,?)")->execute([$code, $name, $cls, $tid, $is_elective, $yr_in, $sem_in]);
+            $filter_sem = $sem_in;
         } catch (PDOException $e) {
             // Fallback: column is_elective ยังไม่มี (ยังไม่ได้ run migration)
             $pdo->prepare("INSERT INTO att_subjects (subject_code,subject_name,classroom,teacher_id) VALUES (?,?,?,?)")->execute([$code, $name, $cls, $tid]);
@@ -148,7 +229,8 @@ if ($action === 'add_subject') {
         $_chk_tg = (bool)$pdo->query("SHOW COLUMNS FROM `att_subjects` LIKE 'telegram_chat_id'")->fetch();
         if ($_chk_tg) {
             $chat = trim($_POST['telegram_chat_id'] ?? '');
-            $pdo->prepare("UPDATE att_subjects SET teacher_id=?, subject_code=?, subject_name=?, classroom=?, telegram_chat_id=? WHERE id=?")->execute([$tid, $code, $name, $cls, $chat ?: null, $sid]);
+            $sem_ed = max(1, min(2, (int)($_POST['semester'] ?? $filter_sem)));
+            $pdo->prepare("UPDATE att_subjects SET teacher_id=?, subject_code=?, subject_name=?, classroom=?, telegram_chat_id=?, semester=? WHERE id=?")->execute([$tid, $code, $name, $cls, $chat ?: null, $sem_ed, $sid]);
         } else {
             $pdo->prepare("UPDATE att_subjects SET teacher_id=?, subject_code=?, subject_name=?, classroom=? WHERE id=?")->execute([$tid, $code, $name, $cls, $sid]);
         }
@@ -202,7 +284,12 @@ try {
         ORDER BY firstname
     ")->fetchAll();
 
-    $subjects   = $pdo->query("SELECT s.*, t.name as t_name FROM att_subjects s JOIN att_teachers t ON t.id = s.teacher_id ORDER BY s.subject_code")->fetchAll();
+    $sem1_subj_count = (int)$pdo->query("SELECT COUNT(*) FROM att_subjects WHERE academic_year = $filter_year AND semester = 1")->fetchColumn();
+    $sem2_subj_count = (int)$pdo->query("SELECT COUNT(*) FROM att_subjects WHERE academic_year = $filter_year AND semester = 2")->fetchColumn();
+    $sem_where = $filter_sem > 0 ? "WHERE s.academic_year = $filter_year AND s.semester = $filter_sem" : "WHERE s.academic_year = $filter_year";
+    $subjects   = $pdo->query("SELECT s.*, t.name as t_name FROM att_subjects s JOIN att_teachers t ON t.id = s.teacher_id $sem_where ORDER BY s.semester, s.subject_code")->fetchAll();
+    $term1_cfg  = llw_get_term_dates($filter_year, 1, $pdo);
+    $term2_cfg  = llw_get_term_dates($filter_year, 2, $pdo);
     $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE student_id REGEXP '^[0-9]+$' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
     if (!$filter_cls) $filter_cls = $classrooms[0] ?? '';
@@ -515,6 +602,94 @@ require_once '../components/layout_start.php';
 
     <!-- ══ SUBJECTS TAB ══ -->
     <div id="pane-subjects" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- ── แถบจัดการภาคเรียน 1/2 + คัดลอกรายวิชาในคลิกเดียว ── -->
+        <div class="lg:col-span-3 bg-gradient-to-r from-indigo-50 via-blue-50 to-emerald-50 rounded-3xl p-6 border border-blue-100 shadow-sm flex flex-col gap-5">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-xl shadow-md shadow-blue-200"><i class="bi bi-calendar2-range-fill"></i></div>
+                    <div>
+                        <h3 class="font-black text-slate-800 text-base">ตั้งค่าภาคเรียน & จัดการรายวิชาประจำเทอม (ปีการศึกษา <?= $filter_year ?>)</h3>
+                        <p class="text-xs text-slate-500 font-bold">ภาคเรียนปัจจุบันของระบบ: <span class="text-blue-600">ภาคเรียนที่ <?= llw_current_semester() ?>/<?= llw_current_academic_year() ?></span></p>
+                    </div>
+                </div>
+                <!-- สลับดูวิชาตามภาคเรียน -->
+                <div class="flex items-center gap-1.5 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
+                    <a href="admin.php?tab=subjects&year=<?= $filter_year ?>&sem=1" class="px-4 py-2 rounded-xl text-xs font-black transition-all <?= $filter_sem === 1 ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50' ?>">
+                        เทอม 1 (<?= $sem1_subj_count ?? 0 ?> วิชา)
+                    </a>
+                    <a href="admin.php?tab=subjects&year=<?= $filter_year ?>&sem=2" class="px-4 py-2 rounded-xl text-xs font-black transition-all <?= $filter_sem === 2 ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50' ?>">
+                        เทอม 2 (<?= $sem2_subj_count ?? 0 ?> วิชา)
+                    </a>
+                    <a href="admin.php?tab=subjects&year=<?= $filter_year ?>&sem=0" class="px-4 py-2 rounded-xl text-xs font-black transition-all <?= $filter_sem === 0 ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50' ?>">
+                        ทุกเทอม
+                    </a>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- ฟอร์มตั้งค่าวันเปิด-ปิดภาคเรียน -->
+                <form method="POST" class="bg-white/90 rounded-2xl p-4 border border-slate-200/80 flex flex-col gap-3">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="save_term_settings">
+                    <input type="hidden" name="academic_year" value="<?= $filter_year ?>">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-black text-slate-700"><i class="bi bi-Sliders text-blue-600 me-1"></i> วันเปิด–ปิดภาคเรียน (ใช้คำนวณเวลาเรียน มส. 80% และเข้าแถว)</span>
+                        <select name="active_mode" class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-700 outline-none">
+                            <option value="0" <?= empty($term1_cfg['is_active']) && empty($term2_cfg['is_active']) ? 'selected' : '' ?>>สลับเทอมอัตโนมัติตามวันที่</option>
+                            <option value="1" <?= !empty($term1_cfg['is_active']) ? 'selected' : '' ?>>บังคับใช้ ภาคเรียนที่ 1</option>
+                            <option value="2" <?= !empty($term2_cfg['is_active']) ? 'selected' : '' ?>>บังคับใช้ ภาคเรียนที่ 2</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                            <span class="font-black text-blue-700 block mb-1">ภาคเรียนที่ 1</span>
+                            <div class="flex items-center gap-1">
+                                <input type="date" name="sem1_start" value="<?= htmlspecialchars($term1_cfg['start_date'] ?? '2026-05-16') ?>" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold">
+                                <span>–</span>
+                                <input type="date" name="sem1_end" value="<?= htmlspecialchars($term1_cfg['end_date'] ?? '2026-10-31') ?>" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold">
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                            <span class="font-black text-emerald-700 block mb-1">ภาคเรียนที่ 2</span>
+                            <div class="flex items-center gap-1">
+                                <input type="date" name="sem2_start" value="<?= htmlspecialchars($term2_cfg['start_date'] ?? '2026-11-01') ?>" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold">
+                                <span>–</span>
+                                <input type="date" name="sem2_end" value="<?= htmlspecialchars($term2_cfg['end_date'] ?? '2027-03-31') ?>" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold">
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="self-end bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-700 transition shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> บันทึกวันเปิด–ปิดเทอม
+                    </button>
+                </form>
+
+                <!-- ฟอร์มคัดลอกรายวิชาจากเทอม 1 มาเทอม 2 ในคลิกเดียว -->
+                <form method="POST" onsubmit="return confirm('ยืนยันการคัดลอกรายวิชาทั้งหมดจากเทอม 1 ไปยังเทอม 2 หรือไม่? (วิชาที่มีอยู่แล้วในเทอม 2 จะไม่ถูกทับ)');" class="bg-white/90 rounded-2xl p-4 border border-emerald-200/80 flex flex-col justify-between gap-3">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="copy_subjects_to_sem2">
+                    <input type="hidden" name="academic_year" value="<?= $filter_year ?>">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-black uppercase">One-Click Rollover</span>
+                            <h4 class="font-black text-slate-800 text-xs">คัดลอกรายวิชาและรายชื่อนักเรียนวิชาเลือกจาก เทอม 1 → เทอม 2</h4>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">ไม่ต้องกรอกวิชาใหม่ทีละห้อง! ระบบจะคัดลอกครูผู้สอน ห้องเรียน ตั้งค่า Telegram และรายชื่อนักเรียนวิชาเลือกจากเทอม 1 (<?= $sem1_subj_count ?? 0 ?> วิชา) มาสร้างเป็นวิชาของเทอม 2 ให้ทันที</p>
+                        <label class="flex items-center gap-2 mt-2.5 text-xs font-bold text-slate-700 cursor-pointer">
+                            <input type="checkbox" name="auto_increment_code" value="1" checked class="w-4 h-4 accent-emerald-600">
+                            <span>เปลี่ยนเลขท้ายรหัสวิชาจาก <code class="bg-slate-100 px-1 rounded">...1</code> เป็น <code class="bg-emerald-50 text-emerald-700 px-1 rounded">...2</code> อัตโนมัติ (เช่น ท21101 → ท21102)</span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                        <a href="import_subjects.php?semester=<?= $filter_sem ?: 2 ?>" class="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
+                            <i class="bi bi-file-earmark-spreadsheet-fill"></i> หรือนำเข้าวิชาจาก CSV
+                        </a>
+                        <button type="submit" class="bg-emerald-600 text-white px-5 py-2 rounded-xl text-xs font-black hover:bg-emerald-700 transition shadow-md shadow-emerald-100 flex items-center gap-1.5">
+                            <i class="bi bi-files"></i> คัดลอกวิชาไปเทอม 2 ทันที
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
         <!-- Add Subject Form -->
         <div class="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex flex-col gap-6 h-fit">
             <div class="flex items-center gap-3">
@@ -524,6 +699,14 @@ require_once '../components/layout_start.php';
             <form method="POST" class="space-y-4">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="add_subject">
+                <input type="hidden" name="academic_year" value="<?= $filter_year ?>">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ภาคเรียน</label>
+                    <select name="semester" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-blue-400 outline-none">
+                        <option value="1" <?= ($filter_sem ?: llw_current_semester()) == 1 ? 'selected' : '' ?>>ภาคเรียนที่ 1/<?= $filter_year ?></option>
+                        <option value="2" <?= ($filter_sem ?: llw_current_semester()) == 2 ? 'selected' : '' ?>>ภาคเรียนที่ 2/<?= $filter_year ?></option>
+                    </select>
+                </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ครูผู้สอน</label>
                     <select name="teacher_id" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
@@ -577,7 +760,7 @@ require_once '../components/layout_start.php';
                         <tr class="hover:bg-slate-50 transition">
                             <td class="px-6 py-4">
                                 <div class="flex flex-col">
-                                    <span class="text-xs font-mono text-blue-600 font-bold"><?= $s['subject_code'] ?></span>
+                                    <span class="text-xs font-mono text-blue-600 font-bold"><?= $s['subject_code'] ?> <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] ms-1">เทอม <?= (int)($s['semester'] ?? 1) ?></span></span>
                                     <span class="font-bold text-slate-700"><?= htmlspecialchars($s['subject_name']) ?></span>
                                 </div>
                             </td>
@@ -1100,14 +1283,14 @@ function editStudent(id, sidCode, name, classroom) {
 <?php
 $swal_tab = 'teachers';
 if ($msg && in_array($action, ['add_student','edit_student','delete_student'])) $swal_tab = 'students';
-if ($msg && in_array($action, ['add_subject','delete_subject'])) $swal_tab = 'subjects';
+if ($msg && in_array($action, ['add_subject','edit_subject','delete_subject','save_term_settings','copy_subjects_to_sem2'])) $swal_tab = 'subjects';
 if ($msg && $action === 'save_enrollment') $swal_tab = 'enrollment';
 
 if ($msg) {
     $safeMsg = addslashes(htmlspecialchars($msg, ENT_QUOTES, 'UTF-8'));
     echo "<script>Swal.fire({ icon: '$msgType', title: 'แจ้งเตือน', text: '$safeMsg', timer: 2000, showConfirmButton: false }).then(()=>showTab('$swal_tab'));</script>";
 } else {
-    $initTab = isset($_GET['cls']) ? 'students' : 'teachers';
+    $initTab = $_GET['tab'] ?? (isset($_GET['sem']) ? 'subjects' : (isset($_GET['cls']) ? 'students' : 'teachers'));
     echo "<script>document.addEventListener('DOMContentLoaded',()=>showTab('$initTab'));</script>";
 }
 require_once '../components/layout_end.php';

@@ -29,9 +29,15 @@ foreach ($allTeachers as $t) {
     $teacherByName[trim($t['display_name'])] = (int)$t['id'];
 }
 
-// ── ดึงรายวิชาปัจจุบัน (subject_code + classroom เป็น key) ──
+llw_ensure_semester_schema($pdo);
+$target_year = (int)($_POST['academic_year'] ?? $_GET['year'] ?? llw_current_academic_year());
+$target_sem  = max(1, min(2, (int)($_POST['semester'] ?? $_GET['semester'] ?? llw_current_semester())));
+
+// ── ดึงรายวิชาปัจจุบันในเทอมที่เลือก (subject_code + classroom เป็น key) ──
 $existingSubjects = [];
-foreach ($pdo->query("SELECT subject_code, classroom FROM att_subjects")->fetchAll(PDO::FETCH_ASSOC) as $s) {
+$exStmt = $pdo->prepare("SELECT subject_code, classroom FROM att_subjects WHERE academic_year = ? AND semester = ?");
+$exStmt->execute([$target_year, $target_sem]);
+foreach ($exStmt->fetchAll(PDO::FETCH_ASSOC) as $s) {
     $existingSubjects[strtolower(trim($s['subject_code'])) . '|' . trim($s['classroom'])] = true;
 }
 
@@ -68,7 +74,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // refresh classrooms list
                 $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_subjects ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
                 $existingSubjects = [];
-                foreach ($pdo->query("SELECT subject_code, classroom FROM att_subjects")->fetchAll(PDO::FETCH_ASSOC) as $s) {
+                $exStmt = $pdo->prepare("SELECT subject_code, classroom FROM att_subjects WHERE academic_year = ? AND semester = ?");
+                $exStmt->execute([$target_year, $target_sem]);
+                foreach ($exStmt->fetchAll(PDO::FETCH_ASSOC) as $s) {
                     $existingSubjects[strtolower(trim($s['subject_code'])) . '|' . trim($s['classroom'])] = true;
                 }
             } catch (Exception $e) {
@@ -169,10 +177,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tidNullable = ($colInfo && strtolower($colInfo['Null'] ?? '') === 'yes');
             $tidFallback = $tidNullable ? null : 0; // ใช้ค่า default ที่ปลอดภัย
 
-            $stmtChk       = $pdo->prepare("SELECT id FROM att_subjects WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?) LIMIT 1");
-            $stmtUpdFull   = $pdo->prepare("UPDATE att_subjects SET subject_name=?, teacher_id=?, is_elective=? WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?)");
-            $stmtUpdName   = $pdo->prepare("UPDATE att_subjects SET subject_name=?, is_elective=? WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?)");
-            $stmtIns       = $pdo->prepare("INSERT INTO att_subjects (subject_code, subject_name, classroom, teacher_id, is_elective) VALUES (?, ?, ?, ?, ?)");
+            $stmtChk       = $pdo->prepare("SELECT id FROM att_subjects WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?) AND academic_year=? AND semester=? LIMIT 1");
+            $stmtUpdFull   = $pdo->prepare("UPDATE att_subjects SET subject_name=?, teacher_id=?, is_elective=? WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?) AND academic_year=? AND semester=?");
+            $stmtUpdName   = $pdo->prepare("UPDATE att_subjects SET subject_name=?, is_elective=? WHERE LOWER(TRIM(subject_code))=LOWER(TRIM(?)) AND TRIM(classroom)=TRIM(?) AND academic_year=? AND semester=?");
+            $stmtIns       = $pdo->prepare("INSERT INTO att_subjects (subject_code, subject_name, classroom, teacher_id, is_elective, academic_year, semester) VALUES (?, ?, ?, ?, ?, ?, ?)");
 
             $errors = [];
             foreach ($data as $r) {
@@ -184,17 +192,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$code || !$name) continue;
 
                 try {
-                    $stmtChk->execute([$code, $cls]);
+                    $stmtChk->execute([$code, $cls, $target_year, $target_sem]);
                     $existId = $stmtChk->fetchColumn();
                     if ($existId) {
                         if ($tid !== null) {
-                            $stmtUpdFull->execute([$name, $tid, $isElective, $code, $cls]);
+                            $stmtUpdFull->execute([$name, $tid, $isElective, $code, $cls, $target_year, $target_sem]);
                         } else {
-                            $stmtUpdName->execute([$name, $isElective, $code, $cls]);
+                            $stmtUpdName->execute([$name, $isElective, $code, $cls, $target_year, $target_sem]);
                         }
                     } else {
                         $insertTid = $tid !== null ? $tid : $tidFallback;
-                        $stmtIns->execute([$code, $name, $cls, $insertTid, $isElective]);
+                        $stmtIns->execute([$code, $name, $cls, $insertTid, $isElective, $target_year, $target_sem]);
                     }
                     $importCount++;
                 } catch (Exception $e) {
@@ -219,9 +227,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ── ดึงรายวิชาปัจจุบันสำหรับตาราง ──
 $filterCls = $_GET['cls'] ?? '';
-$whereQ = $filterCls
-    ? " WHERE s.classroom = " . $pdo->quote($filterCls)
-    : '';
+$whereParts = ["s.academic_year = " . (int)$target_year, "s.semester = " . (int)$target_sem];
+if ($filterCls) {
+    $whereParts[] = "s.classroom = " . $pdo->quote($filterCls);
+}
+$whereQ = " WHERE " . implode(" AND ", $whereParts);
 $subjects = $pdo->query("
     SELECT s.*, at.name AS teacher_name,
            COALESCE(NULLIF(TRIM(CONCAT(COALESCE(lu.firstname,''),' ',COALESCE(lu.lastname,''))),''), at.name) AS teacher_display
@@ -264,6 +274,19 @@ require_once __DIR__ . '/components/layout_start.php';
                 <form method="POST" enctype="multipart/form-data" id="importForm" class="space-y-6">
                     <?= csrf_field() ?>
                     <input type="hidden" name="do" value="preview">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-indigo-50/60 border border-indigo-100 rounded-2xl p-4">
+                        <div>
+                            <label class="text-[11px] font-black text-indigo-700 uppercase tracking-wider block mb-1">นำเข้าสำหรับภาคเรียน</label>
+                            <select name="semester" class="w-full bg-white border border-indigo-200 rounded-xl px-3 py-2 text-sm font-black text-indigo-700 outline-none">
+                                <option value="1" <?= $target_sem === 1 ? 'selected' : '' ?>>ภาคเรียนที่ 1</option>
+                                <option value="2" <?= $target_sem === 2 ? 'selected' : '' ?>>ภาคเรียนที่ 2</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-black text-indigo-700 uppercase tracking-wider block mb-1">ปีการศึกษา (พ.ศ.)</label>
+                            <input type="number" name="academic_year" value="<?= $target_year ?>" class="w-full bg-white border border-indigo-200 rounded-xl px-3 py-2 text-sm font-black text-slate-700 outline-none">
+                        </div>
+                    </div>
                     <div id="dropZone" class="drop-zone rounded-[32px] p-10 flex flex-col items-center justify-center cursor-pointer group">
                         <i class="bi bi-file-earmark-spreadsheet text-5xl text-slate-300 group-hover:text-indigo-500 mb-4 transition-colors"></i>
                         <p class="text-slate-600 font-bold">ลากไฟล์ CSV มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
@@ -304,6 +327,8 @@ require_once __DIR__ . '/components/layout_start.php';
                     <form method="POST">
                         <?= csrf_field() ?>
                         <input type="hidden" name="do" value="import">
+                        <input type="hidden" name="semester" value="<?= $target_sem ?>">
+                        <input type="hidden" name="academic_year" value="<?= $target_year ?>">
                         <input type="hidden" name="json_data"
                                value='<?= htmlspecialchars(json_encode($preview, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>'>
                         <button type="submit"

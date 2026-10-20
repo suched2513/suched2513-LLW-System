@@ -18,9 +18,12 @@ $activeSystem = 'attendance';
 // ดึง classrooms ที่มีในระบบ
 $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE student_id REGEXP '^[0-9]+$' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
+llw_ensure_semester_schema($pdo);
+$selected_sem     = isset($_GET['semester']) ? (int)$_GET['semester'] : llw_current_semester();
+$_admTerm         = llw_get_term_dates($pdo, llw_current_academic_year(), $selected_sem > 0 ? $selected_sem : llw_current_semester());
 $selected_class   = $_GET['classroom']   ?? ($classrooms[0] ?? '');
-$start_date       = $_GET['start_date']  ?? date('Y-m-01');
-$end_date         = $_GET['end_date']    ?? date('Y-m-t');
+$start_date       = $_GET['start_date']  ?? $_admTerm['start'];
+$end_date         = $_GET['end_date']    ?? $_admTerm['end'];
 
 $students      = [];
 $subjects      = [];
@@ -36,10 +39,17 @@ if ($selected_class) {
     $st->execute([$selected_class]);
     $students = $st->fetchAll();
 
-    // --- ดึงรายวิชาของห้องนี้ ---
-    $sj = $pdo->prepare("SELECT * FROM att_subjects WHERE classroom=? ORDER BY subject_code");
-    $sj->execute([$selected_class]);
-    $subjects = $sj->fetchAll();
+    // --- ดึงรายวิชาของห้องนี้ (กรองตามภาคเรียน ถ้ายังไม่มีวิชาในเทอมที่เลือกให้แสดงทั้งหมดของห้อง) ---
+    if ($selected_sem > 0) {
+        $sj = $pdo->prepare("SELECT * FROM att_subjects WHERE classroom=? AND semester=? ORDER BY subject_code");
+        $sj->execute([$selected_class, $selected_sem]);
+        $subjects = $sj->fetchAll();
+    }
+    if (empty($subjects)) {
+        $sj = $pdo->prepare("SELECT * FROM att_subjects WHERE classroom=? ORDER BY subject_code");
+        $sj->execute([$selected_class]);
+        $subjects = $sj->fetchAll();
+    }
 
     // --- สร้าง matrix: student x subject ---
     $matrix = [];   // [student_id][subject_id] => ['come'=>0,'absent'=>0,...,'total'=>0]
@@ -183,6 +193,9 @@ require_once '../components/layout_start.php';
                 <i class="bi bi-file-earmark-spreadsheet-fill"></i> Export CSV
             </a>
             <?php endif; ?>
+            <div class="w-full">
+                <?= llw_render_term_preset_bar($pdo, 'start_date', 'end_date') ?>
+            </div>
         </form>
     </div>
 

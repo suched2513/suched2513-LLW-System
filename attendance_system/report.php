@@ -8,10 +8,12 @@ $pageSubtitle = 'สรุปยอดรวมสถานะการเช็
 
 // Admin เห็นทุกวิชา
 $subject_filter_tid = $_SESSION['llw_role'] === 'super_admin' ? 0 : (int)$teacher_id;
-$subjects = getTeacherSubjects($subject_filter_tid, $pdo);
+$selected_semester = isset($_GET['semester']) ? (int)$_GET['semester'] : 0;
+$subjects = getTeacherSubjects($subject_filter_tid, $pdo, $selected_semester);
 $selected_subject_id = $_GET['subject_id'] ?? '';
-$start_date = $_GET['start_date'] ?? date('Y-m-01');
-$end_date = $_GET['end_date'] ?? date('Y-m-t');
+$_defTerm = llw_get_term_dates($pdo, llw_current_academic_year(), $selected_semester > 0 ? $selected_semester : llw_current_semester());
+$start_date = $_GET['start_date'] ?? $_defTerm['start'];
+$end_date = $_GET['end_date'] ?? $_defTerm['end'];
 
 $report_data = []; $subject_info = null; $total_sessions = 0;
 
@@ -126,7 +128,7 @@ require_once '../components/layout_start.php';
                     <option value="">-- เลือกวิชา --</option>
                     <?php foreach($subjects as $subj): ?>
                         <option value="<?= $subj['id'] ?>" <?= $selected_subject_id == $subj['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($subj['subject_code'] . ' - ' . $subj['subject_name'] . ' (' . $subj['classroom'] . ')') ?>
+                            <?= htmlspecialchars('[เทอม ' . ($subj['semester'] ?? 1) . '] ' . $subj['subject_code'] . ' - ' . $subj['subject_name'] . ' (' . $subj['classroom'] . ')') ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -142,20 +144,37 @@ require_once '../components/layout_start.php';
                 </div>
                 <button type="submit" class="bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 transition font-bold shadow-lg shadow-blue-100"><i class="bi bi-search"></i></button>
             </div>
+            <div class="md:col-span-4">
+                <?= llw_render_term_preset_bar($pdo, 'start_date', 'end_date') ?>
+            </div>
         </form>
     </div>
 
     <?php if ($selected_subject_id && $subject_info):
-        $ms_count = count(array_filter($report_data, fn($r) => $total_sessions > 0 && round(($r['count_come'] / $total_sessions) * 100, 1) < 80));
+        $ms_count   = count(array_filter($report_data, fn($r) => $total_sessions > 0 && round(($r['count_come'] / $total_sessions) * 100, 1) < 80));
+        $warn_count = count(array_filter($report_data, fn($r) => $total_sessions > 0 && round(($r['count_come'] / $total_sessions) * 100, 1) >= 80 && round(($r['count_come'] / $total_sessions) * 100, 1) < 85));
     ?>
 
-    <?php if ($ms_count > 0): ?>
-    <div class="bg-rose-50 border border-rose-200 rounded-2xl px-6 py-4 flex items-center gap-4">
-        <div class="w-10 h-10 bg-rose-500 rounded-xl flex items-center justify-center text-white text-lg"><i class="bi bi-exclamation-triangle-fill"></i></div>
-        <div>
-            <p class="font-black text-rose-700">มีนักเรียนเสี่ยงติด มส. จำนวน <?= $ms_count ?> คน</p>
-            <p class="text-xs text-rose-500 mt-0.5">เกณฑ์: มาเรียนน้อยกว่า 80% จากทั้งหมด <?= $total_sessions ?> คาบ</p>
+    <?php if ($ms_count > 0 || $warn_count > 0): ?>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 no-print">
+        <?php if ($ms_count > 0): ?>
+        <div class="bg-rose-50 border border-rose-200 rounded-2xl px-6 py-4 flex items-center gap-4">
+            <div class="w-10 h-10 bg-rose-500 rounded-xl flex items-center justify-center text-white text-lg shrink-0"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <div>
+                <p class="font-black text-rose-700">ติด มส. (&lt;80%) จำนวน <?= $ms_count ?> คน</p>
+                <p class="text-xs text-rose-500 mt-0.5">มาเรียนน้อยกว่า 80% จากทั้งหมด <?= $total_sessions ?> คาบ</p>
+            </div>
         </div>
+        <?php endif; ?>
+        <?php if ($warn_count > 0): ?>
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4 flex items-center gap-4">
+            <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white text-lg shrink-0"><i class="bi bi-bell-fill"></i></div>
+            <div>
+                <p class="font-black text-amber-800">เฝ้าระวัง / เสี่ยง มส. (80–84.9%) จำนวน <?= $warn_count ?> คน</p>
+                <p class="text-xs text-amber-600 mt-0.5">แจ้งเตือนล่วงหน้าก่อนเวลาเรียนต่ำกว่า 80%</p>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
     <?php endif; ?>
 
@@ -235,6 +254,10 @@ require_once '../components/layout_start.php';
                             <?php if ($is_ms): ?>
                                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-600 text-white text-xs font-black shadow-sm">
                                     <i class="bi bi-x-circle-fill"></i> มส.
+                                </span>
+                            <?php elseif ($total_sessions > 0 && $rate < 85): ?>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-100 text-amber-800 text-xs font-black border border-amber-200">
+                                    <i class="bi bi-exclamation-circle-fill"></i> เสี่ยง มส.
                                 </span>
                             <?php elseif ($total_sessions > 0): ?>
                                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-600 text-xs font-black border border-emerald-100">

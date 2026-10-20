@@ -34,13 +34,23 @@ try {
         $stmt->execute([$userId]);
     } else {
         // Admin เห็นเฉพาะห้องปกติ (ม.X/Y) ไม่รวมห้องวิชาเลือก
-        $stmt = $pdo->query("
+        $curYear = function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569;
+        $stmt = $pdo->prepare("
             SELECT DISTINCT classroom
             FROM att_students
-            WHERE academic_year = 2569
+            WHERE (academic_year = ? OR academic_year IS NULL)
               AND classroom REGEXP '^ม\\\\.[0-9]+/[0-9]+'
             ORDER BY classroom
         ");
+        $stmt->execute([$curYear]);
+        if ($stmt->rowCount() === 0) {
+            $stmt = $pdo->query("
+                SELECT DISTINCT classroom
+                FROM att_students
+                WHERE classroom REGEXP '^ม\\\\.[0-9]+/[0-9]+'
+                ORDER BY classroom
+            ");
+        }
     }
 
     $classrooms = $stmt->fetchAll(PDO::FETCH_COLUMN);

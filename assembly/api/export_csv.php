@@ -45,16 +45,8 @@ try {
     $sStmt->execute([$classroom]);
     $students = $sStmt->fetchAll();
 
-    $monthCond = '';
-    $params    = [$classroom];
-    if ($monthFrom !== '' && $monthTo !== '') {
-        $monthCond = "AND DATE_FORMAT(date,'%m') BETWEEN ? AND ?";
-        $params[]  = $monthFrom;
-        $params[]  = $monthTo;
-    } elseif ($month !== 'all') {
-        $monthCond = "AND DATE_FORMAT(date,'%m') = ?";
-        $params[]  = $month;
-    }
+    [$monthCond, $dateParams] = llw_build_assembly_date_condition($pdo, 'date', $_GET);
+    $params = array_merge([$classroom], $dateParams);
     $aStmt = $pdo->prepare("
         SELECT student_id, status, nail, hair, shirt, pants, socks, shoes, note, date
         FROM assembly_attendance

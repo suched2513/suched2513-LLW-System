@@ -30,13 +30,10 @@ try {
     $where  = ['1=1'];
     $params = [];
 
-    if ($monthFrom !== '' && $monthTo !== '') {
-        $where[]  = "DATE_FORMAT(a.date, '%m') BETWEEN ? AND ?";
-        $params[] = $monthFrom;
-        $params[] = $monthTo;
-    } elseif ($month !== 'all') {
-        $where[]  = "DATE_FORMAT(a.date, '%m') = ?";
-        $params[] = $month;
+    [$dateCondSql, $dateParams] = llw_build_assembly_date_condition($pdo, 'a.date', $_GET);
+    if ($dateCondSql !== '') {
+        $where[] = preg_replace('/^\s*AND\s+/i', '', $dateCondSql);
+        $params  = array_merge($params, $dateParams);
     }
     if ($grade !== 'all') {
         $where[] = "a.classroom REGEXP ?";
@@ -112,7 +109,7 @@ try {
                 SUM(a.status = 'ล') AS leave_count,
                 SUM(a.status = 'ด') AS skip_count
             FROM assembly_attendance a
-            LEFT JOIN assembly_students s ON s.student_id = a.student_id
+            LEFT JOIN (SELECT student_id, MAX(name) AS name FROM att_students GROUP BY student_id) s ON s.student_id = a.student_id
             WHERE $whereStr
             GROUP BY a.student_id, s.name
             ORDER BY a.student_id
@@ -147,7 +144,7 @@ try {
                 COUNT(*) AS total_checks,
                 SUM(a.status = 'ม') AS present_count
             FROM assembly_attendance a
-            LEFT JOIN assembly_students s ON s.student_id = a.student_id
+            LEFT JOIN (SELECT student_id, MAX(name) AS name FROM att_students GROUP BY student_id) s ON s.student_id = a.student_id
             WHERE $whereStr
             GROUP BY a.student_id, s.name, a.classroom
         ");

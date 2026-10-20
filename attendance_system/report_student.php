@@ -7,6 +7,9 @@ $pageTitle = 'รายงานรายบุคคล';
 $pageSubtitle = 'ตรวจสอบประวัติการเข้าเรียนของนักเรียนรายบุคคล';
 
 $search = $_GET['search'] ?? '';
+$_stuTerm = llw_get_term_dates($pdo, llw_current_academic_year(), llw_current_semester());
+$start_date = $_GET['start_date'] ?? $_stuTerm['start'];
+$end_date   = $_GET['end_date']   ?? $_stuTerm['end'];
 $student_info = null; $report_data = []; $summary = ['มา'=>0,'ขาด'=>0,'ลา'=>0,'โดด'=>0,'สาย'=>0];
 
 if ($search) {
@@ -20,10 +23,10 @@ if ($search) {
             SELECT a.*, sj.subject_name, sj.subject_code, sj.classroom as sj_cls
             FROM att_attendance a
             JOIN att_subjects sj ON sj.id = a.subject_id
-            WHERE a.student_id = :sid
+            WHERE a.student_id = :sid AND a.date BETWEEN :sd AND :ed
             ORDER BY a.date DESC, a.period DESC
         ");
-        $stmt->execute(['sid'=>$student_info['id']]);
+        $stmt->execute(['sid'=>$student_info['id'], 'sd'=>$start_date, 'ed'=>$end_date]);
         $report_data = $stmt->fetchAll();
         foreach($report_data as $row) { if(isset($summary[$row['status']])) $summary[$row['status']]++; }
     }
@@ -34,17 +37,25 @@ require_once 'components/layout_start.php';
 
 <div class="flex flex-col gap-8">
     <!-- Search Bar -->
-    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 no-print flex flex-col md:flex-row gap-4 items-center">
-        <div class="flex-1 w-full relative">
-            <i class="bi bi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-            <form method="GET" class="w-full">
-                <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="ค้นหาด้วยรหัสนักเรียน หรือชื่อ-สกุล..." 
-                       class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition-all" id="search-input">
-            </form>
-        </div>
-        <button onclick="document.querySelector('form').submit()" class="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition flex items-center gap-2 w-full md:w-auto justify-center">
-            <i class="bi bi-person-bounding-box"></i> ค้นหา
-        </button>
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 no-print">
+        <form method="GET" class="flex flex-col gap-3">
+            <div class="flex flex-col md:flex-row gap-3 items-center">
+                <div class="flex-1 w-full relative">
+                    <i class="bi bi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" name="search" value="<?= htmlspecialchars($search) ?>" placeholder="ค้นหาด้วยรหัสนักเรียน หรือชื่อ-สกุล..." 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-400 outline-none transition-all" id="search-input">
+                </div>
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <input type="date" name="start_date" value="<?= htmlspecialchars($start_date) ?>" class="bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3 text-xs font-bold outline-none">
+                    <span class="text-slate-400">–</span>
+                    <input type="date" name="end_date" value="<?= htmlspecialchars($end_date) ?>" class="bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3 text-xs font-bold outline-none">
+                </div>
+                <button type="submit" class="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition flex items-center gap-2 w-full md:w-auto justify-center">
+                    <i class="bi bi-person-bounding-box"></i> ค้นหา
+                </button>
+            </div>
+            <?= llw_render_term_preset_bar($pdo, 'start_date', 'end_date') ?>
+        </form>
     </div>
 
     <?php if ($search && !$student_info): ?>

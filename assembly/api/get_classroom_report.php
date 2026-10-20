@@ -49,8 +49,12 @@ try {
     $aStmt->execute([$classroom, $date]);
     $todayRecords = $aStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
-    // 4. Cumulative Stats (Sum for semester/year)
-    // We calculate counts for each student in this classroom across all recorded dates
+    // 4. Cumulative Stats (แยกตามภาคเรียนของวันที่เลือก เพื่อไม่ให้ยอดเทอม 1 ปนกับเทอม 2)
+    $repTs   = strtotime($date) ?: time();
+    $repSem  = isset($_GET['semester']) ? (int)$_GET['semester'] : llw_current_semester($repTs);
+    $repYear = llw_current_academic_year($repTs);
+    $termRange = llw_get_term_dates($pdo, $repYear, $repSem);
+
     $hStmt = $pdo->prepare("
         SELECT 
             student_id,
@@ -59,10 +63,10 @@ try {
             SUM(status = 'ล') AS total_leave,
             SUM(status = 'ด') AS total_skip
         FROM assembly_attendance
-        WHERE classroom = ?
+        WHERE classroom = ? AND date BETWEEN ? AND ?
         GROUP BY student_id
     ");
-    $hStmt->execute([$classroom]);
+    $hStmt->execute([$classroom, $termRange['start'], $termRange['end']]);
     $histData = $hStmt->fetchAll(PDO::FETCH_UNIQUE);
 
     // 5. System Settings (for School Name)

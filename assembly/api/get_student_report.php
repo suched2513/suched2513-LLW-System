@@ -57,13 +57,13 @@ try {
         exit;
     }
 
-    // ประวัติการเข้าแถว
-    $monthCond = '';
-    $params    = [$studentId];
-    if ($month !== 'all') {
-        $monthCond = "AND DATE_FORMAT(date, '%m') = ?";
-        $params[]  = $month;
+    // ประวัติการเข้าแถว (รองรับเลือกทั้งเทอม sem1 / sem2 หรือรายเดือน)
+    if ($month === 'sem1' || $month === 'sem2') {
+        $_GET['semester'] = $month === 'sem1' ? 1 : 2;
+        $_GET['month'] = 'all';
     }
+    [$monthCond, $dateParams] = llw_build_assembly_date_condition($pdo, 'date', $_GET);
+    $params = array_merge([$studentId], $dateParams);
     $aStmt = $pdo->prepare("
         SELECT date, status, nail, hair, shirt, pants, socks, shoes, note
         FROM assembly_attendance
@@ -89,9 +89,8 @@ try {
     $uniformScore = $uniformTotal > 0 ? round($uniformCorrect / $uniformTotal * 100) : 0;
 
     // ข้อมูล checkout (evening)
-    $cParams = [$studentId];
-    $cMonthCond = '';
-    if ($month !== 'all') { $cMonthCond = "AND DATE_FORMAT(date,'%m') = ?"; $cParams[] = $month; }
+    $cParams = array_merge([$studentId], $dateParams);
+    $cMonthCond = $monthCond;
     $cStmt = $pdo->prepare("SELECT status FROM assembly_checkout WHERE student_id = ? $cMonthCond");
     $cStmt->execute($cParams);
     $checkouts = $cStmt->fetchAll(PDO::FETCH_COLUMN);

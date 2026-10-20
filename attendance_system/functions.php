@@ -135,7 +135,25 @@ function ensureTeacherRecord($username, $fullname, $llw_user_id, $pdo) {
  * ดึงรายวิชาที่ครูสอน
  * teacher_id=0 หมายถึง super_admin/wfh_admin → ดึงทั้งหมด
  */
-function getTeacherSubjects($teacher_id, $pdo) {
+function getTeacherSubjects($teacher_id, $pdo, $semester = null, $academic_year = null) {
+    $hasSemCol = function_exists('llw_ensure_semester_schema') && llw_ensure_semester_schema($pdo);
+    if ($hasSemCol) {
+        $sem  = $semester !== null ? (int)$semester : llw_current_semester();
+        $year = $academic_year !== null ? (int)$academic_year : llw_current_academic_year();
+        if ($sem > 0 && $year > 0) {
+            $chk = $pdo->prepare("SELECT COUNT(*) FROM att_subjects WHERE academic_year = ? AND semester = ?");
+            $chk->execute([$year, $sem]);
+            if ((int)$chk->fetchColumn() === 0 && $sem === 2) $sem = 1;
+            if ((int)$teacher_id === 0) {
+                $stmt = $pdo->prepare("SELECT s.*, COALESCE(t.name, 'ไม่ระบุครู') as teacher_name FROM att_subjects s LEFT JOIN att_teachers t ON t.id = s.teacher_id WHERE s.academic_year = :yr AND s.semester = :sem ORDER BY s.subject_code ASC");
+                $stmt->execute(['yr' => $year, 'sem' => $sem]);
+                return $stmt->fetchAll();
+            }
+            $stmt = $pdo->prepare("SELECT s.*, COALESCE(t.name, 'ไม่ระบุครู') as teacher_name FROM att_subjects s LEFT JOIN att_teachers t ON t.id = s.teacher_id WHERE s.teacher_id = :teacher_id AND s.academic_year = :yr AND s.semester = :sem ORDER BY s.subject_code ASC");
+            $stmt->execute(['teacher_id' => $teacher_id, 'yr' => $year, 'sem' => $sem]);
+            return $stmt->fetchAll();
+        }
+    }
     if ((int)$teacher_id === 0) {
         // admin ดูทุกวิชา (LEFT JOIN เผื่อวิชาที่ยังไม่มีครูผูก)
         return $pdo->query("SELECT s.*, COALESCE(t.name, 'ไม่ระบุครู') as teacher_name FROM att_subjects s LEFT JOIN att_teachers t ON t.id = s.teacher_id ORDER BY s.subject_code ASC")->fetchAll();

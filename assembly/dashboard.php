@@ -62,7 +62,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
             <div>
                 <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ห้องเรียน</label>
-                <select id="att-classroom" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all">
+                <select id="att-classroom" onchange="if(this.value) loadStudents()" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all">
                     <option value="">เลือกห้องเรียน...</option>
                 </select>
             </div>
@@ -215,9 +215,22 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </button>
             </div>
         </div>
-        <p class="text-xs text-slate-400 -mt-3 mb-5"><i class="bi bi-info-circle mr-1"></i>เลือกเดือนเริ่มต้น–สิ้นสุดให้เหมือนกันเพื่อดูรายเดือน หรือเลือกช่วงกว้างขึ้นเพื่อดูสรุปทั้งเทอม</p>
+        <div class="flex flex-wrap items-center gap-2 -mt-2 mb-5">
+            <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider mr-1"><i class="bi bi-lightning-charge-fill text-amber-500"></i> เลือกด่วน:</span>
+            <button type="button" onclick="setOvTerm('05','10')" class="px-3 py-1 rounded-xl text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition">
+                📅 ภาคเรียนที่ 1 (พ.ค. – ต.ค.)
+            </button>
+            <button type="button" onclick="setOvTerm('11','03')" class="px-3 py-1 rounded-xl text-xs font-black bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 transition">
+                📅 ภาคเรียนที่ 2 (พ.ย. – มี.ค.)
+            </button>
+            <button type="button" onclick="setOvTerm('<?= date('m') ?>','<?= date('m') ?>')" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition">
+                เดือนนี้
+            </button>
+            <span class="text-xs text-slate-400 ml-auto"><i class="bi bi-info-circle mr-1"></i>รองรับสรุปข้ามปี พ.ย.–มี.ค. สำหรับเทอม 2 อัตโนมัติ</span>
+        </div>
 
         <div id="ov-content" class="hidden">
+            <div id="ov-risk-banner" class="hidden mb-5"></div>
             <!-- Charts -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="bg-slate-50 rounded-2xl p-5">
@@ -404,24 +417,25 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn("Chart registration error:", e);
     }
 
-    // Load initial data
-    initRooms().then(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const getRoom = urlParams.get('classroom');
-        if (getRoom) {
-            const sel = document.getElementById('att-classroom');
-            if (sel) {
-                sel.value = getRoom;
-                loadStudents();
-            }
-        }
-    });
-
-    // Set dates
+    // Set dates first so auto-load has a valid date
     const todayStr = new Date().toISOString().split('T')[0];
     ['att-date', 'co-date'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = todayStr;
+    });
+
+    // Load initial data & auto-select teacher's homeroom for fast 1-click check-in
+    initRooms().then((rooms) => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const getRoom = urlParams.get('classroom');
+        const defaultRoom = getRoom || (rooms && rooms.length === 1 ? rooms[0] : (rooms && rooms.length > 0 && '<?= $_SESSION['llw_role'] ?? '' ?>' === 'att_teacher' ? rooms[0] : ''));
+        if (defaultRoom) {
+            ['att-classroom', 'co-classroom', 'ov-classroom'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = defaultRoom;
+            });
+            loadStudents();
+        }
     });
 
     // Start clock
@@ -458,6 +472,7 @@ async function initRooms() {
         el.innerHTML = '<option value="">เลือกห้องเรียน...</option>' +
             res.classrooms.map(c => `<option value="${c}">${c}</option>`).join('');
     });
+    return res.classrooms || [];
 }
 
 // ─── ATTENDANCE ───
@@ -656,6 +671,16 @@ async function saveCheckout() {
 // ─── OVERVIEW ───
 let ovAttChart = null, ovUniChart = null;
 
+function setOvTerm(mFrom, mTo) {
+    const fEl = document.getElementById('ov-month-from');
+    const tEl = document.getElementById('ov-month-to');
+    if (fEl) fEl.value = mFrom;
+    if (tEl) tEl.value = mTo;
+    if (document.getElementById('ov-classroom')?.value) {
+        loadOverview();
+    }
+}
+
 async function loadOverview() {
     const classroom = document.getElementById('ov-classroom').value;
     const monthFrom = document.getElementById('ov-month-from').value;
@@ -688,6 +713,35 @@ async function loadOverview() {
         data: { labels: ['เล็บ','ทรงผม','เสื้อ','กางเกง','ถุงเท้า','รองเท้า'], datasets: [{ label: '%', data: [u.nail, u.hair, u.shirt, u.pants, u.socks, u.shoes], backgroundColor: '#f59e0b', borderRadius: 8 }] },
         options: { scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', formatter: v => v + '%', font: { weight: 'bold', size: 11 } } } }
     });
+
+    // Early Warning Banner (<80% เสี่ยงไม่ผ่านกิจกรรม / 80-84% เฝ้าระวัง)
+    const bannerEl = document.getElementById('ov-risk-banner');
+    if (bannerEl) {
+        const critList = res.studentsSummary.filter(st => st.totalDays >= 3 && st.presentPct < 80);
+        const warnList = res.studentsSummary.filter(st => st.totalDays >= 3 && st.presentPct >= 80 && st.presentPct < 85);
+        if (critList.length > 0 || warnList.length > 0) {
+            bannerEl.className = 'mb-5 grid grid-cols-1 md:grid-cols-2 gap-3';
+            bannerEl.innerHTML = `
+                ${critList.length > 0 ? `<div class="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center text-lg shrink-0"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                    <div>
+                        <p class="text-sm font-black text-rose-700">🚨 เสี่ยงไม่ผ่านกิจกรรมเข้าแถว (&lt;80%) จำนวน ${critList.length} คน</p>
+                        <p class="text-xs text-rose-500">${critList.slice(0,4).map(x => esc(x.name) + ' (' + x.presentPct + '%)').join(', ')}${critList.length > 4 ? ' ...' : ''}</p>
+                    </div>
+                </div>` : ''}
+                ${warnList.length > 0 ? `<div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-lg shrink-0"><i class="bi bi-bell-fill"></i></div>
+                    <div>
+                        <p class="text-sm font-black text-amber-800">⚠️ เฝ้าระวังล่วงหน้า (80–84%) จำนวน ${warnList.length} คน</p>
+                        <p class="text-xs text-amber-600">${warnList.slice(0,4).map(x => esc(x.name) + ' (' + x.presentPct + '%)').join(', ')}${warnList.length > 4 ? ' ...' : ''}</p>
+                    </div>
+                </div>` : ''}
+            `;
+        } else {
+            bannerEl.className = 'hidden mb-5';
+            bannerEl.innerHTML = '';
+        }
+    }
 
     // Table
     document.getElementById('ov-table').innerHTML = res.studentsSummary.map(s => `
@@ -779,10 +833,15 @@ function renderMonthOptions(bool $includeAll = false): string {
     $months = ['01'=>'มกราคม','02'=>'กุมภาพันธ์','03'=>'มีนาคม','04'=>'เมษายน',
                '05'=>'พฤษภาคม','06'=>'มิถุนายน','07'=>'กรกฎาคม','08'=>'สิงหาคม',
                '09'=>'กันยายน','10'=>'ตุลาคม','11'=>'พฤศจิกายน','12'=>'ธันวาคม'];
-    $html = $includeAll ? '<option value="all">ทุกเดือน</option>' : '<option value="">เลือกเดือน</option>';
+    $curSem = function_exists('llw_current_semester') ? llw_current_semester() : 1;
+    $html = $includeAll
+        ? '<option value="all">ทุกเดือน (ทั้งปี)</option>'
+          . '<option value="sem1" ' . ($curSem === 1 ? 'selected' : '') . '>📅 ภาคเรียนที่ 1 (พ.ค.–ต.ค.)</option>'
+          . '<option value="sem2" ' . ($curSem === 2 ? 'selected' : '') . '>📅 ภาคเรียนที่ 2 (พ.ย.–มี.ค.)</option>'
+        : '<option value="">เลือกเดือน</option>';
     $current = date('m');
     foreach ($months as $k => $v) {
-        $sel = $k === $current ? 'selected' : '';
+        $sel = (!$includeAll && $k === $current) ? 'selected' : '';
         $html .= "<option value=\"$k\" $sel>$v</option>";
     }
     return $html;

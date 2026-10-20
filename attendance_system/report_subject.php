@@ -8,10 +8,11 @@ $pageSubtitle = 'สถิติการเช็คชื่อแยกตา
 
 // Admin เห็นทุกวิชา
 $subject_filter_tid = $_SESSION['llw_role'] === 'super_admin' ? 0 : (int)$teacher_id;
-$subjects = getTeacherSubjects($subject_filter_tid, $pdo);
+$subjects = getTeacherSubjects($subject_filter_tid, $pdo, 0);
 $selected_subject_id = $_GET['subject_id'] ?? '';
-$start_date = $_GET['start_date'] ?? date('Y-m-d', strtotime('-1 month'));
-$end_date = $_GET['end_date'] ?? date('Y-m-d');
+$_subTerm = llw_get_term_dates($pdo, llw_current_academic_year(), llw_current_semester());
+$start_date = $_GET['start_date'] ?? $_subTerm['start'];
+$end_date = $_GET['end_date'] ?? $_subTerm['end'];
 
 $subject_info = null; $report_data = []; $summary = ['มา'=>0,'ขาด'=>0,'ลา'=>0,'โดด'=>0,'สาย'=>0];
 $period_stats = array_fill(1, 8, ['มา'=>0,'ขาด'=>0,'ลา'=>0,'โดด'=>0,'สาย'=>0]);
@@ -65,6 +66,9 @@ require_once '../components/layout_start.php';
                 <button type="submit" class="bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 transition font-bold shadow-lg shadow-blue-100">
                     <i class="bi bi-search"></i>
                 </button>
+            </div>
+            <div class="md:col-span-4">
+                <?= llw_render_term_preset_bar($pdo, 'start_date', 'end_date') ?>
             </div>
         </form>
     </div>

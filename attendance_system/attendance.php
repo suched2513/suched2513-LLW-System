@@ -16,15 +16,21 @@ $subject_filter_tid = $_SESSION['llw_role'] === 'super_admin'
 $pageTitle = 'เช็คชื่อรายคาบ';
 $pageSubtitle = 'บันทึกข้อมูลการเข้าเรียนของนักเรียน';
 
-$subjects = getTeacherSubjects($subject_filter_tid, $pdo);
+$selected_semester = isset($_GET['semester']) ? (int)$_GET['semester'] : (isset($_POST['semester']) ? (int)$_POST['semester'] : llw_current_semester());
+$selected_year     = llw_current_academic_year();
+$subjects = getTeacherSubjects($subject_filter_tid, $pdo, $selected_semester, $selected_year);
 
-$selected_subject_id = $_GET['subject_id'] ?? '';
-$selected_date = $_GET['date'] ?? date('Y-m-d');
-$selected_period = $_GET['period'] ?? 1;
-$start_time = $_GET['start_time'] ?? '08:40';
+$selected_subject_id = $_GET['subject_id'] ?? ($_POST['subject_id'] ?? '');
+$selected_date = $_GET['date'] ?? ($_POST['date'] ?? date('Y-m-d'));
+$selected_period = $_GET['period'] ?? ($_POST['period'] ?? 1);
+$start_time = $_GET['start_time'] ?? ($_POST['start_time'] ?? '08:40');
 
 $students = [];
 $subject_info = null;
+$existing_att_map = [];
+$morning_assembly_map = [];
+$morning_absent_count = 0;
+$subject_cum_map = [];
 
 if ($selected_subject_id) {
     $subject_info = getSubjectById($selected_subject_id, $pdo);
@@ -116,6 +122,57 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
     }
 }
 
+// ── Batch-load current period attendance, morning assembly status, and cumulative subject risk ──
+if ($subject_info && !empty($students)) {
+    try {
+        // 1) Current period records
+        $stCur = $pdo->prepare("SELECT student_id, status, time_in, note FROM att_attendance WHERE date = ? AND period = ? AND subject_id = ?");
+        $stCur->execute([$selected_date, $selected_period, $selected_subject_id]);
+        foreach ($stCur->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $existing_att_map[$r['student_id']] = $r;
+        }
+
+        // 2) Morning assembly status for these students on $selected_date
+        $studentCodes = array_values(array_filter(array_column($students, 'student_id')));
+        if (!empty($studentCodes)) {
+            $inPlaceholders = implode(',', array_fill(0, count($studentCodes), '?'));
+            $stAsm = $pdo->prepare("SELECT student_id, status, note FROM assembly_attendance WHERE date = ? AND student_id IN ($inPlaceholders)");
+            $stAsm->execute(array_merge([$selected_date], $studentCodes));
+            foreach ($stAsm->fetchAll(PDO::FETCH_ASSOC) as $ar) {
+                $morning_assembly_map[$ar['student_id']] = $ar;
+                if (in_array($ar['status'], ['ขาด', 'ลา', 'โดด'])) {
+                    $morning_absent_count++;
+                }
+            }
+        }
+
+        // 3) Cumulative attendance in this subject for early warning (เสี่ยง มส. / มส.)
+        $stCum = $pdo->prepare("
+            SELECT student_id,
+                   COUNT(*) AS total_p,
+                   SUM(CASE WHEN status IN ('มา','สาย','ลา') THEN 1 ELSE 0 END) AS present_p,
+                   SUM(CASE WHEN status IN ('ขาด','โดด') THEN 1 ELSE 0 END) AS absent_p
+            FROM att_attendance
+            WHERE subject_id = ?
+            GROUP BY student_id
+        ");
+        $stCum->execute([$selected_subject_id]);
+        foreach ($stCum->fetchAll(PDO::FETCH_ASSOC) as $cr) {
+            $tot = (int)$cr['total_p'];
+            $pres = (int)$cr['present_p'];
+            $pct = $tot > 0 ? round(($pres / $tot) * 100, 1) : 100.0;
+            $subject_cum_map[$cr['student_id']] = [
+                'total'   => $tot,
+                'present' => $pres,
+                'absent'  => (int)$cr['absent_p'],
+                'pct'     => $pct
+            ];
+        }
+    } catch (Throwable $e) {
+        // Ignore if table missing
+    }
+}
+
 require_once '../components/layout_start.php';
 ?>
 
@@ -161,7 +218,30 @@ require_once '../components/layout_start.php';
 
     <!-- ── Selection Form ── -->
     <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 no-print">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-2 text-xs font-bold text-slate-600">
+                <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-black">
+                    <i class="bi bi-calendar3-range me-1"></i>ปีการศึกษา <?= $selected_year ?>
+                </span>
+                <span>เลือกภาคเรียน:</span>
+                <a href="?semester=1&date=<?= urlencode($selected_date) ?>&period=<?= (int)$selected_period ?>"
+                   class="px-3 py-1 rounded-lg font-black transition <?= $selected_semester === 1 ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' ?>">
+                    ภาคเรียนที่ 1
+                </a>
+                <a href="?semester=2&date=<?= urlencode($selected_date) ?>&period=<?= (int)$selected_period ?>"
+                   class="px-3 py-1 rounded-lg font-black transition <?= $selected_semester === 2 ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' ?>">
+                    ภาคเรียนที่ 2
+                </a>
+            </div>
+            <?php if (!empty($morning_assembly_map)): ?>
+            <div class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl flex items-center gap-1.5">
+                <i class="bi bi-sunrise-fill text-amber-500"></i>
+                เช็คชื่อเข้าแถวเช้าวันนี้แล้ว (พบข้อมูล <?= count($morning_assembly_map) ?> คน · ขาด/ลา/โดด <?= $morning_absent_count ?> คน)
+            </div>
+            <?php endif; ?>
+        </div>
         <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+            <input type="hidden" name="semester" value="<?= (int)$selected_semester ?>">
             <div>
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">วันที่</label>
                 <input type="date" name="date" value="<?= htmlspecialchars($selected_date) ?>" 
@@ -231,7 +311,12 @@ require_once '../components/layout_start.php';
                   <p class="text-xs text-slate-400 font-bold uppercase tracking-wider"><?= count($students) ?> คนในชั้นเรียน</p>
                 </div>
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2">
+                <?php if ($morning_absent_count > 0): ?>
+                <button type="button" onclick="syncFromMorningAssembly()" class="bg-amber-50 text-amber-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-amber-100 transition flex items-center gap-2 border border-amber-200 shadow-sm">
+                    <i class="bi bi-sunrise-fill text-amber-500 text-sm"></i> ดึงสถานะ ขาด/ลา จากแถวเช้า (<?= $morning_absent_count ?> คน)
+                </button>
+                <?php endif; ?>
                 <button type="button" onclick="checkAllPresent()" class="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-100 transition flex items-center gap-2 border border-emerald-100">
                     <i class="bi bi-check-all text-base"></i> มาทั้งหมด
                 </button>
@@ -262,17 +347,50 @@ require_once '../components/layout_start.php';
                                 $sid_db_id = $student['id'];
                                 $sid_display_code = $student['student_id'];
                                 
-                                $stmt = $pdo->prepare("SELECT * FROM att_attendance WHERE date = :date AND period = :period AND subject_id = :subject_id AND student_id = :student_id LIMIT 1");
-                                $stmt->execute(['date' => $selected_date,'period' => $selected_period,'subject_id' => $selected_subject_id,'student_id' => $sid_db_id]);
-                                $record = $stmt->fetch();
+                                $record = $existing_att_map[$sid_db_id] ?? null;
                                 $cur_status = $record ? $record['status'] : 'มา';
                                 $cur_time = $record ? $record['time_in'] : '';
                                 $cur_note = $record ? $record['note'] : '';
+
+                                $asm_rec = $morning_assembly_map[$sid_display_code] ?? null;
+                                $asm_status = $asm_rec['status'] ?? '';
+
+                                $cum_rec = $subject_cum_map[$sid_db_id] ?? null;
                             ?>
-                            <tr id="row-<?= $sid_db_id ?>" class="row-<?= $cur_status ?> transition-colors duration-200">
+                            <tr id="row-<?= $sid_db_id ?>"
+                                data-morning-status="<?= htmlspecialchars($asm_status) ?>"
+                                data-morning-note="<?= htmlspecialchars($asm_rec['note'] ?? '') ?>"
+                                class="row-<?= $cur_status ?> transition-colors duration-200">
                                 <td class="px-6 py-4">
-                                    <div class="flex flex-col">
-                                        <span class="text-xs font-mono font-bold text-blue-600"><?= htmlspecialchars($sid_display_code) ?></span>
+                                    <div class="flex flex-col gap-1">
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            <span class="text-xs font-mono font-bold text-blue-600"><?= htmlspecialchars($sid_display_code) ?></span>
+                                            <?php if ($asm_status && $asm_status !== 'มา'):
+                                                $asmBadgeColors = [
+                                                    'ขาด' => 'bg-rose-100 text-rose-700 border-rose-200',
+                                                    'ลา'  => 'bg-amber-100 text-amber-800 border-amber-200',
+                                                    'โดด' => 'bg-purple-100 text-purple-700 border-purple-200',
+                                                    'สาย' => 'bg-orange-100 text-orange-700 border-orange-200',
+                                                ];
+                                                $bCls = $asmBadgeColors[$asm_status] ?? 'bg-slate-100 text-slate-600 border-slate-200';
+                                            ?>
+                                            <span class="px-2 py-0.5 rounded-md border text-[10px] font-black <?= $bCls ?>" title="สถานะเช็คชื่อแถวเช้าวันนี้">
+                                                🌅 แถวเช้า: <?= htmlspecialchars($asm_status) ?><?= !empty($asm_rec['note']) ? ' (' . htmlspecialchars($asm_rec['note']) . ')' : '' ?>
+                                            </span>
+                                            <?php endif; ?>
+
+                                            <?php if ($cum_rec && $cum_rec['total'] >= 3):
+                                                if ($cum_rec['pct'] < 80): ?>
+                                                <span class="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black" title="เวลาเรียนสะสมวิชานี้ต่ำกว่า 80%">
+                                                    🚨 มส. (<?= $cum_rec['pct'] ?>% · ขาด <?= $cum_rec['absent'] ?> คาบ)
+                                                </span>
+                                                <?php elseif ($cum_rec['pct'] < 85): ?>
+                                                <span class="px-2 py-0.5 rounded-md bg-amber-500 text-white text-[10px] font-black" title="เวลาเรียนสะสมวิชานี้ใกล้เกณฑ์ 80%">
+                                                    ⚠️ เสี่ยง มส. (<?= $cum_rec['pct'] ?>% · ขาด <?= $cum_rec['absent'] ?> คาบ)
+                                                </span>
+                                                <?php endif;
+                                            endif; ?>
+                                        </div>
                                         <span class="text-sm font-bold text-slate-700"><?= htmlspecialchars($student['name']) ?></span>
                                     </div>
                                 </td>
@@ -416,6 +534,36 @@ require_once '../components/layout_start.php';
         }
         
         updateCounts();
+    }
+
+    function syncFromMorningAssembly() {
+        let synced = 0;
+        document.querySelectorAll('tr[id^="row-"]').forEach(row => {
+            const sid = row.id.replace('row-', '');
+            const mStatus = row.getAttribute('data-morning-status') || '';
+            const mNote   = row.getAttribute('data-morning-note') || '';
+            if (['ขาด', 'ลา', 'โดด'].includes(mStatus)) {
+                const radio = row.querySelector(`input[type="radio"][value="${mStatus}"]`);
+                if (radio) {
+                    radio.checked = true;
+                    onStatusChange(sid, mStatus);
+                    const noteInput = row.querySelector(`input[name="note[${sid}]"]`);
+                    if (noteInput && !noteInput.value && mNote) {
+                        noteInput.value = 'แถวเช้า: ' + mNote;
+                    }
+                    synced++;
+                }
+            }
+        });
+        updateCounts();
+        Swal.fire({
+            icon: 'success',
+            title: `ดึงสถานะขาด/ลาจากแถวเช้า ${synced} คนแล้ว`,
+            timer: 1500,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
     }
 
     function checkAllPresent() {

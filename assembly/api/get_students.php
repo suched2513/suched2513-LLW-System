@@ -39,19 +39,29 @@ try {
     }
 
     // ดึงนักเรียนจาก Central Table (att_students) — กรอง subject codes ออก
+    $curYear = function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569;
     $filterSql = "student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)";
     if ($classroom === 'all') {
-        $stmt = $pdo->query("SELECT student_id, name, classroom FROM att_students WHERE academic_year = 2569 AND (status = 'active' OR status IS NULL) AND $filterSql ORDER BY classroom, student_id");
+        $stmt = $pdo->prepare("SELECT student_id, name, classroom FROM att_students WHERE (academic_year = ? OR academic_year IS NULL) AND (status = 'active' OR status IS NULL) AND $filterSql ORDER BY classroom, student_id");
+        $stmt->execute([$curYear]);
         $students = $stmt->fetchAll();
+        if (empty($students)) {
+            $students = $pdo->query("SELECT student_id, name, classroom FROM att_students WHERE (status = 'active' OR status IS NULL) AND $filterSql ORDER BY classroom, student_id")->fetchAll();
+        }
     } else {
         $stmt = $pdo->prepare("
             SELECT student_id, name, classroom
             FROM att_students
-            WHERE classroom = ? AND academic_year = 2569 AND (status = 'active' OR status IS NULL) AND $filterSql
+            WHERE classroom = ? AND (academic_year = ? OR academic_year IS NULL) AND (status = 'active' OR status IS NULL) AND $filterSql
             ORDER BY student_id
         ");
-        $stmt->execute([$classroom]);
+        $stmt->execute([$classroom, $curYear]);
         $students = $stmt->fetchAll();
+        if (empty($students)) {
+            $stmt = $pdo->prepare("SELECT student_id, name, classroom FROM att_students WHERE classroom = ? AND (status = 'active' OR status IS NULL) AND $filterSql ORDER BY student_id");
+            $stmt->execute([$classroom]);
+            $students = $stmt->fetchAll();
+        }
     }
 
     // ดึง attendance (Morning)

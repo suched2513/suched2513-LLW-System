@@ -81,6 +81,9 @@ require_once '../components/layout_start.php';
             <button type="submit" class="bg-indigo-600 text-white px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100">
                 Filter Data
             </button>
+            <div class="w-full pt-1 border-t border-slate-100">
+                <?= llw_render_term_preset_bar($pdo, 'start_date', 'end_date') ?>
+            </div>
         </form>
 
         <div class="flex gap-3">

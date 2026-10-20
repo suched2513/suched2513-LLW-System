@@ -13,19 +13,29 @@ if (($_SESSION['llw_role'] ?? '') !== 'super_admin') {
 $pdo = getPdo();
 
 // ── Filters ────────────────────────────────────────────────────
-$filter_cls = trim($_GET['cls'] ?? '');
+llw_ensure_semester_schema($pdo);
+$filter_cls  = trim($_GET['cls'] ?? '');
+$filter_mode = $_GET['mode'] ?? 'ms'; // 'ms' (<80%) or 'warn' (<85% รวมกลุ่มเสี่ยง)
+$threshold   = $filter_mode === 'warn' ? 85 : 80;
+$_msTerm     = llw_get_term_dates($pdo, llw_current_academic_year(), llw_current_semester());
+$start_date  = $_GET['start_date'] ?? $_msTerm['start'];
+$end_date    = $_GET['end_date']   ?? $_msTerm['end'];
 
 // ── Export CSV ─────────────────────────────────────────────────
 if (isset($_GET['export'])) {
-    $where = $filter_cls ? "AND st.classroom = :cls" : "";
-    $params = $filter_cls ? [':cls' => $filter_cls] : [];
+    $where = "AND a.date BETWEEN :sd AND :ed ";
+    $params = [':sd' => $start_date, ':ed' => $end_date, ':sd2' => $start_date, ':ed2' => $end_date];
+    if ($filter_cls) {
+        $where .= "AND st.classroom = :cls ";
+        $params[':cls'] = $filter_cls;
+    }
 
     $sql = "
         SELECT
             st.classroom, st.student_id, st.name as student_name,
             sj.subject_code, sj.subject_name,
             COUNT(DISTINCT CONCAT(a.date,'_',a.period)) as my_sessions,
-            (SELECT COUNT(DISTINCT CONCAT(date,'_',period)) FROM att_attendance WHERE subject_id=sj.id) as total_sessions,
+            (SELECT COUNT(DISTINCT CONCAT(date,'_',period)) FROM att_attendance WHERE subject_id=sj.id AND date BETWEEN :sd2 AND :ed2) as total_sessions,
             SUM(CASE WHEN a.status='มา' THEN 1 ELSE 0 END) as cnt_come
         FROM att_students st
         JOIN att_attendance a ON a.student_id = st.id
@@ -33,7 +43,7 @@ if (isset($_GET['export'])) {
         WHERE 1=1 $where
         GROUP BY st.id, sj.id
         HAVING total_sessions > 0
-            AND ROUND((cnt_come / total_sessions) * 100, 1) < 80
+            AND ROUND((cnt_come / total_sessions) * 100, 1) < $threshold
         ORDER BY st.classroom, st.student_id, sj.subject_code
     ";
     $s = $pdo->prepare($sql); $s->execute($params); $ms_rows = $s->fetchAll();
@@ -54,16 +64,20 @@ if (isset($_GET['export'])) {
 // ── Data Fetching ───────────────────────────────────────────────
 $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE student_id REGEXP '^[0-9]+$' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
-$where  = $filter_cls ? "AND st.classroom = :cls" : "";
-$params = $filter_cls ? [':cls' => $filter_cls] : [];
+$where  = "AND a.date BETWEEN :sd AND :ed ";
+$params = [':sd' => $start_date, ':ed' => $end_date, ':sd2' => $start_date, ':ed2' => $end_date];
+if ($filter_cls) {
+    $where .= "AND st.classroom = :cls ";
+    $params[':cls'] = $filter_cls;
+}
 
-// นักเรียนที่ติด มส. อย่างน้อย 1 วิชา
+// นักเรียนที่ติด มส. หรือเสี่ยง มส. อย่างน้อย 1 วิชาในช่วงภาคเรียนที่เลือก
 $sql = "
     SELECT
         st.id as std_id, st.classroom, st.student_id, st.name as student_name,
         sj.id as subj_id, sj.subject_code, sj.subject_name,
         COUNT(DISTINCT CONCAT(a.date,'_',a.period)) as my_sessions,
-        (SELECT COUNT(DISTINCT CONCAT(date,'_',period)) FROM att_attendance WHERE subject_id=sj.id) as total_sessions,
+        (SELECT COUNT(DISTINCT CONCAT(date,'_',period)) FROM att_attendance WHERE subject_id=sj.id AND date BETWEEN :sd2 AND :ed2) as total_sessions,
         SUM(CASE WHEN a.status='มา' THEN 1 ELSE 0 END) as cnt_come
     FROM att_students st
     JOIN att_attendance a ON a.student_id = st.id
@@ -71,7 +85,7 @@ $sql = "
     WHERE 1=1 $where
     GROUP BY st.id, sj.id
     HAVING total_sessions > 0
-        AND ROUND((cnt_come / total_sessions) * 100, 1) < 80
+        AND ROUND((cnt_come / total_sessions) * 100, 1) < $threshold
     ORDER BY st.classroom, st.student_id, sj.subject_code
 ";
 $s = $pdo->prepare($sql); $s->execute($params); $ms_rows = $s->fetchAll();
@@ -142,9 +156,22 @@ require_once '../components/layout_start.php';
                 <option value="<?= htmlspecialchars($cls) ?>" <?= $filter_cls === $cls ? 'selected' : '' ?>><?= htmlspecialchars($cls) ?></option>
                 <?php endforeach; ?>
             </select>
+            <label class="text-xs font-black text-slate-400 uppercase tracking-wider ml-2">เกณฑ์แสดงผล:</label>
+            <select name="mode" onchange="this.form.submit()" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold focus:ring-2 focus:ring-rose-400 outline-none">
+                <option value="ms" <?= $filter_mode === 'ms' ? 'selected' : '' ?>>🚨 ติด มส. (&lt;80%)</option>
+                <option value="warn" <?= $filter_mode === 'warn' ? 'selected' : '' ?>>⚠️ รวมกลุ่มเสี่ยงล่วงหน้า (&lt;85%)</option>
+            </select>
+            <label class="text-xs font-black text-slate-400 uppercase tracking-wider ml-2">ตั้งแต่:</label>
+            <input type="date" name="start_date" value="<?= htmlspecialchars($start_date) ?>" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none">
+            <label class="text-xs font-black text-slate-400 uppercase tracking-wider">ถึง:</label>
+            <input type="date" name="end_date" value="<?= htmlspecialchars($end_date) ?>" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none">
+            <button type="submit" class="bg-rose-600 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-rose-700 transition">ค้นหา</button>
             <?php if ($filter_cls): ?>
             <a href="report_ms.php" class="text-xs font-bold text-rose-500 hover:text-rose-700 transition">✕ ล้างตัวกรอง</a>
             <?php endif; ?>
+            <div class="w-full">
+                <?= llw_render_term_preset_bar($pdo, 'start_date', 'end_date') ?>
+            </div>
         </form>
     </div>
 

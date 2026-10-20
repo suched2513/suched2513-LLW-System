@@ -80,7 +80,19 @@ require_once __DIR__ . '/../components/layout_start.php';
                 </button>
             </div>
         </div>
-        <p class="text-xs text-slate-400 -mt-3 mb-5"><i class="bi bi-info-circle mr-1"></i>เลือกเดือนเริ่มต้น–สิ้นสุดให้เหมือนกันเพื่อดูรายเดือน หรือเลือกช่วงกว้างขึ้นเพื่อดูสรุปทั้งเทอม</p>
+        <div class="flex flex-wrap items-center gap-2 -mt-2 mb-5">
+            <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider mr-1"><i class="bi bi-lightning-charge-fill text-amber-500"></i> เลือกด่วน:</span>
+            <button type="button" onclick="setAdmTerm('05','10')" class="px-3 py-1 rounded-xl text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition">
+                📅 ภาคเรียนที่ 1 (พ.ค. – ต.ค.)
+            </button>
+            <button type="button" onclick="setAdmTerm('11','03')" class="px-3 py-1 rounded-xl text-xs font-black bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition">
+                📅 ภาคเรียนที่ 2 (พ.ย. – มี.ค.)
+            </button>
+            <button type="button" onclick="setAdmTerm('<?= date('m') ?>','<?= date('m') ?>')" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition">
+                เดือนนี้
+            </button>
+            <span class="text-xs text-slate-400 ml-auto"><i class="bi bi-info-circle mr-1"></i>รองรับสรุปข้ามปี พ.ย.–มี.ค. สำหรับเทอม 2 อัตโนมัติ</span>
+        </div>
 
         <!-- KPI Cards -->
         <div id="adm-kpi" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 hidden">
@@ -136,7 +148,7 @@ require_once __DIR__ . '/../components/layout_start.php';
             <div class="flex flex-wrap items-center justify-end gap-3">
                 <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl px-3 py-1.5">
                     <label class="text-xs font-bold text-slate-500">นักเรียนที่มาไม่ถึง</label>
-                    <input id="adm-low-threshold" type="number" min="0" max="100" value="60"
+                    <input id="adm-low-threshold" type="number" min="0" max="100" value="80"
                         class="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1 text-sm font-bold text-center outline-none focus:ring-2 focus:ring-rose-400">
                     <span class="text-xs font-bold text-slate-500">%</span>
                 </div>
@@ -395,6 +407,14 @@ async function initRooms() {
 }
 // ─── OVERVIEW ───
 let admBarChart = null, admUniChart = null;
+
+function setAdmTerm(mFrom, mTo) {
+    const fEl = document.getElementById('adm-month-from');
+    const tEl = document.getElementById('adm-month-to');
+    if (fEl) fEl.value = mFrom;
+    if (tEl) tEl.value = mTo;
+    loadAdminOverview();
+}
 
 async function loadAdminOverview() {
     const monthFrom = document.getElementById('adm-month-from').value;
@@ -660,10 +680,15 @@ function renderMonthOptions(bool $includeAll = false): string {
     $months = ['01'=>'มกราคม','02'=>'กุมภาพันธ์','03'=>'มีนาคม','04'=>'เมษายน',
                '05'=>'พฤษภาคม','06'=>'มิถุนายน','07'=>'กรกฎาคม','08'=>'สิงหาคม',
                '09'=>'กันยายน','10'=>'ตุลาคม','11'=>'พฤศจิกายน','12'=>'ธันวาคม'];
-    $html    = $includeAll ? '<option value="all">ทุกเดือน</option>' : '<option value="">เลือกเดือน</option>';
+    $curSem  = function_exists('llw_current_semester') ? llw_current_semester() : 1;
+    $html    = $includeAll
+        ? '<option value="all">ทุกเดือน (ทั้งปี)</option>'
+          . '<option value="sem1" ' . ($curSem === 1 ? 'selected' : '') . '>📅 ภาคเรียนที่ 1 (พ.ค.–ต.ค.)</option>'
+          . '<option value="sem2" ' . ($curSem === 2 ? 'selected' : '') . '>📅 ภาคเรียนที่ 2 (พ.ย.–มี.ค.)</option>'
+        : '<option value="">เลือกเดือน</option>';
     $current = date('m');
     foreach ($months as $k => $v) {
-        $html .= "<option value=\"$k\" " . ($k === $current ? 'selected' : '') . ">$v</option>";
+        $html .= "<option value=\"$k\" " . ((!$includeAll && $k === $current) ? 'selected' : '') . ">$v</option>";
     }
     return $html;
 }

@@ -38,17 +38,9 @@ try {
     $sStmt->execute([$classroom]);
     $students = $sStmt->fetchAll();
 
-    // สร้าง condition สำหรับช่วงเดือน (รองรับทั้งช่วงเดือนใหม่ และ month เดี่ยวแบบเดิม)
-    $monthCond = '';
-    $params    = [$classroom];
-    if ($monthFrom !== '' && $monthTo !== '') {
-        $monthCond = "AND DATE_FORMAT(a.date, '%m') BETWEEN ? AND ?";
-        $params[]  = $monthFrom;
-        $params[]  = $monthTo;
-    } elseif ($month !== 'all') {
-        $monthCond = "AND DATE_FORMAT(a.date, '%m') = ?";
-        $params[]  = $month;
-    }
+    // สร้าง condition สำหรับช่วงเดือน/ภาคเรียน (รองรับข้ามปี พ.ย. 11 - มี.ค. 03 ในเทอม 2)
+    [$monthCond, $dateParams] = llw_build_assembly_date_condition($pdo, 'a.date', $_GET);
+    $params = array_merge([$classroom], $dateParams);
 
     // ดึง attendance ทั้งหมด
     $aStmt = $pdo->prepare("

@@ -7,11 +7,12 @@ $pageTitle   = 'รายงาน ปพ.5';
 $pageSubtitle = 'บันทึกเวลาเรียนรายคาบ';
 
 $isAdmin  = $_SESSION['llw_role'] === 'super_admin';
-$subjects = getTeacherSubjects($isAdmin ? 0 : (int)$teacher_id, $pdo);
+$subjects = getTeacherSubjects($isAdmin ? 0 : (int)$teacher_id, $pdo, 0);
 
 $sid         = (int)($_GET['subject_id'] ?? 0);
-$startDate   = $_GET['start_date'] ?? date('Y-m-01');
-$endDate     = $_GET['end_date']   ?? date('Y-m-t');
+$_p5Term     = llw_get_term_dates($pdo, llw_current_academic_year(), llw_current_semester());
+$startDate   = $_GET['start_date'] ?? $_p5Term['start'];
+$endDate     = $_GET['end_date']   ?? $_p5Term['end'];
 $teachDays   = $_GET['teach_days'] ?? [];   // array of day numbers 1-7 (Mon=1)
 $teachPeriod = (int)($_GET['teach_period'] ?? 0);  // คาบที่ (1-8), 0 = ไม่ระบุ
 
@@ -176,7 +177,7 @@ require_once '../components/layout_start.php';
                     <option value="">-- เลือกวิชา --</option>
                     <?php foreach ($subjects as $sub): ?>
                     <option value="<?= $sub['id'] ?>" <?= $sid == $sub['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($sub['subject_code'] . ' ' . $sub['subject_name'] . ' (' . $sub['classroom'] . ')') ?>
+                        <?= htmlspecialchars('[เทอม ' . ($sub['semester'] ?? 1) . '] ' . $sub['subject_code'] . ' ' . $sub['subject_name'] . ' (' . $sub['classroom'] . ')') ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
@@ -192,6 +193,7 @@ require_once '../components/layout_start.php';
                        class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
             </div>
         </div>
+        <?= llw_render_term_preset_bar($pdo, 'start_date', 'end_date') ?>
 
         <!-- วันที่สอน -->
         <div>

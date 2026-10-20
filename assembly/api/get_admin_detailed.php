@@ -28,9 +28,14 @@ try {
     $where  = ['1=1'];
     $params = [];
 
-    if ($month !== 'all') {
-        $where[]  = "DATE_FORMAT(date, '%m') = ?";
-        $params[] = $month;
+    if ($month === 'sem1' || $month === 'sem2') {
+        $_GET['semester'] = $month === 'sem1' ? 1 : 2;
+        $_GET['month'] = 'all';
+    }
+    [$dateCondSql, $dateParams] = llw_build_assembly_date_condition($pdo, 'date', $_GET);
+    if ($dateCondSql !== '') {
+        $where[] = preg_replace('/^\s*AND\s+/i', '', $dateCondSql);
+        $params  = array_merge($params, $dateParams);
     }
     if ($level !== 'all') {
         // level เช่น "ม.1" → classroom ขึ้นต้นด้วย "ม.1/"
