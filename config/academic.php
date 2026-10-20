@@ -62,18 +62,26 @@ if (!function_exists('llw_default_term_dates')) {
     function llw_default_term_dates(int $academicYear, int $semester): array {
         $ceYear = $academicYear - 543;
         if ($semester === 2) {
+            $s = sprintf('%04d-%02d-%02d', $ceYear, LLW_SEM2_START[0], LLW_SEM2_START[1]);
+            $e = sprintf('%04d-%02d-%02d', $ceYear + 1, LLW_SEM2_END[0], LLW_SEM2_END[1]);
             return [
                 'academic_year' => $academicYear,
                 'semester'      => 2,
-                'start_date'    => sprintf('%04d-%02d-%02d', $ceYear, LLW_SEM2_START[0], LLW_SEM2_START[1]),
-                'end_date'      => sprintf('%04d-%02d-%02d', $ceYear + 1, LLW_SEM2_END[0], LLW_SEM2_END[1]),
+                'start_date'    => $s,
+                'end_date'      => $e,
+                'start'         => $s,
+                'end'           => $e,
             ];
         }
+        $s = sprintf('%04d-%02d-%02d', $ceYear, LLW_SEM1_START[0], LLW_SEM1_START[1]);
+        $e = sprintf('%04d-%02d-%02d', $ceYear, LLW_SEM1_END[0], LLW_SEM1_END[1]);
         return [
             'academic_year' => $academicYear,
             'semester'      => 1,
-            'start_date'    => sprintf('%04d-%02d-%02d', $ceYear, LLW_SEM1_START[0], LLW_SEM1_START[1]),
-            'end_date'      => sprintf('%04d-%02d-%02d', $ceYear, LLW_SEM1_END[0], LLW_SEM1_END[1]),
+            'start_date'    => $s,
+            'end_date'      => $e,
+            'start'         => $s,
+            'end'           => $e,
         ];
     }
 }
@@ -81,8 +89,27 @@ if (!function_exists('llw_default_term_dates')) {
 if (!function_exists('llw_get_term_dates')) {
     /**
      * ดึงช่วงวันเปิด-ปิดภาคเรียนจากตาราง llw_academic_terms (ถ้าไม่มีใช้ค่ามาตรฐาน)
+     * รองรับการเรียกทั้ง:
+     *   - llw_get_term_dates($year, $sem, $pdo)
+     *   - llw_get_term_dates($pdo, $year, $sem)
      */
-    function llw_get_term_dates(?int $academicYear = null, ?int $semester = null, ?PDO $pdo = null): array {
+    function llw_get_term_dates($arg1 = null, $arg2 = null, $arg3 = null): array {
+        $pdo          = null;
+        $academicYear = null;
+        $semester     = null;
+
+        if ($arg1 instanceof PDO) {
+            $pdo          = $arg1;
+            $academicYear = is_numeric($arg2) ? (int)$arg2 : null;
+            $semester     = is_numeric($arg3) ? (int)$arg3 : null;
+        } else {
+            $academicYear = is_numeric($arg1) ? (int)$arg1 : null;
+            $semester     = is_numeric($arg2) ? (int)$arg2 : null;
+            if ($arg3 instanceof PDO) {
+                $pdo = $arg3;
+            }
+        }
+
         $academicYear = $academicYear ?: llw_current_academic_year();
         $semester     = in_array($semester, [1, 2], true) ? $semester : llw_current_semester();
         $defaults     = llw_default_term_dates($academicYear, $semester);
@@ -98,6 +125,8 @@ if (!function_exists('llw_get_term_dates')) {
                 if ($row) {
                     $defaults['start_date'] = $row['start_date'];
                     $defaults['end_date']   = $row['end_date'];
+                    $defaults['start']      = $row['start_date'];
+                    $defaults['end']        = $row['end_date'];
                     $defaults['is_active']  = (int)$row['is_active'];
                 }
             }
@@ -216,34 +245,51 @@ if (!function_exists('llw_resolve_month_range_dates')) {
         $lastDay   = (int)date('t', strtotime(sprintf('%04d-%02d-01', $yearTo, $mTo)));
         $endDate   = sprintf('%04d-%02d-%02d', $yearTo, $mTo, $lastDay);
 
-        return ['start_date' => $startDate, 'end_date' => $endDate];
+        return ['start_date' => $startDate, 'end_date' => $endDate, 'start' => $startDate, 'end' => $endDate];
     }
 }
 
 if (!function_exists('llw_build_assembly_date_condition')) {
     /**
      * สร้าง SQL condition และ params สำหรับกรองวันที่ของระบบเข้าแถว (assembly)
-     * รองรับทั้ง:
-     *   - date_from & date_to (YYYY-MM-DD)
-     *   - semester (1 หรือ 2) + year (พ.ศ.)
-     *   - month_from & month_to (01..12 รองรับข้ามปี พ.ย. 11 -> มี.ค. 03)
-     *   - month เดี่ยว (01..12)
+     * รองรับทั้งการเรียกแบบ:
+     *   - [$sql, $params] = llw_build_assembly_date_condition($pdo, 'a.date', $_GET)
+     *   - $res = llw_build_assembly_date_condition('a.date', $_GET)
      */
-    function llw_build_assembly_date_condition(string $colName = 'date', ?array $src = null): array {
-        $src       = $src ?? $_GET;
-        $dateFrom  = trim($src['date_from']  ?? '');
-        $dateTo    = trim($src['date_to']    ?? '');
+    function llw_build_assembly_date_condition($arg1 = 'date', $arg2 = null, $arg3 = null): array {
+        $pdo     = null;
+        $colName = 'date';
+        $src     = $_GET;
+
+        if ($arg1 instanceof PDO) {
+            $pdo     = $arg1;
+            $colName = is_string($arg2) && $arg2 !== '' ? $arg2 : 'date';
+            $src     = is_array($arg3) ? $arg3 : $_GET;
+        } else {
+            $colName = is_string($arg1) && $arg1 !== '' ? $arg1 : 'date';
+            $src     = is_array($arg2) ? $arg2 : $_GET;
+        }
+
+        $dateFrom  = trim($src['date_from']  ?? ($src['start_date'] ?? ''));
+        $dateTo    = trim($src['date_to']    ?? ($src['end_date']   ?? ''));
         $sem       = (int)($src['semester']  ?? 0);
         $year      = (int)($src['year']      ?? llw_current_academic_year());
         $monthFrom = trim($src['month_from'] ?? '');
         $monthTo   = trim($src['month_to']   ?? '');
         $month     = trim($src['month']      ?? 'all');
 
+        if ($month === 'sem1') { $sem = 1; $month = 'all'; }
+        elseif ($month === 'sem2') { $sem = 2; $month = 'all'; }
+
         // 1. ถ้าระบุ date_from และ date_to มาโดยตรง
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFrom) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateTo)) {
+            $sql    = "AND $colName BETWEEN ? AND ?";
+            $params = [$dateFrom, $dateTo];
             return [
-                'sql'        => "AND $colName BETWEEN ? AND ?",
-                'params'     => [$dateFrom, $dateTo],
+                0            => $sql,
+                1            => $params,
+                'sql'        => $sql,
+                'params'     => $params,
                 'start_date' => $dateFrom,
                 'end_date'   => $dateTo,
                 'label'      => "$dateFrom ถึง $dateTo",
@@ -252,10 +298,14 @@ if (!function_exists('llw_build_assembly_date_condition')) {
 
         // 2. ถ้าระบุ semester (1 หรือ 2)
         if (in_array($sem, [1, 2], true)) {
-            $term = llw_get_term_dates($year, $sem);
+            $term   = llw_get_term_dates($year, $sem, $pdo);
+            $sql    = "AND $colName BETWEEN ? AND ?";
+            $params = [$term['start_date'], $term['end_date']];
             return [
-                'sql'        => "AND $colName BETWEEN ? AND ?",
-                'params'     => [$term['start_date'], $term['end_date']],
+                0            => $sql,
+                1            => $params,
+                'sql'        => $sql,
+                'params'     => $params,
                 'start_date' => $term['start_date'],
                 'end_date'   => $term['end_date'],
                 'label'      => "เทอม {$sem}/{$year}",
@@ -266,9 +316,13 @@ if (!function_exists('llw_build_assembly_date_condition')) {
         if ($monthFrom !== '' && $monthTo !== '') {
             $range = llw_resolve_month_range_dates($monthFrom, $monthTo, $year);
             if ($range) {
+                $sql    = "AND $colName BETWEEN ? AND ?";
+                $params = [$range['start_date'], $range['end_date']];
                 return [
-                    'sql'        => "AND $colName BETWEEN ? AND ?",
-                    'params'     => [$range['start_date'], $range['end_date']],
+                    0            => $sql,
+                    1            => $params,
+                    'sql'        => $sql,
+                    'params'     => $params,
                     'start_date' => $range['start_date'],
                     'end_date'   => $range['end_date'],
                     'label'      => "{$monthFrom}-{$monthTo}/{$year}",
@@ -280,9 +334,13 @@ if (!function_exists('llw_build_assembly_date_condition')) {
         if ($month !== '' && $month !== 'all') {
             $range = llw_resolve_month_range_dates($month, $month, $year);
             if ($range) {
+                $sql    = "AND $colName BETWEEN ? AND ?";
+                $params = [$range['start_date'], $range['end_date']];
                 return [
-                    'sql'        => "AND $colName BETWEEN ? AND ?",
-                    'params'     => [$range['start_date'], $range['end_date']],
+                    0            => $sql,
+                    1            => $params,
+                    'sql'        => $sql,
+                    'params'     => $params,
                     'start_date' => $range['start_date'],
                     'end_date'   => $range['end_date'],
                     'label'      => "เดือน {$month}/{$year}",
@@ -290,18 +348,42 @@ if (!function_exists('llw_build_assembly_date_condition')) {
             }
         }
 
-        return ['sql' => '', 'params' => [], 'start_date' => null, 'end_date' => null, 'label' => 'ทั้งหมด'];
+        return [0 => '', 1 => [], 'sql' => '', 'params' => [], 'start_date' => null, 'end_date' => null, 'label' => 'ทั้งหมด'];
     }
 }
 
 if (!function_exists('llw_render_term_preset_bar')) {
     /**
-     * แสดงแถบปุ่มลัดเลือกช่วงเวลา (เทอม 1 / เทอม 2 / เดือนนี้ / สัปดาห์นี้) สำหรับหน้ารายงาน
+     * แสดงแถบปุ่มลัดเลือกช่วงเวลา (เทอม 1 / เทอม 2 / เดือนนี้ / สัปดาห์นี้ / วันนี้) สำหรับหน้ารายงาน
+     * รองรับทั้ง:
+     *   - llw_render_term_preset_bar($pdo, 'start_date', 'end_date')
+     *   - llw_render_term_preset_bar('start_date', 'end_date')
      */
-    function llw_render_term_preset_bar(string $startSelector = 'input[name="start_date"]', string $endSelector = 'input[name="end_date"]', string $curStart = '', string $curEnd = '', ?int $year = null): string {
-        $year  = $year ?: llw_current_academic_year();
-        $term1 = llw_get_term_dates($year, 1);
-        $term2 = llw_get_term_dates($year, 2);
+    function llw_render_term_preset_bar($arg1 = 'start_date', $arg2 = 'end_date', string $curStart = '', string $curEnd = '', ?int $year = null): string {
+        $pdo = null;
+        if ($arg1 instanceof PDO) {
+            $pdo           = $arg1;
+            $startSelector = is_string($arg2) && $arg2 !== '' ? $arg2 : 'start_date';
+            $endSelector   = ($curStart !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $curStart)) ? $curStart : 'end_date';
+            $curStart      = $_GET[$startSelector] ?? '';
+            $curEnd        = $_GET[$endSelector]   ?? '';
+        } else {
+            $startSelector = is_string($arg1) && $arg1 !== '' ? $arg1 : 'start_date';
+            $endSelector   = is_string($arg2) && $arg2 !== '' ? $arg2 : 'end_date';
+            if ($curStart === '' && isset($_GET[$startSelector])) $curStart = $_GET[$startSelector];
+            if ($curEnd === ''   && isset($_GET[$endSelector]))   $curEnd   = $_GET[$endSelector];
+        }
+
+        if (strpos($startSelector, '[') === false && strpos($startSelector, '#') === false && strpos($startSelector, '.') === false) {
+            $startSelector = 'input[name="' . $startSelector . '"]';
+        }
+        if (strpos($endSelector, '[') === false && strpos($endSelector, '#') === false && strpos($endSelector, '.') === false) {
+            $endSelector = 'input[name="' . $endSelector . '"]';
+        }
+
+        $year   = $year ?: llw_current_academic_year();
+        $term1  = llw_get_term_dates($year, 1, $pdo);
+        $term2  = llw_get_term_dates($year, 2, $pdo);
         $curSem = llw_current_semester();
 
         $monthStart = date('Y-m-01');
@@ -352,7 +434,7 @@ if (!function_exists('llw_render_term_preset_bar')) {
         $sSel = htmlspecialchars($startSelector, ENT_QUOTES, 'UTF-8');
         $eSel = htmlspecialchars($endSelector, ENT_QUOTES, 'UTF-8');
 
-        $html = '<div class="flex flex-wrap items-center gap-2 mb-3 no-print">';
+        $html = '<div class="flex flex-wrap items-center gap-2 mb-1 no-print">';
         $html .= '<span class="text-[11px] font-black text-slate-400 uppercase tracking-wider mr-1"><i class="bi bi-lightning-charge-fill text-amber-500"></i> ช่วงเวลาด่วน:</span>';
         foreach ($presets as $p) {
             $active = ($curStart === $p['start'] && $curEnd === $p['end']);
@@ -383,5 +465,3 @@ if (!function_exists('llw_render_term_preset_bar')) {
         return $html;
     }
 }
-
-

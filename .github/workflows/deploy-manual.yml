@@ -61,6 +61,8 @@ jobs:
            * ไฟล์นี้ถูกสร้างอัตโนมัติโดย GitHub Actions
            */
 
+          require_once __DIR__ . '/academic.php';
+
           define('DB_HOST', '${{ secrets.DB_HOST }}');
           define('DB_USER', '${{ secrets.DB_USER }}');
           define('DB_PASS', '${{ secrets.DB_PASS }}');

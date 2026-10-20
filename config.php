@@ -4,6 +4,7 @@
  * ดึงค่าทั้งหมดจากศูนย์กลาง: config/database.php
  */
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/config/academic.php';
 
 // --- Automated Base Path Detection ---
 // This calculates the relative path from the Apache DocumentRoot to the project folder.
