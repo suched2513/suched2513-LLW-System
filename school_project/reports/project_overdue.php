@@ -24,11 +24,11 @@ echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content fle
       <tbody>
       <?php foreach ($rows as $r): ?>
       <tr>
-        <td class="ps-4"><div style="font-weight:500"><?=h($r['project_name'])?></div><div style="font-size:12px;color:#64748b"><?=h(mb_substr($r['activity']??''，0，60))?></div></td>
+        <td class="ps-4"><div style="font-weight:500"><?=h($r['project_name'])?></div><div style="font-size:12px;color:#64748b"><?=h(mb_substr($r['activity']??'',0,60))?></div></td>
         <td><?=h($r['dept_name'])?></td>
         <td><?=h($r['owner_name'])?></td>
         <td class="text-end"><?=formatMoney($r['budget_subsidy']+$r['budget_quality']+$r['budget_revenue']+$r['budget_operation']+$r['budget_reserve'])?></td>
-        <td class="text-center"><span class="badge bg-<?=$r['days_ago']>60?'danger':'warning text-dark'"><?=$r['days_ago']?> วัน</span></td>
+        <td class="text-center"><span class="badge bg-<?=$r['days_ago']>60?'danger':'warning text-dark'?>"><?=$r['days_ago']?> วัน</span></td>
       </tr>
       <?php endforeach; if(empty($rows)): ?>
       <tr><td colspan="5" class="text-center py-5 text-muted"><i class="bi bi-check-all fs-2 d-block mb-2"></i>ไม่มีโครงการค้างดำเนินการ</td></tr>

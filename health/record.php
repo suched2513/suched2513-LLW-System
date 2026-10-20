@@ -160,8 +160,8 @@ require_once __DIR__ . '/../components/layout_start.php';
       <div>
         <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-wider">ภาคเรียน <span class="text-rose-500">*</span></label>
         <select name="semester" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-400 outline-none">
-          <option value="1" <?=($rec['semester']??1)==1?'selected':''?>>ภาคเรียนที่ 1</option>
-          <option value="2" <?=($rec['semester']??1)==2?'selected':''?>>ภาคเรียนที่ 2</option>
+          <option value="1" <?=($rec['semester']??llw_current_semester())==1?'selected':''?>>ภาคเรียนที่ 1</option>
+          <option value="2" <?=($rec['semester']??llw_current_semester())==2?'selected':''?>>ภาคเรียนที่ 2</option>
         </select>
       </div>
     </div>
@@ -169,7 +169,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     <div class="mb-4">
       <label class="block text-xs font-black text-slate-600 mb-2 uppercase tracking-wider">ปีการศึกษา <span class="text-rose-500">*</span></label>
       <input type="number" name="academic_year" required
-        value="<?=htmlspecialchars($rec['academic_year']??2569,ENT_QUOTES,'UTF-8')?>"
+        value="<?=htmlspecialchars($rec['academic_year']??llw_current_academic_year(),ENT_QUOTES,'UTF-8')?>"
         class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-400 outline-none">
     </div>
 

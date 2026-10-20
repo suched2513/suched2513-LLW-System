@@ -41,9 +41,9 @@ renderHead('Dashboard ผู้อำนวยการ');
 echo '<div class="d-flex">'; renderSidebar(); echo '<div class="main-content flex-grow-1">'; renderTopbar('Dashboard ผู้อำนวยการ'); echo '<div class="page-content">'; showFlash();
 ?>
 <div class="row g-3 mb-4">
-  <div class="col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#1a56db,#3b82f6)"><div class="d-flex justify-content-between align-items-start"><div><div class="stat-value"><?=$stats['total']?0?></div><div class="stat-label">คำขอทั้งหมด</div></div><i class="bi bi-folder2 stat-icon"></i></div></div></div>
-  <div class="col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#f59e0b,#fbbf24)"><div class="d-flex justify-content-between align-items-start"><div><div class="stat-value"><?=$stats['submitted']?0?></div><div class="stat-label">รออนุมัติ</div></div><i class="bi bi-hourglass stat-icon"></i></div></div></div>
-  <div class="col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#10b981,#34d399)"><div class="d-flex justify-content-between align-items-start"><div><div class="stat-value"><?=$stats['approved']?0?></div><div class="stat-label">อนุมัติแล้ว</div></div><i class="bi bi-check-circle stat-icon"></i></div></div></div>
+  <div class="col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#1a56db,#3b82f6)"><div class="d-flex justify-content-between align-items-start"><div><div class="stat-value"><?=$stats['total']??0?></div><div class="stat-label">คำขอทั้งหมด</div></div><i class="bi bi-folder2 stat-icon"></i></div></div></div>
+  <div class="col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#f59e0b,#fbbf24)"><div class="d-flex justify-content-between align-items-start"><div><div class="stat-value"><?=$stats['submitted']??0?></div><div class="stat-label">รออนุมัติ</div></div><i class="bi bi-hourglass stat-icon"></i></div></div></div>
+  <div class="col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#10b981,#34d399)"><div class="d-flex justify-content-between align-items-start"><div><div class="stat-value"><?=$stats['approved']??0?></div><div class="stat-label">อนุมัติแล้ว</div></div><i class="bi bi-check-circle stat-icon"></i></div></div></div>
   <div class="col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#ef4444,#f87171)"><div class="d-flex justify-content-between align-items-start"><div><div class="stat-value"><?=count($overdue)?></div><div class="stat-label">โครงการค้างดำเนินการ</div></div><i class="bi bi-exclamation-triangle stat-icon"></i></div></div></div>
 </div>
 
@@ -114,7 +114,7 @@ new Chart(document.getElementById('budgetChart'), {
 new Chart(document.getElementById('statusChart'), {
   type:'doughnut',
   data:{labels:['รออนุมัติ','อนุมัติ','ปฏิเสธ','Draft'],
-        datasets:[{data:[<?=$stats['submitted']?0?>,<?=$stats['approved']?0?>,<?=$stats['rejected']?0?>,<?=($stats['total']?0)-($stats['submitted']?0)-($stats['approved']?0)-($stats['rejected']?0)?>],
+        datasets:[{data:[<?=$stats['submitted']??0?>,<?=$stats['approved']??0?>,<?=$stats['rejected']??0?>,<?=($stats['total']??0)-($stats['submitted']??0)-($stats['approved']??0)-($stats['rejected']??0)?>],
         backgroundColor:['#f59e0b','#10b981','#ef4444','#94a3b8']}]},
   options:{responsive:true,plugins:{legend:{position:'bottom'}}}
 });

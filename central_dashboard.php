@@ -22,8 +22,8 @@ function llw_sub($str, $start, $len) {
 $pdo = getPdo();
 
 // --- Configuration & Filters ---
-$currentYear = (int)($_GET['year'] ?? 2569);
-$currentSemester = (int)($_GET['semester'] ?? 1);
+$currentYear = (int)($_GET['year'] ?? llw_current_academic_year());
+$currentSemester = (int)($_GET['semester'] ?? llw_current_semester());
 
 // --- Handle Web Migration (One-click Update) ---
 $updateMessage = '';

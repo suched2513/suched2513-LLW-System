@@ -5,10 +5,10 @@ if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.
 if (!in_array($_SESSION['llw_role'], ['super_admin'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 
 $pdo       = getPdo();
-$year      = (int)($_GET['year']      ?? 2569);
-$sem       = (int)($_GET['semester']  ?? 1);
+$year      = (int)($_GET['year']      ?? llw_current_academic_year());
+$sem       = (int)($_GET['semester']  ?? llw_current_semester());
 $classroom = trim($_GET['classroom']  ?? '');
-if (!in_array($sem, [1, 2])) $sem = 1;
+if (!in_array($sem, [1, 2])) $sem = llw_current_semester();
 
 $health_ok = (bool)$pdo->query("SHOW TABLES LIKE 'health_records'")->fetch();
 

@@ -11,8 +11,8 @@ if (!isset($_SESSION['llw_role'])) { header('Location: login.php'); exit(); }
 $pdo = getPdo();
 
 // --- Filters ---
-$currentYear = (int)($_GET['year'] ?? 2569);
-$currentSemester = (int)($_GET['semester'] ?? 1);
+$currentYear = (int)($_GET['year'] ?? llw_current_academic_year());
+$currentSemester = (int)($_GET['semester'] ?? llw_current_semester());
 $currentClass = $_GET['classroom'] ?? '';
 $search = $_GET['search'] ?? '';
 
