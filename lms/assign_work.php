@@ -64,13 +64,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// ── Load subjects ────────────────────────────────────────────────
-if ($is_admin) {
-    $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
-} else {
-    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
-    $st->execute([$teacher_id]); $subjects = $st->fetchAll();
-}
+// ── Load subjects for active semester ────────────────────────────
+$termCtx  = lms_active_term_context($pdo);
+$curSem   = (int)$termCtx['semester'];
+$curYear  = (int)$termCtx['year'];
+$subjects = lms_get_subjects_for_term($pdo, $is_admin, $teacher_id, $curSem, $curYear);
 
 $sel_subject_id = (int)($_GET['subject_id'] ?? ($subjects[0]['id'] ?? 0));
 $sel_subject    = null;
@@ -127,11 +125,13 @@ $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
+<?= lms_render_semester_bar($termCtx, $is_admin) ?>
+
 <?php if (!$sel_subject || empty($subjects)): ?>
 <!-- ── No subject selected: card grid ───────────────────────── -->
 <div class="mb-6">
-  <h2 class="text-lg font-black text-slate-800">สั่งงาน</h2>
-  <p class="text-xs text-slate-400 mt-0.5">เลือกวิชาที่ต้องการสั่งงาน</p>
+  <h2 class="text-lg font-black text-slate-800">สั่งงาน · ภาคเรียนที่ <?=$curSem?>/<?=$curYear?></h2>
+  <p class="text-xs text-slate-400 mt-0.5">เลือกวิชาที่ต้องการสั่งงานในภาคเรียนที่ <?=$curSem?></p>
 </div>
 <?php if (empty($subjects)): ?>
 <div class="bg-white rounded-2xl border border-slate-100 p-16 text-center shadow-sm">
@@ -168,6 +168,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 
 <?php else: ?>
 <!-- ── Subject selected ──────────────────────────────────────── -->
+<?= lms_render_semester_bar($termCtx, $is_admin) ?>
 
 <?php if (isset($_GET['done'])): ?>
 <div class="mb-4 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-3 flex items-center gap-3">

@@ -34,10 +34,12 @@ if (!function_exists('llw_ensure_semester_schema')) {
             }
             if (!$pdo) return false;
 
-            $hasTable = (bool)$pdo->query("SHOW TABLES LIKE 'llw_academic_terms'")->fetchColumn();
-            $hasCol   = (bool)$pdo->query("SHOW COLUMNS FROM `att_subjects` LIKE 'semester'")->fetchColumn();
+            $hasTable  = (bool)$pdo->query("SHOW TABLES LIKE 'llw_academic_terms'")->fetchColumn();
+            $hasCol    = (bool)$pdo->query("SHOW COLUMNS FROM `att_subjects` LIKE 'semester'")->fetchColumn();
+            $hasLmsTbl = (bool)$pdo->query("SHOW TABLES LIKE 'lms_subjects'")->fetchColumn();
+            $hasLmsCol = !$hasLmsTbl || (bool)$pdo->query("SHOW COLUMNS FROM `lms_subjects` LIKE 'semester'")->fetchColumn();
 
-            if (!$hasTable || !$hasCol) {
+            if (!$hasTable || !$hasCol || !$hasLmsCol) {
                 $migFile = __DIR__ . '/../database/migrations/2026_10_20_233000_add_semester_support.php';
                 if (file_exists($migFile)) {
                     $mig = require $migFile;

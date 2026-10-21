@@ -9,16 +9,14 @@ $pdo        = getPdo();
 $is_admin   = $_SESSION['llw_role'] === 'super_admin';
 $teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
 
+$termCtx     = lms_active_term_context($pdo);
+$curSem      = (int)$termCtx['semester'];
+$curYear     = (int)$termCtx['year'];
 $sel_subject = (int)($_GET['subject_id'] ?? 0);
 $sel_class   = trim($_GET['class'] ?? '');
 $sel_unit    = (int)($_GET['unit_id'] ?? 0);
 
-if ($is_admin) {
-    $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
-} else {
-    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
-    $st->execute([$teacher_id]); $subjects = $st->fetchAll();
-}
+$subjects    = lms_get_subjects_for_term($pdo, $is_admin, $teacher_id, $curSem, $curYear);
 
 $subject = $sel_subject ? lms_get_owned_subject($pdo, $sel_subject, $is_admin, $teacher_id) : null;
 $classes = []; $units = []; $unit = null;
@@ -140,12 +138,14 @@ $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
+<?= lms_render_semester_bar($termCtx, $is_admin) ?>
+
 <div class="flex items-center gap-3 mb-6">
   <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-indigo-500 to-blue-600">
     <i class="fas fa-chart-pie text-white"></i>
   </div>
   <div>
-    <h2 class="text-lg font-black text-slate-800">รายงานผล</h2>
+    <h2 class="text-lg font-black text-slate-800">รายงานผล · ภาคเรียนที่ <?=$curSem?>/<?=$curYear?></h2>
     <p class="text-xs text-slate-400">คะแนนก่อน–หลังเรียน และวิเคราะห์ข้อสอบ</p>
   </div>
 </div>

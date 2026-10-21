@@ -74,14 +74,11 @@ $subject_id  = (int)($_GET['subject_id'] ?? 0);
 $exercise_id = (int)($_GET['exercise_id'] ?? 0);
 $sel_class   = trim($_GET['class'] ?? '');
 
-// Subjects accessible to this teacher
-if ($is_admin) {
-    $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
-} else {
-    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
-    $st->execute([$teacher_id]);
-    $subjects = $st->fetchAll();
-}
+// Subjects accessible to this teacher for active semester
+$termCtx  = lms_active_term_context($pdo);
+$curSem   = (int)$termCtx['semester'];
+$curYear  = (int)$termCtx['year'];
+$subjects = lms_get_subjects_for_term($pdo, $is_admin, $teacher_id, $curSem, $curYear);
 
 $subject = null; $exercises = []; $exercise = null; $submissions = []; $classes = [];
 
@@ -171,12 +168,14 @@ $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
+<?= lms_render_semester_bar($termCtx, $is_admin) ?>
+
 <div class="flex flex-wrap items-center gap-3 mb-6">
   <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-violet-500 to-purple-600">
     <i class="bi bi-check2-square text-white text-lg"></i>
   </div>
   <div>
-    <h2 class="text-lg font-black text-slate-800">ตรวจงานนักเรียน</h2>
+    <h2 class="text-lg font-black text-slate-800">ตรวจงานนักเรียน · ภาคเรียนที่ <?=$curSem?>/<?=$curYear?></h2>
     <p class="text-xs text-slate-400">ดูงานที่ส่ง · ให้คะแนน · แสดงความคิดเห็น</p>
   </div>
 </div>

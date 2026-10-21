@@ -175,6 +175,9 @@ require_once __DIR__ . '/../components/layout_start.php';
       <div>
         <h2 class="text-xl font-black text-slate-800"><?=htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8')?></h2>
         <div class="flex flex-wrap gap-1 mt-1">
+          <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full">
+            <i class="fas fa-calendar-check mr-1"></i>ภาคเรียนที่ <?=(int)($subject['semester'] ?? 1)?>/<?=(int)($subject['academic_year'] ?? 2569)?>
+          </span>
           <?php if ($subject['subject_code']): ?>
           <span class="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-bold rounded-full"><?=htmlspecialchars($subject['subject_code'],ENT_QUOTES,'UTF-8')?></span>
           <?php endif; ?>

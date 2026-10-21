@@ -1,20 +1,18 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/_helpers.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 if (!in_array($_SESSION['llw_role'], ['super_admin','att_teacher'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 
 $pdo        = getPdo();
 $is_admin   = $_SESSION['llw_role'] === 'super_admin';
 $teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
+$termCtx    = lms_active_term_context($pdo);
+$curSem     = (int)$termCtx['semester'];
+$curYear    = (int)$termCtx['year'];
 
-if (!$is_admin) {
-    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
-    $st->execute([$teacher_id]);
-    $subjects = $st->fetchAll();
-} else {
-    $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
-}
+$subjects   = lms_get_subjects_for_term($pdo, $is_admin, $teacher_id, $curSem, $curYear);
 
 $subject_stats = [];
 $sids = array_column($subjects, 'id');
@@ -65,15 +63,22 @@ $class_data = $pdo->query("
     GROUP BY classroom ORDER BY classroom
 ")->fetchAll();
 
-// recent activity across all subjects
-$recent = $pdo->query("
-    SELECT s.name AS student_name, s.classroom, e.score, e.total, e.passed, e.taken_at,
-           subj.subject_name
-    FROM lms_student_pre_exam e
-    JOIN att_students s ON s.id = e.student_uid
-    JOIN lms_subjects subj ON subj.id = e.subject_id
-    ORDER BY e.taken_at DESC LIMIT 8
-")->fetchAll();
+// recent activity across subjects in this semester
+$recent = [];
+if (!empty($sids)) {
+    $ph = implode(',', array_fill(0, count($sids), '?'));
+    $rStmt = $pdo->prepare("
+        SELECT s.name AS student_name, s.classroom, e.score, e.total, e.passed, e.taken_at,
+               subj.subject_name
+        FROM lms_student_pre_exam e
+        JOIN att_students s ON s.id = e.student_uid
+        JOIN lms_subjects subj ON subj.id = e.subject_id
+        WHERE e.subject_id IN ($ph)
+        ORDER BY e.taken_at DESC LIMIT 8
+    ");
+    $rStmt->execute($sids);
+    $recent = $rStmt->fetchAll();
+}
 
 $pageTitle    = 'LMS แดชบอร์ด';
 $pageSubtitle = 'ภาพรวมระบบจัดการเรียนการสอน';
@@ -81,17 +86,19 @@ $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
+<?= lms_render_semester_bar($termCtx, $is_admin) ?>
+
 <div class="flex items-center justify-between mb-6">
   <div class="flex items-center gap-3">
     <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style="background:linear-gradient(135deg,#7C3AED,#4F46E5)">
       <i class="fas fa-graduation-cap text-white"></i>
     </div>
     <div>
-      <h2 class="text-lg font-black text-slate-800">แดชบอร์ด LMS</h2>
-      <p class="text-xs text-slate-400"><?=count($subjects)?> วิชา</p>
+      <h2 class="text-lg font-black text-slate-800">แดชบอร์ด LMS · ภาคเรียนที่ <?=$curSem?>/<?=$curYear?></h2>
+      <p class="text-xs text-slate-400"><?=count($subjects)?> วิชาในภาคเรียนที่ <?=$curSem?></p>
     </div>
   </div>
-  <a href="subjects.php" class="px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-violet-200 hover:bg-violet-700 transition-all">
+  <a href="subjects.php?semester=<?=$curSem?>&year=<?=$curYear?>" class="px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-violet-200 hover:bg-violet-700 transition-all">
     <i class="fas fa-book mr-1"></i> จัดการวิชา
   </a>
 </div>
@@ -99,9 +106,10 @@ require_once __DIR__ . '/../components/layout_start.php';
 <?php if (empty($subjects)): ?>
 <div class="bg-white rounded-2xl shadow-xl shadow-slate-100/50 border border-slate-100 p-16 text-center">
   <i class="fas fa-book-open text-5xl mb-4 block" style="color:#DDD8FE"></i>
-  <p class="text-slate-400 font-bold mb-4">ยังไม่มีวิชา</p>
-  <a href="subjects.php" class="px-5 py-2 bg-violet-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-violet-200 hover:bg-violet-700 transition-all">
-    <i class="fas fa-plus mr-1"></i> เพิ่มวิชาแรก
+  <p class="text-slate-500 font-black mb-1">ยังไม่มีวิชาในภาคเรียนที่ <?=$curSem?>/<?=$curYear?></p>
+  <p class="text-xs text-slate-400 mb-5">สามารถเพิ่มวิชาใหม่ หรือดึงโครงสร้างวิชาและเนื้อหาจากภาคเรียนที่ 1 มาใช้ได้ทันที</p>
+  <a href="subjects.php?semester=<?=$curSem?>&year=<?=$curYear?>" class="inline-flex items-center gap-1.5 px-5 py-2.5 bg-violet-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-violet-200 hover:bg-violet-700 transition-all">
+    <i class="fas fa-plus"></i> ไปหน้าจัดการวิชา (เพิ่ม / คัดลอกวิชาจากเทอม 1)
   </a>
 </div>
 <?php else: ?>

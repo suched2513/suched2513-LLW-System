@@ -43,6 +43,22 @@ return [
         if (empty($idx)) {
             $pdo->exec("ALTER TABLE `att_subjects` ADD INDEX `idx_att_subj_year_sem` (`academic_year`, `semester`)");
         }
+
+        // 3. เพิ่มคอลัมน์ academic_year และ semester ใน lms_subjects (ถ้ามีตาราง lms_subjects)
+        $hasLms = (bool)$pdo->query("SHOW TABLES LIKE 'lms_subjects'")->fetchColumn();
+        if ($hasLms) {
+            $lmsCols = $pdo->query("SHOW COLUMNS FROM `lms_subjects`")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('academic_year', $lmsCols, true)) {
+                $pdo->exec("ALTER TABLE `lms_subjects` ADD COLUMN `academic_year` INT NOT NULL DEFAULT 2569");
+            }
+            if (!in_array('semester', $lmsCols, true)) {
+                $pdo->exec("ALTER TABLE `lms_subjects` ADD COLUMN `semester` TINYINT NOT NULL DEFAULT 1");
+            }
+            $lmsIdx = $pdo->query("SHOW INDEX FROM `lms_subjects` WHERE Key_name = 'idx_lms_subj_year_sem'")->fetchAll();
+            if (empty($lmsIdx)) {
+                $pdo->exec("ALTER TABLE `lms_subjects` ADD INDEX `idx_lms_subj_year_sem` (`academic_year`, `semester`)");
+            }
+        }
     },
 
     'down' => function (PDO $pdo) {

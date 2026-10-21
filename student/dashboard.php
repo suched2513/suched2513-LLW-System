@@ -10,13 +10,9 @@ $name      = $_SESSION['student_name'];
 $class     = $_SESSION['student_class'];
 $hasBus    = !empty($_SESSION['bus_student_id']);
 
-if (!function_exists('busGetSemester')) {
-    function busGetSemester(): string {
-        $m = (int)date('n'); $y = (int)date('Y') + 543;
-        return $y . '-' . ($m >= 5 && $m <= 10 ? 1 : 2);
-    }
-}
-$semester = busGetSemester();
+$curYear  = function_exists('llw_current_academic_year') ? llw_current_academic_year() : ((int)date('Y') + 543);
+$curSem   = function_exists('llw_current_semester') ? llw_current_semester() : 1;
+$semester = $curYear . '-' . $curSem;
 
 $flashMsg  = $_GET['msg'] ?? '';
 $flashType = $_GET['t']   ?? 'ok';
@@ -24,15 +20,15 @@ $flashType = $_GET['t']   ?? 'ok';
 // ── Attendance stats (this semester / academic year) ──────────────
 $attStats = ['total' => 0, 'present' => 0, 'absent' => 0, 'late' => 0, 'leave' => 0];
 try {
-    // Current Thai academic year (May–April)
-    $month = (int)date('n');
-    $yearStart = (int)date('Y') . ($month >= 5 ? '-05-01' : '-01-01');
-    // Actually filter by current semester months
-    $semParts  = explode('-', $semester);
-    $thaiYear  = (int)$semParts[0]; $sem = (int)($semParts[1] ?? 1);
-    $gregYear  = $thaiYear - 543;
-    $dateFrom  = $sem === 1 ? "$gregYear-05-01" : "$gregYear-11-01";
-    $dateTo    = $sem === 1 ? "$gregYear-10-31" : ($gregYear + 1) . "-04-30";
+    if (function_exists('llw_get_term_dates')) {
+        $tDates   = llw_get_term_dates($curYear, $curSem, $pdo);
+        $dateFrom = $tDates['start_date'];
+        $dateTo   = $tDates['end_date'];
+    } else {
+        $gregYear = $curYear - 543;
+        $dateFrom = $curSem === 1 ? "$gregYear-05-01" : "$gregYear-11-01";
+        $dateTo   = $curSem === 1 ? "$gregYear-10-31" : ($gregYear + 1) . "-04-30";
+    }
 
     $stmt = $pdo->prepare("
         SELECT status, COUNT(*) as cnt

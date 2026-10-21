@@ -1,21 +1,20 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/_helpers.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 if (!in_array($_SESSION['llw_role'], ['super_admin','att_teacher'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
 
 $pdo        = getPdo();
 $is_admin   = $_SESSION['llw_role'] === 'super_admin';
 $teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
+$termCtx    = lms_active_term_context($pdo);
+$curSem     = (int)$termCtx['semester'];
+$curYear    = (int)$termCtx['year'];
 $subject_id = (int)($_GET['subject_id'] ?? 0);
 $sel_class  = trim($_GET['class'] ?? '');
 
-if (!$is_admin) {
-    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
-    $st->execute([$teacher_id]); $subjects = $st->fetchAll();
-} else {
-    $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
-}
+$subjects   = lms_get_subjects_for_term($pdo, $is_admin, $teacher_id, $curSem, $curYear);
 
 $subject = null; $classrooms = []; $students = []; $exercises = []; $grade_grid = [];
 
@@ -101,12 +100,14 @@ $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
+<?= lms_render_semester_bar($termCtx, $is_admin) ?>
+
 <div class="flex flex-wrap items-center gap-3 mb-6">
   <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-violet-500 to-purple-600">
     <i class="bi bi-table text-white text-lg"></i>
   </div>
   <div>
-    <h2 class="text-lg font-black text-slate-800">สมุดคะแนน</h2>
+    <h2 class="text-lg font-black text-slate-800">สมุดคะแนน · ภาคเรียนที่ <?=$curSem?>/<?=$curYear?></h2>
     <p class="text-xs text-slate-400">คะแนนชิ้นงานรายนักเรียน · เลือกวิชาและห้องเรียน</p>
   </div>
 </div>

@@ -3,20 +3,26 @@ session_start();
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/_guard.php';
 
+require_once __DIR__ . '/../lms/_helpers.php';
 $pdo   = getPdo();
 $uid   = (int)$_SESSION['student_uid'];
 $name  = $_SESSION['student_name'];
 $class = $_SESSION['student_class'];
 
-// Subjects for this classroom
+lms_ensure_semester_columns($pdo);
+$sysYear = function_exists('llw_current_academic_year') ? llw_current_academic_year() : ((int)date('Y') + 543);
+$sysSem  = function_exists('llw_current_semester') ? llw_current_semester() : 1;
+$selSem  = isset($_GET['semester']) && in_array((int)$_GET['semester'], [1, 2], true) ? (int)$_GET['semester'] : $sysSem;
+
+// Subjects for this classroom in selected semester
 $st = $pdo->prepare("
     SELECT s.*
     FROM lms_subjects s
     JOIN lms_subject_classrooms sc ON sc.subject_id = s.id
-    WHERE sc.classroom = ?
+    WHERE sc.classroom = ? AND COALESCE(s.semester, 1) = ? AND COALESCE(s.academic_year, ?) = ?
     ORDER BY s.subject_name
 ");
-$st->execute([$class]);
+$st->execute([$class, $selSem, $sysYear, $sysYear]);
 $subjects = $st->fetchAll();
 
 $subject_stats = [];
@@ -148,16 +154,22 @@ while (isset($active_dates[$cursor->format('Y-m-d')])) {
     </div>
   </div>
 
-  <!-- Summary pills -->
-  <div class="flex gap-2 flex-wrap">
-    <div class="bg-white/15 rounded-2xl px-4 py-2 border border-white/20 text-sm font-black">
-      <i class="bi bi-book-half mr-1.5 opacity-80"></i><?=count($subjects)?> วิชา
+  <!-- Semester Switcher + Summary pills -->
+  <div class="flex items-center justify-between gap-2 flex-wrap">
+    <div class="flex gap-2 flex-wrap">
+      <div class="bg-white/15 rounded-2xl px-3.5 py-1.5 border border-white/20 text-xs font-black">
+        <i class="bi bi-book-half mr-1 opacity-80"></i><?=count($subjects)?> วิชา (เทอม <?=$selSem?>)
+      </div>
+      <?php if ($total_pending > 0): ?>
+      <div class="bg-amber-400/30 rounded-2xl px-3.5 py-1.5 border border-amber-200/40 text-xs font-black animate-pulse">
+        <i class="bi bi-exclamation-circle-fill mr-1"></i><?=$total_pending?> งานค้าง
+      </div>
+      <?php endif; ?>
     </div>
-    <?php if ($total_pending > 0): ?>
-    <div class="bg-amber-400/30 rounded-2xl px-4 py-2 border border-amber-200/40 text-sm font-black animate-pulse">
-      <i class="bi bi-exclamation-circle-fill mr-1.5"></i><?=$total_pending?> งานค้าง
+    <div class="inline-flex bg-black/20 p-1 rounded-xl border border-white/15">
+      <a href="/student/lms.php?semester=1" class="px-3 py-1 rounded-lg text-xs font-black transition-all <?=$selSem===1?'bg-white text-violet-700 shadow':'text-violet-100 hover:text-white'?>">เทอม 1</a>
+      <a href="/student/lms.php?semester=2" class="px-3 py-1 rounded-lg text-xs font-black transition-all <?=$selSem===2?'bg-white text-violet-700 shadow':'text-violet-100 hover:text-white'?>">เทอม 2</a>
     </div>
-    <?php endif; ?>
   </div>
 </div>
 
@@ -193,8 +205,13 @@ while (isset($active_dates[$cursor->format('Y-m-d')])) {
   <?php if (empty($subjects)): ?>
   <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm mt-4">
     <i class="bi bi-book text-slate-200 text-4xl mb-3 block"></i>
-    <p class="text-slate-400 font-bold text-sm">ยังไม่มีวิชาสำหรับห้องนี้</p>
-    <p class="text-slate-300 text-xs mt-1">ครูจะเพิ่มวิชาให้เร็วๆ นี้</p>
+    <p class="text-slate-500 font-black text-sm">ยังไม่มีวิชาในภาคเรียนที่ <?=$selSem?>/<?=$sysYear?> สำหรับห้อง <?=htmlspecialchars($class,ENT_QUOTES,'UTF-8')?></p>
+    <p class="text-slate-400 text-xs mt-1">ครูผู้สอนจะเปิดรายวิชาของภาคเรียนที่ <?=$selSem?> ให้เร็วๆ นี้</p>
+    <?php if ($selSem === 2): ?>
+    <a href="/student/lms.php?semester=1" class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-violet-50 text-violet-700 rounded-xl text-xs font-black border border-violet-200">
+      <i class="bi bi-clock-history"></i> ดูวิชาและผลการเรียนย้อนหลัง ภาคเรียนที่ 1
+    </a>
+    <?php endif; ?>
   </div>
 
   <?php else: ?>

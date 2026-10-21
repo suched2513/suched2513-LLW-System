@@ -8,26 +8,50 @@ require_once __DIR__ . '/_helpers.php';
 $pdo        = getPdo();
 $is_admin   = $_SESSION['llw_role'] === 'super_admin';
 $teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
+$termCtx    = lms_active_term_context($pdo);
+$curSem     = (int)$termCtx['semester'];
+$curYear    = (int)$termCtx['year'];
 $msg = '';
 
 $_has_tid = (bool)$pdo->query("SHOW COLUMNS FROM `lms_subjects` LIKE 'teacher_id'")->fetch();
 $teachers_list = $is_admin ? $pdo->query("SELECT id, name FROM att_teachers ORDER BY name")->fetchAll() : [];
 
-// POST: add / edit / set_classrooms
+// POST: add / edit / set_classrooms / clone_subject
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+
+    if ($action === 'clone_from_sem1') {
+        $srcId    = (int)($_POST['source_subject_id'] ?? 0);
+        $newName  = trim($_POST['new_subject_name'] ?? '');
+        $newCode  = trim($_POST['new_subject_code'] ?? '');
+        $cpUnits  = !empty($_POST['copy_units']);
+        $cpEx     = !empty($_POST['copy_exercises']);
+        $cpExams  = !empty($_POST['copy_exams']);
+        if (!$srcId || !lms_get_owned_subject($pdo, $srcId, $is_admin, $teacher_id)) {
+            header('Location: subjects.php?semester=' . $curSem . '&year=' . $curYear . '&msg=' . urlencode('error:ไม่พบวิชาต้นทางหรือไม่มีสิทธิ์คัดลอก')); exit();
+        }
+        try {
+            lms_clone_subject_to_term($pdo, $srcId, $curYear, $curSem, $newName, $newCode, $cpUnits, $cpEx, $cpExams);
+            header('Location: subjects.php?semester=' . $curSem . '&year=' . $curYear . '&msg=' . urlencode('success:คัดลอกวิชาเข้าสู่ภาคเรียนที่ ' . $curSem . ' สำเร็จ!')); exit();
+        } catch (Throwable $e) {
+            header('Location: subjects.php?semester=' . $curSem . '&year=' . $curYear . '&msg=' . urlencode('error:' . $e->getMessage())); exit();
+        }
+    }
 
     if ($action === 'add') {
         $name = trim($_POST['subject_name'] ?? '');
         $code = trim($_POST['subject_code'] ?? '');
+        $postSem  = in_array((int)($_POST['semester'] ?? $curSem), [1, 2], true) ? (int)$_POST['semester'] : $curSem;
+        $postYear = (int)($_POST['academic_year'] ?? $curYear) ?: $curYear;
         if (!$name) { $msg = 'error:กรุณาระบุชื่อวิชา'; }
         else {
             if ($_has_tid) {
                 $assigned_teacher_id = $is_admin ? ((int)($_POST['assigned_teacher_id'] ?? 0) ?: null) : $teacher_id;
-                $pdo->prepare("INSERT INTO lms_subjects (subject_name, subject_code, teacher_id) VALUES (?,?,?)")
-                    ->execute([$name, $code ?: null, $assigned_teacher_id]);
+                $pdo->prepare("INSERT INTO lms_subjects (subject_name, subject_code, teacher_id, academic_year, semester) VALUES (?,?,?,?,?)")
+                    ->execute([$name, $code ?: null, $assigned_teacher_id, $postYear, $postSem]);
             } else {
-                $pdo->prepare("INSERT INTO lms_subjects (subject_name, subject_code) VALUES (?,?)")->execute([$name, $code ?: null]);
+                $pdo->prepare("INSERT INTO lms_subjects (subject_name, subject_code, academic_year, semester) VALUES (?,?,?,?)")
+                    ->execute([$name, $code ?: null, $postYear, $postSem]);
             }
             $sid = (int)$pdo->lastInsertId();
             $pdo->prepare("INSERT INTO lms_exam_settings (subject_id, pre_pass_score, post_pass_score, post_max_attempts) VALUES (?,6,6,3)")->execute([$sid]);
@@ -38,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $msg = 'success:เพิ่มวิชาสำเร็จ';
         }
-        header('Location: subjects.php?msg=' . urlencode($msg)); exit();
+        header('Location: subjects.php?semester=' . $postSem . '&year=' . $postYear . '&msg=' . urlencode($msg)); exit();
     }
 
     if ($action === 'edit') {
@@ -48,14 +72,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $name = trim($_POST['subject_name'] ?? '');
         $code = trim($_POST['subject_code'] ?? '');
+        $editSem = in_array((int)($_POST['semester'] ?? $curSem), [1, 2], true) ? (int)$_POST['semester'] : $curSem;
         if ($is_admin && $_has_tid) {
             $assigned_teacher_id = (int)($_POST['assigned_teacher_id'] ?? 0) ?: null;
-            $pdo->prepare("UPDATE lms_subjects SET subject_name=?, subject_code=?, teacher_id=? WHERE id=?")
-                ->execute([$name, $code ?: null, $assigned_teacher_id, $id]);
+            $pdo->prepare("UPDATE lms_subjects SET subject_name=?, subject_code=?, teacher_id=?, semester=? WHERE id=?")
+                ->execute([$name, $code ?: null, $assigned_teacher_id, $editSem, $id]);
         } else {
-            $pdo->prepare("UPDATE lms_subjects SET subject_name=?, subject_code=? WHERE id=?")->execute([$name, $code ?: null, $id]);
+            $pdo->prepare("UPDATE lms_subjects SET subject_name=?, subject_code=?, semester=? WHERE id=?")->execute([$name, $code ?: null, $editSem, $id]);
         }
-        header('Location: subjects.php?msg=' . urlencode('success:แก้ไขสำเร็จ')); exit();
+        header('Location: subjects.php?semester=' . $curSem . '&year=' . $curYear . '&msg=' . urlencode('success:แก้ไขสำเร็จ')); exit();
     }
 
     if ($action === 'set_classrooms') {
@@ -102,12 +127,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete') {
 
 if (isset($_GET['msg'])) $msg = $_GET['msg'];
 
-if ($_has_tid && !$is_admin) {
-    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY created_at");
-    $st->execute([$teacher_id]); $subjects = $st->fetchAll();
-} else {
-    $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY created_at")->fetchAll();
-}
+$subjects = lms_get_subjects_for_term($pdo, $is_admin, $teacher_id, $curSem, $curYear);
+$sem1_subjects = $curSem === 2 ? lms_get_subjects_for_term($pdo, $is_admin, $teacher_id, 1, $curYear) : [];
 
 $all_classrooms = $pdo->query("
     SELECT DISTINCT classroom FROM att_students
@@ -154,25 +175,45 @@ require_once __DIR__ . '/../components/layout_start.php';
 });</script>
 <?php endif; ?>
 
+<?= lms_render_semester_bar($termCtx, $is_admin) ?>
+
 <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
   <div class="flex items-center gap-3">
     <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style="background:linear-gradient(135deg,#7C3AED,#4F46E5)">
       <i class="fas fa-chalkboard text-white"></i>
     </div>
     <div>
-      <h2 class="text-lg font-black text-slate-800">วิชา LMS</h2>
-      <p class="text-xs text-slate-400">กำหนดวิชาและห้องเรียนที่เรียนวิชานั้น</p>
+      <h2 class="text-lg font-black text-slate-800">วิชา LMS · ภาคเรียนที่ <?=$curSem?>/<?=$curYear?></h2>
+      <p class="text-xs text-slate-400">กำหนดวิชาและห้องเรียนที่เรียนในภาคเรียนที่ <?=$curSem?></p>
     </div>
   </div>
-  <button onclick="openModal('addModal')" class="px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-violet-200 hover:bg-violet-700 transition-all flex items-center gap-2">
-    <i class="fas fa-plus"></i> เพิ่มวิชา
-  </button>
+  <div class="flex items-center gap-2 flex-wrap">
+    <?php if ($curSem === 2 && !empty($sem1_subjects)): ?>
+    <button onclick="openModal('cloneModal')" class="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-black rounded-xl hover:bg-indigo-100 transition-all flex items-center gap-2">
+      <i class="fas fa-copy"></i> ดึงวิชาจากเทอม 1 มาใช้
+    </button>
+    <?php endif; ?>
+    <button onclick="openModal('addModal')" class="px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-violet-200 hover:bg-violet-700 transition-all flex items-center gap-2">
+      <i class="fas fa-plus"></i> เพิ่มวิชา (เทอม <?=$curSem?>)
+    </button>
+  </div>
 </div>
 
 <?php if (empty($subjects)): ?>
-<div class="bg-white rounded-2xl border border-slate-100 p-16 text-center text-slate-300 shadow-sm">
-  <i class="fas fa-chalkboard text-5xl mb-3 block opacity-30"></i>
-  <p class="font-bold">ยังไม่มีวิชา — กดเพิ่มวิชาเพื่อเริ่มต้น</p>
+<div class="bg-white rounded-2xl border border-slate-100 p-14 text-center shadow-sm">
+  <i class="fas fa-chalkboard text-5xl mb-3 block text-violet-200"></i>
+  <p class="font-black text-slate-700 text-base">ยังไม่มีวิชาในภาคเรียนที่ <?=$curSem?>/<?=$curYear?></p>
+  <p class="text-xs text-slate-400 mt-1 mb-5">คุณสามารถสร้างวิชาใหม่สำหรับเทอม <?=$curSem?> หรือคัดลอกโครงสร้างวิชา (หน่วยเรียน/เนื้อหา/ข้อสอบ) จากเทอม 1 มาใช้ต่อได้ทันทีโดยที่ประวัติส่งงานเดิมของนักเรียนไม่ปะปน</p>
+  <div class="flex items-center justify-center gap-3 flex-wrap">
+    <button onclick="openModal('addModal')" class="px-5 py-2.5 bg-violet-600 text-white text-xs font-black rounded-xl shadow-lg shadow-violet-200 hover:bg-violet-700 transition-all flex items-center gap-2">
+      <i class="fas fa-plus"></i> สร้างวิชาใหม่ในเทอม <?=$curSem?>
+    </button>
+    <?php if ($curSem === 2 && !empty($sem1_subjects)): ?>
+    <button onclick="openModal('cloneModal')" class="px-5 py-2.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-black rounded-xl hover:bg-indigo-100 transition-all flex items-center gap-2">
+      <i class="fas fa-copy"></i> ดึงวิชาจากภาคเรียนที่ 1 (<?=count($sem1_subjects)?> วิชา)
+    </button>
+    <?php endif; ?>
+  </div>
 </div>
 <?php else: ?>
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -311,6 +352,8 @@ require_once __DIR__ . '/../components/layout_start.php';
 
     <form method="POST" id="addForm">
       <input type="hidden" name="action" value="add">
+      <input type="hidden" name="semester" value="<?=$curSem?>">
+      <input type="hidden" name="academic_year" value="<?=$curYear?>">
 
       <!-- Step 1: Subject info -->
       <div id="add-step1" class="p-6 space-y-4">
@@ -398,9 +441,18 @@ require_once __DIR__ . '/../components/layout_start.php';
         <label class="block text-xs font-black text-slate-500 mb-1">ชื่อวิชา</label>
         <input type="text" name="subject_name" id="edit_name" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400 outline-none">
       </div>
-      <div>
-        <label class="block text-xs font-black text-slate-500 mb-1">รหัสวิชา</label>
-        <input type="text" name="subject_code" id="edit_code" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400 outline-none">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-1">รหัสวิชา</label>
+          <input type="text" name="subject_code" id="edit_code" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-1">ภาคเรียน</label>
+          <select name="semester" id="edit_semester" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-amber-400 outline-none">
+            <option value="1">ภาคเรียนที่ 1</option>
+            <option value="2">ภาคเรียนที่ 2</option>
+          </select>
+        </div>
       </div>
       <?php if ($is_admin): ?>
       <div>
@@ -443,6 +495,68 @@ require_once __DIR__ . '/../components/layout_start.php';
       <div class="flex justify-end gap-3 mt-5">
         <button type="button" onclick="closeModal('classModal')" class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl">ยกเลิก</button>
         <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-200"><i class="fas fa-save mr-1"></i>บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Clone from Semester 1 Modal -->
+<div id="cloneModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" style="background:rgba(0,0,0,0.4)">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-indigo-50/70">
+      <h3 class="font-black text-indigo-900 text-sm"><i class="fas fa-copy mr-2 text-indigo-600"></i>ดึงวิชาจากภาคเรียนที่ 1 มาใช้ในภาคเรียนที่ 2</h3>
+      <button onclick="closeModal('cloneModal')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-lg"></i></button>
+    </div>
+    <form method="POST" class="p-6 space-y-4">
+      <input type="hidden" name="action" value="clone_from_sem1">
+      <div>
+        <label class="block text-xs font-black text-slate-500 mb-1.5">เลือกวิชาต้นทางจากภาคเรียนที่ 1 <span class="text-rose-500">*</span></label>
+        <select name="source_subject_id" required onchange="syncCloneDefaults(this)"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-indigo-400 outline-none">
+          <option value="">-- เลือกวิชาจากเทอม 1 --</option>
+          <?php foreach ($sem1_subjects as $s1): ?>
+          <option value="<?=$s1['id']?>"
+                  data-name="<?=htmlspecialchars($s1['subject_name'],ENT_QUOTES,'UTF-8')?>"
+                  data-code="<?=htmlspecialchars($s1['subject_code']??'',ENT_QUOTES,'UTF-8')?>">
+            <?=htmlspecialchars($s1['subject_name'],ENT_QUOTES,'UTF-8')?><?=$s1['subject_code']?' ('.htmlspecialchars($s1['subject_code'],ENT_QUOTES,'UTF-8').')':''?>
+          </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        <div class="col-span-2">
+          <label class="block text-xs font-black text-slate-500 mb-1">ชื่อวิชาในเทอม 2 <span class="text-slate-400 font-normal">(แก้ได้)</span></label>
+          <input type="text" name="new_subject_name" id="clone_new_name" required
+            class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 outline-none"
+            placeholder="ชื่อวิชา">
+        </div>
+        <div>
+          <label class="block text-xs font-black text-slate-500 mb-1">รหัสวิชาใหม่</label>
+          <input type="text" name="new_subject_code" id="clone_new_code"
+            class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 outline-none"
+            placeholder="เช่น ว21102">
+        </div>
+      </div>
+      <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-2">
+        <p class="text-xs font-black text-slate-600 mb-1">ข้อมูลที่ต้องการคัดลอกมาด้วย:</p>
+        <label class="flex items-center gap-2 text-xs text-slate-700 font-bold cursor-pointer">
+          <input type="checkbox" name="copy_units" value="1" checked class="accent-indigo-600 w-4 h-4">
+          <span>หน่วยการเรียนรู้ + เนื้อหาบทเรียนทั้งหมด</span>
+        </label>
+        <label class="flex items-center gap-2 text-xs text-slate-700 font-bold cursor-pointer">
+          <input type="checkbox" name="copy_exercises" value="1" checked class="accent-indigo-600 w-4 h-4">
+          <span>โจทย์ใบงาน (ล้างงานเก่าที่นักเรียนเคยส่งออก เริ่มนับใหม่)</span>
+        </label>
+        <label class="flex items-center gap-2 text-xs text-slate-700 font-bold cursor-pointer">
+          <input type="checkbox" name="copy_exams" value="1" checked class="accent-indigo-600 w-4 h-4">
+          <span>คลังข้อสอบก่อนเรียน / หลังเรียน / กลางภาค / ปลายภาค</span>
+        </label>
+      </div>
+      <div class="flex justify-end gap-3 pt-1">
+        <button type="button" onclick="closeModal('cloneModal')" class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl">ยกเลิก</button>
+        <button type="submit" class="px-5 py-2 bg-indigo-600 text-white text-xs font-black rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">
+          <i class="fas fa-copy mr-1"></i> คัดลอกเข้าเทอม 2
+        </button>
       </div>
     </form>
   </div>
@@ -514,9 +628,17 @@ function openEdit(s) {
   document.getElementById('edit_id').value   = s.id;
   document.getElementById('edit_name').value = s.subject_name;
   document.getElementById('edit_code').value = s.subject_code || '';
+  const semSel = document.getElementById('edit_semester');
+  if (semSel) semSel.value = s.semester || '<?=$curSem?>';
   const teacherSel = document.getElementById('edit_teacher_id');
   if (teacherSel) teacherSel.value = s.teacher_id || '';
   openModal('editModal');
+}
+function syncCloneDefaults(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.value) return;
+  document.getElementById('clone_new_name').value = opt.dataset.name || '';
+  document.getElementById('clone_new_code').value = opt.dataset.code || '';
 }
 
 function openClassrooms(sid, assigned) {

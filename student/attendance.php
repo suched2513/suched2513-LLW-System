@@ -13,19 +13,19 @@ if ($uid === 0 && $code !== '') {
     $uid = (int)($r->fetchColumn() ?: 0);
 }
 
-if (!function_exists('busGetSemester')) {
-    function busGetSemester(): string {
-        $m = (int)date('n'); $y = (int)date('Y') + 543;
-        return $y . '-' . ($m >= 5 && $m <= 10 ? 1 : 2);
-    }
+$thaiYear = function_exists('llw_current_academic_year') ? llw_current_academic_year() : ((int)date('Y') + 543);
+$sysSem   = function_exists('llw_current_semester') ? llw_current_semester() : 1;
+$sem      = isset($_GET['semester']) && in_array((int)$_GET['semester'], [1, 2], true) ? (int)$_GET['semester'] : $sysSem;
+$semester = $thaiYear . '-' . $sem;
+if (function_exists('llw_get_term_dates')) {
+    $tDates   = llw_get_term_dates($thaiYear, $sem, $pdo);
+    $dateFrom = $tDates['start_date'];
+    $dateTo   = $tDates['end_date'];
+} else {
+    $gregYear = $thaiYear - 543;
+    $dateFrom = $sem === 1 ? "$gregYear-05-01" : "$gregYear-11-01";
+    $dateTo   = $sem === 1 ? "$gregYear-10-31" : ($gregYear + 1) . "-04-30";
 }
-$semester = busGetSemester();
-$parts    = explode('-', $semester);
-$thaiYear = (int)$parts[0];
-$sem      = (int)($parts[1] ?? 1);
-$gregYear = $thaiYear - 543;
-$dateFrom = $sem === 1 ? "$gregYear-05-01" : "$gregYear-11-01";
-$dateTo   = $sem === 1 ? "$gregYear-10-31" : ($gregYear + 1) . "-04-30";
 
 // ── Summary per subject ────────────────────────────────────────────
 $subjects = [];
@@ -108,9 +108,13 @@ body { font-family:'Prompt',sans-serif; }
            class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/30 flex-shrink-0">
             <i class="bi bi-arrow-left"></i>
         </a>
-        <div>
+        <div class="flex-1">
             <div class="font-black text-sm leading-tight">เวลาเรียน</div>
-            <div class="text-blue-200 text-xs font-bold">ภาคเรียน <?= htmlspecialchars($semester) ?></div>
+            <div class="text-blue-200 text-xs font-bold">ภาคเรียนที่ <?= $sem ?>/<?= $thaiYear ?></div>
+        </div>
+        <div class="inline-flex bg-black/20 p-1 rounded-xl border border-white/15">
+            <a href="/student/attendance.php?semester=1" class="px-3 py-1 rounded-lg text-xs font-black transition-all <?=$sem===1?'bg-white text-blue-700 shadow':'text-blue-100 hover:text-white'?>">เทอม 1</a>
+            <a href="/student/attendance.php?semester=2" class="px-3 py-1 rounded-lg text-xs font-black transition-all <?=$sem===2?'bg-white text-blue-700 shadow':'text-blue-100 hover:text-white'?>">เทอม 2</a>
         </div>
     </div>
 </header>

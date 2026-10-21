@@ -44,12 +44,10 @@ $sel_class     = $_GET['class'] ?? '';
 $sel_unit      = (int)($_GET['unit_id'] ?? 0);
 $is_subject_wide = in_array($sel_exam_type, $subject_wide_types, true);
 
-if ($is_admin) {
-    $subjects = $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
-} else {
-    $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
-    $st->execute([$teacher_id]); $subjects = $st->fetchAll();
-}
+$termCtx  = lms_active_term_context($pdo);
+$curSem   = (int)$termCtx['semester'];
+$curYear  = (int)$termCtx['year'];
+$subjects = lms_get_subjects_for_term($pdo, $is_admin, $teacher_id, $curSem, $curYear);
 $subject  = null;
 $classes  = [];
 $units    = [];
@@ -110,14 +108,16 @@ $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
+<?= lms_render_semester_bar($termCtx, $is_admin) ?>
+
 <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
   <div class="flex items-center gap-3">
     <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg bg-gradient-to-br from-violet-500 to-purple-700">
       <i class="fas fa-pen-fancy text-white"></i>
     </div>
     <div>
-      <a href="<?=$base_path?>/lms/subjects.php" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>วิชาทั้งหมด</a>
-      <h2 class="text-lg font-black text-slate-800">ตรวจคำตอบอัตนัย</h2>
+      <a href="<?=$base_path?>/lms/subjects.php?semester=<?=$curSem?>&year=<?=$curYear?>" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>วิชาทั้งหมด</a>
+      <h2 class="text-lg font-black text-slate-800">ตรวจคำตอบอัตนัย · ภาคเรียนที่ <?=$curSem?>/<?=$curYear?></h2>
       <p class="text-xs text-slate-400">ข้อสอบก่อนเรียน / หลังเรียน / กลางภาค / ปลายภาค ประเภทตอบอิสระ</p>
     </div>
   </div>

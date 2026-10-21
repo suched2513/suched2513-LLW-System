@@ -557,3 +557,384 @@ function lms_log_activity(PDO $pdo, string $action, string $targetType, int $tar
         error_log('[LMS] activity log failed: ' . $e->getMessage());
     }
 }
+
+
+// ── Semester & Academic Year helpers for LMS ─────────────────────────────
+function lms_ensure_semester_columns(PDO $pdo): bool {
+    static $done = null;
+    if ($done !== null) return $done;
+    try {
+        if (function_exists('llw_ensure_semester_schema')) {
+            llw_ensure_semester_schema($pdo);
+        }
+        $cols = $pdo->query("SHOW COLUMNS FROM `lms_subjects`")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('academic_year', $cols, true)) {
+            $pdo->exec("ALTER TABLE `lms_subjects` ADD COLUMN `academic_year` INT NOT NULL DEFAULT 2569");
+        }
+        if (!in_array('semester', $cols, true)) {
+            $pdo->exec("ALTER TABLE `lms_subjects` ADD COLUMN `semester` TINYINT NOT NULL DEFAULT 1");
+        }
+        $done = true;
+    } catch (Throwable $e) {
+        error_log('[LMS] ensure semester columns failed: ' . $e->getMessage());
+        $done = false;
+    }
+    return $done;
+}
+
+function lms_active_term_context(PDO $pdo): array {
+    lms_ensure_semester_columns($pdo);
+    $sysYear = function_exists('llw_current_academic_year') ? llw_current_academic_year() : ((int)date('Y') + 543);
+    $sysSem  = function_exists('llw_current_semester') ? llw_current_semester() : 1;
+
+    // Handle Super Admin 1-click "set system semester" action
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['lms_term_action'] ?? '') === 'set_system_semester') {
+        $isAdmin    = ($_SESSION['llw_role'] ?? '') === 'super_admin';
+        $targetSem  = (int)($_POST['target_semester'] ?? 2);
+        $targetYear = (int)($_POST['target_year'] ?? $sysYear);
+        if ($isAdmin && in_array($targetSem, [1, 2], true)) {
+            try {
+                $pdo->exec("UPDATE llw_academic_terms SET is_active = 0");
+                $st = $pdo->prepare("UPDATE llw_academic_terms SET is_active = 1 WHERE academic_year = ? AND semester = ?");
+                $st->execute([$targetYear, $targetSem]);
+                if ($st->rowCount() === 0 && function_exists('llw_default_term_dates')) {
+                    $def = llw_default_term_dates($targetYear, $targetSem);
+                    $pdo->prepare("INSERT INTO llw_academic_terms (academic_year, semester, start_date, end_date, is_active) VALUES (?,?,?,?,1) ON DUPLICATE KEY UPDATE is_active=1")
+                        ->execute([$targetYear, $targetSem, $def['start_date'], $def['end_date']]);
+                }
+                $_SESSION['lms_selected_semester'] = $targetSem;
+                $_SESSION['lms_selected_year']     = $targetYear;
+            } catch (Throwable $e) {
+                error_log('[LMS] set_system_semester failed: ' . $e->getMessage());
+            }
+        }
+        $redirect = strtok($_SERVER['REQUEST_URI'], '?');
+        $qs = $_GET;
+        $qs['semester'] = $targetSem;
+        $qs['year']     = $targetYear;
+        header('Location: ' . $redirect . '?' . http_build_query($qs));
+        exit();
+    }
+
+    if (isset($_GET['semester']) && in_array((int)$_GET['semester'], [1, 2], true)) {
+        $_SESSION['lms_selected_semester'] = (int)$_GET['semester'];
+    }
+    if (isset($_GET['year']) && (int)$_GET['year'] >= 2565) {
+        $_SESSION['lms_selected_year'] = (int)$_GET['year'];
+    }
+
+    $selSem  = (int)($_GET['semester'] ?? $_SESSION['lms_selected_semester'] ?? $sysSem);
+    if (!in_array($selSem, [1, 2], true)) $selSem = $sysSem;
+    $selYear = (int)($_GET['year'] ?? $_SESSION['lms_selected_year'] ?? $sysYear);
+
+    // If admin switched system semester globally, sync default session unless user explicitly clicked ?semester=
+    if (!isset($_GET['semester']) && isset($_SESSION['lms_last_sys_sem']) && $_SESSION['lms_last_sys_sem'] !== $sysSem) {
+        $selSem = $sysSem;
+        $_SESSION['lms_selected_semester'] = $sysSem;
+    }
+    $_SESSION['lms_last_sys_sem'] = $sysSem;
+
+    return [
+        'year'     => $selYear,
+        'semester' => $selSem,
+        'sys_year' => $sysYear,
+        'sys_sem'  => $sysSem,
+    ];
+}
+
+function lms_get_subjects_for_term(PDO $pdo, bool $is_admin, int $teacher_id, int $semester, int $academic_year): array {
+    $hasSem = lms_ensure_semester_columns($pdo);
+    $hasTid = (bool)$pdo->query("SHOW COLUMNS FROM `lms_subjects` LIKE 'teacher_id'")->fetch();
+
+    if ($hasSem) {
+        if (!$is_admin && $hasTid) {
+            $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? AND semester=? AND academic_year=? ORDER BY subject_name");
+            $st->execute([$teacher_id, $semester, $academic_year]);
+            return $st->fetchAll();
+        }
+        $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE semester=? AND academic_year=? ORDER BY subject_name");
+        $st->execute([$semester, $academic_year]);
+        return $st->fetchAll();
+    }
+
+    if (!$is_admin && $hasTid) {
+        $st = $pdo->prepare("SELECT * FROM lms_subjects WHERE teacher_id=? ORDER BY subject_name");
+        $st->execute([$teacher_id]);
+        return $st->fetchAll();
+    }
+    return $pdo->query("SELECT * FROM lms_subjects ORDER BY subject_name")->fetchAll();
+}
+
+function lms_render_semester_bar(array $termCtx, bool $is_admin, array $extraQuery = []): string {
+    $year   = (int)$termCtx['year'];
+    $sem    = (int)$termCtx['semester'];
+    $sysSem = (int)$termCtx['sys_sem'];
+
+    $baseQs = array_merge($_GET, $extraQuery);
+    unset($baseQs['msg'], $baseQs['done'], $baseQs['err']);
+
+    $qs1 = http_build_query(array_merge($baseQs, ['semester' => 1, 'year' => $year]));
+    $qs2 = http_build_query(array_merge($baseQs, ['semester' => 2, 'year' => $year]));
+
+    $btn1Cls = $sem === 1
+        ? 'bg-violet-600 text-white shadow-md shadow-violet-200 border-violet-600'
+        : 'bg-white text-slate-600 border-slate-200 hover:border-violet-300 hover:text-violet-700';
+    $btn2Cls = $sem === 2
+        ? 'bg-violet-600 text-white shadow-md shadow-violet-200 border-violet-600'
+        : 'bg-white text-slate-600 border-slate-200 hover:border-violet-300 hover:text-violet-700';
+
+    $badge1 = $sysSem === 1 ? '<span class="ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-black ' . ($sem === 1 ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-700') . '">เทอมปัจจุบัน</span>' : '';
+    $badge2 = $sysSem === 2 ? '<span class="ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-black ' . ($sem === 2 ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-700') . '">เทอมปัจจุบัน</span>' : '';
+
+    $adminBtn = '';
+    if ($is_admin && $sysSem !== 2) {
+        $adminBtn = '
+        <form method="POST" class="inline-block ml-auto">
+            <input type="hidden" name="lms_term_action" value="set_system_semester">
+            <input type="hidden" name="target_semester" value="2">
+            <input type="hidden" name="target_year" value="' . $year . '">
+            <button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-sm transition-all flex items-center gap-1.5">
+                <i class="fas fa-bolt"></i> ตั้ง "ภาคเรียนที่ 2" เป็นเทอมปัจจุบันของระบบทันที
+            </button>
+        </form>';
+    } elseif ($is_admin && $sysSem === 2 && $sem === 1) {
+        $adminBtn = '<span class="ml-auto text-[11px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl"><i class="fas fa-history mr-1"></i>กำลังดูข้อมูลย้อนหลังภาคเรียนที่ 1 (ระบบปัจจุบันคือเทอม 2)</span>';
+    }
+
+    return '
+    <div class="bg-white rounded-2xl border border-violet-100 shadow-sm px-4 py-3 mb-5 flex flex-wrap items-center gap-2.5">
+        <div class="flex items-center gap-2 mr-1">
+            <span class="w-8 h-8 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-black">
+                <i class="fas fa-calendar-alt"></i>
+            </span>
+            <div>
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider leading-none">ปีการศึกษา ' . $year . '</div>
+                <div class="text-xs font-black text-violet-700 mt-0.5">กำลังจัดการ: ภาคเรียนที่ ' . $sem . '/' . $year . '</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-1.5 flex-wrap">
+            <a href="?' . htmlspecialchars($qs1, ENT_QUOTES, 'UTF-8') . '" class="px-3.5 py-1.5 rounded-xl text-xs font-black border transition-all flex items-center ' . $btn1Cls . '">
+                <i class="fas fa-1 mr-1"></i> ภาคเรียนที่ 1' . $badge1 . '
+            </a>
+            <a href="?' . htmlspecialchars($qs2, ENT_QUOTES, 'UTF-8') . '" class="px-3.5 py-1.5 rounded-xl text-xs font-black border transition-all flex items-center ' . $btn2Cls . '">
+                <i class="fas fa-2 mr-1"></i> ภาคเรียนที่ 2' . $badge2 . '
+            </a>
+        </div>
+        ' . $adminBtn . '
+    </div>';
+}
+
+/**
+ * Deep-clone an LMS subject from Semester 1 into Semester 2 (or any target semester)
+ * Copies: subject info, classrooms, subject_settings, units, topics, topic_blocks, exercises (without student submissions), pre/post/midterm/final questions & exam settings.
+ */
+function lms_clone_subject_to_term(
+    PDO $pdo,
+    int $sourceSubjectId,
+    int $targetYear,
+    int $targetSemester,
+    string $newSubjectName = '',
+    string $newSubjectCode = '',
+    bool $copyUnitsAndContent = true,
+    bool $copyExercises = true,
+    bool $copyExams = true
+): int {
+    lms_ensure_semester_columns($pdo);
+    $src = $pdo->prepare("SELECT * FROM lms_subjects WHERE id=?");
+    $src->execute([$sourceSubjectId]);
+    $srcSubj = $src->fetch(PDO::FETCH_ASSOC);
+    if (!$srcSubj) throw new Exception('ไม่พบวิชาต้นทาง');
+
+    $finalName = trim($newSubjectName) !== '' ? trim($newSubjectName) : $srcSubj['subject_name'];
+    $finalCode = trim($newSubjectCode) !== '' ? trim($newSubjectCode) : ($srcSubj['subject_code'] ?? null);
+
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare("
+            INSERT INTO lms_subjects (subject_name, subject_code, teacher_id, academic_year, semester)
+            VALUES (?,?,?,?,?)
+        ")->execute([
+            $finalName,
+            $finalCode ?: null,
+            $srcSubj['teacher_id'] ?? null,
+            $targetYear,
+            $targetSemester,
+        ]);
+        $newSubjId = (int)$pdo->lastInsertId();
+
+        // Copy classrooms
+        $clStmt = $pdo->prepare("SELECT classroom FROM lms_subject_classrooms WHERE subject_id=?");
+        $clStmt->execute([$sourceSubjectId]);
+        $insCl = $pdo->prepare("INSERT IGNORE INTO lms_subject_classrooms (subject_id, classroom) VALUES (?,?)");
+        foreach ($clStmt->fetchAll(PDO::FETCH_COLUMN) as $cl) {
+            $insCl->execute([$newSubjId, $cl]);
+        }
+
+        // Copy subject settings (unlock_mode + midterm/final settings, clearing old open/close dates)
+        $ssStmt = $pdo->prepare("SELECT * FROM lms_subject_settings WHERE subject_id=?");
+        $ssStmt->execute([$sourceSubjectId]);
+        $ss = $ssStmt->fetch(PDO::FETCH_ASSOC);
+        if ($ss) {
+            $pdo->prepare("
+                INSERT INTO lms_subject_settings
+                    (subject_id, unlock_mode, midterm_pass_score, midterm_max_attempts, midterm_show_answer, midterm_random_count,
+                     final_pass_score, final_max_attempts, final_show_answer, final_random_count)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+                ON DUPLICATE KEY UPDATE unlock_mode=VALUES(unlock_mode)
+            ")->execute([
+                $newSubjId,
+                $ss['unlock_mode'] ?? 'open_all',
+                $ss['midterm_pass_score'] ?? 6,
+                $ss['midterm_max_attempts'] ?? 1,
+                $ss['midterm_show_answer'] ?? 0,
+                $ss['midterm_random_count'] ?? 0,
+                $ss['final_pass_score'] ?? 6,
+                $ss['final_max_attempts'] ?? 1,
+                $ss['final_show_answer'] ?? 0,
+                $ss['final_random_count'] ?? 0,
+            ]);
+        } else {
+            $pdo->prepare("INSERT IGNORE INTO lms_exam_settings (subject_id, pre_pass_score, post_pass_score, post_max_attempts) VALUES (?,6,6,3)")
+                ->execute([$newSubjId]);
+        }
+
+        if ($copyUnitsAndContent) {
+            $uStmt = $pdo->prepare("SELECT * FROM lms_units WHERE subject_id=? AND deleted_at IS NULL ORDER BY order_no, id");
+            $uStmt->execute([$sourceSubjectId]);
+            $units = $uStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($units as $u) {
+                $oldUnitId = (int)$u['id'];
+                $pdo->prepare("
+                    INSERT INTO lms_units (subject_id, order_no, unit_number, unit_name, status)
+                    VALUES (?,?,?,?,?)
+                ")->execute([
+                    $newSubjId,
+                    $u['order_no'],
+                    $u['unit_number'] ?? $u['order_no'],
+                    $u['unit_name'],
+                    $u['status'] ?? 'published',
+                ]);
+                $newUnitId = (int)$pdo->lastInsertId();
+
+                // Copy topics & blocks
+                $tStmt = $pdo->prepare("SELECT * FROM lms_topics WHERE unit_id=? AND deleted_at IS NULL ORDER BY order_no, id");
+                $tStmt->execute([$oldUnitId]);
+                foreach ($tStmt->fetchAll(PDO::FETCH_ASSOC) as $t) {
+                    $oldTopicId = (int)$t['id'];
+                    $pdo->prepare("
+                        INSERT INTO lms_topics (unit_id, order_no, topic_name, status)
+                        VALUES (?,?,?,?)
+                    ")->execute([
+                        $newUnitId,
+                        $t['order_no'],
+                        $t['topic_name'],
+                        $t['status'] ?? 'published',
+                    ]);
+                    $newTopicId = (int)$pdo->lastInsertId();
+
+                    $bStmt = $pdo->prepare("SELECT * FROM lms_topic_blocks WHERE topic_id=? ORDER BY order_no, id");
+                    $bStmt->execute([$oldTopicId]);
+                    $insB = $pdo->prepare("
+                        INSERT INTO lms_topic_blocks (topic_id, order_no, block_type, title, body, media_url, media_path, original_name)
+                        VALUES (?,?,?,?,?,?,?,?)
+                    ");
+                    foreach ($bStmt->fetchAll(PDO::FETCH_ASSOC) as $b) {
+                        $insB->execute([
+                            $newTopicId,
+                            $b['order_no'],
+                            $b['block_type'],
+                            $b['title'],
+                            $b['body'],
+                            $b['media_url'],
+                            $b['media_path'],
+                            $b['original_name'],
+                        ]);
+                    }
+                }
+
+                // Copy exercises (without due_date so old semester dates don't mark overdue)
+                if ($copyExercises) {
+                    $exStmt = $pdo->prepare("SELECT * FROM lms_unit_exercises WHERE unit_id=? AND deleted_at IS NULL ORDER BY id");
+                    $exStmt->execute([$oldUnitId]);
+                    $insEx = $pdo->prepare("
+                        INSERT INTO lms_unit_exercises (unit_id, exercise_title, description, max_score, due_date, is_remedial, status)
+                        VALUES (?,?,?,?,NULL,?,?)
+                    ");
+                    foreach ($exStmt->fetchAll(PDO::FETCH_ASSOC) as $ex) {
+                        $insEx->execute([
+                            $newUnitId,
+                            $ex['exercise_title'],
+                            $ex['description'],
+                            $ex['max_score'],
+                            $ex['is_remedial'] ?? 0,
+                            $ex['status'] ?? 'published',
+                        ]);
+                    }
+                }
+
+                // Copy unit exam settings & pre/post questions
+                if ($copyExams) {
+                    $esStmt = $pdo->prepare("SELECT * FROM lms_exam_settings WHERE unit_id=?");
+                    $esStmt->execute([$oldUnitId]);
+                    $es = $esStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($es) {
+                        $pdo->prepare("
+                            INSERT INTO lms_exam_settings (subject_id, unit_id, pre_pass_score, post_pass_score, post_max_attempts, post_show_answer, pre_random_count, post_random_count)
+                            VALUES (?,?,?,?,?,?,?,?)
+                        ")->execute([
+                            $newSubjId,
+                            $newUnitId,
+                            $es['pre_pass_score'] ?? 6,
+                            $es['post_pass_score'] ?? 6,
+                            $es['post_max_attempts'] ?? 3,
+                            $es['post_show_answer'] ?? 0,
+                            $es['pre_random_count'] ?? 0,
+                            $es['post_random_count'] ?? 0,
+                        ]);
+                    }
+
+                    foreach (['lms_pre_questions', 'lms_post_questions'] as $qTbl) {
+                        $qStmt = $pdo->prepare("SELECT * FROM `{$qTbl}` WHERE unit_id=? ORDER BY id");
+                        $qStmt->execute([$oldUnitId]);
+                        foreach ($qStmt->fetchAll(PDO::FETCH_ASSOC) as $q) {
+                            $cols = array_keys($q);
+                            $cols = array_values(array_diff($cols, ['id']));
+                            $q['subject_id'] = $newSubjId;
+                            $q['unit_id']    = $newUnitId;
+                            $colList = '`' . implode('`,`', $cols) . '`';
+                            $phList  = implode(',', array_fill(0, count($cols), '?'));
+                            $vals    = array_map(fn($c) => $q[$c], $cols);
+                            $pdo->prepare("INSERT INTO `{$qTbl}` ({$colList}) VALUES ({$phList})")->execute($vals);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Copy subject-wide midterm & final questions
+        if ($copyExams) {
+            foreach (['lms_midterm_questions', 'lms_final_questions'] as $mqTbl) {
+                $hasTbl = (bool)$pdo->query("SHOW TABLES LIKE '{$mqTbl}'")->fetchColumn();
+                if (!$hasTbl) continue;
+                $qStmt = $pdo->prepare("SELECT * FROM `{$mqTbl}` WHERE subject_id=? ORDER BY id");
+                $qStmt->execute([$sourceSubjectId]);
+                foreach ($qStmt->fetchAll(PDO::FETCH_ASSOC) as $q) {
+                    $cols = array_values(array_diff(array_keys($q), ['id']));
+                    $q['subject_id'] = $newSubjId;
+                    $colList = '`' . implode('`,`', $cols) . '`';
+                    $phList  = implode(',', array_fill(0, count($cols), '?'));
+                    $vals    = array_map(fn($c) => $q[$c], $cols);
+                    $pdo->prepare("INSERT INTO `{$mqTbl}` ({$colList}) VALUES ({$phList})")->execute($vals);
+                }
+            }
+        }
+
+        $pdo->commit();
+        lms_log_activity($pdo, 'clone_subject', 'lms_subject', $newSubjId, ['source_id' => $sourceSubjectId], ['semester' => $targetSemester, 'year' => $targetYear]);
+        return $newSubjId;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+}
