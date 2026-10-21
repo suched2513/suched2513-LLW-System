@@ -183,13 +183,31 @@ $subMenus = [
     ],
 ];
 
-// Badge counts (only for roles that access LMS)
+// Badge counts (only for roles that access LMS, filtered to current active semester)
 $_sidebar_badges = ['lms_pending' => 0, 'lms_essay_pending' => 0];
 if (in_array($userRole, ['super_admin', 'att_teacher'])) {
     try {
         $_spdo = getPdo();
-        $_sidebar_badges['lms_pending'] = (int)$_spdo->query("SELECT COUNT(*) FROM lms_student_exercises WHERE reviewed_at IS NULL")->fetchColumn();
-        $_sidebar_badges['lms_essay_pending'] = (int)$_spdo->query("SELECT COUNT(*) FROM lms_student_exam_answers WHERE reviewed_at IS NULL")->fetchColumn();
+        $_sCurSem = function_exists('llw_current_semester') ? llw_current_semester($_spdo) : 2;
+        $_sCurYr  = function_exists('llw_current_academic_year') ? llw_current_academic_year($_spdo) : 2569;
+        $_st1 = $_spdo->prepare("
+            SELECT COUNT(*) FROM lms_student_exercises se
+            JOIN lms_unit_exercises ue ON ue.id = se.exercise_id
+            JOIN lms_units u ON u.id = ue.unit_id
+            JOIN lms_subjects s ON s.id = u.subject_id
+            WHERE se.reviewed_at IS NULL AND COALESCE(s.semester, 1) = ? AND COALESCE(s.academic_year, ?) = ?
+        ");
+        $_st1->execute([$_sCurSem, $_sCurYr, $_sCurYr]);
+        $_sidebar_badges['lms_pending'] = (int)$_st1->fetchColumn();
+
+        $_st2 = $_spdo->prepare("
+            SELECT COUNT(*) FROM lms_student_exam_answers ea
+            JOIN lms_exam_results er ON er.id = ea.result_id
+            JOIN lms_subjects s ON s.id = er.subject_id
+            WHERE ea.reviewed_at IS NULL AND COALESCE(s.semester, 1) = ? AND COALESCE(s.academic_year, ?) = ?
+        ");
+        $_st2->execute([$_sCurSem, $_sCurYr, $_sCurYr]);
+        $_sidebar_badges['lms_essay_pending'] = (int)$_st2->fetchColumn();
     } catch (Exception $e) { /* ไม่แสดง error ใน sidebar */ }
 }
 ?>

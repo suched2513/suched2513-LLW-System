@@ -29,15 +29,29 @@ if (!$student_id) {
     die("ไม่พบข้อมูลบัญชีนักเรียนของคุณในระบบ กรุณาเข้าสู่ระบบด้วยบัญชีสิทธิ์นักเรียน หรือขอความช่วยเหลือจากอาจารย์ประจำชั้น");
 }
 
-// Fetch subjects matching student classroom
+// Determine selected semester (default to current system semester)
+$sysYear = function_exists('llw_current_academic_year') ? llw_current_academic_year($pdo) : 2569;
+$sysSem  = function_exists('llw_current_semester') ? llw_current_semester($pdo) : 2;
+$selSem  = isset($_GET['semester']) && in_array((int)$_GET['semester'], [1, 2], true)
+    ? (int)$_GET['semester']
+    : (int)($_SESSION['student_lms_semester'] ?? $sysSem);
+if (!isset($_GET['semester']) && isset($_SESSION['student_lms_last_sys_sem']) && $_SESSION['student_lms_last_sys_sem'] !== $sysSem) {
+    $selSem = $sysSem;
+}
+$_SESSION['student_lms_semester'] = $selSem;
+$_SESSION['student_lms_last_sys_sem'] = $sysSem;
+
+// Fetch subjects matching student classroom and selected semester
 $stmt = $pdo->prepare("
     SELECT s.*, t.name as teacher_name 
     FROM att_subjects s 
     LEFT JOIN att_teachers t ON s.teacher_id = t.id 
     WHERE s.classroom = ?
+      AND COALESCE(s.semester, 1) = ?
+      AND COALESCE(s.academic_year, ?) = ?
     ORDER BY s.subject_code ASC
 ");
-$stmt->execute([$student_classroom]);
+$stmt->execute([$student_classroom, $selSem, $sysYear, $sysYear]);
 $subjects = $stmt->fetchAll();
 
 // Group units and quizzes by subject
@@ -93,7 +107,7 @@ if (isset($_SESSION['quiz_submit_msg'])) {
 ?>
 
 <!-- Student Profile Widget -->
-<div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl shadow-blue-100/50 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+<div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl shadow-blue-100/50 mb-5 flex flex-col sm:flex-row items-center justify-between gap-4">
     <div class="flex items-center gap-4">
         <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center text-white text-2xl font-black">
             <i class="bi bi-person-fill"></i>
@@ -101,12 +115,36 @@ if (isset($_SESSION['quiz_submit_msg'])) {
         <div>
             <h2 class="text-lg font-black leading-tight"><?= htmlspecialchars($student_name) ?></h2>
             <p class="text-xs opacity-80 mt-1">
-                <i class="bi bi-tag-fill"></i> ชั้นบรรยาย: <?= htmlspecialchars($student_classroom) ?> | รหัสนักเรียน: <?= htmlspecialchars($_SESSION['username'] ?? '—') ?>
+                <i class="bi bi-tag-fill"></i> ชั้นเรียน: <?= htmlspecialchars($student_classroom) ?> | รหัสนักเรียน: <?= htmlspecialchars($_SESSION['username'] ?? '—') ?>
             </p>
         </div>
     </div>
     <div class="px-4 py-2 bg-white/25 rounded-2xl border border-white/20 text-xs font-bold text-center">
-        สะสมแล้ว <?= count($attempts_list) ?> บทเรียนที่มีสถิติทำข้อสอบ
+        ภาคเรียนที่ <?= $selSem ?>/<?= $sysYear ?> • สะสม <?= count($attempts_list) ?> ครั้งที่ทำข้อสอบ
+    </div>
+</div>
+
+<!-- Semester Switcher Bar -->
+<div class="bg-white rounded-2xl border border-indigo-100 shadow-sm px-4 py-3 mb-8 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+        <span class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-black">
+            <i class="bi bi-calendar3"></i>
+        </span>
+        <div>
+            <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider leading-none">ปีการศึกษา <?= $sysYear ?></div>
+            <div class="text-xs font-black text-indigo-700 mt-0.5">กำลังแสดงแบบทดสอบ: ภาคเรียนที่ <?= $selSem ?>/<?= $sysYear ?></div>
+        </div>
+    </div>
+    <div class="flex items-center gap-1.5">
+        <a href="?semester=2" class="px-3.5 py-1.5 rounded-xl text-xs font-black border transition-all flex items-center gap-1 <?= $selSem === 2 ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300' ?>">
+            ภาคเรียนที่ 2
+            <?php if ($sysSem === 2): ?>
+                <span class="px-1.5 py-0.5 rounded-full text-[9px] font-black <?= $selSem === 2 ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-700' ?>">ปัจจุบัน</span>
+            <?php endif; ?>
+        </a>
+        <a href="?semester=1" class="px-3.5 py-1.5 rounded-xl text-xs font-black border transition-all flex items-center gap-1 <?= $selSem === 1 ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300' ?>">
+            ภาคเรียนที่ 1 (ย้อนหลัง)
+        </a>
     </div>
 </div>
 

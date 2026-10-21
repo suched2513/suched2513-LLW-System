@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../lms/_helpers.php';
 
 // Auth Guard
 if (!isset($_SESSION['llw_role'])) {
@@ -11,6 +12,12 @@ if (!in_array($_SESSION['llw_role'], ['super_admin', 'att_teacher'])) {
 }
 
 $pdo = getPdo();
+$is_admin = ($_SESSION['llw_role'] === 'super_admin');
+$teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
+$termCtx = lms_active_term_context($pdo);
+$curSem  = (int)$termCtx['semester'];
+$curYear = (int)$termCtx['year'];
+
 $msg = '';
 $msgType = 'success';
 
@@ -108,33 +115,185 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("DELETE FROM lms_quizzes WHERE id = ?");
             $stmt->execute([$quiz_id]);
             $msg = 'ลบแบบทดสอบสำเร็จ';
+
+        } elseif ($action === 'clone_term1_subject') {
+            $src_subject_id = (int)($_POST['source_subject_id'] ?? 0);
+            $new_code = trim($_POST['new_subject_code'] ?? '');
+            $new_name = trim($_POST['new_subject_name'] ?? '');
+            $copy_quizzes = !empty($_POST['copy_quizzes']);
+
+            if (!$src_subject_id) throw new Exception('กรุณาเลือกวิชาต้นทางจากภาคเรียนที่ 1');
+
+            $srcStmt = $pdo->prepare("SELECT * FROM att_subjects WHERE id = ?");
+            $srcStmt->execute([$src_subject_id]);
+            $srcSubj = $srcStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$srcSubj) throw new Exception('ไม่พบข้อมูลวิชาต้นทาง');
+            if (!$is_admin && (int)$srcSubj['teacher_id'] !== $teacher_id) {
+                throw new Exception('คุณไม่มีสิทธิ์คัดลอกวิชานี้');
+            }
+
+            $finalCode = $new_code !== '' ? $new_code : $srcSubj['subject_code'];
+            $finalName = $new_name !== '' ? $new_name : $srcSubj['subject_name'];
+
+            $pdo->beginTransaction();
+
+            // Check if Term 2 subject already exists for this classroom & code
+            $chkStmt = $pdo->prepare("
+                SELECT id FROM att_subjects
+                WHERE COALESCE(academic_year, ?) = ?
+                  AND COALESCE(semester, 1) = 2
+                  AND subject_code = ?
+                  AND classroom = ?
+                LIMIT 1
+            ");
+            $chkStmt->execute([$curYear, $curYear, $finalCode, $srcSubj['classroom']]);
+            $targetSubjId = (int)$chkStmt->fetchColumn();
+
+            if ($targetSubjId > 0) {
+                $pdo->prepare("UPDATE att_subjects SET subject_name = ? WHERE id = ?")
+                    ->execute([$finalName, $targetSubjId]);
+            } else {
+                $insSubj = $pdo->prepare("
+                    INSERT INTO att_subjects (subject_code, subject_name, classroom, telegram_chat_id, is_elective, teacher_id, academic_year, semester)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 2)
+                ");
+                $insSubj->execute([
+                    $finalCode,
+                    $finalName,
+                    $srcSubj['classroom'],
+                    $srcSubj['telegram_chat_id'] ?? null,
+                    (int)($srcSubj['is_elective'] ?? 0),
+                    (int)$srcSubj['teacher_id'],
+                    $curYear,
+                ]);
+                $targetSubjId = (int)$pdo->lastInsertId();
+
+                if (!empty($srcSubj['is_elective']) && $targetSubjId > 0) {
+                    $enrSrc = $pdo->prepare("SELECT student_id FROM att_subject_students WHERE subject_id = ?");
+                    $enrSrc->execute([$src_subject_id]);
+                    $enrIns = $pdo->prepare("INSERT IGNORE INTO att_subject_students (subject_id, student_id) VALUES (?, ?)");
+                    foreach ($enrSrc->fetchAll(PDO::FETCH_COLUMN) as $stuId) {
+                        $enrIns->execute([$targetSubjId, $stuId]);
+                    }
+                }
+            }
+
+            // Copy units and optionally quizzes/questions/choices
+            $uStmt = $pdo->prepare("SELECT * FROM lms_units WHERE subject_id = ? ORDER BY unit_number ASC, id ASC");
+            $uStmt->execute([$src_subject_id]);
+            $srcUnits = $uStmt->fetchAll(PDO::FETCH_ASSOC);
+            $copiedUnits = 0;
+
+            foreach ($srcUnits as $u) {
+                $chkU = $pdo->prepare("SELECT id FROM lms_units WHERE subject_id = ? AND unit_number = ? LIMIT 1");
+                $chkU->execute([$targetSubjId, $u['unit_number']]);
+                if ($chkU->fetchColumn()) continue;
+
+                $insU = $pdo->prepare("INSERT INTO lms_units (subject_id, unit_number, order_no, unit_name, description) VALUES (?, ?, ?, ?, ?)");
+                $insU->execute([
+                    $targetSubjId,
+                    (int)$u['unit_number'],
+                    (int)($u['order_no'] ?? $u['unit_number']),
+                    $u['unit_name'],
+                    $u['description'] ?? '',
+                ]);
+                $newUnitId = (int)$pdo->lastInsertId();
+                $copiedUnits++;
+
+                if ($copy_quizzes) {
+                    $qStmt = $pdo->prepare("SELECT * FROM lms_quizzes WHERE unit_id = ? ORDER BY id ASC");
+                    $qStmt->execute([$u['id']]);
+                    foreach ($qStmt->fetchAll(PDO::FETCH_ASSOC) as $qz) {
+                        $insQz = $pdo->prepare("INSERT INTO lms_quizzes (unit_id, quiz_type, title, time_limit, is_active) VALUES (?, ?, ?, ?, ?)");
+                        $insQz->execute([
+                            $newUnitId,
+                            $qz['quiz_type'],
+                            $qz['title'],
+                            (int)$qz['time_limit'],
+                            (int)$qz['is_active'],
+                        ]);
+                        $newQuizId = (int)$pdo->lastInsertId();
+
+                        $quesStmt = $pdo->prepare("SELECT * FROM lms_questions WHERE quiz_id = ? ORDER BY id ASC");
+                        $quesStmt->execute([$qz['id']]);
+                        foreach ($quesStmt->fetchAll(PDO::FETCH_ASSOC) as $ques) {
+                            $insQues = $pdo->prepare("INSERT INTO lms_questions (quiz_id, question_text, points) VALUES (?, ?, ?)");
+                            $insQues->execute([$newQuizId, $ques['question_text'], (int)$ques['points']]);
+                            $newQuesId = (int)$pdo->lastInsertId();
+
+                            $chStmt = $pdo->prepare("SELECT * FROM lms_choices WHERE question_id = ? ORDER BY id ASC");
+                            $chStmt->execute([$ques['id']]);
+                            $insCh = $pdo->prepare("INSERT INTO lms_choices (question_id, choice_text, is_correct) VALUES (?, ?, ?)");
+                            foreach ($chStmt->fetchAll(PDO::FETCH_ASSOC) as $ch) {
+                                $insCh->execute([$newQuesId, $ch['choice_text'], (int)$ch['is_correct']]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            $pdo->commit();
+            $_SESSION['lms_selected_semester'] = 2;
+            $curSem = 2;
+            $termCtx['semester'] = 2;
+            $msg = "ดึงวิชาและหน่วยการเรียนรู้สู่ภาคเรียนที่ 2 สำเร็จ ({$copiedUnits} หน่วย)";
         }
     } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
         $msg = $e->getMessage();
         $msgType = 'error';
     }
 }
 
-// Fetch subjects
-if ($_SESSION['llw_role'] === 'super_admin') {
+// Fetch subjects for active semester
+if ($is_admin) {
     $stmt = $pdo->prepare("
         SELECT s.*, t.name as teacher_name 
         FROM att_subjects s 
         LEFT JOIN att_teachers t ON s.teacher_id = t.id 
+        WHERE COALESCE(s.semester, 1) = ? AND COALESCE(s.academic_year, ?) = ?
         ORDER BY s.subject_code ASC, s.classroom ASC
     ");
-    $stmt->execute();
+    $stmt->execute([$curSem, $curYear, $curYear]);
 } else {
     $stmt = $pdo->prepare("
         SELECT s.*, t.name as teacher_name 
         FROM att_subjects s 
         LEFT JOIN att_teachers t ON s.teacher_id = t.id 
-        WHERE s.teacher_id = ? 
+        WHERE s.teacher_id = ?
+          AND COALESCE(s.semester, 1) = ? AND COALESCE(s.academic_year, ?) = ?
         ORDER BY s.subject_code ASC, s.classroom ASC
     ");
-    $stmt->execute([$_SESSION['teacher_id'] ?? 0]);
+    $stmt->execute([$teacher_id, $curSem, $curYear, $curYear]);
 }
 $subjects = $stmt->fetchAll();
+
+// Fetch Semester 1 subjects for 1-click cloning into Semester 2
+$sem1Subjects = [];
+if ($is_admin) {
+    $s1Stmt = $pdo->prepare("
+        SELECT s.*, t.name as teacher_name,
+               (SELECT COUNT(*) FROM lms_units u WHERE u.subject_id = s.id) AS unit_count
+        FROM att_subjects s
+        LEFT JOIN att_teachers t ON s.teacher_id = t.id
+        WHERE COALESCE(s.semester, 1) = 1 AND COALESCE(s.academic_year, ?) = ?
+        ORDER BY s.subject_code ASC, s.classroom ASC
+    ");
+    $s1Stmt->execute([$curYear, $curYear]);
+    $sem1Subjects = $s1Stmt->fetchAll();
+} else {
+    $s1Stmt = $pdo->prepare("
+        SELECT s.*, t.name as teacher_name,
+               (SELECT COUNT(*) FROM lms_units u WHERE u.subject_id = s.id) AS unit_count
+        FROM att_subjects s
+        LEFT JOIN att_teachers t ON s.teacher_id = t.id
+        WHERE s.teacher_id = ?
+          AND COALESCE(s.semester, 1) = 1 AND COALESCE(s.academic_year, ?) = ?
+        ORDER BY s.subject_code ASC, s.classroom ASC
+    ");
+    $s1Stmt->execute([$teacher_id, $curYear, $curYear]);
+    $sem1Subjects = $s1Stmt->fetchAll();
+}
 
 // Group units by subject_id
 $subjectIds = array_column($subjects, 'id');
@@ -199,12 +358,32 @@ require_once __DIR__ . '/../components/layout_start.php';
 </script>
 <?php endif; ?>
 
+<!-- Semester Control Bar -->
+<?= lms_render_semester_bar($termCtx, $is_admin) ?>
+
+<?php if ($curSem === 2 && !empty($sem1Subjects)): ?>
+<div class="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div class="flex items-start sm:items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <i class="bi bi-magic text-lg"></i>
+        </div>
+        <div>
+            <h4 class="text-sm font-black text-slate-800">ดึงหน่วยการเรียนรู้และข้อสอบจากภาคเรียนที่ 1 มาใช้ในภาคเรียนที่ 2</h4>
+            <p class="text-xs text-slate-600 mt-0.5">คัดลอกหน่วยการเรียนรู้และแบบทดสอบก่อน–หลังเรียนจากเทอม 1 มาใช้ต่อในเทอม 2 ได้ทันที (สามารถเปลี่ยนรหัสวิชา/ชื่อวิชาได้ และไม่ดึงคะแนนเด็กเทอมเก่ามาปน)</p>
+        </div>
+    </div>
+    <button type="button" onclick="openCloneTerm1Modal()" class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2.5 rounded-xl text-xs font-black shadow-md shadow-violet-200 transition-all shrink-0">
+        <i class="bi bi-files"></i> ดึงวิชา & หน่วยเรียนจากเทอม 1
+    </button>
+</div>
+<?php endif; ?>
+
 <!-- Stats Overview Section -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl p-6 text-white shadow-xl shadow-indigo-100/50">
-        <p class="text-xs font-bold opacity-80 uppercase tracking-wider">รายวิชาทั้งหมด</p>
+        <p class="text-xs font-bold opacity-80 uppercase tracking-wider">รายวิชาภาคเรียนที่ <?= $curSem ?>/<?= $curYear ?></p>
         <p class="text-4xl font-black mt-2"><?= count($subjects) ?></p>
-        <span class="text-xs font-medium opacity-70 mt-1 block">วิชาที่คุณรับผิดชอบ</span>
+        <span class="text-xs font-medium opacity-70 mt-1 block">วิชาที่คุณรับผิดชอบในเทอมนี้</span>
     </div>
     
     <div class="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-6 text-white shadow-xl shadow-blue-100/50">
@@ -233,8 +412,24 @@ require_once __DIR__ . '/../components/layout_start.php';
             <div class="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i class="bi bi-journal-x text-3xl"></i>
             </div>
-            <h3 class="text-lg font-black text-slate-800">ไม่พบข้อมูลรายวิชา</h3>
-            <p class="text-sm text-slate-500 mt-1">คุณไม่มีรายวิชาที่สอนลงทะเบียนในระบบ หรือข้อมูลผู้สอนไม่ได้เชื่อมโยง</p>
+            <h3 class="text-lg font-black text-slate-800">ยังไม่มีรายวิชาในภาคเรียนที่ <?= $curSem ?>/<?= $curYear ?></h3>
+            <p class="text-sm text-slate-500 mt-1">
+                <?php if ($curSem === 2 && !empty($sem1Subjects)): ?>
+                    คุณสามารถกดปุ่มด้านล่างเพื่อดึงรายวิชา หน่วยการเรียนรู้ และข้อสอบจากภาคเรียนที่ 1 มาใช้ในภาคเรียนที่ 2 ได้ทันที หรือสลับไปดูข้อมูลย้อนหลังภาคเรียนที่ 1 ที่แถบด้านบน
+                <?php else: ?>
+                    คุณไม่มีรายวิชาที่สอนลงทะเบียนในภาคเรียนนี้ หรือสามารถสลับภาคเรียนได้ที่แถบด้านบน
+                <?php endif; ?>
+            </p>
+            <?php if ($curSem === 2 && !empty($sem1Subjects)): ?>
+                <div class="mt-5 flex justify-center gap-3 flex-wrap">
+                    <button type="button" onclick="openCloneTerm1Modal()" class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-lg shadow-violet-200 transition-all">
+                        <i class="bi bi-files"></i> ดึงวิชา & หน่วยเรียนจากเทอม 1 มาใช้
+                    </button>
+                    <a href="?semester=1&year=<?= $curYear ?>" class="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-all">
+                        <i class="bi bi-clock-history"></i> ดูข้อมูลย้อนหลังภาคเรียนที่ 1
+                    </a>
+                </div>
+            <?php endif; ?>
         </div>
     <?php else: ?>
         <?php foreach ($subjects as $subj): ?>
@@ -574,6 +769,57 @@ require_once __DIR__ . '/../components/layout_start.php';
     </div>
 </div>
 
+<!-- Clone from Semester 1 Modal -->
+<div id="cloneTerm1Modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden transform transition-all duration-300">
+        <div class="px-6 py-5 bg-violet-50 border-b border-violet-100 flex items-center justify-between">
+            <h3 class="text-base font-black text-violet-900"><i class="bi bi-files mr-1.5"></i> ดึงวิชาและหน่วยการเรียนรู้จากภาคเรียนที่ 1</h3>
+            <button type="button" onclick="closeCloneTerm1Modal()" class="w-8 h-8 text-slate-400 hover:text-slate-600 hover:bg-white rounded-full flex items-center justify-center transition-all">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="action" value="clone_term1_subject">
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-600 block mb-1">เลือกรายวิชาต้นทาง (ภาคเรียนที่ 1/<?= $curYear ?>)</label>
+                    <select id="clone_source_subj" name="source_subject_id" required onchange="onSelectTerm1Subj(this)" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all">
+                        <option value="">— เลือกรายวิชาจากเทอม 1 —</option>
+                        <?php foreach ($sem1Subjects as $s1): ?>
+                            <option value="<?= (int)$s1['id'] ?>"
+                                    data-code="<?= htmlspecialchars($s1['subject_code'], ENT_QUOTES) ?>"
+                                    data-name="<?= htmlspecialchars($s1['subject_name'], ENT_QUOTES) ?>">
+                                <?= htmlspecialchars($s1['subject_code'] . ' ' . $s1['subject_name'] . ' (' . $s1['classroom'] . ') — ' . (int)$s1['unit_count'] . ' หน่วย') ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-600 block mb-1">รหัสวิชาในเทอม 2</label>
+                        <input type="text" id="clone_new_code" name="new_subject_code" placeholder="เช่น ว21102" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-600 block mb-1">ชื่อวิชาในเทอม 2</label>
+                        <input type="text" id="clone_new_name" name="new_subject_name" placeholder="ชื่อวิชา..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all">
+                    </div>
+                </div>
+                <label class="flex items-start gap-3 bg-violet-50/60 p-4 rounded-2xl border border-violet-100 cursor-pointer">
+                    <input type="checkbox" name="copy_quizzes" value="1" checked class="mt-0.5 w-4 h-4 text-violet-600 border-slate-300 rounded focus:ring-violet-500">
+                    <div>
+                        <span class="text-xs font-black text-slate-800 block">คัดลอกแบบทดสอบก่อนเรียน–หลังเรียน และคลังคำถามทั้งหมดมาด้วย</span>
+                        <span class="text-[11px] text-slate-500 block mt-0.5">ไม่คัดลอกประวัติคะแนนสอบของนักเรียนเทอม 1 เพื่อให้นักเรียนเทอม 2 เริ่มทำข้อสอบใหม่</span>
+                    </div>
+                </label>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button type="button" onclick="closeCloneTerm1Modal()" class="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 text-xs font-bold hover:bg-slate-100 transition-all">ยกเลิก</button>
+                <button type="submit" class="px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-black shadow-lg shadow-violet-100 transition-all">ดึงข้อมูลมาใช้ในเทอม 2</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Forms for Deletes -->
 <form id="hiddenDeleteUnitForm" method="POST" class="hidden">
     <input type="hidden" name="action" value="delete_unit">
@@ -587,6 +833,30 @@ require_once __DIR__ . '/../components/layout_start.php';
 
 <!-- JS Controller -->
 <script>
+    // Clone Term 1 Subject Modal
+    function openCloneTerm1Modal() {
+        const modal = document.getElementById('cloneTerm1Modal');
+        if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeCloneTerm1Modal() {
+        const modal = document.getElementById('cloneTerm1Modal');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    function onSelectTerm1Subj(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        if (!opt || !opt.value) return;
+        let code = opt.getAttribute('data-code') || '';
+        let name = opt.getAttribute('data-name') || '';
+        if (/^(.+\d{4})1$/u.test(code)) {
+            code = code.replace(/^(.+\d{4})1$/u, '$12');
+            name = name.replace(/(\s*)1$/u, '$12');
+        }
+        document.getElementById('clone_new_code').value = code;
+        document.getElementById('clone_new_name').value = name;
+    }
+
     // Unit Actions
     function openAddUnitModal(subjId, subjName) {
         document.getElementById('add_subj_id').value = subjId;
