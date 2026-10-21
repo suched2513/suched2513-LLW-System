@@ -13,12 +13,92 @@ if (!in_array($_SESSION['llw_role'], ['att_teacher', 'super_admin', 'wfh_admin',
     header('Location: ' . $base_path . '/index.php'); exit();
 }
 
-$pageTitle    = 'เช็คชื่อเข้าแถว';
-$pageSubtitle = 'ระบบเช็คชื่อเข้าแถวและแต่งกายนักเรียน';
+$pdo = getPdo();
+llw_ensure_semester_schema($pdo);
+
+// Allow Super Admin to switch active semester directly from Assembly page
+$asm_flash_msg = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'set_active_semester' && ($_SESSION['llw_role'] ?? '') === 'super_admin') {
+    csrf_verify();
+    $targetSem  = max(1, min(2, (int)($_POST['semester'] ?? 2)));
+    $targetYear = (int)($_POST['academic_year'] ?? llw_current_academic_year());
+    $tDef       = llw_default_term_dates($targetYear, $targetSem);
+    $pdo->exec("UPDATE llw_academic_terms SET is_active = 0");
+    $up = $pdo->prepare("
+        INSERT INTO llw_academic_terms (academic_year, semester, start_date, end_date, is_active)
+        VALUES (?, ?, ?, ?, 1)
+        ON DUPLICATE KEY UPDATE is_active = 1
+    ");
+    $up->execute([$targetYear, $targetSem, $tDef['start_date'], $tDef['end_date']]);
+    header("Location: dashboard.php?semester={$targetSem}&switched=1");
+    exit;
+}
+
+$active_year   = llw_current_academic_year();
+$system_sem    = llw_current_semester();
+$selected_sem  = isset($_GET['semester']) && in_array((int)$_GET['semester'], [1, 2], true)
+    ? (int)$_GET['semester']
+    : $system_sem;
+$cur_term_info = llw_get_term_dates($active_year, $selected_sem, $pdo);
+
+$pageTitle    = "เช็คชื่อเข้าแถว (ภาคเรียนที่ {$selected_sem}/{$active_year})";
+$pageSubtitle = 'ระบบเช็คชื่อเข้าแถวและแต่งกายนักเรียน แยกตามภาคเรียน';
 $activeSystem = 'assembly';
 
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
+
+<!-- ─── Semester Control Bar (ภาคเรียนที่ 1 / 2) ─── -->
+<div class="bg-white rounded-2xl shadow-lg shadow-amber-100/40 p-4 mb-5 border border-amber-200/60 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs shadow-sm">
+            <i class="bi bi-calendar3-range-fill"></i>
+            <span>ปีการศึกษา <?= $active_year ?></span>
+        </div>
+        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <a href="?semester=1" id="sem-pill-1"
+               class="px-4 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 <?= $selected_sem === 1 ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white' ?>">
+                <i class="bi bi-1-circle-fill"></i> ภาคเรียนที่ 1
+                <?php if ($system_sem === 1): ?><span class="px-1.5 py-0.2 rounded bg-white/20 text-[10px]">เทอมปัจจุบัน</span><?php endif; ?>
+            </a>
+            <a href="?semester=2" id="sem-pill-2"
+               class="px-4 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 <?= $selected_sem === 2 ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white' ?>">
+                <i class="bi bi-2-circle-fill"></i> ภาคเรียนที่ 2
+                <?php if ($system_sem === 2): ?><span class="px-1.5 py-0.2 rounded bg-white/20 text-[10px]">เทอมปัจจุบัน</span><?php endif; ?>
+            </a>
+        </div>
+        <span class="text-xs font-bold text-slate-500">
+            <i class="bi bi-clock-history text-amber-500 mr-1"></i>ช่วงวันที่เทอม <?= $selected_sem ?>:
+            <strong class="text-slate-700"><?= date('d/m/Y', strtotime($cur_term_info['start_date'])) ?> – <?= date('d/m/Y', strtotime($cur_term_info['end_date'])) ?></strong>
+        </span>
+    </div>
+
+    <?php if (($_SESSION['llw_role'] ?? '') === 'super_admin'): ?>
+    <div class="flex items-center gap-2">
+        <?php if ($system_sem !== 2): ?>
+        <form method="POST" class="inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="set_active_semester">
+            <input type="hidden" name="semester" value="2">
+            <input type="hidden" name="academic_year" value="<?= $active_year ?>">
+            <button type="submit" class="px-3.5 py-2 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm flex items-center gap-1.5">
+                <i class="bi bi-lightning-charge-fill"></i> ตั้ง "ภาคเรียนที่ 2" เป็นเทอมปัจจุบันของระบบทันที
+            </button>
+        </form>
+        <?php else: ?>
+        <form method="POST" class="inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="set_active_semester">
+            <input type="hidden" name="semester" value="1">
+            <input type="hidden" name="academic_year" value="<?= $active_year ?>">
+            <button type="submit" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-1">
+                <i class="bi bi-arrow-counterclockwise"></i> สลับกลับเป็นเทอม 1
+            </button>
+        </form>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+</div>
 
 <!-- ─── Tab Navigation ─── -->
 <div class="mb-6">
@@ -101,6 +181,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <tr>
                             <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">รหัส</th>
                             <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider text-left border-b border-slate-100">ชื่อ-สกุล</th>
+                            <th class="px-3 py-3 text-xs font-black text-amber-600 uppercase tracking-wider text-center border-b border-slate-100 bg-amber-50/40">สะสมเทอม <?= $selected_sem ?></th>
                             <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">สถานะ</th>
                             <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">เล็บ</th>
                             <th class="px-3 py-3 text-xs font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">ผม</th>
@@ -200,13 +281,13 @@ require_once __DIR__ . '/../components/layout_start.php';
             <div>
                 <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">จากเดือน</label>
                 <select id="ov-month-from" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-400 outline-none transition-all">
-                    <?php echo renderMonthOptions(); ?>
+                    <?php echo renderMonthOptions(false, $selected_sem === 2 ? '11' : '05'); ?>
                 </select>
             </div>
             <div>
                 <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ถึงเดือน</label>
                 <select id="ov-month-to" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-teal-400 outline-none transition-all">
-                    <?php echo renderMonthOptions(); ?>
+                    <?php echo renderMonthOptions(false, $selected_sem === 2 ? '03' : '10'); ?>
                 </select>
             </div>
             <div class="flex items-end">
@@ -376,6 +457,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 <script>
 // ─── Global Configuration ───
 window.BASE = '<?= rtrim(str_replace("/assembly", "", dirname($_SERVER["SCRIPT_NAME"])), "/") ?>';
+window.CURRENT_SEM = <?= (int)$selected_sem ?>;
 window.api  = async path => {
     try {
         const r = await fetch(window.BASE + path);
@@ -482,14 +564,14 @@ async function loadStudents() {
     if (!classroom || !date) { Swal.fire('กรุณาเลือกห้องเรียนและวันที่','','warning'); return; }
 
     Swal.fire({ title: 'กำลังโหลด...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    const res = await api(`/assembly/api/get_students.php?classroom=${encodeURIComponent(classroom)}&date=${date}`);
+    const res = await api(`/assembly/api/get_students.php?classroom=${encodeURIComponent(classroom)}&date=${date}&semester=${window.CURRENT_SEM}`);
     Swal.close();
 
     if (res.status !== 'success') { Swal.fire('เกิดข้อผิดพลาด', res.message, 'error'); return; }
 
     const tbody = document.getElementById('att-student-table');
     if (!res.students.length) {
-        tbody.innerHTML = `<tr><td colspan="10" class="px-4 py-8 text-center text-slate-400">ไม่พบนักเรียนในห้องนี้</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" class="px-4 py-8 text-center text-slate-400">ไม่พบนักเรียนในห้องนี้</td></tr>`;
         return;
     }
 
@@ -497,10 +579,22 @@ async function loadStudents() {
         const hasRecord = s.status !== null;
         const status = s.status || 'ม';
         const checked = (field) => (s[field] ?? 'ถูก') === 'ถูก';
+        const st = s.sem_stats || { m: 0, k: 0, l: 0, d: 0, total: 0, pct: 100 };
+        const badCnt = (st.k || 0) + (st.d || 0);
+        const pctBadge = st.total >= 3 && st.pct < 80
+            ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-black">🚨 ${st.pct}%</span>`
+            : (st.total >= 3 && st.pct < 85
+                ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500 text-white text-[10px] font-black">⚠️ ${st.pct}%</span>`
+                : '');
 
         return `<tr class="border-b border-slate-50 hover:bg-amber-50/30 transition-colors">
             <td class="px-3 py-2.5 text-xs font-bold text-slate-400">${esc(s.student_id)}</td>
-            <td class="px-3 py-2.5 text-sm font-medium text-slate-700">${esc(s.name)}</td>
+            <td class="px-3 py-2.5 text-sm font-medium text-slate-700">${esc(s.name)} ${pctBadge}</td>
+            <td class="px-3 py-2.5 text-center bg-amber-50/20 text-xs">
+                <span class="font-bold text-emerald-600" title="มาเข้าแถวในเทอมนี้">มา ${st.m}</span>
+                <span class="text-slate-300 mx-0.5">/</span>
+                <span class="font-bold ${badCnt > 0 ? 'text-rose-600' : 'text-slate-400'}" title="ขาด/โดดในเทอมนี้">ขาด ${badCnt}</span>
+            </td>
             <td class="px-3 py-2.5 text-center">
                 <select class="status-sel" data-sid="${esc(s.student_id)}" onchange="onStatusChange(this)">
                     <option value="ม" ${status==='ม'?'selected':''}>ม</option>
@@ -688,7 +782,8 @@ async function loadOverview() {
     if (!classroom) { Swal.fire('กรุณาเลือกห้องเรียน','','warning'); return; }
 
     Swal.fire({ title: 'กำลังโหลด...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    const res = await api(`/assembly/api/get_overview.php?classroom=${encodeURIComponent(classroom)}&month_from=${monthFrom}&month_to=${monthTo}`);
+    const semParam = (monthFrom === "05" && monthTo === "10") ? 1 : ((monthFrom === "11" && monthTo === "03") ? 2 : 0);
+    const res = await api(`/assembly/api/get_overview.php?classroom=${encodeURIComponent(classroom)}&month_from=${monthFrom}&month_to=${monthTo}&semester=${semParam}`);
     Swal.close();
     if (res.status !== 'success') { Swal.fire('ผิดพลาด', res.message, 'error'); return; }
 
@@ -757,7 +852,7 @@ async function loadOverview() {
     `).join('');
 
     // CSV link
-    document.getElementById('ov-export-btn').href = BASE + `/assembly/api/export_csv.php?classroom=${encodeURIComponent(classroom)}&month_from=${monthFrom}&month_to=${monthTo}`;
+    document.getElementById('ov-export-btn').href = BASE + `/assembly/api/export_csv.php?classroom=${encodeURIComponent(classroom)}&month_from=${monthFrom}&month_to=${monthTo}&semester=${semParam}`;
 }
 
 // ─── INDIVIDUAL ───
@@ -805,7 +900,7 @@ function printDailyReport() {
     const classroom = document.getElementById('att-classroom').value;
     const date      = document.getElementById('att-date').value;
     if (!classroom || !date) { Swal.fire('กรุณาเลือกห้องเรียนและวันที่','','warning'); return; }
-    window.open(window.BASE + `/assembly/report_print.php?classroom=${encodeURIComponent(classroom)}&date=${date}`, '_blank');
+    window.open(window.BASE + `/assembly/report_print.php?classroom=${encodeURIComponent(classroom)}&date=${date}&semester=${window.CURRENT_SEM}`, '_blank');
 }
 
 function printDailyReportFromOverview() {
@@ -814,7 +909,7 @@ function printDailyReportFromOverview() {
     // However, usually we print for a specific day. Let's use today as default if no date selected elsewhere.
     const date = document.getElementById('att-date').value || new Date().toISOString().split('T')[0];
     if (!classroom) { Swal.fire('กรุณาเลือกห้องเรียน','','warning'); return; }
-    window.open(window.BASE + `/assembly/report_print.php?classroom=${encodeURIComponent(classroom)}&date=${date}`, '_blank');
+    window.open(window.BASE + `/assembly/report_print.php?classroom=${encodeURIComponent(classroom)}&date=${date}&semester=${window.CURRENT_SEM}`, '_blank');
 }
 
 // ─── Escape HTML ───
@@ -829,19 +924,20 @@ function esc(str) {
 require_once __DIR__ . '/../components/layout_end.php';
 
 // ─── Helper: month options ───
-function renderMonthOptions(bool $includeAll = false): string {
+function renderMonthOptions(bool $includeAll = false, ?string $defaultMonth = null): string {
+    global $selected_sem;
     $months = ['01'=>'มกราคม','02'=>'กุมภาพันธ์','03'=>'มีนาคม','04'=>'เมษายน',
                '05'=>'พฤษภาคม','06'=>'มิถุนายน','07'=>'กรกฎาคม','08'=>'สิงหาคม',
                '09'=>'กันยายน','10'=>'ตุลาคม','11'=>'พฤศจิกายน','12'=>'ธันวาคม'];
-    $curSem = function_exists('llw_current_semester') ? llw_current_semester() : 1;
+    $curSem = $selected_sem ?? (function_exists('llw_current_semester') ? llw_current_semester() : 1);
     $html = $includeAll
         ? '<option value="all">ทุกเดือน (ทั้งปี)</option>'
           . '<option value="sem1" ' . ($curSem === 1 ? 'selected' : '') . '>📅 ภาคเรียนที่ 1 (พ.ค.–ต.ค.)</option>'
           . '<option value="sem2" ' . ($curSem === 2 ? 'selected' : '') . '>📅 ภาคเรียนที่ 2 (พ.ย.–มี.ค.)</option>'
         : '<option value="">เลือกเดือน</option>';
-    $current = date('m');
+    $targetM = $defaultMonth ?? date('m');
     foreach ($months as $k => $v) {
-        $sel = (!$includeAll && $k === $current) ? 'selected' : '';
+        $sel = (!$includeAll && $k === $targetM) ? 'selected' : '';
         $html .= "<option value=\"$k\" $sel>$v</option>";
     }
     return $html;

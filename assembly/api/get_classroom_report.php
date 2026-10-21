@@ -25,12 +25,22 @@ if (!$classroom) {
 try {
     $pdo = getPdo();
 
-    // 1. Classroom Info
-    $cStmt = $pdo->prepare("SELECT classroom, teacher_name FROM assembly_classrooms WHERE classroom = ?");
-    $cStmt->execute([$classroom]);
-    $classInfo = $cStmt->fetch();
-    if (!$classInfo) {
-        $classInfo = ['classroom' => $classroom, 'teacher_name' => '-'];
+    // 1. Classroom Info (ดึงครูที่ปรึกษาจาก llw_class_advisors ก่อน แล้ว fallback ไป assembly_classrooms)
+    $advStmt = $pdo->prepare("
+        SELECT GROUP_CONCAT(CONCAT(u.firstname, ' ', u.lastname) ORDER BY a.role_type SEPARATOR ' / ')
+        FROM llw_class_advisors a
+        JOIN llw_users u ON a.user_id = u.user_id
+        WHERE a.classroom = ?
+    ");
+    $advStmt->execute([$classroom]);
+    $advNames = (string)($advStmt->fetchColumn() ?: '');
+
+    if ($advNames !== '') {
+        $classInfo = ['classroom' => $classroom, 'teacher_name' => $advNames];
+    } else {
+        $cStmt = $pdo->prepare("SELECT classroom, teacher_name FROM assembly_classrooms WHERE classroom = ?");
+        $cStmt->execute([$classroom]);
+        $classInfo = $cStmt->fetch() ?: ['classroom' => $classroom, 'teacher_name' => '-'];
     }
 
     // 2. All Students in this room (Central Table)
@@ -105,12 +115,15 @@ try {
     }
 
     echo json_encode([
-        'status'     => 'success',
-        'school'     => $schoolName,
-        'date'       => $date,
-        'classroom'  => $classInfo,
-        'summary'    => $summary,
-        'students'   => $studentList
+        'status'        => 'success',
+        'school'        => $schoolName,
+        'date'          => $date,
+        'semester'      => $repSem,
+        'academic_year' => $repYear,
+        'term_range'    => $termRange,
+        'classroom'     => $classInfo,
+        'summary'       => $summary,
+        'students'      => $studentList
     ]);
 
 } catch (Exception $e) {

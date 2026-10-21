@@ -192,9 +192,9 @@ if (!function_exists('llw_active_term_from_db')) {
 if (!function_exists('llw_current_semester')) {
     function llw_current_semester(?int $ts = null): int {
         if (LLW_FORCE_SEMESTER !== null) return (int)LLW_FORCE_SEMESTER;
-        if ($ts === null) {
-            $dbTerm = llw_active_term_from_db();
-            if ($dbTerm) return $dbTerm['semester'];
+        $dbTerm = llw_active_term_from_db();
+        if ($dbTerm && (!empty($dbTerm['forced']) || $ts === null)) {
+            return (int)$dbTerm['semester'];
         }
         $ts = $ts ?? time();
         $md = (int)date('n', $ts) * 100 + (int)date('j', $ts);
@@ -296,8 +296,8 @@ if (!function_exists('llw_build_assembly_date_condition')) {
             ];
         }
 
-        // 2. ถ้าระบุ semester (1 หรือ 2)
-        if (in_array($sem, [1, 2], true)) {
+        // 2. ถ้าระบุ semester (1 หรือ 2) และไม่ได้กรองเจาะจงเฉพาะเดือนเดี่ยว
+        if (in_array($sem, [1, 2], true) && ($monthFrom === '' || ($monthFrom === '05' && $monthTo === '10') || ($monthFrom === '11' && $monthTo === '03'))) {
             $term   = llw_get_term_dates($year, $sem, $pdo);
             $sql    = "AND $colName BETWEEN ? AND ?";
             $params = [$term['start_date'], $term['end_date']];

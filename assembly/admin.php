@@ -13,12 +13,88 @@ if ($_SESSION['llw_role'] !== 'super_admin') {
     header('Location: ' . $base_path . '/assembly/dashboard.php'); exit();
 }
 
-$pageTitle    = 'รายงานผู้บริหาร';
-$pageSubtitle = 'สรุปการเข้าแถวและแต่งกายทั้งโรงเรียน';
+$pdo = getPdo();
+llw_ensure_semester_schema($pdo);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'set_active_semester') {
+    csrf_verify();
+    $targetSem  = max(1, min(2, (int)($_POST['semester'] ?? 2)));
+    $targetYear = (int)($_POST['academic_year'] ?? llw_current_academic_year());
+    $tDef       = llw_default_term_dates($targetYear, $targetSem);
+    $pdo->exec("UPDATE llw_academic_terms SET is_active = 0");
+    $up = $pdo->prepare("
+        INSERT INTO llw_academic_terms (academic_year, semester, start_date, end_date, is_active)
+        VALUES (?, ?, ?, ?, 1)
+        ON DUPLICATE KEY UPDATE is_active = 1
+    ");
+    $up->execute([$targetYear, $targetSem, $tDef['start_date'], $tDef['end_date']]);
+    header("Location: admin.php?semester={$targetSem}&switched=1");
+    exit;
+}
+
+$active_year   = llw_current_academic_year();
+$system_sem    = llw_current_semester();
+$selected_sem  = isset($_GET['semester']) && in_array((int)$_GET['semester'], [1, 2], true)
+    ? (int)$_GET['semester']
+    : $system_sem;
+$cur_term_info = llw_get_term_dates($active_year, $selected_sem, $pdo);
+
+$pageTitle    = "รายงานผู้บริหาร (ภาคเรียนที่ {$selected_sem}/{$active_year})";
+$pageSubtitle = 'สรุปการเข้าแถวและแต่งกายทั้งโรงเรียน แยกตามภาคเรียน';
 $activeSystem = 'assembly';
 
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
+
+<!-- ─── Semester Control Bar (ภาคเรียนที่ 1 / 2) ─── -->
+<div class="bg-white rounded-2xl shadow-lg shadow-amber-100/40 p-4 mb-5 border border-amber-200/60 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs shadow-sm">
+            <i class="bi bi-calendar3-range-fill"></i>
+            <span>ปีการศึกษา <?= $active_year ?></span>
+        </div>
+        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <a href="?semester=1"
+               class="px-4 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 <?= $selected_sem === 1 ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white' ?>">
+                <i class="bi bi-1-circle-fill"></i> ภาคเรียนที่ 1
+                <?php if ($system_sem === 1): ?><span class="px-1.5 py-0.2 rounded bg-white/20 text-[10px]">เทอมปัจจุบัน</span><?php endif; ?>
+            </a>
+            <a href="?semester=2"
+               class="px-4 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 <?= $selected_sem === 2 ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white' ?>">
+                <i class="bi bi-2-circle-fill"></i> ภาคเรียนที่ 2
+                <?php if ($system_sem === 2): ?><span class="px-1.5 py-0.2 rounded bg-white/20 text-[10px]">เทอมปัจจุบัน</span><?php endif; ?>
+            </a>
+        </div>
+        <span class="text-xs font-bold text-slate-500">
+            <i class="bi bi-clock-history text-amber-500 mr-1"></i>ช่วงวันที่เทอม <?= $selected_sem ?>:
+            <strong class="text-slate-700"><?= date('d/m/Y', strtotime($cur_term_info['start_date'])) ?> – <?= date('d/m/Y', strtotime($cur_term_info['end_date'])) ?></strong>
+        </span>
+    </div>
+
+    <div class="flex items-center gap-2">
+        <?php if ($system_sem !== 2): ?>
+        <form method="POST" class="inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="set_active_semester">
+            <input type="hidden" name="semester" value="2">
+            <input type="hidden" name="academic_year" value="<?= $active_year ?>">
+            <button type="submit" class="px-3.5 py-2 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm flex items-center gap-1.5">
+                <i class="bi bi-lightning-charge-fill"></i> ตั้ง "ภาคเรียนที่ 2" เป็นเทอมปัจจุบันของระบบทันที
+            </button>
+        </form>
+        <?php else: ?>
+        <form method="POST" class="inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="set_active_semester">
+            <input type="hidden" name="semester" value="1">
+            <input type="hidden" name="academic_year" value="<?= $active_year ?>">
+            <button type="submit" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-1">
+                <i class="bi bi-arrow-counterclockwise"></i> สลับกลับเป็นเทอม 1
+            </button>
+        </form>
+        <?php endif; ?>
+    </div>
+</div>
 
 <!-- ─── Tab Navigation ─── -->
 <div class="mb-6">
@@ -53,13 +129,13 @@ require_once __DIR__ . '/../components/layout_start.php';
             <div>
                 <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">จากเดือน</label>
                 <select id="adm-month-from" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all">
-                    <?php echo renderMonthOptions(); ?>
+                    <?php echo renderMonthOptions(false, $selected_sem === 2 ? '11' : '05'); ?>
                 </select>
             </div>
             <div>
                 <label class="text-xs font-black text-slate-400 uppercase tracking-wider mb-1.5 block">ถึงเดือน</label>
                 <select id="adm-month-to" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-amber-400 outline-none transition-all">
-                    <?php echo renderMonthOptions(); ?>
+                    <?php echo renderMonthOptions(false, $selected_sem === 2 ? '03' : '10'); ?>
                 </select>
             </div>
             <div>
@@ -676,19 +752,20 @@ function esc(str) {
 <?php
 require_once __DIR__ . '/../components/layout_end.php';
 
-function renderMonthOptions(bool $includeAll = false): string {
+function renderMonthOptions(bool $includeAll = false, ?string $defaultMonth = null): string {
+    global $selected_sem;
     $months = ['01'=>'มกราคม','02'=>'กุมภาพันธ์','03'=>'มีนาคม','04'=>'เมษายน',
                '05'=>'พฤษภาคม','06'=>'มิถุนายน','07'=>'กรกฎาคม','08'=>'สิงหาคม',
                '09'=>'กันยายน','10'=>'ตุลาคม','11'=>'พฤศจิกายน','12'=>'ธันวาคม'];
-    $curSem  = function_exists('llw_current_semester') ? llw_current_semester() : 1;
+    $curSem  = $selected_sem ?? (function_exists('llw_current_semester') ? llw_current_semester() : 1);
     $html    = $includeAll
         ? '<option value="all">ทุกเดือน (ทั้งปี)</option>'
           . '<option value="sem1" ' . ($curSem === 1 ? 'selected' : '') . '>📅 ภาคเรียนที่ 1 (พ.ค.–ต.ค.)</option>'
           . '<option value="sem2" ' . ($curSem === 2 ? 'selected' : '') . '>📅 ภาคเรียนที่ 2 (พ.ย.–มี.ค.)</option>'
         : '<option value="">เลือกเดือน</option>';
-    $current = date('m');
+    $targetM = $defaultMonth ?? date('m');
     foreach ($months as $k => $v) {
-        $html .= "<option value=\"$k\" " . ((!$includeAll && $k === $current) ? 'selected' : '') . ">$v</option>";
+        $html .= "<option value=\"$k\" " . ((!$includeAll && $k === $targetM) ? 'selected' : '') . ">$v</option>";
     }
     return $html;
 }

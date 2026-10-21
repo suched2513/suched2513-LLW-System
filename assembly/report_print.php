@@ -12,6 +12,8 @@ if (!isset($_SESSION['llw_role'])) {
 
 $room = $_GET['classroom'] ?? '';
 $date = $_GET['date'] ?? date('Y-m-d');
+$sem  = (int)($_GET['semester'] ?? llw_current_semester());
+$year = llw_current_academic_year();
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -109,7 +111,7 @@ $date = $_GET['date'] ?? date('Y-m-d');
             <header class="flex justify-between items-start mb-12 border-b-2 border-slate-100 pb-8">
                 <div>
                     <div class="inline-flex items-center gap-2 bg-cyan-50 text-cyan-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest mb-4">
-                        <i class="bi bi-file-earmark-text-fill"></i> รายงานการมาเรียนประจำวัน
+                        <i class="bi bi-file-earmark-text-fill"></i> รายงานการมาเรียนประจำวัน · <span id="report-sem-label">ภาคเรียนที่ <?= $sem ?>/<?= $year ?></span>
                     </div>
                     <h2 id="school-name" class="text-3xl font-black text-slate-800">...</h2>
                 </div>
@@ -127,7 +129,7 @@ $date = $_GET['date'] ?? date('Y-m-d');
                             <th class="py-4 text-xs font-black text-slate-400 uppercase tracking-widest w-12">เลขที่</th>
                             <th class="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">ชื่อ-สกุล</th>
                             <th class="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-center bg-slate-50/50">วันนี้</th>
-                            <th colspan="4" class="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-center border-l border-slate-50">สถิติรวม (ครั้ง)</th>
+                            <th colspan="4" id="th-sem-stats" class="py-4 text-xs font-black text-slate-400 uppercase tracking-widest text-center border-l border-slate-50">สถิติสะสม ภาคเรียนที่ <?= $sem ?> (ครั้ง)</th>
                         </tr>
                         <tr class="text-xs font-black text-slate-400 border-b border-slate-50 uppercase text-center">
                             <th></th><th></th><th></th>
@@ -165,6 +167,7 @@ $date = $_GET['date'] ?? date('Y-m-d');
     <script>
     const ROOM = '<?= htmlspecialchars($room) ?>';
     const DATE = '<?= htmlspecialchars($date) ?>';
+    const SEM  = '<?= (int)$sem ?>';
     const BASE = '<?= $base_path ?>';
 
     async function fetchData() {
@@ -174,7 +177,7 @@ $date = $_GET['date'] ?? date('Y-m-d');
         }
 
         try {
-            const res = await fetch(`${BASE}/assembly/api/get_classroom_report.php?classroom=${encodeURIComponent(ROOM)}&date=${DATE}`).then(r => r.json());
+            const res = await fetch(`${BASE}/assembly/api/get_classroom_report.php?classroom=${encodeURIComponent(ROOM)}&date=${DATE}&semester=${SEM}`).then(r => r.json());
             
             if (res.status === 'success') {
                 renderReport(res);
