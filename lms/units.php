@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <i class="fas fa-book-open text-white"></i>
     </div>
     <div>
-      <a href="<?=$base_path?>/lms/subjects.php" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>วิชาทั้งหมด</a>
+      <a href="<?=$base_path?>/lms/subjects.php" class="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-2xl bg-white border border-slate-200 text-slate-600 text-sm font-bold shadow-sm hover:bg-slate-50 hover:text-slate-800 hover:shadow-md transition-all mb-3"><i class="fas fa-arrow-left mr-1"></i>วิชาทั้งหมด</a>
       <h2 class="text-lg font-black text-slate-800"><?=htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8')?></h2>
       <p class="text-xs text-slate-400"><?=$view_trash?'กำลังดูถังขยะ':'หน่วยการเรียนรู้และแบบฝึกหัด'?></p>
     </div>

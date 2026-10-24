@@ -116,7 +116,7 @@ require_once __DIR__ . '/../components/layout_start.php';
       <i class="fas fa-pen-fancy text-white"></i>
     </div>
     <div>
-      <a href="<?=$base_path?>/lms/subjects.php?semester=<?=$curSem?>&year=<?=$curYear?>" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>วิชาทั้งหมด</a>
+      <a href="<?=$base_path?>/lms/subjects.php?semester=<?=$curSem?>&year=<?=$curYear?>" class="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-2xl bg-white border border-slate-200 text-slate-600 text-sm font-bold shadow-sm hover:bg-slate-50 hover:text-slate-800 hover:shadow-md transition-all mb-3"><i class="fas fa-arrow-left mr-1"></i>วิชาทั้งหมด</a>
       <h2 class="text-lg font-black text-slate-800">ตรวจคำตอบอัตนัย · ภาคเรียนที่ <?=$curSem?>/<?=$curYear?></h2>
       <p class="text-xs text-slate-400">ข้อสอบก่อนเรียน / หลังเรียน / กลางภาค / ปลายภาค ประเภทตอบอิสระ</p>
     </div>

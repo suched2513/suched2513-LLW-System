@@ -81,7 +81,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     <i class="fas fa-cog text-white"></i>
   </div>
   <div>
-    <a href="<?=$base_path?>/lms/subject_dashboard.php?subject_id=<?=$subject_id?>&tab=exam" class="text-xs text-violet-600 hover:underline"><i class="fas fa-arrow-left mr-1"></i>ข้อสอบ</a>
+    <a href="<?=$base_path?>/lms/subject_dashboard.php?subject_id=<?=$subject_id?>&tab=exam" class="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-2xl bg-white border border-slate-200 text-slate-600 text-sm font-bold shadow-sm hover:bg-slate-50 hover:text-slate-800 hover:shadow-md transition-all mb-3"><i class="fas fa-arrow-left mr-1"></i>ข้อสอบ</a>
     <h2 class="text-lg font-black text-slate-800">ตั้งค่าสอบกลางภาค-ปลายภาค</h2>
     <p class="text-xs text-slate-400"><?=htmlspecialchars($subject['subject_name'],ENT_QUOTES,'UTF-8')?></p>
   </div>
