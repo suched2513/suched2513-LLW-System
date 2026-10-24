@@ -168,6 +168,8 @@ $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
+<?php require_once __DIR__ . '/../components/back_button.php'; ?>
+<?= lms_back_button($subject_id ? '/lms/subject_dashboard.php?subject_id=' . (int)$subject_id : '/lms/dashboard.php', $subject_id ? 'กลับหน้ารายวิชา' : 'กลับ Dashboard LMS') ?>
 <?= lms_render_semester_bar($termCtx, $is_admin) ?>
 
 <div class="flex flex-wrap items-center gap-3 mb-6">

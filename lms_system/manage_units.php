@@ -358,6 +358,9 @@ require_once __DIR__ . '/../components/layout_start.php';
 </script>
 <?php endif; ?>
 
+<?php require_once __DIR__ . '/../components/back_button.php'; ?>
+<?= lms_back_button('/lms/dashboard.php', 'กลับ Dashboard LMS') ?>
+
 <!-- Semester Control Bar -->
 <?= lms_render_semester_bar($termCtx, $is_admin) ?>
 

@@ -106,6 +106,10 @@ if (isset($_SESSION['quiz_submit_msg'])) {
 }
 ?>
 
+<?php require_once __DIR__ . '/../components/back_button.php'; ?>
+<?php $isTeacherView = in_array($_SESSION['llw_role'], ['super_admin', 'att_teacher'], true); ?>
+<?= lms_back_button($isTeacherView ? '/lms/dashboard.php' : '/student/lms.php', $isTeacherView ? 'กลับ Dashboard LMS' : 'กลับหน้าบทเรียน') ?>
+
 <!-- Student Profile Widget -->
 <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl shadow-blue-100/50 mb-5 flex flex-col sm:flex-row items-center justify-between gap-4">
     <div class="flex items-center gap-4">

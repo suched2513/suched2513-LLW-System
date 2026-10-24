@@ -197,6 +197,9 @@ $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
+<?php require_once __DIR__ . '/../components/back_button.php'; ?>
+<?= lms_back_button('/lms_system/student_quizzes.php', 'กลับรายการแบบทดสอบ', 'ออกจากข้อสอบ? คำตอบที่ยังไม่ได้ส่งจะไม่ถูกบันทึก') ?>
+
 <!-- Timer & Header Sticky Banner -->
 <div class="sticky top-16 sm:top-20 z-40 bg-white border border-slate-200 rounded-3xl p-5 shadow-lg shadow-slate-100/50 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 select-none no-print">
     <div>

@@ -86,6 +86,8 @@ $activeSystem = 'lms';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
+<?php require_once __DIR__ . '/../components/back_button.php'; ?>
+<?= lms_back_button('/index.php', 'กลับหน้าหลักระบบ') ?>
 <?= lms_render_semester_bar($termCtx, $is_admin) ?>
 
 <div class="flex items-center justify-between mb-6">
