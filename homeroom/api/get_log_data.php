@@ -1,7 +1,8 @@
 <?php
 /**
  * homeroom/api/get_log_data.php
- * ดึงข้อมูลนักเรียน, สถิติการเช็คชื่อหน้าเสาธงอัตโนมัติ (assembly_attendance),
+ * ดึงข้อมูลนักเรียน, สถิติการเช็คชื่อเข้าแถวหน้าเสาธง (assembly_attendance) เป็นค่าเริ่มต้น,
+ * ข้อมูลการเช็คชื่อโฮมรูมแยกต่างหาก (hr_daily_attendance โดยไม่ทับข้อมูลเข้าแถว),
  * หัวข้อโฮมรูม และคำนวณสถานะรายสัปดาห์ (สัปดาห์ที่ 1-20) ตามภาคเรียนจริง
  */
 header('Content-Type: application/json; charset=utf-8');
@@ -34,7 +35,6 @@ try {
     $pdo = getPdo();
     llw_ensure_semester_schema($pdo);
 
-    // Ensure expand query range covers selected_date as well
     $queryStart = min($start_date, $selected_date);
     $queryEnd   = max($end_date, $selected_date);
 
@@ -81,28 +81,29 @@ try {
     $advisors = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // 3. ดึงหัวข้อโฮมรูมรายวัน (homeroom_logs)
-    $stmt = $pdo->prepare("SELECT log_date, topic FROM homeroom_logs WHERE classroom = ? AND log_date BETWEEN ? AND ?");
+    $stmt = $pdo->prepare("SELECT id, log_date, topic FROM homeroom_logs WHERE classroom = ? AND log_date BETWEEN ? AND ?");
     $stmt->execute([$classroom, $queryStart, $queryEnd]);
     $logsByDate = [];
+    $logIdsByDate = [];
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $l) {
-        $logsByDate[$l['log_date']] = $l['topic'];
+        $logsByDate[$l['log_date']]   = $l['topic'];
+        $logIdsByDate[$l['log_date']] = (int)$l['id'];
     }
 
-    // 4. ดึงสถิติการเช็คชื่อเข้าแถวหน้าเสาธง (assembly_attendance)
+    // 4. ดึงสถิติการเช็คชื่อเข้าแถวหน้าเสาธง (assembly_attendance) เป็นค่าตั้งต้น (Baseline)
     $stmt = $pdo->prepare("
-        SELECT student_id, date, status, note, nail, hair, shirt, pants, socks, shoes, updated_at
+        SELECT student_id, date, status, note, updated_at
         FROM assembly_attendance
         WHERE classroom = ? AND date BETWEEN ? AND ?
     ");
     $stmt->execute([$classroom, $queryStart, $queryEnd]);
     $attRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $attByStudentAndDate = [];
-    $notesByStudentAndDate = [];
-    $checkedCountByDate = [];
-    $lastUpdatedByDate = [];
+    $assemblyAttByStudentAndDate = [];
+    $notesByStudentAndDate       = [];
+    $checkedCountByDate          = [];
+    $lastUpdatedByDate           = [];
 
-    // Mapping status จากตัวย่อใน assembly_attendance ('ม','ข','ล','ด') เป็นสถานะโฮมรูม
     $statusMap = [
         'ม'   => 'มา',
         'มา'  => 'มา',
@@ -110,8 +111,8 @@ try {
         'ขาด' => 'ขาด',
         'ล'   => 'ลา',
         'ลา'  => 'ลา',
-        'ด'   => 'โดด',
-        'โดด' => 'โดด',
+        'ด'   => 'ขาด', // โดดเข้าแถว -> ตั้งต้นเป็นขาด (และแสดงป้ายกำกับว่าโดดเข้าแถว)
+        'โดด' => 'ขาด',
         'ส'   => 'สาย',
         'สาย' => 'สาย',
     ];
@@ -122,7 +123,7 @@ try {
         $rawSt   = trim($a['status'] ?? 'ม');
         $longSt  = $statusMap[$rawSt] ?? 'มา';
 
-        $attByStudentAndDate[$normSid][$d] = $longSt;
+        $assemblyAttByStudentAndDate[$normSid][$d] = ($rawSt === 'ด' || $rawSt === 'โดด') ? 'โดด' : $longSt;
         if (!empty($a['note'])) {
             $notesByStudentAndDate[$normSid][$d] = $a['note'];
         }
@@ -131,6 +132,47 @@ try {
             if (!isset($lastUpdatedByDate[$d]) || $a['updated_at'] > $lastUpdatedByDate[$d]) {
                 $lastUpdatedByDate[$d] = $a['updated_at'];
             }
+        }
+    }
+
+    // 4.5 ดึงข้อมูลการเช็คชื่อโฮมรูม (hr_daily_attendance) ถ้าครูเคยบันทึกแยกไว้ในคาบโฮมรูม
+    // ข้อมูลใน hr_daily_attendance จะใช้แสดงในโฮมรูมโดยไม่ไปทับ assembly_attendance
+    $homeroomAttByStudentAndDate = [];
+    $hasHrSavedByDate = [];
+    $hasHrAttTable = (bool)$pdo->query("SHOW TABLES LIKE 'hr_daily_attendance'")->fetchColumn();
+    if ($hasHrAttTable && !empty($logIdsByDate)) {
+        $logIds = array_values($logIdsByDate);
+        $dateByLogId = array_flip($logIdsByDate);
+        $inPlaceholders = implode(',', array_fill(0, count($logIds), '?'));
+        $stmtHrAtt = $pdo->prepare("SELECT log_id, student_id, status, note FROM hr_daily_attendance WHERE log_id IN ({$inPlaceholders})");
+        $stmtHrAtt->execute($logIds);
+        foreach ($stmtHrAtt->fetchAll(PDO::FETCH_ASSOC) as $hrRow) {
+            $d = $dateByLogId[(int)$hrRow['log_id']] ?? null;
+            if (!$d) continue;
+            $normSid = llw_normalize_student_id($hrRow['student_id']);
+            $st = $hrRow['status'];
+            if ($st === 'โดด') $st = 'ขาด';
+            $homeroomAttByStudentAndDate[$normSid][$d] = $st;
+            $hasHrSavedByDate[$d] = ($hasHrSavedByDate[$d] ?? 0) + 1;
+        }
+    }
+
+    // รวมสถานะที่จะแสดงในหน้าโฮมรูม:
+    // - ถ้าวันนั้นมีบันทึกใน hr_daily_attendance แล้ว ให้ใช้ค่าจาก hr_daily_attendance
+    // - ถ้ายังไม่มี ให้ดึงค่าจาก assembly_attendance มาใส่ให้อัตโนมัติ!
+    $effectiveAttByStudentAndDate = [];
+    foreach ($students as $st) {
+        $sid = $st['student_id'];
+        $asmSt = $assemblyAttByStudentAndDate[$sid][$selected_date] ?? null;
+        $hrSt  = $homeroomAttByStudentAndDate[$sid][$selected_date] ?? null;
+
+        if ($hrSt !== null) {
+            $effectiveAttByStudentAndDate[$sid][$selected_date] = $hrSt;
+        } elseif ($asmSt !== null) {
+            // ถ้าตอนเข้าแถวเป็น 'โดด' ในโฮมรูมให้เริ่มต้นเป็น 'ขาด' (แต่ครูเปลี่ยนเป็น 'สาย' หรือ 'มา' ได้ถ้าเข้าโฮมรูม)
+            $effectiveAttByStudentAndDate[$sid][$selected_date] = ($asmSt === 'โดด') ? 'ขาด' : $asmSt;
+        } else {
+            $effectiveAttByStudentAndDate[$sid][$selected_date] = 'มา';
         }
     }
 
@@ -147,13 +189,11 @@ try {
     $termStart = $termInfo['start_date'];
     $termEnd   = $termInfo['end_date'];
 
-    // หาวันจันทร์ของสัปดาห์ที่ 1 ของภาคเรียน
-    $tsStart = strtotime($termStart);
+    $tsStart  = strtotime($termStart);
     $dowStart = (int)date('N', $tsStart); // 1=Mon .. 7=Sun
     if ($dowStart <= 5) {
         $week1MondayTs = strtotime('-' . ($dowStart - 1) . ' days', $tsStart);
     } else {
-        // ถ้าวันเปิดเทอมตรงกับเสาร์-อาทิตย์ ให้เริ่มสัปดาห์ที่ 1 ในวันจันทร์ถัดไป
         $week1MondayTs = strtotime('+' . (8 - $dowStart) . ' days', $tsStart);
     }
 
@@ -161,10 +201,9 @@ try {
     $semRangeStart  = date('Y-m-d', $week1MondayTs);
     $semRangeEnd    = date('Y-m-d', $week20FridayTs);
 
-    // ดึงวันที่ที่มีการบันทึกโฮมรูม หรือ เช็คชื่อเข้าแถว ตลอดทั้งภาคเรียน เพื่อแสดง X/5 วันของแต่ละสัปดาห์
     $stmtLogDates = $pdo->prepare("
         SELECT DISTINCT log_date FROM homeroom_logs
-        WHERE classroom = ? AND log_date BETWEEN ? AND ? AND TRIM(COALESCE(topic, '')) != ''
+        WHERE classroom = ? AND log_date BETWEEN ? AND ?
     ");
     $stmtLogDates->execute([$classroom, $semRangeStart, $semRangeEnd]);
     $homeroomLoggedDates = array_flip($stmtLogDates->fetchAll(PDO::FETCH_COLUMN));
@@ -214,7 +253,6 @@ try {
         ];
     }
 
-    // ถ้าวันที่เลือกอยู่หลังสัปดาห์ที่ 20 ให้ชี้ที่สัปดาห์ที่ 20, ถ้าอยู่ก่อนสัปดาห์ที่ 1 ให้ชี้ที่สัปดาห์ที่ 1
     if ($selTs > $week20FridayTs) {
         $activeWeekNumber = 20;
     } elseif ($selTs < $week1MondayTs) {
@@ -224,20 +262,22 @@ try {
     echo json_encode([
         'status' => 'success',
         'data' => [
-            'students'           => $students,
-            'advisors'           => $advisors,
-            'logs'               => $logsByDate,
-            'attendance'         => $attByStudentAndDate,
-            'notes'              => $notesByStudentAndDate,
-            'checked_by_date'    => $checkedCountByDate,
-            'updated_by_date'    => $lastUpdatedByDate,
-            'photos'             => $photosByDate,
-            'weeks'              => $weeks,
-            'active_week'        => $activeWeekNumber,
-            'term_start'         => $termStart,
-            'term_end'           => $termEnd,
-            'semester'           => $semester,
-            'academic_year'      => $academic_year,
+            'students'            => $students,
+            'advisors'            => $advisors,
+            'logs'                => $logsByDate,
+            'attendance'          => $effectiveAttByStudentAndDate,
+            'assembly_attendance' => $assemblyAttByStudentAndDate,
+            'homeroom_saved_date' => $hasHrSavedByDate,
+            'notes'               => $notesByStudentAndDate,
+            'checked_by_date'     => $checkedCountByDate,
+            'updated_by_date'     => $lastUpdatedByDate,
+            'photos'              => $photosByDate,
+            'weeks'               => $weeks,
+            'active_week'         => $activeWeekNumber,
+            'term_start'          => $termStart,
+            'term_end'            => $termEnd,
+            'semester'            => $semester,
+            'academic_year'       => $academic_year,
         ]
     ]);
 

@@ -160,8 +160,8 @@ require_once __DIR__ . '/../components/layout_start.php';
                         <div id="count-ลา" class="text-sm font-black text-slate-700">0</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-xs font-black text-indigo-500 uppercase">โดด/สาย</div>
-                        <div id="count-โดด" class="text-sm font-black text-slate-700">0</div>
+                        <div class="text-xs font-black text-indigo-500 uppercase">สาย</div>
+                        <div id="count-สาย" class="text-sm font-black text-slate-700">0</div>
                     </div>
                 </div>
             </div>
@@ -281,7 +281,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 .att-radio:checked + .att-label.label-มา { background: #ecfdf5; color: #10b981; border-color: #10b981; box-shadow: 0 4px 12px rgba(16,185,129,0.2); }
 .att-radio:checked + .att-label.label-ขาด { background: #fef2f2; color: #f43f5e; border-color: #f43f5e; box-shadow: 0 4px 12px rgba(244,63,94,0.2); }
 .att-radio:checked + .att-label.label-ลา { background: #fffbeb; color: #f59e0b; border-color: #f59e0b; box-shadow: 0 4px 12px rgba(245,158,11,0.2); }
-.att-radio:checked + .att-label.label-โดด { background: #f5f3ff; color: #8b5cf6; border-color: #8b5cf6; box-shadow: 0 4px 12px rgba(139,92,246,0.2); }
+.att-radio:checked + .att-label.label-สาย { background: #f5f3ff; color: #8b5cf6; border-color: #8b5cf6; box-shadow: 0 4px 12px rgba(139,92,246,0.2); }
 </style>
 
 <script>
@@ -341,11 +341,14 @@ function renderStudents(date, classroom) {
     const bannerEl  = document.getElementById('assembly-sync-banner');
     const absentBox = document.getElementById('absent-highlight-box');
 
-    const students   = currentData.students || [];
-    const attendance = currentData.attendance || {};
-    const notes      = currentData.notes || {};
-    const checkedCnt = (currentData.checked_by_date && currentData.checked_by_date[date]) ? currentData.checked_by_date[date] : 0;
-    const updatedAt  = (currentData.updated_by_date && currentData.updated_by_date[date]) ? currentData.updated_by_date[date] : '';
+    const students    = currentData.students || [];
+    const attendance  = currentData.attendance || {};
+    const assemblyAtt = currentData.assembly_attendance || {};
+    const hrSavedMap  = currentData.homeroom_saved_date || {};
+    const notes       = currentData.notes || {};
+    const checkedCnt  = (currentData.checked_by_date && currentData.checked_by_date[date]) ? currentData.checked_by_date[date] : 0;
+    const hrSavedCnt  = hrSavedMap[date] || 0;
+    const updatedAt   = (currentData.updated_by_date && currentData.updated_by_date[date]) ? currentData.updated_by_date[date] : '';
 
     if (!students.length) {
         bannerEl.innerHTML = '';
@@ -356,13 +359,16 @@ function renderStudents(date, classroom) {
 
     // 1. Render Auto-Sync Banner
     if (checkedCnt > 0) {
-        const timeStr = updatedAt ? ` (อัปเดตล่าสุด ${updatedAt.substring(11, 16)} น.)` : '';
+        const timeStr = updatedAt ? ` (เช็คเข้าแถวเมื่อ ${updatedAt.substring(11, 16)} น.)` : '';
+        const modeNote = hrSavedCnt > 0
+            ? 'บันทึกโฮมรูมวันนี้แล้ว — ข้อมูลโฮมรูมแยกจากเช็คชื่อเข้าแถว (ไม่ทับสถิติเข้าแถว)'
+            : 'ดึงค่าตั้งต้นจากเช็คชื่อเข้าแถวให้อัตโนมัติ — หากเด็กมาเข้าแถวไม่ทันแต่เข้าโฮมรูม กดเปลี่ยนเป็น "มา" หรือ "สาย" ได้เลยโดยไม่ทับข้อมูลเข้าแถว';
         bannerEl.innerHTML = `
             <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 flex items-start gap-2.5">
                 <i class="bi bi-check-circle-fill text-emerald-600 text-base mt-0.5"></i>
                 <div class="text-xs leading-relaxed">
-                    <p class="font-black text-emerald-800">ดึงข้อมูลจากการเช็คชื่อเข้าแถวอัตโนมัติแล้ว!</p>
-                    <p class="text-emerald-700 font-medium">เช็คแล้ว ${checkedCnt}/${students.length} คน${esc(timeStr)} — <b>ไม่ต้องเช็คชื่อซ้ำ</b> (กดเปลี่ยนเฉพาะคนที่ต้องการแก้ไขได้)</p>
+                    <p class="font-black text-emerald-800">ดึงรายชื่อจากการเช็คชื่อเข้าแถวแล้ว (${checkedCnt}/${students.length} คน)${esc(timeStr)}</p>
+                    <p class="text-emerald-700 font-medium">${modeNote}</p>
                 </div>
             </div>
         `;
@@ -373,7 +379,7 @@ function renderStudents(date, classroom) {
                     <i class="bi bi-info-circle-fill text-amber-500 text-base mt-0.5"></i>
                     <div>
                         <p class="font-black text-amber-800">วันที่เลือกยังไม่มีการเช็คชื่อเข้าแถว</p>
-                        <p class="text-amber-700 font-medium">ระบบตั้งค่าเริ่มต้นเป็น "มา" ครบทุกคน หรือไปเช็คที่หน้าระบบเข้าแถวก่อนได้</p>
+                        <p class="text-amber-700 font-medium">ระบบตั้งค่าเริ่มต้นเป็น "มา" ครบทุกคน (การเช็คในหน้านี้จะบันทึกเฉพาะคาบโฮมรูม ไม่ทับข้อมูลเข้าแถว)</p>
                     </div>
                 </div>
                 <a href="/assembly/dashboard.php?classroom=${encodeURIComponent(classroom)}&date=${encodeURIComponent(date)}"
@@ -384,31 +390,39 @@ function renderStudents(date, classroom) {
         `;
     }
 
-    // 2. Highlight Absent / Leave / Skip Students at the Top
+    // 2. Highlight Absent / Leave / Skip Students from Assembly at the Top
     const nonPresent = [];
     students.forEach((s) => {
-        let st = (attendance[s.student_id] && attendance[s.student_id][date]) || 'มา';
-        if (st === 'สาย') st = 'โดด';
-        if (st !== 'มา') {
-            nonPresent.push({ student: s, status: st, note: (notes[s.student_id] && notes[s.student_id][date]) || '' });
+        const asmSt = (assemblyAtt[s.student_id] && assemblyAtt[s.student_id][date]) || 'มา';
+        const hrSt  = (attendance[s.student_id] && attendance[s.student_id][date]) || 'มา';
+        if (asmSt !== 'มา' || hrSt !== 'มา') {
+            nonPresent.push({
+                student: s,
+                asmStatus: asmSt,
+                hrStatus: hrSt,
+                note: (notes[s.student_id] && notes[s.student_id][date]) || ''
+            });
         }
     });
 
     if (nonPresent.length > 0) {
         absentBox.classList.remove('hidden');
         const badges = nonPresent.map(item => {
-            const badgeColor = item.status === 'ขาด'
-                ? 'bg-rose-100 text-rose-700 border-rose-200'
-                : (item.status === 'ลา' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-purple-100 text-purple-700 border-purple-200');
+            const diffText = item.asmStatus !== item.hrStatus
+                ? `เข้าแถว:${item.asmStatus} → โฮมรูม:${item.hrStatus}`
+                : item.hrStatus;
+            const badgeColor = item.hrStatus === 'มา'
+                ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                : (item.hrStatus === 'สาย' ? 'bg-purple-100 text-purple-700 border-purple-200' : (item.hrStatus === 'ลา' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-rose-100 text-rose-700 border-rose-200'));
             const noteTxt = item.note ? ` (${esc(item.note)})` : '';
             return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[11px] font-bold ${badgeColor}">
-                        <b>${esc(item.status)}:</b> ${esc(item.student.name)}${noteTxt}
+                        <b>${esc(diffText)}:</b> ${esc(item.student.name)}${noteTxt}
                     </span>`;
         }).join(' ');
         absentBox.innerHTML = `
             <div class="bg-rose-50/60 border border-rose-100 rounded-2xl p-3 mt-1">
                 <p class="text-[11px] font-black text-rose-600 uppercase tracking-wider mb-1.5">
-                    <i class="bi bi-person-exclamation mr-1"></i>นักเรียนที่ไม่ได้มาเข้าแถววันนี้ (${nonPresent.length} คน)
+                    <i class="bi bi-person-exclamation mr-1"></i>นักเรียนที่ไม่ได้มาเข้าแถว / ปรับสถานะในโฮมรูม (${nonPresent.length} คน)
                 </p>
                 <div class="flex flex-wrap gap-1.5">${badges}</div>
             </div>
@@ -422,9 +436,15 @@ function renderStudents(date, classroom) {
     let html = '';
     students.forEach((s, i) => {
         let currentStatus = (attendance[s.student_id] && attendance[s.student_id][date]) || 'มา';
-        if (currentStatus === 'สาย') currentStatus = 'โดด';
+        if (currentStatus === 'โดด') currentStatus = 'ขาด';
+        const asmStatus = (assemblyAtt[s.student_id] && assemblyAtt[s.student_id][date]) || (checkedCnt > 0 ? 'มา' : '');
         const stNote = (notes[s.student_id] && notes[s.student_id][date]) ? notes[s.student_id][date] : '';
         const isNotPresent = currentStatus !== 'มา';
+
+        let asmTagHtml = '';
+        if (asmStatus && asmStatus !== 'มา') {
+            asmTagHtml = `<span class="px-1.5 py-0.2 rounded bg-rose-100 text-rose-600 text-[10px] font-black ml-1">เข้าแถว: ${esc(asmStatus)}</span>`;
+        }
 
         html += `
         <div class="flex items-center justify-between p-3 rounded-2xl ${isNotPresent ? 'bg-rose-50/40' : 'hover:bg-slate-50'} transition-all border-b border-slate-50 last:border-0 group">
@@ -432,14 +452,15 @@ function renderStudents(date, classroom) {
                 <span class="w-6 h-6 bg-slate-100 text-slate-400 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-all">${i + 1}</span>
                 <div class="min-w-0">
                     <p class="text-xs font-bold text-slate-700 truncate">${esc(s.name)}</p>
-                    <p class="text-[11px] text-slate-400 font-bold tracking-tighter">
-                        ${esc(s.student_id)}
-                        ${stNote ? `<span class="text-amber-600 ml-1">· ${esc(stNote)}</span>` : ''}
+                    <p class="text-[11px] text-slate-400 font-bold tracking-tighter flex flex-wrap items-center gap-1">
+                        <span>${esc(s.student_id)}</span>
+                        ${asmTagHtml}
+                        ${stNote ? `<span class="text-amber-600">· ${esc(stNote)}</span>` : ''}
                     </p>
                 </div>
             </div>
-            <div class="flex gap-1 student-att-row flex-shrink-0" data-id="${esc(s.student_id)}">
-                ${['มา', 'ขาด', 'ลา', 'โดด'].map(st => `
+            <div class="flex gap-1 student-att-row flex-shrink-0" data-id="${esc(s.student_id)}" data-name="${esc(s.name)}">
+                ${['มา', 'ขาด', 'ลา', 'สาย'].map(st => `
                     <input type="radio" name="att_${esc(s.student_id)}" id="att_${esc(s.student_id)}_${st}" value="${st}" class="att-radio" ${currentStatus === st ? 'checked' : ''} onchange="onManualAttendanceChange()">
                     <label for="att_${esc(s.student_id)}_${st}" class="att-label label-${st}">${st}</label>
                 `).join('')}
@@ -532,7 +553,7 @@ function selectWeek(mondayDateStr) {
 }
 
 function updateStats() {
-    const statuses = ['มา', 'ขาด', 'ลา', 'โดด'];
+    const statuses = ['มา', 'ขาด', 'ลา', 'สาย'];
     statuses.forEach(st => {
         const count = document.querySelectorAll(`.att-radio[value="${st}"]:checked`).length;
         const el = document.getElementById(`count-${st}`);
@@ -569,21 +590,18 @@ async function saveHomeroom(e) {
     const attendance = [];
     document.querySelectorAll('.student-att-row').forEach(row => {
         const sid = row.dataset.id;
+        const sname = row.dataset.name || sid;
         const checkedInput = row.querySelector('input:checked');
         if (checkedInput) {
-            attendance.push({ id: sid, status: checkedInput.value });
+            attendance.push({ id: sid, name: sname, status: checkedInput.value });
         }
     });
-
-    const alreadyCheckedInAssembly = (currentData && currentData.checked_by_date && currentData.checked_by_date[date] > 0);
-    const shouldSyncAttendance = (!alreadyCheckedInAssembly || attendanceModified) ? '1' : '0';
 
     const fd = new FormData();
     fd.append('classroom', classroom);
     fd.append('log_date', date);
     fd.append('topic', topic);
     fd.append('attendance', JSON.stringify(attendance));
-    fd.append('sync_attendance', shouldSyncAttendance);
     if (photo) fd.append('photo', photo);
 
     Swal.fire({ title: 'กำลังบันทึกข้อมูล...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });

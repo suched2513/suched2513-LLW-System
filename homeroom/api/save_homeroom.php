@@ -1,7 +1,8 @@
 <?php
 /**
  * homeroom/api/save_homeroom.php
- * บันทึกหัวข้อโฮมรูม + ซิงก์ข้อมูลเช็คชื่อกับระบบเช็คชื่อเข้าแถว (assembly_attendance) + อัปโหลดรูปภาพ
+ * บันทึกหัวข้อโฮมรูม (homeroom_logs) + บันทึกการเช็คชื่อคาบโฮมรูมแยกใน hr_daily_attendance
+ * (โดยไม่ไปเขียนทับข้อมูลเช็คชื่อเข้าแถวหน้าเสาธง assembly_attendance)
  */
 header('Content-Type: application/json; charset=utf-8');
 session_start();
@@ -17,7 +18,6 @@ $classroom  = trim($_POST['classroom'] ?? '');
 $log_date   = trim($_POST['log_date'] ?? '');
 $topic      = trim($_POST['topic'] ?? '');
 $attendance = json_decode($_POST['attendance'] ?? '[]', true);
-$sync_att   = ($_POST['sync_attendance'] ?? '1') === '1';
 $user_id    = (int)($_SESSION['user_id'] ?? 0);
 
 if ($classroom === '' || $log_date === '') {
@@ -37,36 +37,33 @@ try {
     ");
     $stmt->execute([$classroom, $log_date, $topic, $user_id]);
 
-    // 2. ซิงก์การเช็คชื่อเข้ากับตาราง assembly_attendance (เฉพาะกรณีที่ยังไม่มีการเช็คชื่อเข้าแถว หรือครูมีการปรับแก้สถานะ)
-    if ($sync_att && is_array($attendance) && !empty($attendance)) {
-        // แปลงสถานะเป็นรหัสมาตรฐานของตาราง assembly_attendance: ENUM('ม','ข','ล','ด')
-        $toEnumMap = [
-            'มา'  => 'ม',
-            'ม'   => 'ม',
-            'ขาด' => 'ข',
-            'ข'   => 'ข',
-            'ลา'  => 'ล',
-            'ล'   => 'ล',
-            'สาย' => 'ด',
-            'โดด' => 'ด',
-            'ด'   => 'ด',
-        ];
+    // ดึง log_id ของ homeroom_logs
+    $stmtId = $pdo->prepare("SELECT id FROM homeroom_logs WHERE classroom = ? AND log_date = ? LIMIT 1");
+    $stmtId->execute([$classroom, $log_date]);
+    $logId = (int)$stmtId->fetchColumn();
 
-        $stmtAtt = $pdo->prepare("
-            INSERT INTO assembly_attendance (student_id, date, status, classroom, created_by, created_at)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    // 2. บันทึกการเช็คชื่อเฉพาะของคาบโฮมรูมลงใน hr_daily_attendance
+    //    (ไม่ไปเขียนทับตาราง assembly_attendance เพื่อรักษาประวัติการมาเข้าแถวตามจริง)
+    $hasHrAttTable = (bool)$pdo->query("SHOW TABLES LIKE 'hr_daily_attendance'")->fetchColumn();
+    if ($hasHrAttTable && $logId > 0 && is_array($attendance) && !empty($attendance)) {
+        $allowedStatuses = ['มา', 'ขาด', 'สาย', 'ลา', 'โดด'];
+        $stmtHrAtt = $pdo->prepare("
+            INSERT INTO hr_daily_attendance (log_id, student_id, student_name, status)
+            VALUES (?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-                status     = VALUES(status),
-                classroom  = VALUES(classroom),
-                updated_at = CURRENT_TIMESTAMP
+                student_name = VALUES(student_name),
+                status       = VALUES(status)
         ");
 
         foreach ($attendance as $att) {
-            $sid = llw_normalize_student_id($att['id'] ?? '');
+            $sid   = llw_normalize_student_id($att['id'] ?? '');
             if ($sid === '') continue;
-            $rawStatus  = trim($att['status'] ?? 'มา');
-            $enumStatus = $toEnumMap[$rawStatus] ?? 'ม';
-            $stmtAtt->execute([$sid, $log_date, $enumStatus, $classroom, $user_id ?: null]);
+            $sName = trim($att['name'] ?? $sid);
+            $st    = trim($att['status'] ?? 'มา');
+            if (!in_array($st, $allowedStatuses, true)) {
+                $st = 'มา';
+            }
+            $stmtHrAtt->execute([$logId, $sid, $sName, $st]);
         }
     }
 
@@ -98,7 +95,7 @@ try {
     }
 
     $pdo->commit();
-    echo json_encode(['status' => 'success', 'message' => 'บันทึกข้อมูลเรียบร้อยแล้ว']);
+    echo json_encode(['status' => 'success', 'message' => 'บันทึกข้อมูลโฮมรูมเรียบร้อยแล้ว (ไม่กระทบยอดเช็คชื่อเข้าแถว)']);
 
 } catch (Throwable $e) {
     if (isset($pdo) && $pdo->inTransaction()) {

@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     try {
         if ($action === 'run_stability_migration') {
             $targetMigrations = [
+                '2026_05_05_000001_create_hr_daily_attendance',
                 '2026_10_20_233000_add_semester_support',
                 '2026_10_24_233000_system_stability_and_performance',
             ];

@@ -178,6 +178,7 @@ jobs:
               $executed = $pdo->query("SELECT migration FROM _migrations")->fetchAll(PDO::FETCH_COLUMN);
               $batch = (int)$pdo->query("SELECT COALESCE(MAX(batch), 0) + 1 FROM _migrations")->fetchColumn();
               $autoTargets = [
+                  '2026_05_05_000001_create_hr_daily_attendance',
                   '2026_10_20_233000_add_semester_support',
                   '2026_10_24_233000_system_stability_and_performance',
               ];

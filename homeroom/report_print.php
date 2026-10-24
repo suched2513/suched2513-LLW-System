@@ -75,8 +75,28 @@ try {
     
     $stats = [];
     foreach ($attRaw as $a) {
-        $longStatus = $statusMap[$a['status']] ?? 'มา'; // Default to 'มา' if unknown to avoid 0s
+        $longStatus = $statusMap[$a['status']] ?? 'มา';
         $stats[$a['date']][$longStatus] = ($stats[$a['date']][$longStatus] ?? 0) + $a['count'];
+    }
+
+    // If hr_daily_attendance exists for any date in this week, use the Homeroom attendance stats for that date
+    if ($pdo->query("SHOW TABLES LIKE 'hr_daily_attendance'")->fetchColumn()) {
+        $stmtHrStats = $pdo->prepare("
+            SELECT l.log_date AS date, a.status, COUNT(*) AS count
+            FROM homeroom_logs l
+            JOIN hr_daily_attendance a ON a.log_id = l.id
+            WHERE l.classroom = ? AND l.log_date BETWEEN ? AND ?
+            GROUP BY l.log_date, a.status
+        ");
+        $stmtHrStats->execute([$classroom, $monday, $friday]);
+        $hrStatsByDate = [];
+        foreach ($stmtHrStats->fetchAll(PDO::FETCH_ASSOC) as $hrRow) {
+            $longStatus = $statusMap[$hrRow['status']] ?? 'มา';
+            $hrStatsByDate[$hrRow['date']][$longStatus] = ($hrStatsByDate[$hrRow['date']][$longStatus] ?? 0) + (int)$hrRow['count'];
+        }
+        foreach ($hrStatsByDate as $dKey => $dCounts) {
+            $stats[$dKey] = $dCounts;
+        }
     }
 
     // Photos
