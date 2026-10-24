@@ -30,8 +30,8 @@ if (!$student_id) {
 }
 
 // Determine selected semester (default to current system semester)
-$sysYear = function_exists('llw_current_academic_year') ? llw_current_academic_year($pdo) : 2569;
-$sysSem  = function_exists('llw_current_semester') ? llw_current_semester($pdo) : 2;
+$sysYear = function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569;
+$sysSem  = function_exists('llw_current_semester') ? llw_current_semester() : 2;
 $selSem  = isset($_GET['semester']) && in_array((int)$_GET['semester'], [1, 2], true)
     ? (int)$_GET['semester']
     : (int)($_SESSION['student_lms_semester'] ?? $sysSem);

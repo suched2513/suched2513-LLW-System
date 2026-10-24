@@ -188,8 +188,8 @@ $_sidebar_badges = ['lms_pending' => 0, 'lms_essay_pending' => 0];
 if (in_array($userRole, ['super_admin', 'att_teacher'])) {
     try {
         $_spdo = getPdo();
-        $_sCurSem = function_exists('llw_current_semester') ? llw_current_semester($_spdo) : 2;
-        $_sCurYr  = function_exists('llw_current_academic_year') ? llw_current_academic_year($_spdo) : 2569;
+        $_sCurSem = function_exists('llw_current_semester') ? llw_current_semester() : 2;
+        $_sCurYr  = function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569;
         $_st1 = $_spdo->prepare("
             SELECT COUNT(*) FROM lms_student_exercises se
             JOIN lms_unit_exercises ue ON ue.id = se.exercise_id
@@ -208,7 +208,7 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
         ");
         $_st2->execute([$_sCurSem, $_sCurYr, $_sCurYr]);
         $_sidebar_badges['lms_essay_pending'] = (int)$_st2->fetchColumn();
-    } catch (Exception $e) { /* ไม่แสดง error ใน sidebar */ }
+    } catch (\Throwable $e) { error_log('[LLW Sidebar] ' . $e->getMessage()); /* ไม่แสดง error ใน sidebar */ }
 }
 ?>
 
