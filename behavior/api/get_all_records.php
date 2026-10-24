@@ -14,8 +14,19 @@ if (!isset($_SESSION['llw_role'])) {
     exit;
 }
 
+$sem      = isset($_GET['semester']) && in_array((int)$_GET['semester'], [1, 2], true) ? (int)$_GET['semester'] : 0;
+$acadYear = (int)($_GET['academic_year'] ?? llw_current_academic_year());
+
 try {
     $pdo = getPdo();
+
+    $dateWhere = "";
+    $params = [];
+    if ($sem > 0) {
+        $term = llw_get_term_dates($acadYear, $sem, $pdo);
+        $dateWhere = " WHERE r.record_date BETWEEN ? AND ? ";
+        $params = [$term['start_date'], $term['end_date']];
+    }
 
     /** 
      * CANONICAL IDENTITY JOIN (v2)
@@ -25,7 +36,7 @@ try {
      * - 4715 (Integer)
      * - ' 04715 ' (Spaces)
      */
-    $stmt = $pdo->query("
+    $stmt = $pdo->prepare("
         SELECT 
             r.*, 
             s.name as master_name, 
@@ -35,9 +46,11 @@ try {
             TRIM(LEADING '0' FROM TRIM(BOTH ' ' FROM r.student_id)) = 
             TRIM(LEADING '0' FROM TRIM(BOTH ' ' FROM s.student_id))
         )
+        {$dateWhere}
         ORDER BY r.record_date DESC, r.created_at DESC
         LIMIT 2000
     ");
+    $stmt->execute($params);
     $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $data = [];

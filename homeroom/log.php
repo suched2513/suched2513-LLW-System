@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * homeroom/log.php — สมุดบันทึกโฮมรูม (Platinum Edition)
  * ระบบบันทึกหัวข้อกิจกรรม, อัปเดตรูปภาพ และตรวจสอบสถิติรายสัปดาห์
@@ -11,6 +11,33 @@ if (!isset($_SESSION['llw_role'])) {
 }
 
 $pdo = getPdo();
+llw_ensure_semester_schema($pdo);
+
+$active_year   = llw_current_academic_year();
+$system_sem    = llw_current_semester();
+$selected_sem  = isset($_GET['semester']) && in_array((int)$_GET['semester'], [1, 2], true)
+    ? (int)$_GET['semester']
+    : $system_sem;
+$cur_term_info = llw_get_term_dates($active_year, $selected_sem, $pdo);
+
+// Allow Super Admin to switch active semester directly
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'set_active_semester' && ($_SESSION['llw_role'] ?? '') === 'super_admin') {
+    csrf_verify();
+    $targetSem  = max(1, min(2, (int)($_POST['semester'] ?? 2)));
+    $targetYear = (int)($_POST['academic_year'] ?? llw_current_academic_year());
+    $tDef       = llw_default_term_dates($targetYear, $targetSem);
+    $pdo->exec("UPDATE llw_academic_terms SET is_active = 0");
+    $up = $pdo->prepare("
+        INSERT INTO llw_academic_terms (academic_year, semester, start_date, end_date, is_active)
+        VALUES (?, ?, ?, ?, 1)
+        ON DUPLICATE KEY UPDATE is_active = 1
+    ");
+    $up->execute([$targetYear, $targetSem, $tDef['start_date'], $tDef['end_date']]);
+    $redir = "log.php?semester={$targetSem}&switched=1" . (!empty($_GET['classroom']) ? '&classroom=' . urlencode($_GET['classroom']) : '');
+    header("Location: " . $redir);
+    exit;
+}
+
 $userId = $_SESSION['user_id'];
 $userRole = $_SESSION['llw_role'];
 
@@ -22,13 +49,64 @@ $myClasses = $stmt->fetchAll(PDO::FETCH_COLUMN);
 $isAdmin = $userRole === 'super_admin';
 $targetClass = $_GET['classroom'] ?? ($myClasses[0] ?? '');
 
-$pageTitle = 'สมุดบันทึกโฮมรูม';
+$pageTitle = "สมุดบันทึกโฮมรูม (ภาคเรียนที่ {$selected_sem}/{$active_year})";
 $pageSubtitle = 'ระบบบันทึกกิจกรรมและเช็คชื่อที่ปรึกษารายวัน';
 $activeSystem = 'homeroom';
 
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
+<!-- ─── Semester Control Bar (ภาคเรียนที่ 1 / 2) ─── -->
+<div class="bg-white rounded-2xl shadow-lg shadow-indigo-100/40 p-4 mb-6 border border-indigo-200/60 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black text-xs shadow-sm">
+            <i class="bi bi-calendar3-range-fill"></i>
+            <span>ปีการศึกษา <?= $active_year ?></span>
+        </div>
+        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <a href="?semester=1<?= !empty($targetClass) ? '&classroom=' . urlencode($targetClass) : '' ?>" id="sem-pill-1"
+               class="px-4 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 <?= $selected_sem === 1 ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white' ?>">
+                <i class="bi bi-1-circle-fill"></i> ภาคเรียนที่ 1
+                <?php if ($system_sem === 1): ?><span class="px-1.5 py-0.2 rounded bg-white/20 text-[10px]">เทอมปัจจุบัน</span><?php endif; ?>
+            </a>
+            <a href="?semester=2<?= !empty($targetClass) ? '&classroom=' . urlencode($targetClass) : '' ?>" id="sem-pill-2"
+               class="px-4 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 <?= $selected_sem === 2 ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white' ?>">
+                <i class="bi bi-2-circle-fill"></i> ภาคเรียนที่ 2
+                <?php if ($system_sem === 2): ?><span class="px-1.5 py-0.2 rounded bg-white/20 text-[10px]">เทอมปัจจุบัน</span><?php endif; ?>
+            </a>
+        </div>
+        <span class="text-xs font-bold text-slate-500">
+            <i class="bi bi-clock-history text-indigo-500 mr-1"></i>ช่วงวันที่เทอม <?= $selected_sem ?>:
+            <strong class="text-slate-700"><?= date('d/m/Y', strtotime($cur_term_info['start_date'])) ?> – <?= date('d/m/Y', strtotime($cur_term_info['end_date'])) ?></strong>
+        </span>
+    </div>
+
+    <?php if (($_SESSION['llw_role'] ?? '') === 'super_admin'): ?>
+    <div class="flex items-center gap-2">
+        <?php if ($system_sem !== 2): ?>
+        <form method="POST" class="inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="set_active_semester">
+            <input type="hidden" name="semester" value="2">
+            <input type="hidden" name="academic_year" value="<?= $active_year ?>">
+            <button type="submit" class="px-3.5 py-2 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm flex items-center gap-1.5">
+                <i class="bi bi-lightning-charge-fill"></i> ตั้ง "ภาคเรียนที่ 2" เป็นเทอมปัจจุบันของระบบทันที
+            </button>
+        </form>
+        <?php else: ?>
+        <form method="POST" class="inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="set_active_semester">
+            <input type="hidden" name="semester" value="1">
+            <input type="hidden" name="academic_year" value="<?= $active_year ?>">
+            <button type="submit" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-1">
+                <i class="bi bi-arrow-counterclockwise"></i> สลับกลับเป็นเทอม 1
+            </button>
+        </form>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+</div>
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch animate-fade-in">
     
     <!-- LEFT COLUMN: Student List (Attendance) -->

@@ -14,7 +14,9 @@ if (!isset($_SESSION['llw_role'])) {
     exit;
 }
 
-$room = $_GET['room'] ?? ''; // e.g. "4/1"
+$room     = $_GET['room'] ?? ''; // e.g. "4/1"
+$sem      = isset($_GET['semester']) && in_array((int)$_GET['semester'], [1, 2], true) ? (int)$_GET['semester'] : 0;
+$acadYear = (int)($_GET['academic_year'] ?? llw_current_academic_year());
 
 try {
     $pdo = getPdo();
@@ -39,13 +41,20 @@ try {
     }
 
     // 2. ดึงสรุปคะแนนจาก beh_records
-    // ต้อง Group โดยใช้ LPAD เพื่อรวมคะแนนของ 04715 และ 4715 เข้าด้วยกัน
-    $scoreStmt = $pdo->prepare("
+    $scoreSql = "
         SELECT LPAD(student_id, 5, '0') as sid_norm, type, SUM(score) as total 
         FROM beh_records 
-        GROUP BY sid_norm, type
-    ");
-    $scoreStmt->execute();
+    ";
+    $scoreParams = [];
+    if ($sem > 0) {
+        $term = llw_get_term_dates($acadYear, $sem, $pdo);
+        $scoreSql .= " WHERE record_date BETWEEN ? AND ? ";
+        $scoreParams = [$term['start_date'], $term['end_date']];
+    }
+    $scoreSql .= " GROUP BY sid_norm, type";
+    
+    $scoreStmt = $pdo->prepare($scoreSql);
+    $scoreStmt->execute($scoreParams);
     $rawScores = $scoreStmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Map scores to normalized student_id

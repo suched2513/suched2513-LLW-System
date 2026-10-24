@@ -14,9 +14,20 @@ if (!isset($_SESSION['llw_role'])) {
     exit;
 }
 
+$sem      = isset($_GET['semester']) && in_array((int)$_GET['semester'], [1, 2], true) ? (int)$_GET['semester'] : 0;
+$acadYear = (int)($_GET['academic_year'] ?? llw_current_academic_year());
+
 try {
     $pdo = getPdo();
     
+    $dateWhere = "";
+    $params = [];
+    if ($sem > 0) {
+        $term = llw_get_term_dates($acadYear, $sem, $pdo);
+        $dateWhere = " AND r.record_date BETWEEN ? AND ? ";
+        $params = [$term['start_date'], $term['end_date']];
+    }
+
     /**
      * SQL calculating Net Score per student using att_students as Master
      * Uses Extreme Trimming to bridge IDs and correctly decomposes classroom
@@ -36,12 +47,14 @@ try {
             TRIM(LEADING '0' FROM TRIM(BOTH ' ' FROM s.student_id)) = 
             TRIM(LEADING '0' FROM TRIM(BOTH ' ' FROM r.student_id))
         )
+        WHERE 1=1 {$dateWhere}
         GROUP BY s.student_id
         ORDER BY net_score DESC, total_good DESC
         LIMIT 10
     ";
     
-    $stmt = $pdo->query($sql);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     if (ob_get_length()) ob_clean();

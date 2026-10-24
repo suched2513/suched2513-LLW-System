@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * behavior/dashboard.php — ระบบบันทึกพฤติกรรมนักเรียน (Teacher Dashboard)
  * Tabs: บันทึกพฤติกรรม | ประวัติรายบุคคล | ฐานข้อมูลรวม
@@ -10,15 +10,93 @@ if (!isset($_SESSION['llw_role'])) {
     header('Location: ' . $base_path . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
     exit();
 }
+$pdo = getPdo();
+llw_ensure_semester_schema($pdo);
 
+// Allow Super Admin to switch active semester directly
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'set_active_semester' && ($_SESSION['llw_role'] ?? '') === 'super_admin') {
+    csrf_verify();
+    $targetSem  = max(1, min(2, (int)($_POST['semester'] ?? 2)));
+    $targetYear = (int)($_POST['academic_year'] ?? llw_current_academic_year());
+    $tDef       = llw_default_term_dates($targetYear, $targetSem);
+    $pdo->exec("UPDATE llw_academic_terms SET is_active = 0");
+    $up = $pdo->prepare("
+        INSERT INTO llw_academic_terms (academic_year, semester, start_date, end_date, is_active)
+        VALUES (?, ?, ?, ?, 1)
+        ON DUPLICATE KEY UPDATE is_active = 1
+    ");
+    $up->execute([$targetYear, $targetSem, $tDef['start_date'], $tDef['end_date']]);
+    $redir = "dashboard.php?semester={$targetSem}&switched=1" . (!empty($_GET['classroom']) ? '&classroom=' . urlencode($_GET['classroom']) : '');
+    header("Location: " . $redir);
+    exit;
+}
 
-$pageTitle    = 'บันทึกพฤติกรรม';
-$pageSubtitle = 'ระบบบันทึกพฤติกรรมนักเรียน';
+$active_year   = llw_current_academic_year();
+$system_sem    = llw_current_semester();
+$selected_sem  = isset($_GET['semester']) && in_array((int)$_GET['semester'], [1, 2], true)
+    ? (int)$_GET['semester']
+    : $system_sem;
+$cur_term_info = llw_get_term_dates($active_year, $selected_sem, $pdo);
+$classroom_param = $_GET['classroom'] ?? '';
+
+$pageTitle    = "บันทึกพฤติกรรม (ภาคเรียนที่ {$selected_sem}/{$active_year})";
+$pageSubtitle = 'ระบบบันทึกพฤติกรรมนักเรียน แยกตามภาคเรียน';
 $activeSystem = 'behavior';
 
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
+<!-- ─── Semester Control Bar (ภาคเรียนที่ 1 / 2) ─── -->
+<div class="bg-white rounded-2xl shadow-lg shadow-violet-100/40 p-4 mb-5 border border-violet-200/60 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-black text-xs shadow-sm">
+            <i class="bi bi-calendar3-range-fill"></i>
+            <span>ปีการศึกษา <?= $active_year ?></span>
+        </div>
+        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <a href="?semester=1<?= !empty($classroom_param) ? '&classroom=' . urlencode($classroom_param) : '' ?>" id="sem-pill-1"
+               class="px-4 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 <?= $selected_sem === 1 ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white' ?>">
+                <i class="bi bi-1-circle-fill"></i> ภาคเรียนที่ 1
+                <?php if ($system_sem === 1): ?><span class="px-1.5 py-0.2 rounded bg-white/20 text-[10px]">เทอมปัจจุบัน</span><?php endif; ?>
+            </a>
+            <a href="?semester=2<?= !empty($classroom_param) ? '&classroom=' . urlencode($classroom_param) : '' ?>" id="sem-pill-2"
+               class="px-4 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 <?= $selected_sem === 2 ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white' ?>">
+                <i class="bi bi-2-circle-fill"></i> ภาคเรียนที่ 2
+                <?php if ($system_sem === 2): ?><span class="px-1.5 py-0.2 rounded bg-white/20 text-[10px]">เทอมปัจจุบัน</span><?php endif; ?>
+            </a>
+        </div>
+        <span class="text-xs font-bold text-slate-500">
+            <i class="bi bi-clock-history text-violet-500 mr-1"></i>ช่วงวันที่เทอม <?= $selected_sem ?>:
+            <strong class="text-slate-700"><?= date('d/m/Y', strtotime($cur_term_info['start_date'])) ?> – <?= date('d/m/Y', strtotime($cur_term_info['end_date'])) ?></strong>
+        </span>
+    </div>
+
+    <?php if (($_SESSION['llw_role'] ?? '') === 'super_admin'): ?>
+    <div class="flex items-center gap-2">
+        <?php if ($system_sem !== 2): ?>
+        <form method="POST" class="inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="set_active_semester">
+            <input type="hidden" name="semester" value="2">
+            <input type="hidden" name="academic_year" value="<?= $active_year ?>">
+            <button type="submit" class="px-3.5 py-2 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm flex items-center gap-1.5">
+                <i class="bi bi-lightning-charge-fill"></i> ตั้ง "ภาคเรียนที่ 2" เป็นเทอมปัจจุบันของระบบทันที
+            </button>
+        </form>
+        <?php else: ?>
+        <form method="POST" class="inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="set_active_semester">
+            <input type="hidden" name="semester" value="1">
+            <input type="hidden" name="academic_year" value="<?= $active_year ?>">
+            <button type="submit" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center gap-1">
+                <i class="bi bi-arrow-counterclockwise"></i> สลับกลับเป็นเทอม 1
+            </button>
+        </form>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+</div>
 <!-- ─── Tab Navigation ─── -->
 <div class="mb-6">
     <div class="bg-white rounded-2xl shadow-xl shadow-violet-100/50 p-1.5 inline-flex flex-wrap gap-1 border border-violet-100/50">
@@ -275,9 +353,17 @@ require_once __DIR__ . '/../components/layout_start.php';
             </div>
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4 bg-slate-50 rounded-xl p-3 border border-slate-100">
-            <div class="md:col-span-4">
+            <div class="md:col-span-3">
                 <input type="text" id="dbSearch" placeholder="🔍 ค้นหาชื่อ, กิจกรรม..."
                     class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all">
+            </div>
+            <div class="md:col-span-2">
+                <select id="dbFilterSemester" onchange="loadDatabaseRecords(); loadClassroomSummary();"
+                    class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-violet-500 outline-none transition-all">
+                    <option value="<?= $selected_sem ?>" selected>ภาคเรียนที่ <?= $selected_sem ?>/<?= $active_year ?></option>
+                    <option value="<?= $selected_sem === 1 ? 2 : 1 ?>">ภาคเรียนที่ <?= $selected_sem === 1 ? 2 : 1 ?>/<?= $active_year ?></option>
+                    <option value="all">ทุกภาคเรียน</option>
+                </select>
             </div>
             <div class="md:col-span-2">
                 <select id="dbFilterClass"
@@ -285,7 +371,7 @@ require_once __DIR__ . '/../components/layout_start.php';
                     <option value="">ทุกห้อง</option>
                 </select>
             </div>
-            <div class="md:col-span-3">
+            <div class="md:col-span-2">
                 <select id="dbFilterType"
                     class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition-all">
                     <option value="">ทุกประเภท</option>
@@ -509,6 +595,10 @@ require_once __DIR__ . '/../components/layout_start.php';
 <script>
 // ─── Config ───
 window.BASE = '<?= rtrim(str_replace("/behavior", "", dirname($_SERVER["SCRIPT_NAME"])), "/") ?>';
+window.CURRENT_SEM = <?= (int)$selected_sem ?>;
+window.CURRENT_YEAR = <?= (int)$active_year ?>;
+window.TERM_START = '<?= $cur_term_info['start_date'] ?>';
+window.TERM_END = '<?= $cur_term_info['end_date'] ?>';
 const BASE_BEHAVIOR_SCORE = 100;
 const STUDENT_PAGE_SIZE = 20;
 
@@ -567,7 +657,7 @@ async function loadLeaderboard() {
     const container = document.getElementById('leaderboardContainer');
     container.innerHTML = '<div class="py-20 text-center"><div class="animate-spin w-10 h-10 border-4 border-amber-200 border-t-amber-500 rounded-full mx-auto"></div></div>';
     
-    const res = await api('/behavior/api/get_leaderboard.php');
+    const res = await api('/behavior/api/get_leaderboard.php?semester=' + window.CURRENT_SEM + '&academic_year=' + window.CURRENT_YEAR);
     if (res.status === 'success' && res.data.length > 0) {
         container.innerHTML = '';
         document.getElementById('leaderboardTopName').innerText = res.data[0].name;
@@ -1015,7 +1105,9 @@ window.deleteActivity = deleteActivity;
 async function loadDatabaseRecords() {
     const body = document.getElementById('databaseBody');
     body.innerHTML = '<tr><td colspan="7" class="px-4 py-12 text-center"><div class="animate-spin w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full mx-auto"></div></td></tr>';
-    const data = await api('/behavior/api/get_all_records.php');
+    const semVal = document.getElementById('dbFilterSemester')?.value ?? window.CURRENT_SEM;
+    const semParam = semVal === 'all' ? '' : ('&semester=' + encodeURIComponent(semVal));
+    const data = await api('/behavior/api/get_all_records.php?academic_year=' + window.CURRENT_YEAR + semParam);
     cachedAllRecordForDB = Array.isArray(data) ? data : [];
     renderDatabaseTable(cachedAllRecordForDB);
 }
@@ -1094,7 +1186,9 @@ async function loadClassroomSummary() {
     section.classList.remove('hidden');
     body.innerHTML = '<tr><td colspan="5" class="px-4 py-12 text-center text-slate-400"><div class="animate-spin w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full mx-auto"></div></td></tr>';
 
-    const res = await api('/behavior/api/get_classroom_summary.php?room=' + encodeURIComponent(room));
+    const semVal = document.getElementById('dbFilterSemester')?.value ?? window.CURRENT_SEM;
+    const semParam = semVal === 'all' ? '' : ('&semester=' + encodeURIComponent(semVal));
+    const res = await api('/behavior/api/get_classroom_summary.php?room=' + encodeURIComponent(room) + '&academic_year=' + window.CURRENT_YEAR + semParam);
     if (res.status === 'success') {
         renderClassroomSummary(res.data);
     } else {
