@@ -107,42 +107,47 @@ try {
     // Compute semester cumulative attendance stats per student
     $semesterStatsMap = [];
     if (!empty($students) && function_exists('llw_build_assembly_date_condition')) {
-        $reqSem = (int)($_GET['semester'] ?? ($date ? llw_current_semester(strtotime($date)) : llw_current_semester()));
-        if (!in_array($reqSem, [1, 2], true)) $reqSem = llw_current_semester();
-        $acadYear = (int)($_GET['academic_year'] ?? ($date ? llw_current_academic_year(strtotime($date)) : llw_current_academic_year()));
+        try {
+            $reqSem = (int)($_GET['semester'] ?? ($date ? llw_current_semester(strtotime($date)) : llw_current_semester()));
+            if (!in_array($reqSem, [1, 2], true)) $reqSem = llw_current_semester();
+            $acadYear = (int)($_GET['academic_year'] ?? ($date ? llw_current_academic_year(strtotime($date)) : llw_current_academic_year()));
 
-        $semParams = [$classroom];
-        $semCond = llw_build_assembly_date_condition('check_date', $semParams, [
-            'academic_year' => $acadYear,
-            'semester'      => $reqSem,
-        ]);
+            [$semCondSql, $semDateParams] = llw_build_assembly_date_condition($pdo, 'date', [
+                'year'     => $acadYear,
+                'semester' => $reqSem,
+            ]);
 
-        $semStmt = $pdo->prepare("
-            SELECT student_id,
-                   SUM(CASE WHEN status = 'มา' THEN 1 ELSE 0 END) AS m_cnt,
-                   SUM(CASE WHEN status = 'ขาด' THEN 1 ELSE 0 END) AS k_cnt,
-                   SUM(CASE WHEN status = 'ลา' THEN 1 ELSE 0 END) AS l_cnt,
-                   SUM(CASE WHEN status = 'โดด' THEN 1 ELSE 0 END) AS d_cnt,
-                   COUNT(*) AS total_cnt
-            FROM llw_assembly_attendance
-            WHERE classroom = ? AND check_type = 'morning' AND {$semCond}
-            GROUP BY student_id
-        ");
-        $semStmt->execute($semParams);
-        foreach ($semStmt->fetchAll() as $sr) {
-            $tot = (int)$sr['total_cnt'];
-            $m   = (int)$sr['m_cnt'];
-            $semesterStatsMap[$sr['student_id']] = [
-                'm'     => $m,
-                'k'     => (int)$sr['k_cnt'],
-                'l'     => (int)$sr['l_cnt'],
-                'd'     => (int)$sr['d_cnt'],
-                'total' => $tot,
-                'pct'   => $tot > 0 ? round(($m / $tot) * 100, 1) : 100,
-            ];
+            $sql = "
+                SELECT student_id,
+                       SUM(CASE WHEN status = 'ม' THEN 1 ELSE 0 END) AS m_cnt,
+                       SUM(CASE WHEN status = 'ข' THEN 1 ELSE 0 END) AS k_cnt,
+                       SUM(CASE WHEN status = 'ล' THEN 1 ELSE 0 END) AS l_cnt,
+                       SUM(CASE WHEN status = 'ด' THEN 1 ELSE 0 END) AS d_cnt,
+                       COUNT(*) AS total_cnt
+                FROM assembly_attendance
+                WHERE 1=1 " . ($classroom !== 'all' ? "AND classroom = ? " : "") . "{$semCondSql}
+                GROUP BY student_id
+            ";
+            $params = $classroom !== 'all' ? array_merge([$classroom], $semDateParams) : $semDateParams;
+
+            $semStmt = $pdo->prepare($sql);
+            $semStmt->execute($params);
+            foreach ($semStmt->fetchAll() as $sr) {
+                $tot = (int)$sr['total_cnt'];
+                $m   = (int)$sr['m_cnt'];
+                $semesterStatsMap[$sr['student_id']] = [
+                    'm'     => $m,
+                    'k'     => (int)$sr['k_cnt'],
+                    'l'     => (int)$sr['l_cnt'],
+                    'd'     => (int)$sr['d_cnt'],
+                    'total' => $tot,
+                    'pct'   => $tot > 0 ? round(($m / $tot) * 100, 1) : 100,
+                ];
+            }
+        } catch (Exception $statEx) {
+            error_log('[Assembly] get_students stats error: ' . $statEx->getMessage());
         }
     }
-
     // Merge
     $result = [];
     foreach ($students as $s) {
