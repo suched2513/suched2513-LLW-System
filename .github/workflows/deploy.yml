@@ -165,10 +165,41 @@ jobs:
           "
           echo "✅ Deploy completed successfully!"
 
-      # ─── 6. Clear PHP OPcache ──────────────────────────────────
-      - name: Clear PHP OPcache
+      # ─── 6. Clear PHP OPcache & Run Stability Migration ────────
+      - name: Clear PHP OPcache and Apply Pending Schema Updates
         run: |
-          printf '<?php opcache_reset(); echo "ok";' > /tmp/_opc.php
+          cat > /tmp/_opc.php << 'PHPEOF'
+          <?php
+          if (function_exists('opcache_reset')) { opcache_reset(); }
+          require_once __DIR__ . '/config/database.php';
+          try {
+              $pdo = getPdo();
+              $pdo->exec("CREATE TABLE IF NOT EXISTS _migrations (id INT AUTO_INCREMENT PRIMARY KEY, migration VARCHAR(255) NOT NULL UNIQUE, batch INT NOT NULL DEFAULT 1, executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+              $executed = $pdo->query("SELECT migration FROM _migrations")->fetchAll(PDO::FETCH_COLUMN);
+              $batch = (int)$pdo->query("SELECT COALESCE(MAX(batch), 0) + 1 FROM _migrations")->fetchColumn();
+              $autoTargets = [
+                  '2026_10_20_233000_add_semester_support',
+                  '2026_10_24_233000_system_stability_and_performance',
+              ];
+              foreach ($autoTargets as $mName) {
+                  if (!in_array($mName, $executed, true)) {
+                      $mFile = __DIR__ . '/database/migrations/' . $mName . '.php';
+                      if (file_exists($mFile)) {
+                          $m = require $mFile;
+                          if (is_array($m) && isset($m['up'])) {
+                              $m['up']($pdo);
+                              $st = $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, ?)");
+                              $st->execute([$mName, $batch]);
+                          }
+                      }
+                  }
+              }
+              echo "ok";
+          } catch (Throwable $e) {
+              error_log('[Deploy Auto-Migrate] ' . $e->getMessage());
+              echo "warn";
+          }
+          PHPEOF
           lftp -e "
             set ftp:passive-mode yes;
             set ftp:ssl-allow no;
@@ -187,4 +218,4 @@ jobs:
             rm _opc.php;
             bye
           "
-          echo "✅ OPcache cleared"
+          echo "✅ OPcache cleared & stability migrations applied"

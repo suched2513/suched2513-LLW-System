@@ -27,16 +27,17 @@ if ($type === 'Teacher') {
     ");
     $stmt->execute();
 } else {
+    $curYear = llw_current_academic_year($pdo);
     $stmt = $pdo->prepare("
         SELECT b.entry_id, b.borrower_type, b.borrower_id, b.class_name,
                b.chromebook_id, b.chromebook_serial, b.status, b.date_borrowed, b.date_returned,
                (SELECT notes FROM cb_inspections i WHERE i.borrow_log_id = b.entry_id ORDER BY i.id DESC LIMIT 1) AS inspect_notes,
-               (SELECT name FROM att_students s WHERE s.student_id = LPAD(b.borrower_id, 5, '0') AND s.academic_year = 2569 LIMIT 1) AS borrower_name
+               (SELECT name FROM att_students s WHERE s.student_id = LPAD(b.borrower_id, 5, '0') AND s.academic_year = ? LIMIT 1) AS borrower_name
         FROM cb_borrow_logs b
         WHERE b.borrower_type = 'Student' AND b.class_name = ?
         ORDER BY b.date_borrowed DESC
     ");
-    $stmt->execute([$classroom]);
+    $stmt->execute([$curYear, $classroom]);
 }
 $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

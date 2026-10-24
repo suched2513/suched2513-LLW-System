@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * API: Get student focus data (info + scores + history)
  * GET ?sid=xxxxx
@@ -28,19 +28,16 @@ if ($sid === '') {
 try {
     $pdo = getPdo();
 
-    // Poly-Identity Resolver
-    $sidPadded = $sid;
-    if (preg_match('/^\d+$/', $sid)) {
-        $sidPadded = str_pad($sid, 5, '0', STR_PAD_LEFT);
-    }
-    $sidUnpadded = ltrim($sidPadded, '0');
+    // Poly-Identity Resolver via Central Helper
+    [$sidPadded, $sidUnpadded] = llw_student_id_variants($sid);
 
-    // 1. Get Student Info (Unpadded in att_students, Padded in request)
+    // 1. Get Student Info (Indexed lookup on both 5-digit padded & unpadded)
     $stmtSt = $pdo->prepare("
         SELECT s.student_id, s.name, s.classroom, b.homeroom, b.img_url
         FROM att_students s
         LEFT JOIN beh_students b ON s.student_id = b.student_id
-        WHERE s.student_id = ? OR s.student_id = ?
+        WHERE s.student_id IN (?, ?)
+        ORDER BY s.academic_year DESC
         LIMIT 1
     ");
     $stmtSt->execute([$sidPadded, $sidUnpadded]);
@@ -72,24 +69,24 @@ try {
         }
     }
 
-    // Set finalized SID for score/history queries from the found record
-    $sid = $student['student_id'];
+    // Set finalized SID variants for score/history queries from the found record
+    [$finalPadded, $finalUnpadded] = llw_student_id_variants($student['student_id']);
 
     $st = [
-        'studentId' => $student['student_id'],
+        'studentId' => $finalPadded,
         'name'      => $student['name'],
         'classText' => $student['classroom'],
         'homeroom'  => $student['homeroom'] ?? '',
         'img'       => $student['img_url'] ?? '',
     ];
 
-    // Calculate scores
-    $stmtGood = $pdo->prepare("SELECT COALESCE(SUM(score), 0) AS total FROM beh_records WHERE student_id = ? AND type = 'ความดี'");
-    $stmtGood->execute([$sid]);
+    // Calculate scores (match both padded & unpadded via index)
+    $stmtGood = $pdo->prepare("SELECT COALESCE(SUM(score), 0) AS total FROM beh_records WHERE student_id IN (?, ?) AND type = 'ความดี'");
+    $stmtGood->execute([$finalPadded, $finalUnpadded]);
     $goodScore = (int)$stmtGood->fetchColumn();
 
-    $stmtBad = $pdo->prepare("SELECT COALESCE(SUM(score), 0) AS total FROM beh_records WHERE student_id = ? AND type = 'ความผิด'");
-    $stmtBad->execute([$sid]);
+    $stmtBad = $pdo->prepare("SELECT COALESCE(SUM(score), 0) AS total FROM beh_records WHERE student_id IN (?, ?) AND type = 'ความผิด'");
+    $stmtBad->execute([$finalPadded, $finalUnpadded]);
     $badScore = (int)$stmtBad->fetchColumn();
 
     $scores = [
@@ -100,11 +97,11 @@ try {
     // Build history HTML
     $stmtHist = $pdo->prepare("
         SELECT * FROM beh_records 
-        WHERE student_id = ? 
+        WHERE student_id IN (?, ?) 
         ORDER BY record_date DESC, created_at DESC 
         LIMIT 100
     ");
-    $stmtHist->execute([$sid]);
+    $stmtHist->execute([$finalPadded, $finalUnpadded]);
     $records = $stmtHist->fetchAll();
 
     $html = '';
@@ -171,8 +168,6 @@ try {
     ]);
 
 } catch (Exception $e) {
-    error_log('[behavior] get_student_focus error: ' . $e->getMessage());
     if (ob_get_length()) ob_clean();
-    http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
+    llw_json_error('เกิดข้อผิดพลาดในการโหลดข้อมูลนักเรียน', $e, 500, 'behavior/get_student_focus');
 }

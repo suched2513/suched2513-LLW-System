@@ -5,9 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $pageTitle ?? 'LLW Management System' ?> | Lalom Wittaya</title>
 
-    <!-- Fonts -->
+    <!-- PWA & Mobile App Meta -->
+    <meta name="theme-color" content="#0b1426">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LLW System">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/assets/icons/icon-192.svg">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.svg">
+
+    <!-- Resource Hints & Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
 
     <!-- CSS -->
@@ -279,5 +290,38 @@
                     }, 300);
                 });
             });
+
+            // ── Register Service Worker (PWA + Asset Caching) ──
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            }
+
+            // ── Handle PWA Install Prompt ──
+            let deferredPwaPrompt = null;
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPwaPrompt = e;
+                const installBtn = document.getElementById('llw-pwa-install-btn');
+                if (installBtn) installBtn.style.display = 'block';
+            });
+
+            window.installLlwApp = function() {
+                if (deferredPwaPrompt) {
+                    deferredPwaPrompt.prompt();
+                    deferredPwaPrompt.userChoice.then(() => {
+                        deferredPwaPrompt = null;
+                        const installBtn = document.getElementById('llw-pwa-install-btn');
+                        if (installBtn) installBtn.style.display = 'none';
+                    });
+                } else if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'ติดตั้งแอป LLW System',
+                        html: '<div class="text-left text-sm space-y-2"><p>1. สำหรับ <b>iPhone/iPad (Safari)</b>: กดปุ่ม <b>แชร์ (Share)</b> ด้านล่าง แล้วเลือก <b>"เพิ่มไปยังหน้าจอโฮม" (Add to Home Screen)</b></p><p>2. สำหรับ <b>Android (Chrome)</b>: กดเมนู 3 จุดมุมขวาบน แล้วเลือก <b>"ติดตั้งแอป" (Install App)</b></p></div>',
+                        confirmButtonText: 'เข้าใจแล้ว',
+                        confirmButtonColor: '#2563eb'
+                    });
+                }
+            };
         });
     </script>

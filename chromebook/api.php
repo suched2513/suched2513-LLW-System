@@ -61,8 +61,11 @@ try {
             } elseif ($sheet === 'Teachers') {
                 ok($pdo->query("SELECT teacher_id, name FROM cb_teachers ORDER BY name")->fetchAll(PDO::FETCH_NUM));
             } elseif ($sheet === 'Students') {
-                // ดึงจากฐานข้อมูลกลาง (att_students) ปี 2569
-                ok($pdo->query("SELECT student_id, name, classroom as class_name FROM att_students WHERE academic_year = 2569 AND (status = 'active' OR status IS NULL) ORDER BY classroom, name")->fetchAll(PDO::FETCH_NUM));
+                // ดึงจากฐานข้อมูลกลาง (att_students) ปีการศึกษาปัจจุบัน
+                $curYear = llw_current_academic_year($pdo);
+                $stmtSt = $pdo->prepare("SELECT student_id, name, classroom as class_name FROM att_students WHERE academic_year = ? AND (status = 'active' OR status IS NULL) ORDER BY classroom, name");
+                $stmtSt->execute([$curYear]);
+                ok($stmtSt->fetchAll(PDO::FETCH_NUM));
             } elseif ($sheet === 'Chromebooks') {
                 ok($pdo->query("SELECT chromebook_id, model, serial_number FROM cb_chromebooks ORDER BY chromebook_id")->fetchAll(PDO::FETCH_NUM));
             } elseif ($sheet === 'Inspections') {

@@ -3,7 +3,7 @@ session_start();
 require_once __DIR__ . '/../config.php';
 
 if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_admin', 'cb_admin'])) {
-    header('Location: ' . $base_path . '/login.php'); exit();
+    header('Location: /login.php'); exit();
 }
 
 $id = (int)($_GET['id'] ?? 0);
@@ -35,11 +35,12 @@ if (!$rep) { http_response_code(404); exit('ไม่พบรายการ');
 $attStudentName = null;
 $attClassroom   = null;
 if ($rep['borrower_type'] === 'Student' && $rep['borrower_id']) {
+    $curYear = llw_current_academic_year($pdo);
     $stmtS = $pdo->prepare("
         SELECT name, classroom FROM att_students
-        WHERE student_id = LPAD(?, 5, '0') AND academic_year = 2569 LIMIT 1
+        WHERE student_id = LPAD(?, 5, '0') AND academic_year = ? LIMIT 1
     ");
-    $stmtS->execute([$rep['borrower_id']]);
+    $stmtS->execute([$rep['borrower_id'], $curYear]);
     $attRow = $stmtS->fetch(PDO::FETCH_ASSOC);
     if ($attRow) { $attStudentName = $attRow['name']; $attClassroom = $attRow['classroom']; }
 }

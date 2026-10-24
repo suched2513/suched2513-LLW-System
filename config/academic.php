@@ -9,6 +9,10 @@
  *   2. การกำหนดวันเปิด–ปิดเทอม หรือบังคับสลับเทอมผ่านตาราง `llw_academic_terms` โดย Admin
  */
 
+if (file_exists(__DIR__ . '/../includes/system_helpers.php')) {
+    require_once __DIR__ . '/../includes/system_helpers.php';
+}
+
 if (!defined('LLW_FORCE_ACADEMIC_YEAR')) define('LLW_FORCE_ACADEMIC_YEAR', null); // เช่น 2569
 if (!defined('LLW_FORCE_SEMESTER'))      define('LLW_FORCE_SEMESTER', null);      // 1 หรือ 2
 

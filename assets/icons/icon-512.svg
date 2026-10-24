@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="45%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#a5b4fc"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="196" fill="none" stroke="url(#accent)" stroke-width="5" stroke-opacity="0.3"/>
+  <!-- Graduation Cap Icon -->
+  <path d="M256 116L96 190l160 74 160-74-160-74z" fill="#ffffff"/>
+  <path d="M154 228v70c0 32 45 58 102 58s102-26 102-58v-70l-102 48-102-48z" fill="#bfdbfe"/>
+  <rect x="396" y="190" width="16" height="96" rx="8" fill="#fbbf24"/>
+  <circle cx="404" cy="292" r="14" fill="#fbbf24"/>
+  <!-- LLW Text -->
+  <text x="256" y="424" font-family="Prompt, sans-serif" font-size="72" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="8">LLW</text>
+</svg>

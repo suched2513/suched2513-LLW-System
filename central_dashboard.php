@@ -238,6 +238,9 @@ require_once 'components/layout_start.php';
                             <option value="2" <?= $currentSemester == 2 ? 'selected' : '' ?>>ภาคเรียนที่ 2</option>
                         </select>
                     </form>
+                    <a href="/system_diagnostics.php" class="bg-slate-800 hover:bg-slate-700 text-blue-300 text-xs font-bold px-4 py-3 rounded-2xl border border-white/10 transition-all flex items-center gap-2 no-underline">
+                        <i class="bi bi-shield-check"></i> สุขภาพระบบ
+                    </a>
                     <?php if(!$hasDemographics): ?>
                     <form action="" method="POST">
                         <?= csrf_field() ?>

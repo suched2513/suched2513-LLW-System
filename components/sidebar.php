@@ -265,6 +265,12 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
                         <p>จัดการผู้ใช้งานระบบ</p>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="<?= $base_path ?>/system_diagnostics.php" class="nav-link <?= $current_page === 'system_diagnostics.php' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-heartbeat text-info"></i>
+                        <p>ตรวจสอบความเสถียรระบบ</p>
+                    </a>
+                </li>
                 <?php endif; ?>
 
                 <?php if (in_array($userRole, ['super_admin', 'att_teacher', 'student', 'wfh_staff'])): ?>
@@ -669,6 +675,12 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
                 <div style="font-size:0.64rem;color:rgba(148,163,184,0.65);"><?= $roleName ?></div>
             </div>
         </div>
+        <button type="button" id="llw-pwa-install-btn" onclick="if(window.installLlwApp) window.installLlwApp();"
+           style="display:none;width:100%;text-align:center;background:rgba(59,130,246,0.16);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);border-radius:10px;padding:0.42rem;font-size:0.75rem;font-weight:600;margin-bottom:0.4rem;cursor:pointer;transition:all 0.15s;"
+           onmouseover="this.style.background='rgba(59,130,246,0.3)';this.style.color='#fff'"
+           onmouseout="this.style.background='rgba(59,130,246,0.16)';this.style.color='#93c5fd'">
+            <i class="fas fa-mobile-alt me-1"></i>ติดตั้งแอปลงมือถือ
+        </button>
         <a href="<?= $base_path ?>/logout.php"
            style="display:block;text-align:center;background:rgba(239,68,68,0.13);color:#fca5a5;border:1px solid rgba(239,68,68,0.22);border-radius:10px;padding:0.45rem;font-size:0.78rem;font-weight:600;text-decoration:none;transition:all 0.15s;"
            onmouseover="this.style.background='rgba(239,68,68,0.25)';this.style.color='#fff'"
