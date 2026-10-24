@@ -8,7 +8,10 @@ require_once __DIR__ . '/../config.php';
 if (!isset($_SESSION['llw_role'])) exit('Access Denied');
 
 $classroom = $_GET['classroom'] ?? '';
-$monday = $_GET['monday'] ?? '';
+$monday    = $_GET['monday'] ?? '';
+$weekNum   = (int)($_GET['week'] ?? 0);
+$semester  = (int)($_GET['semester'] ?? llw_current_semester());
+$acadYear  = llw_current_academic_year();
 
 if (!$classroom || !$monday) exit('Data Missing');
 
@@ -32,10 +35,20 @@ try {
     $friday = $dates[4];
 
     // 2. Fetch Data
-    // Students (Use assembly_students)
-    $stmt = $pdo->prepare("SELECT student_id, name FROM assembly_students WHERE classroom = ? ORDER BY student_id");
+    // Students (Use att_students with fallback to assembly_students)
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT LPAD(TRIM(student_id), 5, '0') AS student_id, name
+        FROM att_students
+        WHERE classroom = ? AND (status = 'active' OR status IS NULL) AND student_id REGEXP '^[0-9]+$'
+        ORDER BY student_id
+    ");
     $stmt->execute([$classroom]);
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($students)) {
+        $stmt = $pdo->prepare("SELECT student_id, name FROM assembly_students WHERE classroom = ? ORDER BY student_id");
+        $stmt->execute([$classroom]);
+        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     // Topics
     $stmt = $pdo->prepare("SELECT log_date, topic FROM homeroom_logs WHERE classroom = ? AND log_date BETWEEN ? AND ?");
@@ -122,7 +135,12 @@ $dayNames = ['จันทร์', 'อังคาร', 'พุธ', 'พฤห
 
     <div class="header">
         <h1 class="title">บันทึกกิจกรรมโฮมรูม (Homeroom Logbook)</h1>
-        <p class="subtitle">ระดับชั้นมัธยมศึกษาปีที่ <?= htmlspecialchars($classroom) ?> | ประจำสัปดาห์วันที่ <?= date('d/m/Y', strtotime($monday)) ?> - <?= date('d/m/Y', strtotime($friday)) ?></p>
+        <p class="subtitle">
+            ห้องเรียน <?= htmlspecialchars($classroom) ?>
+            <?= $weekNum > 0 ? ' | สัปดาห์ที่ ' . (int)$weekNum : '' ?>
+            (ภาคเรียนที่ <?= (int)$semester ?>/<?= (int)$acadYear ?>)
+            | ประจำวันที่ <?= date('d/m/Y', strtotime($monday)) ?> - <?= date('d/m/Y', strtotime($friday)) ?>
+        </p>
     </div>
 
     <table>
@@ -179,8 +197,8 @@ $dayNames = ['จันทร์', 'อังคาร', 'พุธ', 'พฤห
         <div class="sig-box">
             <p style="font-size: 0.8rem; font-weight: 700;">(ลงชื่อ) ครูที่ปรึกษาคนที่ <?= $idx + 1 ?></p>
             <div class="sig-line">
-                <?php if ($adv['signature']): ?>
-                    <img src="<?= $adv['signature'] ?>" class="sig-img">
+                <?php if (!empty($adv['signature'])): ?>
+                    <img src="<?= htmlspecialchars($adv['signature']) ?>" class="sig-img">
                 <?php endif; ?>
             </div>
             <p style="font-size: 0.85rem; font-weight: 900;">(ครู<?= htmlspecialchars($adv['firstname'] . ' ' . $adv['lastname']) ?>)</p>
