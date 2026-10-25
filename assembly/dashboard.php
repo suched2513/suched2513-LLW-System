@@ -678,12 +678,17 @@ async function saveAllAttendance() {
     Swal.close();
 
     if (res.status === 'success') {
-        let subMsg = res.message;
-        if (res.telegram && res.telegram.sent === false && res.telegram.desc) {
-            subMsg += `\n(แจ้งเตือน Telegram ไม่สำเร็จ: ${res.telegram.desc})`;
+        if (res.telegram && res.telegram.sent === false) {
+            await Swal.fire({
+                icon: 'warning',
+                title: 'บันทึกสำเร็จ แต่แจ้งเตือน Telegram ไม่สำเร็จ',
+                html: `<div class="text-sm text-slate-600">${esc(res.message)}<br><br><b class="text-rose-600">สาเหตุจาก Telegram:</b> ${esc(res.telegram.desc || 'ไม่ทราบสาเหตุ')}<br><span class="text-xs text-slate-400">กรุณาตรวจสอบ Bot Token / Chat ID ของกลุ่มเช็คชื่อในหน้าตั้งค่าระบบ</span></div>`,
+                confirmButtonText: 'รับทราบ',
+                confirmButtonColor: '#f59e0b'
+            });
+        } else {
+            await Swal.fire({ icon:'success', title:'บันทึกสำเร็จ!', text: res.message, timer: 2000, showConfirmButton:false });
         }
-        await Swal.fire({ icon:'success', title:'บันทึกสำเร็จ!', text: subMsg,
-                          timer: res.telegram && res.telegram.sent === false ? 4000 : 2000, showConfirmButton:false });
         resetAttForm();
     } else {
         Swal.fire('ผิดพลาด', res.message, 'error');

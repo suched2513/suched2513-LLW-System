@@ -71,34 +71,68 @@ class Telegram
      */
     private static function call(string $method, array $params = [], bool $multipart = false): array
     {
-        if (empty(self::$token)) {
+        $token = trim(self::$token);
+        if (empty($token)) {
             return ['ok' => false, 'description' => 'Telegram token not set'];
         }
-
-        $url = "https://api.telegram.org/bot" . self::$token . "/{$method}";
-
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => self::$timeout,
-            CURLOPT_POST           => true,
-        ]);
-
-        if ($multipart) {
-            // multipart/form-data สำหรับส่งไฟล์
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
-        } else {
-            // application/json
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params, JSON_UNESCAPED_UNICODE));
+        if (isset($params['chat_id']) && is_string($params['chat_id'])) {
+            $params['chat_id'] = trim($params['chat_id']);
         }
 
-        $raw    = curl_exec($ch);
-        $curlErr = curl_error($ch);
-        curl_close($ch);
+        $url     = "https://api.telegram.org/bot" . $token . "/{$method}";
+        $raw     = false;
+        $curlErr = '';
+
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => self::$timeout,
+                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_POST           => true,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0,
+            ]);
+
+            if ($multipart) {
+                // multipart/form-data สำหรับส่งไฟล์
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+            } else {
+                // application/json
+                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params, JSON_UNESCAPED_UNICODE));
+            }
+
+            $raw     = curl_exec($ch);
+            $curlErr = curl_error($ch);
+            curl_close($ch);
+        }
+
+        // Fallback ด้วย file_get_contents หาก cURL ล้มเหลว (เช่น ปัญหา SSL/Firewall บน Shared Host)
+        if ($raw === false && !$multipart) {
+            $formParams = $params;
+            if (isset($formParams['reply_markup']) && is_array($formParams['reply_markup'])) {
+                $formParams['reply_markup'] = json_encode($formParams['reply_markup'], JSON_UNESCAPED_UNICODE);
+            }
+            $opts = [
+                'http' => [
+                    'header'        => "Content-type: application/x-www-form-urlencoded\r\n",
+                    'method'        => 'POST',
+                    'content'       => http_build_query($formParams),
+                    'timeout'       => self::$timeout,
+                    'ignore_errors' => true,
+                ],
+                'ssl' => [
+                    'verify_peer'      => false,
+                    'verify_peer_name' => false,
+                ],
+            ];
+            $ctx = stream_context_create($opts);
+            $raw = @file_get_contents($url, false, $ctx);
+        }
 
         if ($raw === false) {
-            error_log("[Telegram::call] cURL error: {$curlErr}");
+            error_log("[Telegram::call] Request error: {$curlErr}");
             return ['ok' => false, 'description' => "cURL error: {$curlErr}"];
         }
 
@@ -106,7 +140,75 @@ class Telegram
         if (!is_array($decoded)) {
             return ['ok' => false, 'description' => 'Invalid JSON response'];
         }
+
+        // กรณีกลุ่มธรรมดาถูกอัปเกรดเป็น Supergroup (Telegram คืนค่า migrate_to_chat_id) → ส่งซ้ำด้วย ID ใหม่อัตโนมัติ
+        if (empty($decoded['ok']) && !empty($decoded['parameters']['migrate_to_chat_id']) && isset($params['chat_id'])) {
+            $newChatId = (string)$decoded['parameters']['migrate_to_chat_id'];
+            if ($newChatId !== (string)$params['chat_id']) {
+                $params['chat_id']       = $newChatId;
+                self::$chatId            = $newChatId;
+                $retry                   = self::call($method, $params, $multipart);
+                $retry['migrated_chat']  = $newChatId;
+                return $retry;
+            }
+        }
+
+        // กรณีข้อความมีอักขระพิเศษที่ทำให้ HTML parse พัง → ลองส่งใหม่แบบข้อความธรรมดาอัตโนมัติ
+        if (empty($decoded['ok']) && !empty($params['parse_mode']) && stripos($decoded['description'] ?? '', 'parse entities') !== false) {
+            unset($params['parse_mode']);
+            if (isset($params['text'])) {
+                $params['text'] = strip_tags($params['text']);
+            }
+            return self::call($method, $params, $multipart);
+        }
+
         return $decoded;
+    }
+
+    /**
+     * ส่งแจ้งเตือนสำหรับระบบเช็คชื่อ/นักเรียน (เข้าแถว, เครื่องแต่งกาย, รายคาบ, โฮมรูม, พฤติกรรม, ใบลานักเรียน)
+     * รองรับ fallback อัตโนมัติกรณี Token/Chat ID มีการสลับบอท หรือกลุ่มอัปเกรดเป็น Supergroup
+     */
+    public static function sendAttendanceNotify(PDO $pdo, string $text, ?string $customChatId = null): array
+    {
+        try {
+            $settings    = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
+            $attToken    = trim((string)($settings['att_bot_token'] ?? ''));
+            $mainToken   = trim((string)($settings['telegram_token'] ?? ''));
+            $attChatId   = trim((string)($customChatId ?: ($settings['att_chat_id'] ?? '')));
+            $adminChatId = trim((string)($settings['admin_chat_id'] ?? ''));
+
+            $targetChat = $attChatId !== '' ? $attChatId : $adminChatId;
+            if ($targetChat === '') {
+                return ['ok' => false, 'description' => 'ยังไม่ได้ตั้งค่า Chat ID กลุ่มเช็คชื่อนักเรียน'];
+            }
+
+            // ลำดับ Token ที่จะลองส่งไปยังกลุ่มเช็คชื่อ: 1) att_bot_token 2) telegram_token (เผื่อบอทหลักอยู่ในกลุ่มเช็คชื่อ)
+            $tokensToTry = array_values(array_unique(array_filter([$attToken, $mainToken])));
+            if (empty($tokensToTry)) {
+                return ['ok' => false, 'description' => 'ยังไม่ได้ตั้งค่า Bot Token'];
+            }
+
+            $lastRes = ['ok' => false, 'description' => 'Unknown error'];
+            foreach ($tokensToTry as $tk) {
+                self::init($tk, $targetChat);
+                $res = self::sendMessage($text, $targetChat);
+                if (!empty($res['ok'])) {
+                    // ถ้ากลุ่มถูกอัปเกรดเป็น Supergroup อัปเดต att_chat_id ในฐานข้อมูลให้อัตโนมัติ
+                    if (!empty($res['migrated_chat']) && $customChatId === null && $attChatId !== '') {
+                        try {
+                            $up = $pdo->prepare("UPDATE wfh_system_settings SET att_chat_id = ? WHERE setting_id = 1");
+                            $up->execute([$res['migrated_chat']]);
+                        } catch (\Throwable $ignore) {}
+                    }
+                    return $res;
+                }
+                $lastRes = $res;
+            }
+            return $lastRes;
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'description' => $e->getMessage()];
+        }
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -278,6 +380,8 @@ class Telegram
             CURLOPT_FILE           => $fp,
             CURLOPT_TIMEOUT        => 60,
             CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0,
         ]);
         $success  = curl_exec($ch);
         $curlErr  = curl_error($ch);

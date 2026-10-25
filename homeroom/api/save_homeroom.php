@@ -96,14 +96,10 @@ try {
 
     $pdo->commit();
 
-    // 4. แจ้งเตือน Telegram เข้ากลุ่มเช็คชื่อนักเรียน (att_bot_token + att_chat_id)
+    // 4. แจ้งเตือน Telegram เข้ากลุ่มเช็คชื่อนักเรียน (ใช้ sendAttendanceNotify)
     try {
         require_once __DIR__ . '/../../includes/telegram_bot.php';
-        $settings  = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
-        $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
-        $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
-
-        if ($attToken && $attChatId && is_array($attendance) && !empty($attendance)) {
+        if (is_array($attendance) && !empty($attendance)) {
             $tcStmt = $pdo->prepare("
                 SELECT CONCAT(u.firstname, ' ', u.lastname)
                 FROM llw_class_advisors ca
@@ -125,10 +121,13 @@ try {
             $month = (int)date('n', strtotime($log_date));
             $thDateStr = "$thDate {$monthNames[$month]} " . (date('Y', strtotime($log_date)) + 543);
 
+            $safeRoom    = htmlspecialchars($classroom, ENT_QUOTES, 'UTF-8');
+            $safeTeacher = htmlspecialchars($teacherName, ENT_QUOTES, 'UTF-8');
+
             $msg  = "🏫 <b>บันทึกกิจกรรมโฮมรูม & เช็คชื่อ</b>\n";
             $msg .= "📅 วันที่: $thDateStr\n";
-            $msg .= "🏫 ห้อง: $classroom\n";
-            $msg .= "👩🏫 ครูที่ปรึกษา: $teacherName\n";
+            $msg .= "🏫 ห้อง: $safeRoom\n";
+            $msg .= "👩‍🏫 ครูที่ปรึกษา: $safeTeacher\n";
             if ($topic !== '') {
                 $msg .= "📝 เรื่องที่แจ้ง: " . htmlspecialchars($topic, ENT_QUOTES, 'UTF-8') . "\n";
             }
@@ -138,8 +137,8 @@ try {
             if (count($absentList) > 0) {
                 $msg .= "❌ ไม่มา/สาย:\n";
                 foreach ($absentList as $a) {
-                    $name = trim($a['name'] ?? ($a['id'] ?? ''));
-                    $st   = $a['status'] ?? '';
+                    $name = htmlspecialchars(trim($a['name'] ?? ($a['id'] ?? '')), ENT_QUOTES, 'UTF-8');
+                    $st   = htmlspecialchars($a['status'] ?? '', ENT_QUOTES, 'UTF-8');
                     $msg .= "• $name ($st)\n";
                 }
             } else {
@@ -147,8 +146,7 @@ try {
             }
             $msg .= "\n🕒 บันทึกเวลา: " . date('H:i:s');
 
-            Telegram::init($attToken);
-            Telegram::sendMessage($msg, $attChatId);
+            Telegram::sendAttendanceNotify($pdo, $msg);
         }
     } catch (\Throwable $tgErr) {
         error_log('[homeroom/save_homeroom] Telegram error: ' . $tgErr->getMessage());

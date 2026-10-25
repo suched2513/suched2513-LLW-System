@@ -115,85 +115,113 @@ try {
     // ─── Telegram Notify ───────────────────────────────────────────
     $tgDebug = null;
     try {
-        // ดึง Telegram config โดยใช้ SELECT * เพื่อไม่ให้พังหากบางคอลัมน์ยังไม่ได้ migrate
-        $settings  = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
-        $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
-        $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
+        $total      = count($records);
+        $present    = count(array_filter($records, fn($r) => ($r['status'] ?? '') === 'ม'));
+        $absentList = array_filter($records, fn($r) => ($r['status'] ?? 'ม') !== 'ม');
 
-        if ($attToken && $attChatId) {
-            $total      = count($records);
-            $present    = count(array_filter($records, fn($r) => ($r['status'] ?? '') === 'ม'));
-            $absentList = array_filter($records, fn($r) => ($r['status'] ?? 'ม') !== 'ม');
+        // ดึงชื่อนักเรียนจาก att_students (ตารางหลักเดียวกับ get_students.php) + fallback assembly_students
+        $studentIds = array_values(array_filter(array_map(
+            fn($r) => trim($r['student_id'] ?? $r['studentID'] ?? ''),
+            $records
+        )));
+        $nameMap = [];
+        if (!empty($studentIds)) {
+            $placeholders = implode(',', array_fill(0, count($studentIds), '?'));
+            try {
+                $nameStmt = $pdo->prepare("SELECT student_id, name FROM att_students WHERE student_id IN ($placeholders)");
+                $nameStmt->execute($studentIds);
+                foreach ($nameStmt->fetchAll(PDO::FETCH_ASSOC) as $nr) {
+                    $nameMap[$nr['student_id']] = $nr['name'];
+                    $nameMap[str_pad($nr['student_id'], 5, '0', STR_PAD_LEFT)] = $nr['name'];
+                }
+            } catch (\Throwable $ignore) {}
 
-            // ดึงชื่อนักเรียนจาก att_students (ตารางหลักเดียวกับ get_students.php) + fallback assembly_students
-            $studentIds = array_values(array_filter(array_map(
-                fn($r) => trim($r['student_id'] ?? $r['studentID'] ?? ''),
-                $records
-            )));
-            $nameMap = [];
-            if (!empty($studentIds)) {
-                $placeholders = implode(',', array_fill(0, count($studentIds), '?'));
+            if (empty($nameMap)) {
                 try {
-                    $nameStmt = $pdo->prepare("SELECT student_id, name FROM att_students WHERE student_id IN ($placeholders)");
+                    $nameStmt = $pdo->prepare("SELECT student_id, name FROM assembly_students WHERE student_id IN ($placeholders)");
                     $nameStmt->execute($studentIds);
                     foreach ($nameStmt->fetchAll(PDO::FETCH_ASSOC) as $nr) {
                         $nameMap[$nr['student_id']] = $nr['name'];
                         $nameMap[str_pad($nr['student_id'], 5, '0', STR_PAD_LEFT)] = $nr['name'];
                     }
                 } catch (\Throwable $ignore) {}
+            }
+        }
 
-                if (empty($nameMap)) {
-                    try {
-                        $nameStmt = $pdo->prepare("SELECT student_id, name FROM assembly_students WHERE student_id IN ($placeholders)");
-                        $nameStmt->execute($studentIds);
-                        foreach ($nameStmt->fetchAll(PDO::FETCH_ASSOC) as $nr) {
-                            $nameMap[$nr['student_id']] = $nr['name'];
-                            $nameMap[str_pad($nr['student_id'], 5, '0', STR_PAD_LEFT)] = $nr['name'];
-                        }
-                    } catch (\Throwable $ignore) {}
+        // ตรวจรายการเครื่องแต่งกายผิดระเบียบ (เฉพาะนักเรียนที่มาเรียน)
+        $uniformMap = [
+            'nail'  => 'เล็บ',
+            'hair'  => 'ผม',
+            'shirt' => 'เสื้อ',
+            'pants' => 'กางเกง',
+            'socks' => 'ถุงเท้า',
+            'shoes' => 'รองเท้า',
+        ];
+        $uniformIssues = [];
+        foreach ($records as $r) {
+            if (($r['status'] ?? 'ม') !== 'ม') continue;
+            $badItems = [];
+            foreach ($uniformMap as $col => $label) {
+                if (($r[$col] ?? 'ถูก') === 'ผิด') {
+                    $badItems[] = $label;
                 }
             }
-
-            $thDate = date('j', strtotime($date));
-            $monthNames = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
-                           'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-            $month = (int)date('n', strtotime($date));
-            $thDateStr = "$thDate {$monthNames[$month]} " . (date('Y', strtotime($date)) + 543);
-
-            $msg  = "🌅 <b>เช็คชื่อเข้าแถวเช้า</b>\n";
-            $msg .= "📅 วันที่: $thDateStr\n";
-            $msg .= "🏫 ห้อง: $classroom\n";
-            $msg .= "👩🏫 ครูที่ปรึกษา: $teacherName\n\n";
-            $msg .= "👥 นักเรียนทั้งหมด: $total คน\n";
-            $msg .= "✅ มาเข้าแถว: $present คน\n";
-
-            if (count($absentList) > 0) {
-                $msg .= "❌ ไม่มาเข้าแถว:\n\n";
-                foreach ($absentList as $a) {
-                    $sid  = trim($a['student_id'] ?? $a['studentID'] ?? '');
-                    $padSid = preg_match('/^\d+$/', $sid) ? str_pad($sid, 5, '0', STR_PAD_LEFT) : $sid;
-                    $name = $nameMap[$sid] ?? ($nameMap[$padSid] ?? $sid);
-                    $statusText = match($a['status'] ?? '') {
-                        'ข' => 'ขาด', 'ล' => 'ลา', 'ด' => 'โดด', default => $a['status']
-                    };
-                    $msg .= "• $name ($statusText)\n";
-                }
-            } else {
-                $msg .= "🎉 ทุกคนมาเข้าแถวครบ!\n";
+            if (!empty($badItems)) {
+                $sid    = trim($r['student_id'] ?? $r['studentID'] ?? '');
+                $padSid = preg_match('/^\d+$/', $sid) ? str_pad($sid, 5, '0', STR_PAD_LEFT) : $sid;
+                $sName  = htmlspecialchars($nameMap[$sid] ?? ($nameMap[$padSid] ?? $sid), ENT_QUOTES, 'UTF-8');
+                $uniformIssues[] = "• {$sName} (" . implode(', ', $badItems) . ")";
             }
-            $msg .= "\n🕒 บันทึกเวลา: " . date('H:i:s');
+        }
 
-            Telegram::init($attToken);
-            $tgRes = Telegram::sendMessage($msg, $attChatId);
-            $tgDebug = [
-                'sent' => (bool)($tgRes['ok'] ?? false),
-                'desc' => $tgRes['description'] ?? null,
-            ];
-            if (!($tgRes['ok'] ?? false)) {
-                error_log('[Assembly] Telegram send failed: ' . ($tgRes['description'] ?? 'unknown'));
+        $thDate = date('j', strtotime($date));
+        $monthNames = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                       'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+        $month = (int)date('n', strtotime($date));
+        $thDateStr = "$thDate {$monthNames[$month]} " . (date('Y', strtotime($date)) + 543);
+
+        $safeRoom    = htmlspecialchars($classroom, ENT_QUOTES, 'UTF-8');
+        $safeTeacher = htmlspecialchars($teacherName, ENT_QUOTES, 'UTF-8');
+
+        $msg  = "🌅 <b>เช็คชื่อเข้าแถวเช้า & เครื่องแต่งกาย</b>\n";
+        $msg .= "📅 วันที่: $thDateStr\n";
+        $msg .= "🏫 ห้อง: $safeRoom\n";
+        $msg .= "👩‍🏫 ครูที่ปรึกษา: $safeTeacher\n\n";
+        $msg .= "👥 นักเรียนทั้งหมด: $total คน\n";
+        $msg .= "✅ มาเข้าแถว: $present คน\n";
+
+        $statusMap = ['ข' => 'ขาด', 'ล' => 'ลา', 'ด' => 'โดด'];
+        if (count($absentList) > 0) {
+            $msg .= "❌ ไม่มาเข้าแถว:\n";
+            foreach ($absentList as $a) {
+                $sid        = trim($a['student_id'] ?? $a['studentID'] ?? '');
+                $padSid     = preg_match('/^\d+$/', $sid) ? str_pad($sid, 5, '0', STR_PAD_LEFT) : $sid;
+                $name       = htmlspecialchars($nameMap[$sid] ?? ($nameMap[$padSid] ?? $sid), ENT_QUOTES, 'UTF-8');
+                $stKey      = $a['status'] ?? '';
+                $statusText = htmlspecialchars($statusMap[$stKey] ?? $stKey, ENT_QUOTES, 'UTF-8');
+                $noteStr    = !empty($a['note']) ? ' [' . htmlspecialchars($a['note'], ENT_QUOTES, 'UTF-8') . ']' : '';
+                $msg .= "• $name ($statusText)$noteStr\n";
             }
         } else {
-            $tgDebug = ['sent' => false, 'desc' => 'Token or Chat ID is empty'];
+            $msg .= "🎉 ทุกคนมาเข้าแถวครบ!\n";
+        }
+
+        if (!empty($uniformIssues)) {
+            $msg .= "\n⚠️ <b>เครื่องแต่งกายผิดระเบียบ (" . count($uniformIssues) . " คน):</b>\n";
+            $msg .= implode("\n", $uniformIssues) . "\n";
+        } else {
+            $msg .= "👔 เครื่องแต่งกาย: ถูกระเบียบทุกคน\n";
+        }
+
+        $msg .= "\n🕒 บันทึกเวลา: " . date('H:i:s');
+
+        $tgRes = Telegram::sendAttendanceNotify($pdo, $msg);
+        $tgDebug = [
+            'sent' => (bool)($tgRes['ok'] ?? false),
+            'desc' => $tgRes['description'] ?? null,
+        ];
+        if (!($tgRes['ok'] ?? false)) {
+            error_log('[Assembly] Telegram send failed: ' . ($tgRes['description'] ?? 'unknown'));
         }
     } catch (\Throwable $tgErr) {
         $tgDebug = ['sent' => false, 'desc' => $tgErr->getMessage()];

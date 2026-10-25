@@ -67,50 +67,39 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
 
         // ── Telegram Auto-Broadcast (ส่งอัตโนมัติทุกครั้ง) ──
         try {
-            // ตรวจและเพิ่มคอลัมน์ถ้ายังไม่มี
-            $existCols = $pdo->query("SHOW COLUMNS FROM wfh_system_settings")->fetchAll(PDO::FETCH_COLUMN);
-            if (!in_array('att_chat_id',   $existCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_chat_id VARCHAR(100) NULL");
-            if (!in_array('att_bot_token', $existCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_bot_token VARCHAR(200) NULL");
-
-            $settings  = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
-            $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
-
-            // Chat ID: ใช้ per-subject ก่อน → fallback global att_chat_id → fallback admin_chat_id
+            // Chat ID เฉพาะรายวิชา (ถ้ามี) มิฉะนั้นใช้กลุ่มเช็คชื่อกลางจาก wfh_system_settings
+            $customSubChat = null;
             $_has_sub_chat = (bool)$pdo->query("SHOW COLUMNS FROM `att_subjects` LIKE 'telegram_chat_id'")->fetch();
             if ($_has_sub_chat && !empty($subject_info['telegram_chat_id'])) {
-                $attChatId = $subject_info['telegram_chat_id'];
-            } else {
-                $attChatId = !empty($settings['att_chat_id']) ? $settings['att_chat_id'] : ($settings['admin_chat_id'] ?? '');
+                $customSubChat = $subject_info['telegram_chat_id'];
             }
 
-            if ($attToken && $attChatId) {
-                $counts = ['มา' => 0, 'ขาด' => 0, 'ลา' => 0, 'โดด' => 0, 'สาย' => 0];
-                $absentees = [];
-                foreach ($student_status as $sid => $status) {
-                    if (isset($counts[$status])) $counts[$status]++;
-                    if (in_array($status, ['ขาด', 'โดด', 'ลา', 'สาย'])) {
-                        $st = $pdo->prepare("SELECT name FROM att_students WHERE id = ?");
-                        $st->execute([$sid]);
-                        $absentees[] = "• " . $st->fetchColumn() . " ($status)";
-                    }
+            $counts = ['มา' => 0, 'ขาด' => 0, 'ลา' => 0, 'โดด' => 0, 'สาย' => 0];
+            $absentees = [];
+            foreach ($student_status as $sid => $status) {
+                if (isset($counts[$status])) $counts[$status]++;
+                if (in_array($status, ['ขาด', 'โดด', 'ลา', 'สาย'])) {
+                    $st = $pdo->prepare("SELECT name FROM att_students WHERE id = ?");
+                    $st->execute([$sid]);
+                    $sName = htmlspecialchars((string)$st->fetchColumn(), ENT_QUOTES, 'UTF-8');
+                    $absentees[] = "• {$sName} (" . htmlspecialchars($status, ENT_QUOTES, 'UTF-8') . ")";
                 }
+            }
 
-                $total = array_sum($counts);
-                $msg  = "✅ <b>เช็คชื่อแล้ว</b>\n";
-                $msg .= "📅 " . date('d/m/Y', strtotime($date)) . " | คาบที่ {$period}\n";
-                $msg .= "📘 " . htmlspecialchars($subject_info['subject_name']) . " (" . htmlspecialchars($subject_info['classroom']) . ")\n";
-                $msg .= "👤 " . htmlspecialchars($_SESSION['teacher_name'] ?? '') . "\n";
-                $msg .= "📊 มา {$counts['มา']} | ขาด {$counts['ขาด']} | ลา {$counts['ลา']} | โดด {$counts['โดด']} | สาย {$counts['สาย']} / {$total} คน";
+            $total = array_sum($counts);
+            $msg  = "✅ <b>เช็คชื่อแล้ว</b>\n";
+            $msg .= "📅 " . date('d/m/Y', strtotime($date)) . " | คาบที่ {$period}\n";
+            $msg .= "📘 " . htmlspecialchars($subject_info['subject_name']) . " (" . htmlspecialchars($subject_info['classroom']) . ")\n";
+            $msg .= "👤 " . htmlspecialchars($_SESSION['teacher_name'] ?? '') . "\n";
+            $msg .= "📊 มา {$counts['มา']} | ขาด {$counts['ขาด']} | ลา {$counts['ลา']} | โดด {$counts['โดด']} | สาย {$counts['สาย']} / {$total} คน";
 
-                if (!empty($absentees)) {
-                    $msg .= "\n\n<b>รายชื่อ:</b>\n" . implode("\n", $absentees);
-                }
+            if (!empty($absentees)) {
+                $msg .= "\n\n<b>รายชื่อ:</b>\n" . implode("\n", $absentees);
+            }
 
-                Telegram::init($attToken);
-                $tgResult = Telegram::sendMessage($msg, $attChatId);
-                if (!($tgResult['ok'] ?? false)) {
-                    error_log('[Attendance] Telegram failed: ' . ($tgResult['description'] ?? 'unknown'));
-                }
+            $tgResult = Telegram::sendAttendanceNotify($pdo, $msg, $customSubChat);
+            if (!($tgResult['ok'] ?? false)) {
+                error_log('[Attendance] Telegram failed: ' . ($tgResult['description'] ?? 'unknown'));
             }
         } catch (\Throwable $tgEx) {
             error_log('[Attendance] Telegram error: ' . $tgEx->getMessage());
