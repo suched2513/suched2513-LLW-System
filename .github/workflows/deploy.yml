@@ -179,8 +179,14 @@ jobs:
               $batch = (int)$pdo->query("SELECT COALESCE(MAX(batch), 0) + 1 FROM _migrations")->fetchColumn();
               $autoTargets = [
                   '2026_05_05_000001_create_hr_daily_attendance',
+                  '2026_05_09_000002_add_leave_chat_id_to_wfh_system_settings',
+                  '2026_05_09_000003_add_duty_chat_id_and_evening_shift',
+                  '2026_05_09_000004_add_duty_bot_token_to_settings',
+                  '2026_05_09_000005_add_att_chat_id_to_wfh_system_settings',
+                  '2026_05_09_000006_add_att_bot_token_to_wfh_system_settings',
                   '2026_10_20_233000_add_semester_support',
                   '2026_10_24_233000_system_stability_and_performance',
+                  '2026_10_25_000001_add_leave_bot_token_to_wfh_system_settings',
               ];
               foreach ($autoTargets as $mName) {
                   if (!in_array($mName, $executed, true)) {

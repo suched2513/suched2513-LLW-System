@@ -95,6 +95,65 @@ try {
     }
 
     $pdo->commit();
+
+    // 4. แจ้งเตือน Telegram เข้ากลุ่มเช็คชื่อนักเรียน (att_bot_token + att_chat_id)
+    try {
+        require_once __DIR__ . '/../../includes/telegram_bot.php';
+        $settings  = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
+        $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
+        $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
+
+        if ($attToken && $attChatId && is_array($attendance) && !empty($attendance)) {
+            $tcStmt = $pdo->prepare("
+                SELECT CONCAT(u.firstname, ' ', u.lastname)
+                FROM llw_class_advisors ca
+                JOIN llw_users u ON u.user_id = ca.user_id
+                WHERE ca.classroom = ?
+                ORDER BY u.firstname
+            ");
+            $tcStmt->execute([$classroom]);
+            $advisors    = $tcStmt->fetchAll(PDO::FETCH_COLUMN);
+            $teacherName = !empty($advisors) ? implode(' / ', $advisors) : ($_SESSION['fullname'] ?? '-');
+
+            $total      = count($attendance);
+            $present    = count(array_filter($attendance, fn($r) => ($r['status'] ?? 'มา') === 'มา'));
+            $absentList = array_filter($attendance, fn($r) => ($r['status'] ?? 'มา') !== 'มา');
+
+            $thDate = date('j', strtotime($log_date));
+            $monthNames = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                           'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+            $month = (int)date('n', strtotime($log_date));
+            $thDateStr = "$thDate {$monthNames[$month]} " . (date('Y', strtotime($log_date)) + 543);
+
+            $msg  = "🏫 <b>บันทึกกิจกรรมโฮมรูม & เช็คชื่อ</b>\n";
+            $msg .= "📅 วันที่: $thDateStr\n";
+            $msg .= "🏫 ห้อง: $classroom\n";
+            $msg .= "👩🏫 ครูที่ปรึกษา: $teacherName\n";
+            if ($topic !== '') {
+                $msg .= "📝 เรื่องที่แจ้ง: " . htmlspecialchars($topic, ENT_QUOTES, 'UTF-8') . "\n";
+            }
+            $msg .= "\n👥 นักเรียนทั้งหมด: $total คน\n";
+            $msg .= "✅ มาเรียน: $present คน\n";
+
+            if (count($absentList) > 0) {
+                $msg .= "❌ ไม่มา/สาย:\n";
+                foreach ($absentList as $a) {
+                    $name = trim($a['name'] ?? ($a['id'] ?? ''));
+                    $st   = $a['status'] ?? '';
+                    $msg .= "• $name ($st)\n";
+                }
+            } else {
+                $msg .= "🎉 นักเรียนมาครบทุกคน!\n";
+            }
+            $msg .= "\n🕒 บันทึกเวลา: " . date('H:i:s');
+
+            Telegram::init($attToken);
+            Telegram::sendMessage($msg, $attChatId);
+        }
+    } catch (\Throwable $tgErr) {
+        error_log('[homeroom/save_homeroom] Telegram error: ' . $tgErr->getMessage());
+    }
+
     echo json_encode(['status' => 'success', 'message' => 'บันทึกข้อมูลโฮมรูมเรียบร้อยแล้ว (ไม่กระทบยอดเช็คชื่อเข้าแถว)']);
 
 } catch (Throwable $e) {

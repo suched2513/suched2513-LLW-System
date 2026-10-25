@@ -111,7 +111,7 @@ try {
     // ── Smart Notifications (Telegram) ──
     $shouldNotify = ($type === 'ความดี' && $score >= 20) || ($type === 'ความผิด' && $score >= 10);
     if ($shouldNotify) {
-        $settings = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
+        $settings = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
         $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
         $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
         if ($attToken && $attChatId) {

@@ -6,6 +6,7 @@
 header('Content-Type: application/json; charset=utf-8');
 session_start();
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../includes/telegram_bot.php';
 
 if (!isset($_SESSION['llw_role'])) {
     http_response_code(401);
@@ -76,6 +77,60 @@ try {
             ':created_by' => $createdBy,
         ]);
         $count++;
+    }
+
+    // ── แจ้งเตือน Telegram เช็คชื่อกลับบ้าน (ใช้ att_bot_token + att_chat_id) ──
+    try {
+        $settings  = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
+        $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
+        $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
+
+        if ($attToken && $attChatId) {
+            $tcStmt = $pdo->prepare("
+                SELECT CONCAT(u.firstname, ' ', u.lastname)
+                FROM llw_class_advisors ca
+                JOIN llw_users u ON u.user_id = ca.user_id
+                WHERE ca.classroom = ?
+                ORDER BY u.firstname
+            ");
+            $tcStmt->execute([$classroom]);
+            $advisors    = $tcStmt->fetchAll(PDO::FETCH_COLUMN);
+            $teacherName = !empty($advisors) ? implode(' / ', $advisors) : '-';
+
+            $total      = count($records);
+            $present    = count(array_filter($records, fn($r) => ($r['status'] ?? 'มา') === 'มา'));
+            $absentList = array_filter($records, fn($r) => ($r['status'] ?? 'มา') !== 'มา');
+
+            $thDate = date('j', strtotime($date));
+            $monthNames = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                           'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+            $month = (int)date('n', strtotime($date));
+            $thDateStr = "$thDate {$monthNames[$month]} " . (date('Y', strtotime($date)) + 543);
+
+            $msg  = "🌇 <b>เช็คชื่อกลับบ้าน (ตอนเย็น)</b>\n";
+            $msg .= "📅 วันที่: $thDateStr\n";
+            $msg .= "🏫 ห้อง: $classroom\n";
+            $msg .= "👩🏫 ครูที่ปรึกษา: $teacherName\n\n";
+            $msg .= "👥 นักเรียนทั้งหมด: $total คน\n";
+            $msg .= "✅ อยู่ครบ: $present คน\n";
+
+            if (count($absentList) > 0) {
+                $msg .= "❌ ไม่อยู่/โดด:\n\n";
+                foreach ($absentList as $a) {
+                    $name = trim($a['name'] ?? ($a['student_id'] ?? ''));
+                    $st   = $a['status'] ?? '';
+                    $msg .= "• $name ($st)\n";
+                }
+            } else {
+                $msg .= "🎉 นักเรียนอยู่ครบทุกคน!\n";
+            }
+            $msg .= "\n🕒 บันทึกเวลา: " . date('H:i:s');
+
+            Telegram::init($attToken);
+            Telegram::sendMessage($msg, $attChatId);
+        }
+    } catch (\Throwable $tgErr) {
+        error_log('[Assembly] save_checkout Telegram error: ' . $tgErr->getMessage());
     }
 
     echo json_encode(['status' => 'success', 'saved' => $count]);

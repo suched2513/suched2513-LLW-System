@@ -678,8 +678,12 @@ async function saveAllAttendance() {
     Swal.close();
 
     if (res.status === 'success') {
-        await Swal.fire({ icon:'success', title:'บันทึกสำเร็จ!', text: res.message,
-                          timer:2000, showConfirmButton:false });
+        let subMsg = res.message;
+        if (res.telegram && res.telegram.sent === false && res.telegram.desc) {
+            subMsg += `\n(แจ้งเตือน Telegram ไม่สำเร็จ: ${res.telegram.desc})`;
+        }
+        await Swal.fire({ icon:'success', title:'บันทึกสำเร็จ!', text: subMsg,
+                          timer: res.telegram && res.telegram.sent === false ? 4000 : 2000, showConfirmButton:false });
         resetAttForm();
     } else {
         Swal.fire('ผิดพลาด', res.message, 'error');

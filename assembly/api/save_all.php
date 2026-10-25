@@ -113,23 +113,46 @@ try {
     }
 
     // ─── Telegram Notify ───────────────────────────────────────────
+    $tgDebug = null;
     try {
-        // ดึง Telegram config จาก wfh_system_settings
-        $settings = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
+        // ดึง Telegram config โดยใช้ SELECT * เพื่อไม่ให้พังหากบางคอลัมน์ยังไม่ได้ migrate
+        $settings  = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
         $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
         $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
+
         if ($attToken && $attChatId) {
-            $total   = count($records);
-            $present = count(array_filter($records, fn($r) => ($r['status'] ?? '') === 'ม'));
+            $total      = count($records);
+            $present    = count(array_filter($records, fn($r) => ($r['status'] ?? '') === 'ม'));
             $absentList = array_filter($records, fn($r) => ($r['status'] ?? 'ม') !== 'ม');
 
-            // ดึงชื่อนักเรียน
-            $studentIds = array_column($records, 'student_id');
-            if (empty($studentIds)) $studentIds = array_column($records, 'studentID');
-            $placeholders = implode(',', array_fill(0, count($studentIds), '?'));
-            $nameStmt = $pdo->prepare("SELECT student_id, name FROM assembly_students WHERE student_id IN ($placeholders)");
-            $nameStmt->execute($studentIds);
-            $nameMap = array_column($nameStmt->fetchAll(), 'name', 'student_id');
+            // ดึงชื่อนักเรียนจาก att_students (ตารางหลักเดียวกับ get_students.php) + fallback assembly_students
+            $studentIds = array_values(array_filter(array_map(
+                fn($r) => trim($r['student_id'] ?? $r['studentID'] ?? ''),
+                $records
+            )));
+            $nameMap = [];
+            if (!empty($studentIds)) {
+                $placeholders = implode(',', array_fill(0, count($studentIds), '?'));
+                try {
+                    $nameStmt = $pdo->prepare("SELECT student_id, name FROM att_students WHERE student_id IN ($placeholders)");
+                    $nameStmt->execute($studentIds);
+                    foreach ($nameStmt->fetchAll(PDO::FETCH_ASSOC) as $nr) {
+                        $nameMap[$nr['student_id']] = $nr['name'];
+                        $nameMap[str_pad($nr['student_id'], 5, '0', STR_PAD_LEFT)] = $nr['name'];
+                    }
+                } catch (\Throwable $ignore) {}
+
+                if (empty($nameMap)) {
+                    try {
+                        $nameStmt = $pdo->prepare("SELECT student_id, name FROM assembly_students WHERE student_id IN ($placeholders)");
+                        $nameStmt->execute($studentIds);
+                        foreach ($nameStmt->fetchAll(PDO::FETCH_ASSOC) as $nr) {
+                            $nameMap[$nr['student_id']] = $nr['name'];
+                            $nameMap[str_pad($nr['student_id'], 5, '0', STR_PAD_LEFT)] = $nr['name'];
+                        }
+                    } catch (\Throwable $ignore) {}
+                }
+            }
 
             $thDate = date('j', strtotime($date));
             $monthNames = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
@@ -137,7 +160,8 @@ try {
             $month = (int)date('n', strtotime($date));
             $thDateStr = "$thDate {$monthNames[$month]} " . (date('Y', strtotime($date)) + 543);
 
-            $msg  = "📅 วันที่: $thDateStr\n";
+            $msg  = "🌅 <b>เช็คชื่อเข้าแถวเช้า</b>\n";
+            $msg .= "📅 วันที่: $thDateStr\n";
             $msg .= "🏫 ห้อง: $classroom\n";
             $msg .= "👩🏫 ครูที่ปรึกษา: $teacherName\n\n";
             $msg .= "👥 นักเรียนทั้งหมด: $total คน\n";
@@ -146,8 +170,9 @@ try {
             if (count($absentList) > 0) {
                 $msg .= "❌ ไม่มาเข้าแถว:\n\n";
                 foreach ($absentList as $a) {
-                    $sid  = $a['student_id'] ?? $a['studentID'] ?? '';
-                    $name = $nameMap[$sid] ?? $sid;
+                    $sid  = trim($a['student_id'] ?? $a['studentID'] ?? '');
+                    $padSid = preg_match('/^\d+$/', $sid) ? str_pad($sid, 5, '0', STR_PAD_LEFT) : $sid;
+                    $name = $nameMap[$sid] ?? ($nameMap[$padSid] ?? $sid);
                     $statusText = match($a['status'] ?? '') {
                         'ข' => 'ขาด', 'ล' => 'ลา', 'ด' => 'โดด', default => $a['status']
                     };
@@ -159,17 +184,28 @@ try {
             $msg .= "\n🕒 บันทึกเวลา: " . date('H:i:s');
 
             Telegram::init($attToken);
-            Telegram::sendMessage($msg, $attChatId);
+            $tgRes = Telegram::sendMessage($msg, $attChatId);
+            $tgDebug = [
+                'sent' => (bool)($tgRes['ok'] ?? false),
+                'desc' => $tgRes['description'] ?? null,
+            ];
+            if (!($tgRes['ok'] ?? false)) {
+                error_log('[Assembly] Telegram send failed: ' . ($tgRes['description'] ?? 'unknown'));
+            }
+        } else {
+            $tgDebug = ['sent' => false, 'desc' => 'Token or Chat ID is empty'];
         }
-    } catch (Exception $tgErr) {
+    } catch (\Throwable $tgErr) {
+        $tgDebug = ['sent' => false, 'desc' => $tgErr->getMessage()];
         error_log('[Assembly] Telegram error: ' . $tgErr->getMessage());
     }
 
     echo json_encode([
-        'status'  => 'success',
-        'message' => "เพิ่มใหม่ $added รายการ, อัพเดต $updated รายการ",
-        'added'   => $added,
-        'updated' => $updated,
+        'status'   => 'success',
+        'message'  => "เพิ่มใหม่ $added รายการ, อัพเดต $updated รายการ",
+        'added'    => $added,
+        'updated'  => $updated,
+        'telegram' => $tgDebug,
     ]);
 } catch (Exception $e) {
     error_log('[Assembly] save_all: ' . $e->getMessage());

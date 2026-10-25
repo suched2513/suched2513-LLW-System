@@ -74,7 +74,7 @@ try {
 
     // Send Telegram Notification
     try {
-        $set = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
+        $set = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
         $attToken  = !empty($set['att_bot_token']) ? $set['att_bot_token'] : ($set['telegram_token'] ?? '');
         $attChatId = !empty($set['att_chat_id'])   ? $set['att_chat_id']   : ($set['admin_chat_id'] ?? '');
         if ($attToken && $attChatId) {
