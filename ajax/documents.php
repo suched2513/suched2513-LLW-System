@@ -276,13 +276,19 @@ function handleSendTelegram(PDO $pdo): void {
     $text .= 'เรื่อง: ' . htmlspecialchars($doc['subject'], ENT_QUOTES, 'UTF-8') . "\n";
     $text .= 'แจ้งโดย: ' . htmlspecialchars($_SESSION['firstname'] ?? 'ระบบ', ENT_QUOTES, 'UTF-8');
 
-    if (!defined('TELEGRAM_TOKEN') || !defined('TELEGRAM_CHAT_ID')) {
-        throw new Exception('ไม่ได้ตั้งค่า Telegram Token/ChatID');
+    $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
+    $tgSet   = $stmtSet ? $stmtSet->fetch(PDO::FETCH_ASSOC) : [];
+    $tgToken = $tgSet['telegram_token'] ?? '';
+    $tgChat  = $tgSet['admin_chat_id']  ?? '';
+
+    if (empty($tgToken) || empty($tgChat)) {
+        throw new Exception('ไม่ได้ตั้งค่า Telegram Token/ChatID ในระบบ');
     }
 
-    $bot = new TelegramBot(TELEGRAM_TOKEN, TELEGRAM_CHAT_ID);
-    if (!$bot->sendMessage($text)) {
-        throw new Exception('ไม่สามารถส่ง Telegram ได้');
+    Telegram::init($tgToken);
+    $res = Telegram::sendMessage($text, $tgChat);
+    if (!($res['ok'] ?? false)) {
+        throw new Exception('ไม่สามารถส่ง Telegram ได้: ' . ($res['description'] ?? ''));
     }
 
     echo json_encode(['success' => true, 'message' => 'ส่งแจ้งเตือน Telegram เรียบร้อยแล้ว']);

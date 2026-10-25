@@ -68,10 +68,12 @@ try {
     
     // ดึง settings จาก wfh_system_settings
     try {
-        $sStmt = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
+        $sStmt = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1");
         $settings = $sStmt->fetch();
+        $tgToken  = !empty($settings['leave_bot_token']) ? $settings['leave_bot_token'] : ($settings['telegram_token'] ?? '');
+        $tgChatId = !empty($settings['leave_chat_id'])   ? $settings['leave_chat_id']   : ($settings['admin_chat_id']  ?? '');
         
-        if ($settings && $settings['telegram_token'] && $settings['admin_chat_id']) {
+        if ($tgToken && $tgChatId) {
             $msg  = "🔔 <b>มีคำขอออกนอกบริเวณใหม่</b>\n";
             $msg .= "👤 ผู้ขอ: " . $teacher_name . "\n";
             $msg .= "📝 เหตุผล: " . ($input['reason'] ?? '') . " (" . ($input['reason_type'] ?? '') . ")\n";
@@ -82,7 +84,8 @@ try {
             }
             $msg .= "🔗 กรุณาตรวจสอบในระบบ LLW";
 
-            sendTelegramMessage($settings['telegram_token'], $settings['admin_chat_id'], $msg);
+            Telegram::init($tgToken);
+            Telegram::sendMessage($msg, $tgChatId);
         }
     } catch (Exception $e) {
         // ไม่ให้ Telegram error หยุดระบบ

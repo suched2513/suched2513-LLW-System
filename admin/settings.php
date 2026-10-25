@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once '../config.php';
 
@@ -13,12 +13,46 @@ $msg = '';
 try {
     $pdo = getPdo();
     $existingCols = $pdo->query("SHOW COLUMNS FROM wfh_system_settings")->fetchAll(PDO::FETCH_COLUMN);
-    if (!in_array('leave_chat_id',  $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN leave_chat_id VARCHAR(100) NULL AFTER admin_chat_id");
-    if (!in_array('att_chat_id',    $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_chat_id VARCHAR(100) NULL AFTER leave_chat_id");
-    if (!in_array('att_bot_token',  $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_bot_token VARCHAR(200) NULL AFTER att_chat_id");
-    if (!in_array('duty_chat_id',   $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN duty_chat_id VARCHAR(100) NULL AFTER att_bot_token");
-    if (!in_array('duty_bot_token', $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN duty_bot_token VARCHAR(200) NULL AFTER duty_chat_id");
+    if (!in_array('leave_chat_id',   $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN leave_chat_id VARCHAR(100) NULL AFTER admin_chat_id");
+    if (!in_array('leave_bot_token', $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN leave_bot_token VARCHAR(200) NULL AFTER leave_chat_id");
+    if (!in_array('att_chat_id',     $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_chat_id VARCHAR(100) NULL AFTER leave_bot_token");
+    if (!in_array('att_bot_token',   $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_bot_token VARCHAR(200) NULL AFTER att_chat_id");
+    if (!in_array('duty_chat_id',    $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN duty_chat_id VARCHAR(100) NULL AFTER att_bot_token");
+    if (!in_array('duty_bot_token',  $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN duty_bot_token VARCHAR(200) NULL AFTER duty_chat_id");
 } catch (Exception $e) { error_log('settings auto-migrate: ' . $e->getMessage()); }
+
+// AJAX: ทดสอบบอทการลา (ใช้ leave_bot_token หรือ fallback telegram_token)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_leave_telegram') {
+    header('Content-Type: application/json; charset=utf-8');
+    require_once '../includes/telegram_bot.php';
+    $token   = trim($_POST['token'] ?? '');
+    $chat_id = trim($_POST['chat_id'] ?? '');
+    if (!$token || !$chat_id) {
+        echo json_encode(['ok' => false, 'message' => 'กรุณากรอก Bot Token และ Chat ID ของกลุ่มการลาก่อน']);
+        exit;
+    }
+    Telegram::init($token);
+    $res = Telegram::sendMessage("📝 <b>ทดสอบบอทแจ้งเตือนการลา & ขออนุญาตออกนอกบริเวณ</b>\nโรงเรียนละลมวิทยา พร้อมใช้งานแล้ว!", $chat_id);
+    if ($res['ok'] ?? false) {
+        echo json_encode(['ok' => true, 'message' => 'ส่งสำเร็จ! ตรวจสอบในกลุ่มการลาได้เลย']);
+    } else {
+        $desc = $res['description'] ?? '';
+        $known = [
+            'chat not found'      => 'ไม่พบกลุ่ม — ตรวจสอบ Chat ID และต้องเพิ่มบอทเข้ากลุ่มก่อน',
+            'bot was kicked'      => 'บอทถูกเตะออกจากกลุ่ม — เพิ่มบอทเข้ากลุ่มใหม่',
+            'bot is not a member' => 'บอทยังไม่ได้เข้ากลุ่ม — เพิ่มบอทเข้ากลุ่มก่อน',
+            'Unauthorized'        => 'Bot Token ไม่ถูกต้อง — ตรวจสอบ Token อีกครั้ง',
+            'not enough rights'   => 'บอทไม่มีสิทธิ์ส่งข้อความในกลุ่มนี้',
+        ];
+        $errMsg = 'ส่งไม่สำเร็จ';
+        foreach ($known as $en => $th) {
+            if (stripos($desc, $en) !== false) { $errMsg = $th; break; }
+        }
+        if ($errMsg === 'ส่งไม่สำเร็จ' && $desc) $errMsg .= ": {$desc}";
+        echo json_encode(['ok' => false, 'message' => $errMsg]);
+    }
+    exit;
+}
 
 // AJAX: ทดสอบบอทเช็คชื่อ
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_att_telegram') {
@@ -127,12 +161,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tg_token        = trim($_POST['telegram_token']);
         $tg_chat_id      = trim($_POST['admin_chat_id']);
         $tg_leave_chat   = trim($_POST['leave_chat_id']);
+        $tg_leave_token  = trim($_POST['leave_bot_token'] ?? '');
         $tg_att_chat     = trim($_POST['att_chat_id']);
         $tg_att_token    = trim($_POST['att_bot_token']);
         $tg_duty_chat    = trim($_POST['duty_chat_id']);
         $tg_duty_token   = trim($_POST['duty_bot_token']);
-        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=?, leave_chat_id=?, att_chat_id=?, att_bot_token=?, duty_chat_id=?, duty_bot_token=? WHERE setting_id=1");
-        $stmt->bind_param('sssssss', $tg_token, $tg_chat_id, $tg_leave_chat, $tg_att_chat, $tg_att_token, $tg_duty_chat, $tg_duty_token);
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=?, leave_chat_id=?, leave_bot_token=?, att_chat_id=?, att_bot_token=?, duty_chat_id=?, duty_bot_token=? WHERE setting_id=1");
+        $stmt->bind_param('ssssssss', $tg_token, $tg_chat_id, $tg_leave_chat, $tg_leave_token, $tg_att_chat, $tg_att_token, $tg_duty_chat, $tg_duty_token);
         $stmt->execute();
         $stmt->close();
         $msg = 'บันทึกการตั้งค่า Telegram เรียบร้อย';
@@ -347,14 +382,24 @@ require_once __DIR__ . '/../components/layout_start.php';
             <!-- Chat ID group 2: การลา -->
             <div class="bg-rose-50/50 rounded-2xl p-5 border border-rose-100 space-y-3">
                 <p class="text-xs font-black text-rose-700 uppercase tracking-widest flex items-center gap-2">
-                    <i class="bi bi-calendar-x"></i> กลุ่มแจ้งเตือนการลา
+                    <i class="bi bi-calendar-x"></i> กลุ่มแจ้งเตือนการลา & ขออนุญาตออกนอกบริเวณ
                 </p>
+                <p class="text-xs text-rose-500 font-bold -mt-1">กรอก Bot Token เฉพาะของบอทการลา (หากเว้นว่างจะใช้ Bot Token หลักด้านบนอัตโนมัติ)</p>
+                <div class="relative">
+                    <input type="password" name="leave_bot_token" id="inp-leave-token"
+                        value="<?= htmlspecialchars($settings['leave_bot_token'] ?? '') ?>"
+                        placeholder="Bot Token ของบอทการลา (หรือเว้นว่างเพื่อใช้ Token หลัก)"
+                        class="w-full bg-white border border-rose-200 rounded-2xl px-4 py-3 pr-12 text-sm focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 outline-none transition-all font-mono">
+                    <button type="button" onclick="toggleLeaveToken()" class="absolute right-4 top-1/2 -translate-y-1/2 text-rose-300 hover:text-rose-500 transition-all">
+                        <i class="bi bi-eye-fill" id="eye-leave-icon"></i>
+                    </button>
+                </div>
                 <input type="text" name="leave_chat_id" id="inp-leave-chat"
                     value="<?= htmlspecialchars($settings['leave_chat_id'] ?? '') ?>"
-                    placeholder="เช่น -4987654321"
+                    placeholder="Chat ID กลุ่มแจ้งอนุญาตลา เช่น -4987654321"
                     class="w-full bg-white border border-rose-200 rounded-2xl px-4 py-3 text-sm focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 outline-none transition-all font-bold">
-                <p class="text-xs text-rose-600/70 font-bold">รับแจ้งเตือนเมื่อ: ครูยื่นขอลา / ขออนุญาตมาสาย</p>
-                <button type="button" onclick="testTelegram('inp-leave-chat','tg-result-leave')"
+                <p class="text-xs text-rose-600/70 font-bold">รับแจ้งเตือนเมื่อ: ครูยื่นใบลา / อนุมัติใบลา / ขออนุญาตออกนอกบริเวณ</p>
+                <button type="button" onclick="testLeaveTelegram()"
                     class="w-full bg-white hover:bg-rose-50 text-rose-600 font-black py-2.5 rounded-xl border border-rose-200 transition-all text-sm flex items-center justify-center gap-2">
                     <i class="bi bi-send-fill"></i> ทดสอบกลุ่มการลา
                 </button>
@@ -607,6 +652,65 @@ require_once __DIR__ . '/../components/layout_start.php';
 </div>
 
 <script>
+// Toggle Leave Bot Token visibility
+function toggleLeaveToken() {
+    const inp  = document.getElementById('inp-leave-token');
+    const icon = document.getElementById('eye-leave-icon');
+    if (inp.type === 'password') {
+        inp.type = 'text';
+        icon.className = 'bi bi-eye-slash-fill';
+    } else {
+        inp.type = 'password';
+        icon.className = 'bi bi-eye-fill';
+    }
+}
+
+// ทดสอบบอทการลา (ใช้ leave_bot_token หรือ fallback ไป inp-tg-token)
+function testLeaveTelegram() {
+    const result = document.getElementById('tg-result-leave');
+    const leaveToken = document.getElementById('inp-leave-token').value.trim();
+    const mainToken  = document.getElementById('inp-tg-token').value.trim();
+    const token      = leaveToken || mainToken;
+    const leaveChat  = document.getElementById('inp-leave-chat').value.trim();
+    const mainChat   = document.getElementById('inp-tg-chat').value.trim();
+    const chatId     = leaveChat || mainChat;
+    const btn        = event.currentTarget;
+
+    if (!token || !chatId) {
+        result.className = 'p-3 rounded-xl text-sm font-bold bg-amber-50 text-amber-700 border border-amber-100';
+        result.textContent = 'กรุณากรอก Bot Token และ Chat ID ของกลุ่มการลาก่อน';
+        result.classList.remove('hidden');
+        return;
+    }
+
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> กำลังส่ง...';
+    btn.disabled = true;
+
+    const fd = new FormData();
+    fd.append('action', 'test_leave_telegram');
+    fd.append('token', token);
+    fd.append('chat_id', chatId);
+
+    fetch('settings.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            result.className = 'p-3 rounded-xl text-sm font-bold border ' +
+                (data.ok ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100');
+            result.innerHTML = (data.ok ? '<i class="bi bi-check-circle-fill me-2"></i>' : '<i class="bi bi-x-circle-fill me-2"></i>') + data.message;
+            result.classList.remove('hidden');
+        })
+        .catch(() => {
+            result.className = 'p-3 rounded-xl text-sm font-bold bg-rose-50 text-rose-600 border border-rose-100';
+            result.textContent = 'เกิดข้อผิดพลาด ไม่สามารถเชื่อมต่อได้';
+            result.classList.remove('hidden');
+        })
+        .finally(() => {
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+        });
+}
+
 // Toggle Att Bot Token visibility
 function toggleAttToken() {
     const inp  = document.getElementById('inp-att-token');

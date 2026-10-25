@@ -26,9 +26,9 @@ if (!$isCli) {
 $pdo = getPdo();
 
 // ── อ่าน settings ──
-$stmtS = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
+$stmtS = $pdo->query("SELECT telegram_token, admin_chat_id, duty_bot_token FROM wfh_system_settings LIMIT 1");
 $sys = $stmtS->fetch(PDO::FETCH_ASSOC);
-$botToken = $sys['telegram_token'] ?? '';
+$botToken = !empty($sys['duty_bot_token']) ? $sys['duty_bot_token'] : ($sys['telegram_token'] ?? '');
 
 if (empty($botToken)) {
     die("❌ ยังไม่ได้ตั้งค่า telegram_token ใน wfh_system_settings\n");

@@ -115,8 +115,10 @@ try {
     // ─── Telegram Notify ───────────────────────────────────────────
     try {
         // ดึง Telegram config จาก wfh_system_settings
-        $settings = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
-        if ($settings && $settings['telegram_token'] && $settings['admin_chat_id']) {
+        $settings = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
+        $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
+        $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
+        if ($attToken && $attChatId) {
             $total   = count($records);
             $present = count(array_filter($records, fn($r) => ($r['status'] ?? '') === 'ม'));
             $absentList = array_filter($records, fn($r) => ($r['status'] ?? 'ม') !== 'ม');
@@ -156,8 +158,8 @@ try {
             }
             $msg .= "\n🕒 บันทึกเวลา: " . date('H:i:s');
 
-            $bot = new TelegramBot($settings['telegram_token'], $settings['admin_chat_id']);
-            $bot->sendMessage($msg);
+            Telegram::init($attToken);
+            Telegram::sendMessage($msg, $attChatId);
         }
     } catch (Exception $tgErr) {
         error_log('[Assembly] Telegram error: ' . $tgErr->getMessage());

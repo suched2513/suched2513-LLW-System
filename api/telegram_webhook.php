@@ -22,12 +22,12 @@ if (!empty($webhookSecret)) {
     }
 }
 
-// ── อ่าน Telegram Bot Token ──
-$stmtTok = $pdo->prepare("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
+// ── อ่าน Telegram Bot Token (ใช้ duty_bot_token ก่อน ถ้าไม่มีค่อยใช้ telegram_token) ──
+$stmtTok = $pdo->prepare("SELECT telegram_token, admin_chat_id, duty_bot_token, duty_chat_id FROM wfh_system_settings LIMIT 1");
 $stmtTok->execute();
 $sysSettings = $stmtTok->fetch(PDO::FETCH_ASSOC);
-$botToken    = $sysSettings['telegram_token'] ?? '';
-$adminChatId = $sysSettings['admin_chat_id']  ?? '';
+$botToken    = !empty($sysSettings['duty_bot_token']) ? $sysSettings['duty_bot_token'] : ($sysSettings['telegram_token'] ?? '');
+$adminChatId = !empty($sysSettings['duty_chat_id'])   ? $sysSettings['duty_chat_id']   : ($sysSettings['admin_chat_id']  ?? '');
 
 if (empty($botToken)) {
     http_response_code(500);

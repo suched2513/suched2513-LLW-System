@@ -123,14 +123,18 @@ if (isset($requestId) && isset($status)) {
         $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
         $config  = $stmtSet ? $stmtSet->fetch() : null;
 
-        $leaveChatId = '';
+        $leaveChatId   = '';
+        $leaveBotToken = '';
         try {
-            $lcs = $pdo->query("SELECT leave_chat_id FROM wfh_system_settings LIMIT 1");
-            if ($lcs) $leaveChatId = (string)($lcs->fetchColumn() ?? '');
+            $lcs = $pdo->query("SELECT leave_chat_id, leave_bot_token FROM wfh_system_settings LIMIT 1");
+            if ($lcs && ($lRow = $lcs->fetch(PDO::FETCH_ASSOC))) {
+                $leaveChatId   = (string)($lRow['leave_chat_id'] ?? '');
+                $leaveBotToken = (string)($lRow['leave_bot_token'] ?? '');
+            }
         } catch (\Throwable $ignore) {}
 
-        $tgToken  = $config['telegram_token'] ?? '';
-        $tgChatId = !empty($leaveChatId) ? $leaveChatId : ($config['admin_chat_id'] ?? '');
+        $tgToken  = !empty($leaveBotToken) ? $leaveBotToken : ($config['telegram_token'] ?? '');
+        $tgChatId = !empty($leaveChatId)   ? $leaveChatId   : ($config['admin_chat_id']  ?? '');
 
         if ($config && !empty($tgToken) && !empty($tgChatId)) {
             $stmtInfo = $pdo->prepare("SELECT u.firstname, u.lastname, r.leave_type FROM tl_requests r JOIN llw_users u ON r.user_id = u.user_id WHERE r.id = ?");

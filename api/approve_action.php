@@ -51,10 +51,11 @@ try {
     // ส่ง Telegram แจ้งผู้ขอ
     if ($request) {
         try {
-            $sStmt = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
+            $sStmt = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1");
             $settings = $sStmt->fetch();
+            $tgToken  = !empty($settings['leave_bot_token']) ? $settings['leave_bot_token'] : ($settings['telegram_token'] ?? '');
 
-            if ($settings && $settings['telegram_token']) {
+            if ($settings && $tgToken) {
                 // แจ้งผู้ขอ (ถ้ามี chat_id)
                 if (!empty($request['telegram_chat_id'])) {
                     if ($status == 1) {
@@ -64,7 +65,7 @@ try {
                     }
                     $msg .= "📝 เหตุผล: " . $request['reason'] . "\n";
                     $msg .= "⏰ เวลา: " . $request['time_start'] . " - " . $request['time_end'];
-                    sendTelegramMessage($settings['telegram_token'], $request['telegram_chat_id'], $msg);
+                    sendTelegramMessage($tgToken, $request['telegram_chat_id'], $msg);
                 }
 
                 // แจ้งครูสอนแทน (กรณีอนุมัติและมีคาบการสอน)
@@ -87,7 +88,7 @@ try {
                             $msg_sub .= "👤 " . $request['t_name'] . " ฝากสอนแทน\n";
                             $msg_sub .= "🗓 คาบที่: " . $sub['period'] . " วิชา: " . $sub['subject'] . "\n";
                             $msg_sub .= "📍 ชั้น: " . $sub['class_level'];
-                            sendTelegramMessage($settings['telegram_token'], $sub['sub_telegram'], $msg_sub);
+                            sendTelegramMessage($tgToken, $sub['sub_telegram'], $msg_sub);
                         }
                     }
                 }

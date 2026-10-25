@@ -74,8 +74,10 @@ try {
 
     // Send Telegram Notification
     try {
-        $set = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
-        if (is_array($set) && !empty($set['telegram_token']) && !empty($set['admin_chat_id'])) {
+        $set = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
+        $attToken  = !empty($set['att_bot_token']) ? $set['att_bot_token'] : ($set['telegram_token'] ?? '');
+        $attChatId = !empty($set['att_chat_id'])   ? $set['att_chat_id']   : ($set['admin_chat_id'] ?? '');
+        if ($attToken && $attChatId) {
             $msg = "📢 <b>มีบันทึกความดีใหม่รอยืนยัน</b>\n";
             $msg .= "---------------------------\n";
             $msg .= "👤 <b>นักเรียน:</b> " . $student['name'] . " (ม." . $level . "/" . $room . ")\n";
@@ -84,7 +86,8 @@ try {
             $msg .= "---------------------------\n";
             $msg .= "🔗 <a href='https://llw.krusuched.com/behavior/dashboard.php'>เข้าสู่ระบบเพื่อตรวจสอบ</a>";
             
-            sendTelegramMessage($set['telegram_token'], $set['admin_chat_id'], $msg);
+            Telegram::init($attToken);
+            Telegram::sendMessage($msg, $attChatId);
         }
     } catch (Exception $e) {
         error_log('[behavior] telegram notify error: ' . $e->getMessage());

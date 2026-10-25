@@ -116,19 +116,22 @@ try {
 
     // ─── 8. ส่งแจ้งเตือน Telegram ───
     try {
-        // ดึง admin_chat_id ก่อน (มีอยู่แน่) แล้วค่อย leave_chat_id แยก
+        // ดึง admin_chat_id ก่อน (มีอยู่แน่) แล้วค่อย leave_chat_id + leave_bot_token แยก
         $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
         $config  = $stmtSet ? $stmtSet->fetch() : null;
 
-        // leave_chat_id อาจยังไม่มี column (migration ยังไม่รัน) — ดึงแยก
-        $leaveChatId = '';
+        $leaveChatId   = '';
+        $leaveBotToken = '';
         try {
-            $lcs = $pdo->query("SELECT leave_chat_id FROM wfh_system_settings LIMIT 1");
-            if ($lcs) $leaveChatId = (string)($lcs->fetchColumn() ?? '');
+            $lcs = $pdo->query("SELECT leave_chat_id, leave_bot_token FROM wfh_system_settings LIMIT 1");
+            if ($lcs && ($lRow = $lcs->fetch(PDO::FETCH_ASSOC))) {
+                $leaveChatId   = (string)($lRow['leave_chat_id'] ?? '');
+                $leaveBotToken = (string)($lRow['leave_bot_token'] ?? '');
+            }
         } catch (\Throwable $ignore) {}
 
-        $tgToken  = $config['telegram_token'] ?? '';
-        $tgChatId = !empty($leaveChatId) ? $leaveChatId : ($config['admin_chat_id'] ?? '');
+        $tgToken  = !empty($leaveBotToken) ? $leaveBotToken : ($config['telegram_token'] ?? '');
+        $tgChatId = !empty($leaveChatId)   ? $leaveChatId   : ($config['admin_chat_id']  ?? '');
 
         if ($config && !empty($tgToken) && !empty($tgChatId)) {
             $typeMap  = ['sick' => 'ลาป่วย', 'personal' => 'ลากิจส่วนตัว', 'vacation' => 'ลาพักผ่อน', 'maternity' => 'ลาคลอดบุตร', 'other' => 'ลาอื่นๆ'];

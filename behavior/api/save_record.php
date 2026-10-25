@@ -111,8 +111,10 @@ try {
     // ── Smart Notifications (Telegram) ──
     $shouldNotify = ($type === 'ความดี' && $score >= 20) || ($type === 'ความผิด' && $score >= 10);
     if ($shouldNotify) {
-        $settings = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
-        if (is_array($settings) && !empty($settings['telegram_token']) && !empty($settings['admin_chat_id'])) {
+        $settings = $pdo->query("SELECT telegram_token, admin_chat_id, att_bot_token, att_chat_id FROM wfh_system_settings LIMIT 1")->fetch();
+        $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
+        $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
+        if ($attToken && $attChatId) {
             $icon = ($type === 'ความดี') ? '🌟' : '🛑';
             $msg = "$icon <b>สรุปบันทึกพฤติกรรม</b>\n";
             $msg .= "👤 นักเรียน: $studentName ($studentId)\n";
@@ -122,7 +124,8 @@ try {
             $msg .= "👨‍🏫 ผู้บันทึก: $teacher\n";
             $msg .= "📅 วันที่: " . date('d/m/Y', strtotime($date));
             
-            sendTelegramMessage($settings['telegram_token'], $settings['admin_chat_id'], $msg);
+            Telegram::init($attToken);
+            Telegram::sendMessage($msg, $attChatId);
         }
     }
 

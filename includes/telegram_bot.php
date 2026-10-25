@@ -9,28 +9,14 @@
  *  - Telegram               — class ใหม่ พร้อม static methods ทั้งหมด
  */
 
-// ─── Backward-compatible function ──────────────────────────────────────
+// ─── Backward-compatible function (ใช้ cURL ผ่าน Telegram class เพื่อความเสถียร) ───
 function sendTelegramMessage(string $token, string $chatId, string $message): bool
 {
     if (empty($token) || empty($chatId)) return false;
 
-    $url  = "https://api.telegram.org/bot{$token}/sendMessage";
-    $data = [
-        'chat_id'    => $chatId,
-        'text'       => $message,
-        'parse_mode' => 'HTML',
-    ];
-    $opts = [
-        'http' => [
-            'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
-            'method'  => 'POST',
-            'content' => http_build_query($data),
-            'timeout' => 5,
-        ],
-    ];
-    $ctx = stream_context_create($opts);
-    $result = @file_get_contents($url, false, $ctx);
-    return $result !== false;
+    Telegram::init($token, $chatId);
+    $res = Telegram::sendMessage($message, $chatId);
+    return (bool)($res['ok'] ?? false);
 }
 
 // ─── Backward-compatible TelegramBot class ─────────────────────────────

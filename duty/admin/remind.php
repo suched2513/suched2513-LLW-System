@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * duty/admin/remind.php — ส่งการเตือนครูด้วยตนเอง
  * รองรับ ?report_id=X หรือ ?schedule_id=X
@@ -13,9 +13,10 @@ if (($_SESSION['llw_role'] ?? '') !== 'super_admin') {
 
 $pdo = getPdo();
 
-// ดึง bot token
-$stmtT = $pdo->query("SELECT telegram_token FROM wfh_system_settings LIMIT 1");
-$botToken = (string)($stmtT->fetchColumn() ?? '');
+// ดึง bot token (ใช้ duty_bot_token ก่อน)
+$stmtT = $pdo->query("SELECT duty_bot_token, telegram_token FROM wfh_system_settings LIMIT 1");
+$sysT  = $stmtT ? $stmtT->fetch(PDO::FETCH_ASSOC) : [];
+$botToken = !empty($sysT['duty_bot_token']) ? $sysT['duty_bot_token'] : (string)($sysT['telegram_token'] ?? '');
 Telegram::init($botToken);
 
 $reportId   = (int)($_GET['report_id']   ?? 0);
