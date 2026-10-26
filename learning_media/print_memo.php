@@ -118,7 +118,7 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
-            margin-top: 30px;
+            margin-top: 24px;
             page-break-inside: avoid;
         }
         .sign-box {
@@ -137,6 +137,38 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
             vertical-align: top;
             font-size: 13.5pt;
         }
+        .sig-display-box {
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: -10px;
+        }
+        .sig-display-box img {
+            max-height: 50px;
+            max-width: 180px;
+            object-fit: contain;
+        }
+        .btn-sig {
+            background: #0284c7;
+            color: #fff;
+            border: none;
+            padding: 3px 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-sig-clear {
+            background: #fee2e2;
+            color: #ef4444;
+            border: 1px solid #fca5a5;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
         .no-print-bar {
             position: fixed;
             top: 0;
@@ -151,10 +183,50 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
             z-index: 9999;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
+
+        /* ── Signature Modal ── */
+        .sig-modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        .sig-modal-dialog {
+            background: #fff;
+            border-radius: 16px;
+            width: 480px;
+            max-width: 95vw;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .sig-modal-header {
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: #fff;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 800;
+            font-size: 14px;
+        }
+        .sig-canvas-wrap {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            background: #f8fafc;
+            display: inline-block;
+            cursor: crosshair;
+            margin: 10px 0;
+            touch-action: none;
+        }
+
         @media print {
             body { background: #fff; padding: 0; }
             .page { width: 100%; min-height: auto; box-shadow: none; margin: 0; padding: 15mm 15mm 15mm 20mm; }
-            .no-print-bar { display: none !important; }
+            .no-print-bar, .no-print, .sig-modal-backdrop { display: none !important; }
             @page { size: A4 portrait; margin: 0; }
         }
     </style>
@@ -178,25 +250,27 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
 <div class="page" style="margin-top:40px;">
     <!-- ตราครุฑ -->
     <div class="header-krut">
-        <img class="krut-img" src="https://upload.wikimedia.org/wikipedia/commons/8/8f/Emblem_of_Thailand.svg" alt="ตราครุฑ">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Garuda_Emblem_of_Thailand.svg/180px-Garuda_Emblem_of_Thailand.svg.png" 
+             alt="ตราครุฑ" class="krut-img" onerror="this.style.display='none'">
     </div>
+
     <div class="memo-title">บันทึกข้อความ</div>
 
     <table class="memo-meta">
         <tr>
-            <td style="width:55%;">
+            <td style="width: 60%;">
                 <span class="meta-label">ส่วนราชการ</span> โรงเรียนละลมวิทยา สพม.ศรีสะเกษ ยโสธร
             </td>
-            <td style="width:45%;text-align:right;">
-                <span class="meta-label">กลุ่มสาระฯ</span> <?= htmlspecialchars($media['subject']) ?>
+            <td style="width: 40%; text-align: right;">
+                <span class="meta-label">ที่</span> ....................................................
             </td>
         </tr>
         <tr>
             <td>
-                <span class="meta-label">ที่</span> ศธ ....................................
-            </td>
-            <td style="text-align:right;">
                 <span class="meta-label">วันที่</span> <?= thaiDateFull($media['media_date']) ?>
+            </td>
+            <td style="text-align: right;">
+                &nbsp;
             </td>
         </tr>
         <tr>
@@ -242,9 +316,19 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
     <div class="sign-grid">
         <div></div>
         <div class="sign-box">
-            ลงชื่อ..........................................................ผู้จัดทำ/รายงาน<br>
-            ( <?= htmlspecialchars($media['author']) ?> )<br>
-            ตำแหน่ง ครู โรงเรียนละลมวิทยา
+            <div id="memo-sig-display" class="sig-display-box"></div>
+            <div>ลงชื่อ..........................................................</div>
+            <div style="font-weight: bold; margin-top: 2px;">( <?= htmlspecialchars($media['author']) ?> )</div>
+            <div>ตำแหน่ง ครู โรงเรียนละลมวิทยา</div>
+            <div>ครูผู้จัดทำและรายงาน</div>
+            <div class="no-print" style="margin-top: 6px;">
+                <button type="button" class="btn-sig" onclick="openMemoSigModal()">
+                    <i class="fas fa-signature me-1"></i> เซ็นชื่อดิจิทัล
+                </button>
+                <button type="button" class="btn-sig-clear" id="memo-btn-clear" style="display:none;" onclick="clearMemoSig()">
+                    <i class="fas fa-eraser me-1"></i> ลบ
+                </button>
+            </div>
         </div>
     </div>
 
@@ -270,6 +354,103 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
         </tr>
     </table>
 </div>
+
+<!-- Modal เซ็นชื่อ -->
+<div class="sig-modal-backdrop" id="memoSigModal">
+    <div class="sig-modal-dialog">
+        <div class="sig-modal-header">
+            <span><i class="fas fa-pen-nib me-2"></i> วาดลายเซ็นดิจิทัล</span>
+            <button type="button" onclick="closeMemoSigModal()" style="background:transparent;border:none;color:#fff;font-size:18px;cursor:pointer;">&times;</button>
+        </div>
+        <div style="padding:16px 20px;text-align:center;">
+            <p style="font-size:13px;color:#64748b;margin:0 0 10px 0;">ใช้เมาส์ นิ้ว หรือปากกาเซ็นชื่อ:</p>
+            <div class="sig-canvas-wrap">
+                <canvas id="memoCanvas" width="420" height="180"></canvas>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <button type="button" onclick="clearMemoCanvas()" style="background:#f1f5f9;border:1px solid #cbd5e1;padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700;">
+                    <i class="fas fa-undo me-1"></i> ล้าง
+                </button>
+                <div style="display:flex;gap:6px;">
+                    <button type="button" onclick="closeMemoSigModal()" style="background:#e2e8f0;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;">ยกเลิก</button>
+                    <button type="button" onclick="applyMemoSig()" style="background:#0284c7;color:#fff;border:none;padding:6px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">นำไปใช้</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const mCanvas = document.getElementById('memoCanvas');
+const mCtx = mCanvas.getContext('2d');
+let mDrawing = false, mLastX = 0, mLastY = 0;
+
+function initMemoCanvas() {
+    mCtx.strokeStyle = '#0f2b5c';
+    mCtx.lineWidth = 2.5;
+    mCtx.lineCap = 'round';
+    mCtx.lineJoin = 'round';
+
+    mCanvas.addEventListener('mousedown', (e) => {
+        mDrawing = true;
+        const rect = mCanvas.getBoundingClientRect();
+        mLastX = e.clientX - rect.left;
+        mLastY = e.clientY - rect.top;
+    });
+    mCanvas.addEventListener('mousemove', (e) => {
+        if (!mDrawing) return;
+        const rect = mCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        mCtx.beginPath(); mCtx.moveTo(mLastX, mLastY); mCtx.lineTo(x, y); mCtx.stroke();
+        mLastX = x; mLastY = y;
+    });
+    window.addEventListener('mouseup', () => { mDrawing = false; });
+
+    mCanvas.addEventListener('touchstart', (e) => {
+        e.preventDefault(); mDrawing = true;
+        const rect = mCanvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        mLastX = touch.clientX - rect.left; mLastY = touch.clientY - rect.top;
+    }, { passive: false });
+    mCanvas.addEventListener('touchmove', (e) => {
+        e.preventDefault(); if (!mDrawing) return;
+        const rect = mCanvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const x = touch.clientX - rect.left; const y = touch.clientY - rect.top;
+        mCtx.beginPath(); mCtx.moveTo(mLastX, mLastY); mCtx.lineTo(x, y); mCtx.stroke();
+        mLastX = x; mLastY = y;
+    }, { passive: false });
+    mCanvas.addEventListener('touchend', (e) => { e.preventDefault(); mDrawing = false; });
+}
+
+function clearMemoCanvas() { mCtx.clearRect(0, 0, mCanvas.width, mCanvas.height); }
+function openMemoSigModal() { clearMemoCanvas(); document.getElementById('memoSigModal').style.display = 'flex'; }
+function closeMemoSigModal() { document.getElementById('memoSigModal').style.display = 'none'; }
+
+function applyMemoSig() {
+    const dataUrl = mCanvas.toDataURL('image/png');
+    document.getElementById('memo-sig-display').innerHTML = `<img src="${dataUrl}" alt="ลายเซ็น">`;
+    document.getElementById('memo-btn-clear').style.display = 'inline-block';
+    try { localStorage.setItem('llw_memo_sig_<?= $id ?>', dataUrl); } catch(e){}
+    closeMemoSigModal();
+}
+
+function clearMemoSig() {
+    document.getElementById('memo-sig-display').innerHTML = '';
+    document.getElementById('memo-btn-clear').style.display = 'none';
+    try { localStorage.removeItem('llw_memo_sig_<?= $id ?>'); } catch(e){}
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initMemoCanvas();
+    const saved = localStorage.getItem('llw_memo_sig_<?= $id ?>');
+    if (saved) {
+        document.getElementById('memo-sig-display').innerHTML = `<img src="${saved}" alt="ลายเซ็น">`;
+        document.getElementById('memo-btn-clear').style.display = 'inline-block';
+    }
+});
+</script>
 
 </body>
 </html>
