@@ -698,34 +698,52 @@ $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' . urle
                 </div>
             </div>
 
-            <!-- Right Card: ผู้รับรองรายงาน -->
+            <!-- Right Card: ผู้รับรองรายงาน (นายเฉลิมชัย ศรีชัย) -->
             <div class="sign-card">
                 <div>
-                    <div class="sign-role-title">ผู้รับรองรายงาน</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <span class="sign-role-title">ผู้รับรองรายงาน</span>
+                        <?php if (!empty($media['academic_head_approved'])): ?>
+                            <span style="background:#dcfce7;color:#15803d;padding:1px 8px;border-radius:9999px;font-size:9.5pt;font-weight:bold;">
+                                <i class="fas fa-check-circle"></i> รับรองแล้ว
+                            </span>
+                        <?php endif; ?>
+                    </div>
                     
                     <!-- Digital Signature Area -->
                     <div id="sig-display-2" class="sig-display-box">
-                        <!-- Rendered signature image will appear here -->
+                        <?php if (!empty($media['academic_head_signature'])): ?>
+                            <img src="<?= htmlspecialchars($media['academic_head_signature']) ?>" alt="ลายเซ็นนายเฉลิมชัย ศรีชัย">
+                        <?php endif; ?>
                     </div>
 
                     <div style="margin: 4px 0 6px 0; white-space: nowrap;">
                         ลงชื่อ <span class="dots-line" style="width:160px;"></span>
                     </div>
                     <div style="font-weight: 700; margin: 2px 0; white-space: nowrap;">
-                        (&nbsp;....................................................&nbsp;)
+                        (&nbsp;นายเฉลิมชัย ศรีชัย&nbsp;)
                     </div>
                     <div style="color: #64748b; font-size: 11pt; margin: 2px 0; line-height: 1.35;">
-                        หัวหน้ากลุ่มสาระฯ / รองผู้อำนวยการกลุ่มบริหารวิชาการ
+                        หัวหน้าฝ่ายวิชาการ โรงเรียนละลมวิทยา
                     </div>
                     <div style="font-size: 11pt; margin-top: 6px;">
-                        วันที่ <span class="dots-line" style="width:110px;"></span>
+                        วันที่ <?= !empty($media['academic_head_at']) ? thaiDateFull($media['academic_head_at']) : thaiDateFull($media['media_date']) ?>
                     </div>
                 </div>
 
-                <!-- Digital Sign Controls (Hidden on Print) -->
-                <div class="no-print" style="margin-top: 10px; display: flex; justify-content: center; gap: 6px;">
+                <!-- Digital Sign & Approval Controls (Hidden on Print) -->
+                <div class="no-print" style="margin-top: 10px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;">
+                    <?php if (empty($media['academic_head_approved'])): ?>
+                        <button type="button" class="btn-sig" style="background:#059669;" onclick="approveFromSummary('head')">
+                            <i class="fas fa-check-circle me-1"></i> กดรับรอง (นายเฉลิมชัย ศรีชัย)
+                        </button>
+                    <?php else: ?>
+                        <button type="button" class="btn-sig-clear" onclick="unapproveFromSummary('head')">
+                            <i class="fas fa-undo me-1"></i> ยกเลิกรับรอง
+                        </button>
+                    <?php endif; ?>
                     <button type="button" class="btn-sig" onclick="openSignatureModal('2')">
-                        <i class="fas fa-signature me-1"></i> เซ็นชื่อดิจิทัล
+                        <i class="fas fa-signature me-1"></i> เซ็นชื่อ
                     </button>
                     <button type="button" class="btn-sig-clear" id="btn-clear-2" style="display:none;" onclick="clearSignature('2')">
                         <i class="fas fa-eraser me-1"></i> ลบ
@@ -916,6 +934,54 @@ function clearSignature(target) {
     try {
         localStorage.removeItem('llw_media_sig_' + target + '_<?= $id ?>');
     } catch(e) {}
+}
+
+async function approveFromSummary(step) {
+    if (!confirm('ยืนยันการบันทึกรับรองรายงานในฐานะ นายเฉลิมชัย ศรีชัย (หัวหน้าฝ่ายวิชาการ) หรือไม่?')) return;
+
+    try {
+        const formData = new FormData();
+        formData.append('id', <?= $id ?>);
+        formData.append('step', step);
+
+        const res = await fetch('/learning_media/api.php?action=approve', {
+            method: 'POST',
+            body: formData
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+            alert(json.message);
+            location.reload();
+        } else {
+            alert(json.msg || json.message);
+        }
+    } catch (err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+    }
+}
+
+async function unapproveFromSummary(step) {
+    if (!confirm('ยืนยันการยกเลิกการรับรองรายงานนี้หรือไม่?')) return;
+
+    try {
+        const formData = new FormData();
+        formData.append('id', <?= $id ?>);
+        formData.append('step', step);
+
+        const res = await fetch('/learning_media/api.php?action=unapprove', {
+            method: 'POST',
+            body: formData
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+            alert(json.message);
+            location.reload();
+        } else {
+            alert(json.msg || json.message);
+        }
+    } catch (err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+    }
 }
 
 // ── Restore saved signatures on page load ──

@@ -27,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 '2026_10_24_233000_system_stability_and_performance',
                 '2026_10_26_220000_create_learning_media_table',
                 '2026_10_26_223000_enhance_learning_media_system',
+                '2026_10_26_231500_add_approvals_to_learning_media',
             ];
             $ranCount = 0;
             $nextBatch = 1;

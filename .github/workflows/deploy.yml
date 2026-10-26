@@ -189,6 +189,7 @@ jobs:
                   '2026_10_25_000001_add_leave_bot_token_to_wfh_system_settings',
                   '2026_10_26_220000_create_learning_media_table',
                   '2026_10_26_223000_enhance_learning_media_system',
+                  '2026_10_26_231500_add_approvals_to_learning_media',
               ];
               foreach ($autoTargets as $mName) {
                   if (!in_array($mName, $executed, true)) {

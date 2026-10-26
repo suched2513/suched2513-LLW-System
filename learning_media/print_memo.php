@@ -376,22 +376,98 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
     <!-- ตารางความเห็นและคำสั่งอนุมัติ -->
     <table class="approval-table">
         <tr>
+            <!-- Left: หัวหน้าฝ่ายวิชาการ (นายเฉลิมชัย ศรีชัย) -->
             <td style="width:50%;">
-                <strong>ความเห็นของหัวหน้ากลุ่มสาระการเรียนรู้</strong><br>
-                ( &nbsp; ) ทราบ และเห็นควรอนุมัติ<br>
-                ( &nbsp; ) อื่นๆ ................................................................<br><br>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <strong>ความเห็นของหัวหน้าฝ่ายวิชาการ</strong>
+                    <?php if (!empty($media['academic_head_approved'])): ?>
+                        <span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:9999px;font-size:10.5pt;font-weight:bold;">
+                            <i class="fas fa-check-circle"></i> อนุมัติแล้ว
+                        </span>
+                    <?php endif; ?>
+                </div>
+
+                <div style="margin-bottom: 3px;">
+                    ( <?= !empty($media['academic_head_approved']) ? '<strong style="color:#059669;">✓</strong>' : '&nbsp;' ?> ) ทราบ และเห็นควรอนุมัติ
+                </div>
+                <div style="margin-bottom: 6px;">
+                    ( &nbsp; ) อื่นๆ ................................................................
+                </div>
+
+                <div id="head-sig-display" class="sig-display-box" style="margin-top: 8px;">
+                    <?php if (!empty($media['academic_head_signature'])): ?>
+                        <img src="<?= htmlspecialchars($media['academic_head_signature']) ?>" alt="ลายเซ็นนายเฉลิมชัย ศรีชัย">
+                    <?php endif; ?>
+                </div>
+
                 <div style="white-space: nowrap;">ลงชื่อ..........................................................</div>
-                <div style="white-space: nowrap; margin-top: 2px;">(&nbsp;..........................................................&nbsp;)</div>
-                <div style="margin-top: 2px;">วันที่ ......./......./.......</div>
+                <div style="white-space: nowrap; margin-top: 2px; font-weight: bold;">
+                    (&nbsp;นายเฉลิมชัย ศรีชัย&nbsp;)
+                </div>
+                <div style="margin-top: 2px;">หัวหน้าฝ่ายวิชาการ โรงเรียนละลมวิทยา</div>
+                <div style="margin-top: 2px;">
+                    วันที่ <?= !empty($media['academic_head_at']) ? thaiDateFull($media['academic_head_at']) : '...../......./.......' ?>
+                </div>
+
+                <!-- Approval Buttons (No Print) -->
+                <div class="no-print" style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
+                    <?php if (empty($media['academic_head_approved'])): ?>
+                        <button type="button" class="btn-sig" style="background:#059669;padding:5px 12px;" onclick="approveAction('head')">
+                            <i class="fas fa-check-circle me-1"></i> กดอนุมัติ (นายเฉลิมชัย ศรีชัย)
+                        </button>
+                    <?php else: ?>
+                        <button type="button" class="btn-sig-clear" onclick="unapproveAction('head')">
+                            <i class="fas fa-undo me-1"></i> ยกเลิกอนุมัติ
+                        </button>
+                    <?php endif; ?>
+                </div>
             </td>
+
+            <!-- Right: ผู้อำนวยการโรงเรียน (นายสถาน ปรางมาศ) -->
             <td style="width:50%;">
-                <strong>คำสั่ง / ข้อสั่งการผู้อำนวยการโรงเรียน</strong><br>
-                ( &nbsp; ) ทราบ และอนุมัติ<br>
-                ( &nbsp; ) อื่นๆ ................................................................<br><br>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <strong>คำสั่ง / ข้อสั่งการผู้อำนวยการโรงเรียน</strong>
+                    <?php if (!empty($media['director_approved'])): ?>
+                        <span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:9999px;font-size:10.5pt;font-weight:bold;">
+                            <i class="fas fa-check-circle"></i> อนุมัติแล้ว
+                        </span>
+                    <?php endif; ?>
+                </div>
+
+                <div style="margin-bottom: 3px;">
+                    ( <?= !empty($media['director_approved']) ? '<strong style="color:#2563eb;">✓</strong>' : '&nbsp;' ?> ) ทราบ และอนุมัติ
+                </div>
+                <div style="margin-bottom: 6px;">
+                    ( &nbsp; ) อื่นๆ ................................................................
+                </div>
+
+                <div id="director-sig-display" class="sig-display-box" style="margin-top: 8px;">
+                    <?php if (!empty($media['director_signature'])): ?>
+                        <img src="<?= htmlspecialchars($media['director_signature']) ?>" alt="ลายเซ็นนายสถาน ปรางมาศ">
+                    <?php endif; ?>
+                </div>
+
                 <div style="white-space: nowrap;">ลงชื่อ..........................................................</div>
-                <div style="white-space: nowrap; margin-top: 2px;">(&nbsp;..........................................................&nbsp;)</div>
+                <div style="white-space: nowrap; margin-top: 2px; font-weight: bold;">
+                    (&nbsp;นายสถาน ปรางมาศ&nbsp;)
+                </div>
                 <div style="margin-top: 2px;">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
-                <div style="margin-top: 2px;">วันที่ ......./......./.......</div>
+                <div style="margin-top: 2px;">
+                    วันที่ <?= !empty($media['director_at']) ? thaiDateFull($media['director_at']) : '...../......./.......' ?>
+                </div>
+
+                <!-- Approval Buttons (No Print) -->
+                <div class="no-print" style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
+                    <?php if (empty($media['director_approved'])): ?>
+                        <button type="button" class="btn-sig" style="background:#2563eb;padding:5px 12px;" onclick="approveAction('director')">
+                            <i class="fas fa-check-circle me-1"></i> กดอนุมัติ (นายสถาน ปรางมาศ)
+                        </button>
+                    <?php else: ?>
+                        <button type="button" class="btn-sig-clear" onclick="unapproveAction('director')">
+                            <i class="fas fa-undo me-1"></i> ยกเลิกอนุมัติ
+                        </button>
+                    <?php endif; ?>
+                </div>
             </td>
         </tr>
     </table>
@@ -482,6 +558,55 @@ function clearMemoSig() {
     document.getElementById('memo-sig-display').innerHTML = '';
     document.getElementById('memo-btn-clear').style.display = 'none';
     try { localStorage.removeItem('llw_memo_sig_<?= $id ?>'); } catch(e){}
+}
+
+async function approveAction(step) {
+    const approver = step === 'head' ? 'นายเฉลิมชัย ศรีชัย (หัวหน้าฝ่ายวิชาการ)' : 'นายสถาน ปรางมาศ (ผู้อำนวยการโรงเรียน)';
+    if (!confirm(`ยืนยันการบันทึกอนุมัติในฐานะ ${approver} หรือไม่?`)) return;
+
+    try {
+        const formData = new FormData();
+        formData.append('id', <?= $id ?>);
+        formData.append('step', step);
+
+        const res = await fetch('/learning_media/api.php?action=approve', {
+            method: 'POST',
+            body: formData
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+            alert(json.message);
+            location.reload();
+        } else {
+            alert(json.msg || json.message);
+        }
+    } catch (err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+    }
+}
+
+async function unapproveAction(step) {
+    if (!confirm('ยืนยันการยกเลิกการอนุมัตินี้หรือไม่?')) return;
+
+    try {
+        const formData = new FormData();
+        formData.append('id', <?= $id ?>);
+        formData.append('step', step);
+
+        const res = await fetch('/learning_media/api.php?action=unapprove', {
+            method: 'POST',
+            body: formData
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+            alert(json.message);
+            location.reload();
+        } else {
+            alert(json.msg || json.message);
+        }
+    } catch (err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

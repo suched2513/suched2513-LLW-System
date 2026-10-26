@@ -814,6 +814,15 @@ function filterAndRender() {
             ? `⭐ ${item.ratingAvg.toFixed(1)} (${item.ratingCount})`
             : `⭐ ประเมิน`;
 
+        let approvalBadge = '';
+        if (item.directorApproved) {
+            approvalBadge = `<span class="badge rounded-pill bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold" title="ผู้อำนวยการอนุมัติแล้ว"><i class="fas fa-check-circle text-emerald-600 me-0.5"></i> ผอ. อนุมัติแล้ว</span>`;
+        } else if (item.academicHeadApproved) {
+            approvalBadge = `<span class="badge rounded-pill bg-sky-50 text-sky-700 border border-sky-200 text-[10px] font-bold" title="หัวหน้าฝ่ายวิชาการรับรองแล้ว"><i class="fas fa-check text-sky-600 me-0.5"></i> วิชาการรับรองแล้ว</span>`;
+        } else {
+            approvalBadge = `<span class="badge rounded-pill bg-slate-50 text-slate-500 border border-slate-200 text-[10px] font-bold"><i class="far fa-clock me-0.5"></i> รออนุมัติ</span>`;
+        }
+
         return `
             <div class="col-12 col-md-6 col-lg-4">
                 <div class="media-card h-100">
@@ -841,9 +850,12 @@ function filterAndRender() {
                             <i class="fas fa-user-edit text-slate-400"></i>
                             <span class="truncate"><strong>ผู้จัดทำ:</strong> ${escapeHtml(item.author)}</span>
                         </div>
-                        <div class="text-xs text-slate-400 mb-3 d-flex align-items-center gap-1.5">
-                            <i class="far fa-calendar-alt"></i>
-                            <span>${item.date}</span>
+                        <div class="text-xs text-slate-400 mb-2 d-flex align-items-center justify-content-between">
+                            <span class="d-flex align-items-center gap-1.5">
+                                <i class="far fa-calendar-alt"></i>
+                                <span>${item.date}</span>
+                            </span>
+                            ${approvalBadge}
                         </div>
 
                         <div class="d-flex align-items-center justify-content-between mt-auto pt-3 border-top border-slate-100">

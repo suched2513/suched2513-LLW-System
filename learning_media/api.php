@@ -112,6 +112,18 @@ try {
         if (!in_array('usage_results', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN usage_results TEXT NULL");
         if (!in_array('rating_avg', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN rating_avg DECIMAL(3,2) NOT NULL DEFAULT 0.00");
         if (!in_array('rating_count', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN rating_count INT NOT NULL DEFAULT 0");
+
+        if (!in_array('academic_head_approved', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN academic_head_approved TINYINT(1) NOT NULL DEFAULT 0");
+        if (!in_array('academic_head_name', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN academic_head_name VARCHAR(100) NOT NULL DEFAULT 'นายเฉลิมชัย ศรีชัย'");
+        if (!in_array('academic_head_comment', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN academic_head_comment VARCHAR(255) NULL DEFAULT 'ทราบ และเห็นควรอนุมัติ'");
+        if (!in_array('academic_head_at', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN academic_head_at DATETIME NULL");
+        if (!in_array('academic_head_signature', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN academic_head_signature LONGTEXT NULL");
+
+        if (!in_array('director_approved', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN director_approved TINYINT(1) NOT NULL DEFAULT 0");
+        if (!in_array('director_name', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN director_name VARCHAR(100) NOT NULL DEFAULT 'นายสถาน ปรางมาศ'");
+        if (!in_array('director_comment', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN director_comment VARCHAR(255) NULL DEFAULT 'ทราบ และอนุมัติ'");
+        if (!in_array('director_at', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN director_at DATETIME NULL");
+        if (!in_array('director_signature', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN director_signature LONGTEXT NULL");
     } catch (Exception $e) {}
 
     // ─────────────────────────────────────────────────────────────
@@ -124,7 +136,10 @@ try {
         $search    = trim($_GET['search'] ?? '');
 
         $sql = "SELECT id, user_id, media_date, author, grade, subject, media_type, media_name, media_link,
-                       objective, usage_results, cover_url, views, rating_avg, rating_count, created_at
+                       objective, usage_results, cover_url, views, rating_avg, rating_count,
+                       academic_head_approved, academic_head_name, academic_head_comment, academic_head_at, academic_head_signature,
+                       director_approved, director_name, director_comment, director_at, director_signature,
+                       created_at
                 FROM learning_media
                 WHERE status = 'active'";
         $params = [];
@@ -176,9 +191,19 @@ try {
                 'usageResults' => $r['usage_results'] ?? '',
                 'cover'        => $r['cover_url'] ?: 'https://cdn-icons-png.flaticon.com/512/847/847969.png',
                 'views'        => (int)$r['views'],
-                'ratingAvg'    => (float)($r['rating_avg'] ?? 0),
-                'ratingCount'  => (int)($r['rating_count'] ?? 0),
-                'createdAt'    => $r['created_at'],
+                'ratingAvg'            => (float)($r['rating_avg'] ?? 0),
+                'ratingCount'          => (int)($r['rating_count'] ?? 0),
+                'academicHeadApproved' => (int)($r['academic_head_approved'] ?? 0),
+                'academicHeadName'     => $r['academic_head_name'] ?: 'นายเฉลิมชัย ศรีชัย',
+                'academicHeadComment'  => $r['academic_head_comment'] ?: 'ทราบ และเห็นควรอนุมัติ',
+                'academicHeadAt'       => $r['academic_head_at'] ? toThaiDateString(substr($r['academic_head_at'], 0, 10)) : null,
+                'academicHeadSig'      => $r['academic_head_signature'],
+                'directorApproved'     => (int)($r['director_approved'] ?? 0),
+                'directorName'         => $r['director_name'] ?: 'นายสถาน ปรางมาศ',
+                'directorComment'      => $r['director_comment'] ?: 'ทราบ และอนุมัติ',
+                'directorAt'           => $r['director_at'] ? toThaiDateString(substr($r['director_at'], 0, 10)) : null,
+                'directorSig'          => $r['director_signature'],
+                'createdAt'            => $r['created_at'],
             ];
         }
 
@@ -469,6 +494,102 @@ try {
 
         echo json_encode(['status' => 'success', 'message' => 'ลบสื่อการเรียนรู้เรียบร้อยแล้ว']);
         exit;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 8. APPROVE MEDIA (Academic Head & Director)
+    // ─────────────────────────────────────────────────────────────
+    if ($action === 'approve') {
+        if (!isset($_SESSION['llw_role'])) {
+            http_response_code(401);
+            echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบ']);
+            exit;
+        }
+
+        $id           = (int)($_POST['id'] ?? 0);
+        $step         = trim($_POST['step'] ?? 'head'); // 'head' or 'director'
+        $comment      = trim($_POST['comment'] ?? '');
+        $signature    = trim($_POST['signature'] ?? '');
+        $approverName = trim($_POST['approver_name'] ?? '');
+
+        if ($id <= 0) {
+            echo json_encode(['status' => 'fail', 'msg' => 'ไม่พบรหัสสื่อ']);
+            exit;
+        }
+
+        $now = date('Y-m-d H:i:s');
+
+        if ($step === 'head') {
+            $headName = $approverName ?: 'นายเฉลิมชัย ศรีชัย';
+            $headComment = $comment ?: 'ทราบ และเห็นควรอนุมัติ';
+
+            $sql = "UPDATE learning_media SET academic_head_approved = 1, academic_head_name = ?, academic_head_comment = ?, academic_head_at = ?";
+            $params = [$headName, $headComment, $now];
+            if ($signature) {
+                $sql .= ", academic_head_signature = ?";
+                $params[] = $signature;
+            }
+            $sql .= " WHERE id = ?";
+            $params[] = $id;
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+
+            echo json_encode(['status' => 'success', 'message' => 'หัวหน้าฝ่ายวิชาการอนุมัติเรียบร้อยแล้ว', 'at' => toThaiDateString(date('Y-m-d'))]);
+            exit;
+        } elseif ($step === 'director') {
+            $directorName = $approverName ?: 'นายสถาน ปรางมาศ';
+            $directorComment = $comment ?: 'ทราบ และอนุมัติ';
+
+            $sql = "UPDATE learning_media SET director_approved = 1, director_name = ?, director_comment = ?, director_at = ?";
+            $params = [$directorName, $directorComment, $now];
+            if ($signature) {
+                $sql .= ", director_signature = ?";
+                $params[] = $signature;
+            }
+            $sql .= " WHERE id = ?";
+            $params[] = $id;
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+
+            echo json_encode(['status' => 'success', 'message' => 'ผู้อำนวยการอนุมัติเรียบร้อยแล้ว', 'at' => toThaiDateString(date('Y-m-d'))]);
+            exit;
+        } else {
+            echo json_encode(['status' => 'fail', 'msg' => 'ขั้นตอนการอนุมัติไม่ถูกต้อง']);
+            exit;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 9. UNAPPROVE MEDIA (Reset)
+    // ─────────────────────────────────────────────────────────────
+    if ($action === 'unapprove') {
+        if (!isset($_SESSION['llw_role'])) {
+            http_response_code(401);
+            echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบ']);
+            exit;
+        }
+
+        $id   = (int)($_POST['id'] ?? 0);
+        $step = trim($_POST['step'] ?? 'head');
+
+        if ($id <= 0) {
+            echo json_encode(['status' => 'fail', 'msg' => 'ไม่พบรหัสสื่อ']);
+            exit;
+        }
+
+        if ($step === 'head') {
+            $stmt = $pdo->prepare("UPDATE learning_media SET academic_head_approved = 0, academic_head_at = NULL, academic_head_signature = NULL WHERE id = ?");
+            $stmt->execute([$id]);
+            echo json_encode(['status' => 'success', 'message' => 'ยกเลิกการอนุมัติฝ่ายวิชาการแล้ว']);
+            exit;
+        } elseif ($step === 'director') {
+            $stmt = $pdo->prepare("UPDATE learning_media SET director_approved = 0, director_at = NULL, director_signature = NULL WHERE id = ?");
+            $stmt->execute([$id]);
+            echo json_encode(['status' => 'success', 'message' => 'ยกเลิกการอนุมัติผู้อำนวยการแล้ว']);
+            exit;
+        }
     }
 
     echo json_encode(['status' => 'error', 'message' => 'Unknown action']);
