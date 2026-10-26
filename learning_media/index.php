@@ -250,7 +250,7 @@ if ($isLoggedIn) {
 <div class="bg-white rounded-3xl p-5 mb-5 shadow-sm border border-slate-100">
     <div class="row g-3 align-items-center justify-content-between">
         <!-- Search Input -->
-        <div class="col-12 col-md-5 col-lg-4">
+        <div class="col-12 col-md-4 col-lg-4">
             <div class="input-group">
                 <span class="input-group-text bg-slate-50 border-slate-200 text-slate-400 rounded-start-2xl">
                     <i class="fas fa-search"></i>
@@ -261,7 +261,7 @@ if ($isLoggedIn) {
         </div>
 
         <!-- Grade Selector -->
-        <div class="col-12 col-md-4 col-lg-3">
+        <div class="col-12 col-md-3 col-lg-3">
             <div class="d-flex align-items-center gap-2">
                 <label for="gradeFilter" class="text-xs font-black text-slate-500 uppercase tracking-wider mb-0 text-nowrap">
                     <i class="fas fa-school text-primary me-1"></i>ระดับชั้น:
@@ -280,12 +280,18 @@ if ($isLoggedIn) {
             </div>
         </div>
 
-        <!-- Stats Counter -->
-        <div class="col-12 col-md-3 text-md-end">
+        <!-- Stats Counter & Semester Report Button -->
+        <div class="col-12 col-md-5 col-lg-5 text-md-end d-flex flex-wrap align-items-center justify-content-md-end gap-2">
             <span id="totalMediaCount" class="badge rounded-pill px-3 py-2 text-xs font-bold"
                   style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;">
                 กำลังโหลด...
             </span>
+            <a href="report_semester.php" target="_blank"
+               class="btn btn-sm rounded-pill px-3 py-2 text-xs font-bold shadow-sm d-inline-flex align-items-center gap-1"
+               style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #fff; text-decoration: none;">
+                <i class="fas fa-chart-pie"></i>
+                <span>สรุปสถิติสิ้นเทอม</span>
+            </a>
         </div>
     </div>
 

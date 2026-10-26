@@ -182,6 +182,10 @@ $subMenus = [
         ['icon' => 'fas fa-users',            'label' => 'จัดการผู้ใช้งาน',        'url' => $base_path . '/parent_meeting/users.php', 'roles' => ['super_admin']],
         ['icon' => 'fas fa-cog',              'label' => 'ตั้งค่าระบบ (ห้องเรียน)', 'url' => $base_path . '/parent_meeting/settings.php', 'roles' => ['super_admin']],
     ],
+    'learning_media' => [
+        ['icon' => 'fas fa-photo-video', 'label' => 'คลังสื่อการเรียนรู้', 'url' => $base_path . '/learning_media/index.php'],
+        ['icon' => 'fas fa-chart-pie',   'label' => 'สรุปสถิติสิ้นภาคเรียน', 'url' => $base_path . '/learning_media/report_semester.php'],
+    ],
 ];
 
 // Badge counts (only for roles that access LMS, filtered to current active semester)
@@ -487,11 +491,21 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
                 </li>
 
                 <!-- Learning Media (คลังสื่อการเรียนรู้) -->
-                <li class="nav-item">
-                    <a href="<?= $base_path ?>/learning_media/index.php" class="nav-link <?= $activeSystem === 'learning_media' ? 'active' : '' ?>">
+                <li class="nav-item <?= $activeSystem === 'learning_media' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'learning_media' ? 'active' : '' ?>">
                         <i class="nav-icon fas fa-photo-video text-info"></i>
-                        <p class="text-info">คลังสื่อการเรียนรู้</p>
+                        <p class="text-info">คลังสื่อการเรียนรู้ <i class="nav-arrow fas fa-angle-left"></i></p>
                     </a>
+                    <ul class="nav nav-treeview">
+                        <?php foreach ($subMenus['learning_media'] as $sub): ?>
+                        <li class="nav-item">
+                            <a href="<?= $sub['url'] ?>" class="nav-link <?= $current_page === basename($sub['url']) ? 'active' : '' ?>">
+                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
+                                <p><?= $sub['label'] ?></p>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
                 </li>
 
                 <!-- Supervision & PLC -->
