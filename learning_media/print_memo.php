@@ -1,6 +1,7 @@
 <?php
 /**
  * learning_media/print_memo.php — แบบบันทึกข้อความราชการ ขออนุมัติและรายงานผลการใช้สื่อการเรียนรู้
+ * 2-Page Official Thai Government Memo Format with Digital Signature
  */
 session_start();
 require_once __DIR__ . '/../config/database.php';
@@ -52,23 +53,25 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
             font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
             font-size: 15pt;
-            line-height: 1.5;
+            line-height: 1.55;
             color: #000;
-            background: #f1f5f9;
+            background: #e2e8f0;
             margin: 0;
-            padding: 20px 0;
+            padding: 60px 0 40px 0;
         }
         .page {
             width: 210mm;
             min-height: 297mm;
-            padding: 20mm 20mm 20mm 25mm;
-            margin: 0 auto;
+            padding: 22mm 20mm 20mm 25mm;
+            margin: 0 auto 25px auto;
             background: #fff;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            box-sizing: border-box;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
             position: relative;
         }
         .header-krut {
@@ -84,7 +87,7 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
             text-align: center;
             font-size: 24pt;
             font-weight: bold;
-            margin-top: -35px;
+            margin-top: -38px;
             margin-bottom: 20px;
         }
         .memo-meta {
@@ -111,8 +114,14 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
             border: 1px solid #cbd5e1;
             border-radius: 8px;
             padding: 12px 16px;
-            margin: 12px 0 16px;
+            margin: 14px 0 16px;
             background: #f8fafc;
+        }
+        .memo-page-number {
+            text-align: center;
+            font-size: 15pt;
+            font-weight: bold;
+            margin-bottom: 25px;
         }
         .sign-grid {
             display: grid;
@@ -128,14 +137,15 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
         .approval-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 25px;
+            margin-top: 30px;
             page-break-inside: avoid;
         }
         .approval-table td {
             border: 1px solid #94a3b8;
-            padding: 10px 14px;
+            padding: 12px 14px;
             vertical-align: top;
             font-size: 13.5pt;
+            line-height: 1.5;
         }
         .sig-display-box {
             min-height: 50px;
@@ -174,14 +184,14 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
             top: 0;
             left: 0;
             right: 0;
-            background: #1e293b;
+            background: #0f172a;
             color: #fff;
-            padding: 10px 20px;
+            padding: 10px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             z-index: 9999;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         }
 
         /* ── Signature Modal ── */
@@ -224,22 +234,35 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
         }
 
         @media print {
-            body { background: #fff; padding: 0; }
-            .page { width: 100%; min-height: auto; box-shadow: none; margin: 0; padding: 15mm 15mm 15mm 20mm; }
+            body { background: #fff; padding: 0; margin: 0; }
+            .page {
+                width: 100%;
+                min-height: 275mm;
+                box-shadow: none;
+                margin: 0;
+                padding: 15mm 15mm 15mm 20mm;
+                page-break-after: always;
+                break-after: page;
+            }
+            .page:last-child {
+                page-break-after: auto;
+                break-after: auto;
+            }
             .no-print-bar, .no-print, .sig-modal-backdrop { display: none !important; }
-            @page { size: A4 portrait; margin: 0; }
+            @page { size: A4 portrait; margin: 5mm; }
         }
     </style>
 </head>
 <body>
 
 <div class="no-print-bar">
-    <div style="font-size:14px;font-weight:bold;">
-        <i class="fas fa-file-alt me-2" style="color:#38bdf8;"></i> บันทึกข้อความขออนุมัติและรายงานการใช้สื่อการเรียนรู้
+    <div style="font-size:14px;font-weight:bold;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-file-alt text-sky-400"></i>
+        <span>บันทึกข้อความขออนุมัติและรายงานการใช้สื่อการเรียนรู้ — <span style="color:#38bdf8;">๒ หน้า (A4)</span></span>
     </div>
     <div style="display:flex;gap:10px;">
-        <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:6px 18px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;">
-            <i class="fas fa-print me-1"></i> สั่งพิมพ์เอกสาร
+        <button onclick="window.print()" style="background:#0284c7;color:#fff;border:none;padding:6px 18px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;">
+            <i class="fas fa-print"></i> สั่งพิมพ์เอกสาร
         </button>
         <button onclick="window.close()" style="background:#475569;color:#fff;border:none;padding:6px 14px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;">
             ปิดหน้าต่าง
@@ -247,7 +270,10 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
     </div>
 </div>
 
-<div class="page" style="margin-top:40px;">
+<!-- ══════════════════════════════════════════════════════
+     MEMO PAGE 1: ตราครุฑ, ส่วนราชการ, ข้อความเกริ่น, และรายละเอียดสื่อ
+     ══════════════════════════════════════════════════════ -->
+<div class="page" id="memoPage1">
     <!-- ตราครุฑ -->
     <div class="header-krut">
         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Garuda_Emblem_of_Thailand.svg/180px-Garuda_Emblem_of_Thailand.svg.png" 
@@ -307,8 +333,17 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
         </div>
         <div><strong>๔. ลิงก์เข้าถึงสื่อ:</strong> <span style="font-size:11pt;color:#1d4ed8;word-break:break-all;"><?= htmlspecialchars($media['media_link']) ?></span></div>
     </div>
+</div>
 
-    <p class="indent">
+<!-- ══════════════════════════════════════════════════════
+     MEMO PAGE 2: คำลงท้าย (จึงเรียนมาเพื่อทราบ...), ลายมือชื่อ, และตารางความเห็น/อนุมัติ
+     ══════════════════════════════════════════════════════ -->
+<div class="page" id="memoPage2">
+    <!-- เลขหน้าตรงกลางตามระเบียบสารบรรณ -->
+    <div class="memo-page-number">- ๒ -</div>
+
+    <!-- จึงเรียนมาเพื่อโปรดทราบ... (ปัดมาหน้าที่ 2 ตามที่ต้องการ) -->
+    <p class="indent" style="margin-top: 15px;">
         จึงเรียนมาเพื่อโปรดทราบและพิจารณาอนุมัติให้ใช้เป็นหลักฐานประกอบการประเมินการปฏิบัติงานต่อไป
     </p>
 
@@ -317,11 +352,11 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
         <div></div>
         <div class="sign-box">
             <div id="memo-sig-display" class="sig-display-box"></div>
-            <div>ลงชื่อ..........................................................</div>
-            <div style="font-weight: bold; margin-top: 2px;">( <?= htmlspecialchars($media['author']) ?> )</div>
-            <div>ตำแหน่ง ครู โรงเรียนละลมวิทยา</div>
-            <div>ครูผู้จัดทำและรายงาน</div>
-            <div class="no-print" style="margin-top: 6px;">
+            <div style="white-space: nowrap;">ลงชื่อ..........................................................</div>
+            <div style="font-weight: bold; margin-top: 2px; white-space: nowrap;">( <?= htmlspecialchars($media['author']) ?> )</div>
+            <div style="margin-top: 2px;">ตำแหน่ง ครู โรงเรียนละลมวิทยา</div>
+            <div style="margin-top: 2px;">ครูผู้จัดทำและรายงาน</div>
+            <div class="no-print" style="margin-top: 8px;">
                 <button type="button" class="btn-sig" onclick="openMemoSigModal()">
                     <i class="fas fa-signature me-1"></i> เซ็นชื่อดิจิทัล
                 </button>
@@ -332,24 +367,25 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
         </div>
     </div>
 
+    <!-- ตารางความเห็นและคำสั่งอนุมัติ -->
     <table class="approval-table">
         <tr>
             <td style="width:50%;">
                 <strong>ความเห็นของหัวหน้ากลุ่มสาระการเรียนรู้</strong><br>
                 ( &nbsp; ) ทราบ และเห็นควรอนุมัติ<br>
                 ( &nbsp; ) อื่นๆ ................................................................<br><br>
-                ลงชื่อ..........................................................<br>
-                (..........................................................)<br>
-                วันที่ ......./......./.......
+                <div style="white-space: nowrap;">ลงชื่อ..........................................................</div>
+                <div style="white-space: nowrap; margin-top: 2px;">(&nbsp;..........................................................&nbsp;)</div>
+                <div style="margin-top: 2px;">วันที่ ......./......./.......</div>
             </td>
             <td style="width:50%;">
                 <strong>คำสั่ง / ข้อสั่งการผู้อำนวยการโรงเรียน</strong><br>
                 ( &nbsp; ) ทราบ และอนุมัติ<br>
                 ( &nbsp; ) อื่นๆ ................................................................<br><br>
-                ลงชื่อ..........................................................<br>
-                (..........................................................)<br>
-                ผู้อำนวยการโรงเรียนละลมวิทยา<br>
-                วันที่ ......./......./.......
+                <div style="white-space: nowrap;">ลงชื่อ..........................................................</div>
+                <div style="white-space: nowrap; margin-top: 2px;">(&nbsp;..........................................................&nbsp;)</div>
+                <div style="margin-top: 2px;">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
+                <div style="margin-top: 2px;">วันที่ ......./......./.......</div>
             </td>
         </tr>
     </table>

@@ -673,16 +673,16 @@ $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' . urle
                         <!-- Rendered signature image will appear here -->
                     </div>
 
-                    <div style="margin: 4px 0 6px 0;">
-                        ลงชื่อ <span class="dots-line" style="width:170px;"></span>
+                    <div style="margin: 4px 0 6px 0; white-space: nowrap;">
+                        ลงชื่อ <span class="dots-line" style="width:160px;"></span>
                     </div>
-                    <div style="font-weight: 700; margin: 2px 0;">
+                    <div style="font-weight: 700; margin: 2px 0; white-space: nowrap;">
                         ( <?= htmlspecialchars($media['author']) ?> )
                     </div>
                     <div style="color: #64748b; font-size: 11pt; margin: 2px 0;">
                         ตำแหน่ง ครู โรงเรียนละลมวิทยา
                     </div>
-                    <div style="font-size: 11pt; margin-top: 6px;">
+                    <div style="font-size: 11pt; margin-top: 6px; white-space: nowrap;">
                         วันที่ <?= thaiDateFull($media['media_date']) ?>
                     </div>
                 </div>
@@ -708,13 +708,13 @@ $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' . urle
                         <!-- Rendered signature image will appear here -->
                     </div>
 
-                    <div style="margin: 4px 0 6px 0;">
-                        ลงชื่อ <span class="dots-line" style="width:170px;"></span>
+                    <div style="margin: 4px 0 6px 0; white-space: nowrap;">
+                        ลงชื่อ <span class="dots-line" style="width:160px;"></span>
                     </div>
-                    <div style="font-weight: 700; margin: 2px 0;">
-                        ( ............................................................ )
+                    <div style="font-weight: 700; margin: 2px 0; white-space: nowrap;">
+                        (&nbsp;....................................................&nbsp;)
                     </div>
-                    <div style="color: #64748b; font-size: 11pt; margin: 2px 0;">
+                    <div style="color: #64748b; font-size: 11pt; margin: 2px 0; line-height: 1.35;">
                         หัวหน้ากลุ่มสาระฯ / รองผู้อำนวยการกลุ่มบริหารวิชาการ
                     </div>
                     <div style="font-size: 11pt; margin-top: 6px;">
