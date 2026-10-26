@@ -592,6 +592,31 @@ try {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // 10. SAVE SIGNATURE (For Head, Director, or Author)
+    // ─────────────────────────────────────────────────────────────
+    if ($action === 'save_signature') {
+        $id        = (int)($_POST['id'] ?? 0);
+        $target    = trim($_POST['target'] ?? '');
+        $signature = trim($_POST['signature'] ?? '');
+
+        if ($id <= 0 || !$target) {
+            echo json_encode(['status' => 'fail', 'msg' => 'ข้อมูลไม่ครบถ้วน']);
+            exit;
+        }
+
+        if ($target === 'head') {
+            $stmt = $pdo->prepare("UPDATE learning_media SET academic_head_signature = ? WHERE id = ?");
+            $stmt->execute([$signature ?: null, $id]);
+        } elseif ($target === 'director') {
+            $stmt = $pdo->prepare("UPDATE learning_media SET director_signature = ? WHERE id = ?");
+            $stmt->execute([$signature ?: null, $id]);
+        }
+
+        echo json_encode(['status' => 'success', 'message' => 'บันทึกลายเซ็นเรียบร้อยแล้ว']);
+        exit;
+    }
+
     echo json_encode(['status' => 'error', 'message' => 'Unknown action']);
 } catch (Exception $e) {
     error_log('[Learning Media API Error] ' . $e->getMessage());

@@ -363,7 +363,7 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
             <div style="margin-top: 2px;">ตำแหน่ง ครู โรงเรียนละลมวิทยา</div>
             <div style="margin-top: 2px;">ครูผู้จัดทำและรายงาน</div>
             <div class="no-print" style="margin-top: 8px;">
-                <button type="button" class="btn-sig" onclick="openMemoSigModal()">
+                <button type="button" class="btn-sig" onclick="openMemoSigModal('author')">
                     <i class="fas fa-signature me-1"></i> เซ็นชื่อดิจิทัล
                 </button>
                 <button type="button" class="btn-sig-clear" id="memo-btn-clear" style="display:none;" onclick="clearMemoSig()">
@@ -394,32 +394,42 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
                     ( &nbsp; ) อื่นๆ ................................................................
                 </div>
 
-                <div id="head-sig-display" class="sig-display-box" style="margin-top: 8px;">
-                    <?php if (!empty($media['academic_head_signature'])): ?>
-                        <img src="<?= htmlspecialchars($media['academic_head_signature']) ?>" alt="ลายเซ็นนายเฉลิมชัย ศรีชัย">
-                    <?php endif; ?>
-                </div>
+                <!-- กล่องลายเซ็นและชื่อ จัดให้อยู่กึ่งกลางเป๊ะตรงตามลงชื่อ -->
+                <div style="text-align: center; margin-top: 10px;">
+                    <div id="head-sig-display" class="sig-display-box">
+                        <?php if (!empty($media['academic_head_signature'])): ?>
+                            <img src="<?= htmlspecialchars($media['academic_head_signature']) ?>" alt="ลายเซ็นนายเฉลิมชัย ศรีชัย">
+                        <?php endif; ?>
+                    </div>
 
-                <div style="white-space: nowrap;">ลงชื่อ..........................................................</div>
-                <div style="white-space: nowrap; margin-top: 2px; font-weight: bold;">
-                    (&nbsp;นายเฉลิมชัย ศรีชัย&nbsp;)
-                </div>
-                <div style="margin-top: 2px;">หัวหน้าฝ่ายวิชาการ โรงเรียนละลมวิทยา</div>
-                <div style="margin-top: 2px;">
-                    วันที่ <?= !empty($media['academic_head_at']) ? thaiDateFull($media['academic_head_at']) : '...../......./.......' ?>
-                </div>
+                    <div style="white-space: nowrap;">ลงชื่อ..........................................................</div>
+                    <div style="white-space: nowrap; margin-top: 3px; font-weight: bold;">
+                        (&nbsp;นายเฉลิมชัย ศรีชัย&nbsp;)
+                    </div>
+                    <div style="margin-top: 2px;">หัวหน้าฝ่ายวิชาการ โรงเรียนละลมวิทยา</div>
+                    <div style="margin-top: 2px;">
+                        วันที่ <?= !empty($media['academic_head_at']) ? thaiDateFull($media['academic_head_at']) : '...../......./.......' ?>
+                    </div>
 
-                <!-- Approval Buttons (No Print) -->
-                <div class="no-print" style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
-                    <?php if (empty($media['academic_head_approved'])): ?>
-                        <button type="button" class="btn-sig" style="background:#059669;padding:5px 12px;" onclick="approveAction('head')">
-                            <i class="fas fa-check-circle me-1"></i> กดอนุมัติ (นายเฉลิมชัย ศรีชัย)
+                    <!-- ปุ่มเซ็นชื่อ + ปุ่มอนุมัติ (ซ่อนตอนพิมพ์) -->
+                    <div class="no-print" style="margin-top: 10px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" class="btn-sig" onclick="openMemoSigModal('head')">
+                            <i class="fas fa-signature me-1"></i> เซ็นชื่อดิจิทัล
                         </button>
-                    <?php else: ?>
-                        <button type="button" class="btn-sig-clear" onclick="unapproveAction('head')">
-                            <i class="fas fa-undo me-1"></i> ยกเลิกอนุมัติ
+                        <button type="button" class="btn-sig-clear" id="head-btn-clear" style="<?= empty($media['academic_head_signature']) ? 'display:none;' : '' ?>" onclick="clearSigAction('head')">
+                            <i class="fas fa-eraser me-1"></i> ลบลายเซ็น
                         </button>
-                    <?php endif; ?>
+
+                        <?php if (empty($media['academic_head_approved'])): ?>
+                            <button type="button" class="btn-sig" style="background:#059669;" onclick="approveAction('head')">
+                                <i class="fas fa-check-circle me-1"></i> กดอนุมัติ
+                            </button>
+                        <?php else: ?>
+                            <button type="button" class="btn-sig-clear" onclick="unapproveAction('head')">
+                                <i class="fas fa-undo me-1"></i> ยกเลิกอนุมัติ
+                            </button>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </td>
 
@@ -441,32 +451,42 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
                     ( &nbsp; ) อื่นๆ ................................................................
                 </div>
 
-                <div id="director-sig-display" class="sig-display-box" style="margin-top: 8px;">
-                    <?php if (!empty($media['director_signature'])): ?>
-                        <img src="<?= htmlspecialchars($media['director_signature']) ?>" alt="ลายเซ็นนายสถาน ปรางมาศ">
-                    <?php endif; ?>
-                </div>
+                <!-- กล่องลายเซ็นและชื่อ จัดให้อยู่กึ่งกลางเป๊ะตรงตามลงชื่อ -->
+                <div style="text-align: center; margin-top: 10px;">
+                    <div id="director-sig-display" class="sig-display-box">
+                        <?php if (!empty($media['director_signature'])): ?>
+                            <img src="<?= htmlspecialchars($media['director_signature']) ?>" alt="ลายเซ็นนายสถาน ปรางมาศ">
+                        <?php endif; ?>
+                    </div>
 
-                <div style="white-space: nowrap;">ลงชื่อ..........................................................</div>
-                <div style="white-space: nowrap; margin-top: 2px; font-weight: bold;">
-                    (&nbsp;นายสถาน ปรางมาศ&nbsp;)
-                </div>
-                <div style="margin-top: 2px;">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
-                <div style="margin-top: 2px;">
-                    วันที่ <?= !empty($media['director_at']) ? thaiDateFull($media['director_at']) : '...../......./.......' ?>
-                </div>
+                    <div style="white-space: nowrap;">ลงชื่อ..........................................................</div>
+                    <div style="white-space: nowrap; margin-top: 3px; font-weight: bold;">
+                        (&nbsp;นายสถาน ปรางมาศ&nbsp;)
+                    </div>
+                    <div style="margin-top: 2px;">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
+                    <div style="margin-top: 2px;">
+                        วันที่ <?= !empty($media['director_at']) ? thaiDateFull($media['director_at']) : '...../......./.......' ?>
+                    </div>
 
-                <!-- Approval Buttons (No Print) -->
-                <div class="no-print" style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;">
-                    <?php if (empty($media['director_approved'])): ?>
-                        <button type="button" class="btn-sig" style="background:#2563eb;padding:5px 12px;" onclick="approveAction('director')">
-                            <i class="fas fa-check-circle me-1"></i> กดอนุมัติ (นายสถาน ปรางมาศ)
+                    <!-- ปุ่มเซ็นชื่อ + ปุ่มอนุมัติ (ซ่อนตอนพิมพ์) -->
+                    <div class="no-print" style="margin-top: 10px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" class="btn-sig" style="background:#2563eb;" onclick="openMemoSigModal('director')">
+                            <i class="fas fa-signature me-1"></i> เซ็นชื่อดิจิทัล
                         </button>
-                    <?php else: ?>
-                        <button type="button" class="btn-sig-clear" onclick="unapproveAction('director')">
-                            <i class="fas fa-undo me-1"></i> ยกเลิกอนุมัติ
+                        <button type="button" class="btn-sig-clear" id="director-btn-clear" style="<?= empty($media['director_signature']) ? 'display:none;' : '' ?>" onclick="clearSigAction('director')">
+                            <i class="fas fa-eraser me-1"></i> ลบลายเซ็น
                         </button>
-                    <?php endif; ?>
+
+                        <?php if (empty($media['director_approved'])): ?>
+                            <button type="button" class="btn-sig" style="background:#059669;" onclick="approveAction('director')">
+                                <i class="fas fa-check-circle me-1"></i> กดอนุมัติ
+                            </button>
+                        <?php else: ?>
+                            <button type="button" class="btn-sig-clear" onclick="unapproveAction('director')">
+                                <i class="fas fa-undo me-1"></i> ยกเลิกอนุมัติ
+                            </button>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </td>
         </tr>
@@ -477,7 +497,7 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
 <div class="sig-modal-backdrop" id="memoSigModal">
     <div class="sig-modal-dialog">
         <div class="sig-modal-header">
-            <span><i class="fas fa-pen-nib me-2"></i> วาดลายเซ็นดิจิทัล</span>
+            <span id="memoSigModalTitle"><i class="fas fa-pen-nib me-2"></i> วาดลายเซ็นดิจิทัล</span>
             <button type="button" onclick="closeMemoSigModal()" style="background:transparent;border:none;color:#fff;font-size:18px;cursor:pointer;">&times;</button>
         </div>
         <div style="padding:16px 20px;text-align:center;">
@@ -487,7 +507,7 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <button type="button" onclick="clearMemoCanvas()" style="background:#f1f5f9;border:1px solid #cbd5e1;padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:700;">
-                    <i class="fas fa-undo me-1"></i> ล้าง
+                    <i class="fas fa-undo me-1"></i> ล้างกระดาน
                 </button>
                 <div style="display:flex;gap:6px;">
                     <button type="button" onclick="closeMemoSigModal()" style="background:#e2e8f0;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;">ยกเลิก</button>
@@ -502,6 +522,7 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
 const mCanvas = document.getElementById('memoCanvas');
 const mCtx = mCanvas.getContext('2d');
 let mDrawing = false, mLastX = 0, mLastY = 0;
+let currentMemoSigTarget = 'author';
 
 function initMemoCanvas() {
     mCtx.strokeStyle = '#0f2b5c';
@@ -543,14 +564,68 @@ function initMemoCanvas() {
 }
 
 function clearMemoCanvas() { mCtx.clearRect(0, 0, mCanvas.width, mCanvas.height); }
-function openMemoSigModal() { clearMemoCanvas(); document.getElementById('memoSigModal').style.display = 'flex'; }
+
+function openMemoSigModal(target = 'author') {
+    currentMemoSigTarget = target;
+    clearMemoCanvas();
+
+    const titleEl = document.getElementById('memoSigModalTitle');
+    if (target === 'head') {
+        titleEl.innerHTML = '<i class="fas fa-pen-nib me-2"></i> วาดลายเซ็น: นายเฉลิมชัย ศรีชัย (หัวหน้าฝ่ายวิชาการ)';
+    } else if (target === 'director') {
+        titleEl.innerHTML = '<i class="fas fa-pen-nib me-2"></i> วาดลายเซ็น: นายสถาน ปรางมาศ (ผู้อำนวยการโรงเรียน)';
+    } else {
+        titleEl.innerHTML = '<i class="fas fa-pen-nib me-2"></i> วาดลายเซ็น: ครูผู้จัดทำ';
+    }
+
+    document.getElementById('memoSigModal').style.display = 'flex';
+}
+
 function closeMemoSigModal() { document.getElementById('memoSigModal').style.display = 'none'; }
 
-function applyMemoSig() {
+async function applyMemoSig() {
+    const blank = document.createElement('canvas');
+    blank.width = mCanvas.width;
+    blank.height = mCanvas.height;
+    if (mCanvas.toDataURL() === blank.toDataURL()) {
+        alert('กรุณาเซ็นชื่อก่อนกดนำไปใช้');
+        return;
+    }
+
     const dataUrl = mCanvas.toDataURL('image/png');
-    document.getElementById('memo-sig-display').innerHTML = `<img src="${dataUrl}" alt="ลายเซ็น">`;
-    document.getElementById('memo-btn-clear').style.display = 'inline-block';
-    try { localStorage.setItem('llw_memo_sig_<?= $id ?>', dataUrl); } catch(e){}
+
+    if (currentMemoSigTarget === 'author') {
+        document.getElementById('memo-sig-display').innerHTML = `<img src="${dataUrl}" alt="ลายเซ็น">`;
+        document.getElementById('memo-btn-clear').style.display = 'inline-block';
+        try { localStorage.setItem('llw_memo_sig_<?= $id ?>', dataUrl); } catch(e){}
+    } else if (currentMemoSigTarget === 'head') {
+        document.getElementById('head-sig-display').innerHTML = `<img src="${dataUrl}" alt="ลายเซ็นนายเฉลิมชัย ศรีชัย">`;
+        const btnClear = document.getElementById('head-btn-clear');
+        if (btnClear) btnClear.style.display = 'inline-block';
+
+        // Save to Database
+        try {
+            const formData = new FormData();
+            formData.append('id', <?= $id ?>);
+            formData.append('target', 'head');
+            formData.append('signature', dataUrl);
+            await fetch('/learning_media/api.php?action=save_signature', { method: 'POST', body: formData });
+        } catch(e){}
+    } else if (currentMemoSigTarget === 'director') {
+        document.getElementById('director-sig-display').innerHTML = `<img src="${dataUrl}" alt="ลายเซ็นนายสถาน ปรางมาศ">`;
+        const btnClear = document.getElementById('director-btn-clear');
+        if (btnClear) btnClear.style.display = 'inline-block';
+
+        // Save to Database
+        try {
+            const formData = new FormData();
+            formData.append('id', <?= $id ?>);
+            formData.append('target', 'director');
+            formData.append('signature', dataUrl);
+            await fetch('/learning_media/api.php?action=save_signature', { method: 'POST', body: formData });
+        } catch(e){}
+    }
+
     closeMemoSigModal();
 }
 
@@ -558,6 +633,34 @@ function clearMemoSig() {
     document.getElementById('memo-sig-display').innerHTML = '';
     document.getElementById('memo-btn-clear').style.display = 'none';
     try { localStorage.removeItem('llw_memo_sig_<?= $id ?>'); } catch(e){}
+}
+
+async function clearSigAction(target) {
+    if (!confirm('ยืนยันการลบลายเซ็นนี้หรือไม่?')) return;
+
+    if (target === 'head') {
+        document.getElementById('head-sig-display').innerHTML = '';
+        const btnClear = document.getElementById('head-btn-clear');
+        if (btnClear) btnClear.style.display = 'none';
+        try {
+            const formData = new FormData();
+            formData.append('id', <?= $id ?>);
+            formData.append('target', 'head');
+            formData.append('signature', '');
+            await fetch('/learning_media/api.php?action=save_signature', { method: 'POST', body: formData });
+        } catch(e){}
+    } else if (target === 'director') {
+        document.getElementById('director-sig-display').innerHTML = '';
+        const btnClear = document.getElementById('director-btn-clear');
+        if (btnClear) btnClear.style.display = 'none';
+        try {
+            const formData = new FormData();
+            formData.append('id', <?= $id ?>);
+            formData.append('target', 'director');
+            formData.append('signature', '');
+            await fetch('/learning_media/api.php?action=save_signature', { method: 'POST', body: formData });
+        } catch(e){}
+    }
 }
 
 async function approveAction(step) {
