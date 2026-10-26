@@ -125,10 +125,19 @@ $hdrIcon = $headerIcons[$activeSystem] ?? 'fas fa-cog';
             </li>
         </ul>
 
-        <!-- Right: clock + user pill -->
+        <!-- Right: clock + install app + user pill -->
         <ul class="navbar-nav ms-auto align-items-center gap-2">
             <li class="nav-item d-none d-lg-flex align-items-center">
                 <span id="topbar-clock" style="font-size:0.75rem;color:#94a3b8;"></span>
+            </li>
+            <li class="nav-item llw-pwa-install-trigger" data-pwa-display="flex">
+                <button type="button" onclick="if(window.installLlwApp) window.installLlwApp();"
+                        class="d-flex align-items-center gap-1.5 px-3 py-1.5 rounded-pill border-0"
+                        style="background:linear-gradient(135deg,#2563eb,#4f46e5);color:#fff;font-size:0.75rem;font-weight:700;box-shadow:0 2px 8px rgba(37,99,235,0.28);cursor:pointer;transition:all 0.15s;"
+                        title="ติดตั้งแอป LLW System ลงอุปกรณ์">
+                    <i class="fas fa-download" style="font-size:0.72rem;"></i>
+                    <span>ติดตั้งแอป</span>
+                </button>
             </li>
             <li class="nav-item dropdown">
                 <a href="#" class="nav-link dropdown-toggle p-0" data-bs-toggle="dropdown"
@@ -155,6 +164,13 @@ $hdrIcon = $headerIcons[$activeSystem] ?? 'fas fa-cog';
                             <?= htmlspecialchars($userName) ?>
                         </div>
                         <div style="font-size:0.7rem;color:#94a3b8;"><?= $roleName ?></div>
+                    </li>
+                    <li class="llw-pwa-install-trigger" data-pwa-display="block">
+                        <button type="button" class="dropdown-item small py-2 fw-semibold"
+                                onclick="if(window.installLlwApp) window.installLlwApp();"
+                                style="color:#2563eb;">
+                            <i class="fas fa-mobile-alt me-2" style="color:#2563eb;"></i>ติดตั้งแอปลงมือถือ
+                        </button>
                     </li>
                     <li>
                         <a class="dropdown-item small py-2"

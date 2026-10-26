@@ -5,10 +5,13 @@
  * - Network-Only สำหรับ API (/api/, POST requests) เพื่อความถูกต้องของข้อมูลแบบ Real-time
  * - Network-First พร้อมหน้า Offline ภาษาไทยสำหรับหน้าเว็บหลัก
  */
-const CACHE_NAME = 'llw-static-v2';
+const CACHE_NAME = 'llw-static-v3';
 
 const PRECACHE_URLS = [
     '/manifest.json',
+    '/assets/js/pwa-install.js',
+    '/assets/icons/icon-192.png',
+    '/assets/icons/icon-512.png',
     '/assets/icons/icon-192.svg',
     '/assets/icons/icon-512.svg'
 ];

@@ -11,16 +11,34 @@
   "lang": "th",
   "icons": [
     {
-      "src": "/assets/icons/icon-192.svg",
+      "src": "/assets/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/assets/icons/icon-512.svg",
+      "src": "/assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
       "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/icons/icon-192.svg",
+      "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "shortcuts": [
@@ -28,25 +46,25 @@
       "name": "เช็คชื่อเข้าแถว",
       "short_name": "เข้าแถว",
       "url": "/assembly/dashboard.php",
-      "icons": [{ "src": "/assets/icons/icon-192.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "เช็คชื่อวิชาเรียน",
       "short_name": "วิชาเรียน",
       "url": "/attendance_system/attendance.php",
-      "icons": [{ "src": "/assets/icons/icon-192.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "งานที่ปรึกษา & พฤติกรรม",
       "short_name": "พฤติกรรม",
       "url": "/behavior/dashboard.php",
-      "icons": [{ "src": "/assets/icons/icon-192.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "ลงเวลาปฏิบัติงาน",
       "short_name": "ลงเวลา",
       "url": "/user/dashboard.php",
-      "icons": [{ "src": "/assets/icons/icon-192.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "/assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

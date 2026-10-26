@@ -164,12 +164,21 @@ function _redirect_by_role(string $role): void {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($c['title']) ?> | LLW</title>
+    <meta name="theme-color" content="#0b1426">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LLW System">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/assets/icons/icon-192.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@100;200;300;400;500;600;700;800&family=Prompt:wght@700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/assets/js/pwa-install.js"></script>
     <style>
         :root {
             --accent: <?= htmlspecialchars($c['accent']) ?>;
@@ -389,11 +398,19 @@ function hexToRgb($hex) {
             <div class="flex-1 h-px bg-white/5"></div>
         </div>
 
-        <div class="text-center">
-            <a href="index.php" class="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-white transition-colors">
-                <i class="bi bi-house"></i>
-                กลับสู่หน้าหลักระบบ
-            </a>
+        <div class="text-center space-y-3">
+            <button type="button" onclick="if(window.installLlwApp) window.installLlwApp();"
+                    class="llw-pwa-install-trigger w-full py-3 px-4 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 hover:text-white font-bold text-sm flex items-center justify-center gap-2 transition-all"
+                    data-pwa-display="flex">
+                <i class="bi bi-phone"></i>
+                ติดตั้งแอป LLW ลงมือถือ
+            </button>
+            <div>
+                <a href="index.php" class="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-white transition-colors">
+                    <i class="bi bi-house"></i>
+                    กลับสู่หน้าหลักระบบ
+                </a>
+            </div>
         </div>
 
         <!-- Footer -->

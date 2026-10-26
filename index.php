@@ -163,14 +163,20 @@ $modules = array_values($modules);
     <!-- PWA / App Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="LLW Portal">
+    <meta name="apple-mobile-web-app-title" content="LLW System">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+    <link rel="icon" type="image/svg+xml" href="/assets/icons/icon-192.svg">
+    <link rel="apple-touch-icon" sizes="192x192" href="/assets/icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/assets/js/pwa-install.js"></script>
     <style>
         body { font-family: 'Prompt', sans-serif; touch-action: manipulation; }
 
@@ -298,6 +304,11 @@ $modules = array_values($modules);
             </div>
             <!-- Right Actions -->
             <div class="flex items-center gap-2">
+                <button type="button" onclick="if(window.installLlwApp) window.installLlwApp();"
+                        class="llw-pwa-install-trigger px-3 py-1.5 bg-white/15 text-white rounded-xl font-black text-xs border border-white/25 flex items-center gap-1 active:scale-95 transition-transform"
+                        data-pwa-display="flex">
+                    <i class="bi bi-download"></i><span>ติดตั้งแอป</span>
+                </button>
                 <?php if ($isLoggedIn): ?>
                     <div class="w-9 h-9 bg-white/15 rounded-full flex items-center justify-center text-white font-black text-sm border border-white/25 shadow-inner"><?= mb_substr($firstname, 0, 1) ?></div>
                     <a href="logout.php" class="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center text-white/80 border border-white/15 active:bg-white/20 transition-colors">
@@ -540,6 +551,11 @@ $modules = array_values($modules);
         </div>
     </a>
     <div class="flex items-center gap-3">
+        <button type="button" onclick="if(window.installLlwApp) window.installLlwApp();"
+                class="llw-pwa-install-trigger flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-2xl font-black text-xs hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                data-pwa-display="flex">
+            <i class="bi bi-phone"></i>ติดตั้งแอป
+        </button>
         <?php if ($isLoggedIn): ?>
             <?php foreach ($quickAccess as $qa): ?>
             <a href="<?= htmlspecialchars($qa['url']) ?>" class="hidden md:flex w-10 h-10 items-center justify-center text-<?= $qa['color'] ?>-600 bg-<?= $qa['color'] ?>-50 rounded-xl hover:bg-<?= $qa['color'] ?>-600 hover:text-white transition-all shadow-sm hover:shadow-lg hover:scale-110 hover:-translate-y-0.5" title="<?= htmlspecialchars($qa['label']) ?>">
