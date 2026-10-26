@@ -27,6 +27,7 @@ elseif (strpos($full_url, '/duty/') !== false)            $activeSystem = 'duty'
 elseif (strpos($full_url, '/club/') !== false || strpos($full_url, '/student_club/') !== false) $activeSystem = 'club';
 elseif (strpos($full_url, '/lms/') !== false || strpos($full_url, '/lms_system/') !== false) $activeSystem = 'lms';
 elseif (strpos($full_url, '/sar/') !== false)             $activeSystem = 'sar';
+elseif (strpos($full_url, '/learning_media/') !== false)  $activeSystem = 'learning_media';
 elseif (strpos($full_url, '/health/') !== false)           $activeSystem = 'health';
 elseif (strpos($full_url, '/parent_meeting/') !== false)   $activeSystem = 'parent_meeting';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
@@ -483,6 +484,14 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
                         </li>
                         <?php endforeach; ?>
                     </ul>
+                </li>
+
+                <!-- Learning Media (คลังสื่อการเรียนรู้) -->
+                <li class="nav-item">
+                    <a href="<?= $base_path ?>/learning_media/index.php" class="nav-link <?= $activeSystem === 'learning_media' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-photo-video text-info"></i>
+                        <p class="text-info">คลังสื่อการเรียนรู้</p>
+                    </a>
                 </li>
 
                 <!-- Supervision & PLC -->
