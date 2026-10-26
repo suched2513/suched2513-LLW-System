@@ -96,12 +96,13 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
             margin-bottom: 18px;
         }
         .memo-meta td {
-            padding: 4px 0;
+            padding: 3px 0;
             vertical-align: top;
+            font-size: 15pt;
         }
         .meta-label {
             font-weight: bold;
-            font-size: 16pt;
+            font-size: 15pt;
         }
         p {
             margin: 0 0 10px 0;
@@ -274,40 +275,43 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
      MEMO PAGE 1: ตราครุฑ, ส่วนราชการ, ข้อความเกริ่น, และรายละเอียดสื่อ
      ══════════════════════════════════════════════════════ -->
 <div class="page" id="memoPage1">
-    <!-- ตราครุฑ และหัวเรื่องบันทึกข้อความ -->
-    <div style="position: relative; margin-bottom: 18px; min-height: 60px;">
+    <!-- ตราครุฑ -->
+    <div class="header-krut">
         <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Garuda_Emblem_of_Thailand.svg/180px-Garuda_Emblem_of_Thailand.svg.png" 
-             alt="ตราครุฑ" class="krut-img" style="position: absolute; left: 0; top: 0;" onerror="this.style.display='none'">
-        <div style="text-align: center; font-size: 26pt; font-weight: bold; padding-top: 4px;">
-            บันทึกข้อความ
-        </div>
+             alt="ตราครุฑ" class="krut-img" onerror="this.style.display='none'">
     </div>
+
+    <div class="memo-title">บันทึกข้อความ</div>
 
     <table class="memo-meta">
         <tr>
-            <td style="width: 58%; vertical-align: top; line-height: 1.45;">
-                <span class="meta-label">ส่วนราชการ</span> โรงเรียนละลมวิทยา<br>
-                สพม.ศรีสะเกษ ยโสธร
+            <td style="width: 58%; vertical-align: top;">
+                <span class="meta-label">ส่วนราชการ</span> โรงเรียนละลมวิทยา
             </td>
-            <td style="width: 42%; vertical-align: top; line-height: 1.45;">
+            <td style="width: 42%; vertical-align: top;">
                 <span class="meta-label">กลุ่มสาระฯ</span> <?= htmlspecialchars($media['subject']) ?>
             </td>
         </tr>
         <tr>
-            <td style="vertical-align: top; padding-top: 6px;">
-                <span class="meta-label">ที่</span> ศธ ....................................
+            <td colspan="2" style="padding-top: 0; padding-bottom: 2px;">
+                สพม.ศรีสะเกษ ยโสธร
             </td>
-            <td style="vertical-align: top; padding-top: 6px;">
+        </tr>
+        <tr>
+            <td style="vertical-align: top;">
+                <span class="meta-label">ที่</span> ศธ ....................................................
+            </td>
+            <td style="vertical-align: top;">
                 <span class="meta-label">วันที่</span> <?= thaiDateFull($media['media_date']) ?>
             </td>
         </tr>
         <tr>
-            <td colspan="2" style="vertical-align: top; padding-top: 8px;">
+            <td colspan="2" style="padding-top: 6px; vertical-align: top; line-height: 1.5;">
                 <span class="meta-label">เรื่อง</span> ขอส่งแบบรายงานและสรุปผลการนำสื่อนวัตกรรมการจัดการเรียนรู้ไปใช้ในการจัดการเรียนการสอน
             </td>
         </tr>
         <tr>
-            <td colspan="2" style="vertical-align: top; padding-top: 8px;">
+            <td colspan="2" style="padding-top: 4px; vertical-align: top;">
                 <span class="meta-label">เรียน</span> ผู้อำนวยการโรงเรียนละลมวิทยา
             </td>
         </tr>
