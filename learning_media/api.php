@@ -58,47 +58,10 @@ function handleCoverUpload(array $file): ?string {
     return '/uploads/learning_media/' . $filename;
 }
 
-// Helper to handle base64 image data (e.g. from canvas or mobile camera)
-function handleCoverBase64(string $base64Data, ?string $originalName = null): ?string {
-    if (!preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
-        return null;
-    }
-
-    $ext = strtolower($type[1]);
-    if ($ext === 'jpeg') $ext = 'jpg';
-    $allowedExts = ['jpg', 'png', 'webp', 'gif'];
-    if (!in_array($ext, $allowedExts, true)) {
-        throw new Exception('อนุญาตเฉพาะไฟล์รูปภาพ (JPG, PNG, WEBP, GIF)');
-    }
-
-    $data = substr($base64Data, strpos($base64Data, ',') + 1);
-    $decoded = base64_decode($data);
-    if ($decoded === false) {
-        throw new Exception('ข้อมูลรูปภาพ base64 ไม่ถูกต้อง');
-    }
-    if (strlen($decoded) > 3 * 1024 * 1024) {
-        throw new Exception('ขนาดไฟล์รูปภาพต้องไม่เกิน 3MB');
-    }
-
-    $uploadDir = __DIR__ . '/../uploads/learning_media/';
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
-    }
-
-    $filename = 'media_' . date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
-    $targetPath = $uploadDir . $filename;
-
-    if (file_put_contents($targetPath, $decoded) === false) {
-        throw new Exception('ไม่สามารถบันทึกไฟล์รูปภาพได้');
-    }
-
-    return '/uploads/learning_media/' . $filename;
-}
-
 try {
     $pdo = getPdo();
 
-    // Auto-create table if not exists (graceful self-healing)
+    // ── Self-healing: Ensure table and enhanced columns exist ──
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS learning_media (
             id           INT AUTO_INCREMENT PRIMARY KEY,
@@ -107,10 +70,15 @@ try {
             author       VARCHAR(150) NOT NULL,
             grade        VARCHAR(50) NOT NULL,
             subject      VARCHAR(100) NOT NULL,
+            media_type   VARCHAR(50) NOT NULL DEFAULT 'slide',
             media_name   VARCHAR(255) NOT NULL,
             media_link   TEXT NOT NULL,
+            objective    TEXT NULL,
+            usage_results TEXT NULL,
             cover_url    TEXT NULL,
             views        INT NOT NULL DEFAULT 0,
+            rating_avg   DECIMAL(3,2) NOT NULL DEFAULT 0.00,
+            rating_count INT NOT NULL DEFAULT 0,
             status       ENUM('active','inactive') NOT NULL DEFAULT 'active',
             created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -122,15 +90,41 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ");
 
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS learning_media_ratings (
+            id             INT AUTO_INCREMENT PRIMARY KEY,
+            media_id       INT NOT NULL,
+            rating         TINYINT NOT NULL DEFAULT 5,
+            feedback       TEXT NULL,
+            evaluator_name VARCHAR(100) NULL,
+            evaluator_role VARCHAR(50) NOT NULL DEFAULT 'student',
+            created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_lmr_media (media_id),
+            INDEX idx_lmr_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    // Check if columns exist on previously created table
+    try {
+        $cols = $pdo->query("SHOW COLUMNS FROM learning_media")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('media_type', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN media_type VARCHAR(50) NOT NULL DEFAULT 'slide'");
+        if (!in_array('objective', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN objective TEXT NULL");
+        if (!in_array('usage_results', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN usage_results TEXT NULL");
+        if (!in_array('rating_avg', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN rating_avg DECIMAL(3,2) NOT NULL DEFAULT 0.00");
+        if (!in_array('rating_count', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN rating_count INT NOT NULL DEFAULT 0");
+    } catch (Exception $e) {}
+
     // ─────────────────────────────────────────────────────────────
     // 1. LIST MEDIA
     // ─────────────────────────────────────────────────────────────
     if ($action === 'list') {
-        $grade   = trim($_GET['grade'] ?? '');
-        $subject = trim($_GET['subject'] ?? '');
-        $search  = trim($_GET['search'] ?? '');
+        $grade     = trim($_GET['grade'] ?? '');
+        $subject   = trim($_GET['subject'] ?? '');
+        $mediaType = trim($_GET['mediaType'] ?? '');
+        $search    = trim($_GET['search'] ?? '');
 
-        $sql = "SELECT id, user_id, media_date, author, grade, subject, media_name, media_link, cover_url, views, created_at
+        $sql = "SELECT id, user_id, media_date, author, grade, subject, media_type, media_name, media_link,
+                       objective, usage_results, cover_url, views, rating_avg, rating_count, created_at
                 FROM learning_media
                 WHERE status = 'active'";
         $params = [];
@@ -143,9 +137,14 @@ try {
             $sql .= " AND subject = ?";
             $params[] = $subject;
         }
+        if ($mediaType !== '') {
+            $sql .= " AND media_type = ?";
+            $params[] = $mediaType;
+        }
         if ($search !== '') {
-            $sql .= " AND (media_name LIKE ? OR author LIKE ? OR grade LIKE ? OR subject LIKE ?)";
+            $sql .= " AND (media_name LIKE ? OR author LIKE ? OR grade LIKE ? OR subject LIKE ? OR objective LIKE ?)";
             $term = "%{$search}%";
+            $params[] = $term;
             $params[] = $term;
             $params[] = $term;
             $params[] = $term;
@@ -163,24 +162,33 @@ try {
         foreach ($rows as $r) {
             $totalViews += (int)$r['views'];
             $mediaList[] = [
-                'id'         => (int)$r['id'],
-                'userId'     => $r['user_id'] ? (int)$r['user_id'] : null,
-                'date'       => toThaiDateString($r['media_date']),
-                'rawDate'    => $r['media_date'],
-                'author'     => $r['author'],
-                'grade'      => $r['grade'],
-                'subject'    => $r['subject'],
-                'mediaName'  => $r['media_name'],
-                'mediaLink'  => $r['media_link'],
-                'cover'      => $r['cover_url'] ?: 'https://cdn-icons-png.flaticon.com/512/847/847969.png',
-                'views'      => (int)$r['views'],
-                'createdAt'  => $r['created_at'],
+                'id'           => (int)$r['id'],
+                'userId'       => $r['user_id'] ? (int)$r['user_id'] : null,
+                'date'         => toThaiDateString($r['media_date']),
+                'rawDate'      => $r['media_date'],
+                'author'       => $r['author'],
+                'grade'        => $r['grade'],
+                'subject'      => $r['subject'],
+                'mediaType'    => $r['media_type'] ?: 'slide',
+                'mediaName'    => $r['media_name'],
+                'mediaLink'    => $r['media_link'],
+                'objective'    => $r['objective'] ?? '',
+                'usageResults' => $r['usage_results'] ?? '',
+                'cover'        => $r['cover_url'] ?: 'https://cdn-icons-png.flaticon.com/512/847/847969.png',
+                'views'        => (int)$r['views'],
+                'ratingAvg'    => (float)($r['rating_avg'] ?? 0),
+                'ratingCount'  => (int)($r['rating_count'] ?? 0),
+                'createdAt'    => $r['created_at'],
             ];
         }
 
-        // Summary counts by subject for filter tabs
+        // Summary counts by subject
         $subjStmt = $pdo->query("SELECT subject, COUNT(*) as cnt FROM learning_media WHERE status = 'active' GROUP BY subject ORDER BY subject ASC");
         $subjectsCount = $subjStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+        // Summary counts by media_type
+        $typeStmt = $pdo->query("SELECT media_type, COUNT(*) as cnt FROM learning_media WHERE status = 'active' GROUP BY media_type");
+        $typesCount = $typeStmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
         // Distinct grades
         $gradeStmt = $pdo->query("SELECT DISTINCT grade FROM learning_media WHERE status = 'active' ORDER BY grade ASC");
@@ -190,6 +198,7 @@ try {
             'status'        => 'success',
             'data'          => $mediaList,
             'subjectsCount' => $subjectsCount,
+            'typesCount'    => $typesCount,
             'gradesList'    => $gradesList,
             'totalCount'    => count($mediaList),
             'totalViews'    => $totalViews,
@@ -225,7 +234,81 @@ try {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 3. SAVE NEW MEDIA (Requires login)
+    // 3. RATE MEDIA (แบบประเมินความพึงพอใจ 1-5 ดาว)
+    // ─────────────────────────────────────────────────────────────
+    if ($action === 'rate') {
+        $mediaId   = (int)($_POST['media_id'] ?? 0);
+        $rating    = max(1, min(5, (int)($_POST['rating'] ?? 5)));
+        $feedback  = trim($_POST['feedback'] ?? '');
+        $name      = trim($_POST['name'] ?? '');
+        $role      = $_SESSION['llw_role'] ?? 'student';
+
+        if (!$name) {
+            $name = $_SESSION['fullname'] ?? ($_SESSION['teacher_name'] ?? 'ผู้ประเมิน');
+        }
+
+        if ($mediaId <= 0) {
+            echo json_encode(['status' => 'fail', 'msg' => 'ไม่พบรหัสสื่อการเรียนรู้']);
+            exit;
+        }
+
+        // Insert rating
+        $rStmt = $pdo->prepare("
+            INSERT INTO learning_media_ratings (media_id, rating, feedback, evaluator_name, evaluator_role)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        $rStmt->execute([$mediaId, $rating, $feedback ?: null, $name, $role]);
+
+        // Recalculate average and count on learning_media
+        $calcStmt = $pdo->prepare("
+            SELECT COUNT(*) as cnt, AVG(rating) as avg_score
+            FROM learning_media_ratings
+            WHERE media_id = ?
+        ");
+        $calcStmt->execute([$mediaId]);
+        $calc = $calcStmt->fetch(PDO::FETCH_ASSOC);
+
+        $newCount = (int)($calc['cnt'] ?? 0);
+        $newAvg   = round((float)($calc['avg_score'] ?? 0), 2);
+
+        $upStmt = $pdo->prepare("UPDATE learning_media SET rating_avg = ?, rating_count = ? WHERE id = ?");
+        $upStmt->execute([$newAvg, $newCount, $mediaId]);
+
+        echo json_encode([
+            'status'      => 'success',
+            'message'     => 'ขอบคุณสำหรับการประเมินสื่อการเรียนรู้',
+            'ratingAvg'   => $newAvg,
+            'ratingCount' => $newCount,
+        ]);
+        exit;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 4. GET RATINGS FOR A MEDIA ITEM
+    // ─────────────────────────────────────────────────────────────
+    if ($action === 'get_ratings') {
+        $mediaId = (int)($_GET['media_id'] ?? 0);
+        if ($mediaId <= 0) {
+            echo json_encode(['status' => 'error', 'message' => 'ไม่พบรหัสสื่อ']);
+            exit;
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT rating, feedback, evaluator_name, evaluator_role, created_at
+            FROM learning_media_ratings
+            WHERE media_id = ?
+            ORDER BY id DESC
+            LIMIT 50
+        ");
+        $stmt->execute([$mediaId]);
+        $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode(['status' => 'success', 'reviews' => $reviews], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 5. SAVE NEW MEDIA (Requires login)
     // ─────────────────────────────────────────────────────────────
     if ($action === 'save') {
         if (!isset($_SESSION['llw_role'])) {
@@ -241,24 +324,25 @@ try {
             exit;
         }
 
-        $mediaDate = trim($_POST['date'] ?? date('Y-m-d'));
-        $author    = trim($_POST['author'] ?? ($_SESSION['fullname'] ?? 'ครูโรงเรียนละลมวิทยา'));
-        $grade     = trim($_POST['grade'] ?? '');
-        $subject   = trim($_POST['subject'] ?? '');
-        $mediaName = trim($_POST['mediaName'] ?? '');
-        $mediaLink = trim($_POST['mediaLink'] ?? '');
-        $coverUrl  = trim($_POST['coverUrl'] ?? '');
+        $mediaDate    = trim($_POST['date'] ?? date('Y-m-d'));
+        $author       = trim($_POST['author'] ?? ($_SESSION['fullname'] ?? 'ครูโรงเรียนละลมวิทยา'));
+        $grade        = trim($_POST['grade'] ?? '');
+        $subject      = trim($_POST['subject'] ?? '');
+        $mediaType    = trim($_POST['mediaType'] ?? 'slide');
+        $mediaName    = trim($_POST['mediaName'] ?? '');
+        $mediaLink    = trim($_POST['mediaLink'] ?? '');
+        $objective    = trim($_POST['objective'] ?? '');
+        $usageResults = trim($_POST['usageResults'] ?? '');
+        $coverUrl     = trim($_POST['coverUrl'] ?? '');
 
         if (!$grade || !$subject || !$mediaName || !$mediaLink) {
             echo json_encode(['status' => 'fail', 'msg' => 'กรุณากรอกข้อมูลให้ครบถ้วน']);
             exit;
         }
 
-        // Handle uploaded file or base64
+        // Handle uploaded file
         if (isset($_FILES['cover']) && $_FILES['cover']['error'] === UPLOAD_ERR_OK) {
             $coverUrl = handleCoverUpload($_FILES['cover']);
-        } elseif (!empty($_POST['coverBase64'])) {
-            $coverUrl = handleCoverBase64($_POST['coverBase64'], $_POST['coverName'] ?? null);
         }
 
         if (!$coverUrl) {
@@ -268,17 +352,17 @@ try {
         $userId = $_SESSION['user_id'] ?? null;
 
         $stmt = $pdo->prepare("
-            INSERT INTO learning_media (user_id, media_date, author, grade, subject, media_name, media_link, cover_url, views, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'active')
+            INSERT INTO learning_media (user_id, media_date, author, grade, subject, media_type, media_name, media_link, objective, usage_results, cover_url, views, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'active')
         ");
-        $stmt->execute([$userId, $mediaDate, $author, $grade, $subject, $mediaName, $mediaLink, $coverUrl]);
+        $stmt->execute([$userId, $mediaDate, $author, $grade, $subject, $mediaType, $mediaName, $mediaLink, $objective ?: null, $usageResults ?: null, $coverUrl]);
 
         echo json_encode(['status' => 'success', 'message' => 'บันทึกสื่อการเรียนรู้เรียบร้อยแล้ว']);
         exit;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 4. UPDATE MEDIA (Requires login & permission)
+    // 6. UPDATE MEDIA (Requires login & permission)
     // ─────────────────────────────────────────────────────────────
     if ($action === 'update') {
         if (!isset($_SESSION['llw_role'])) {
@@ -313,39 +397,40 @@ try {
             exit;
         }
 
-        $mediaDate = trim($_POST['date'] ?? date('Y-m-d'));
-        $author    = trim($_POST['author'] ?? $existing['author']);
-        $grade     = trim($_POST['grade'] ?? '');
-        $subject   = trim($_POST['subject'] ?? '');
-        $mediaName = trim($_POST['mediaName'] ?? '');
-        $mediaLink = trim($_POST['mediaLink'] ?? '');
-        $coverUrl  = trim($_POST['cover'] ?? $existing['cover_url']);
+        $mediaDate    = trim($_POST['date'] ?? date('Y-m-d'));
+        $author       = trim($_POST['author'] ?? $existing['author']);
+        $grade        = trim($_POST['grade'] ?? '');
+        $subject      = trim($_POST['subject'] ?? '');
+        $mediaType    = trim($_POST['mediaType'] ?? 'slide');
+        $mediaName    = trim($_POST['mediaName'] ?? '');
+        $mediaLink    = trim($_POST['mediaLink'] ?? '');
+        $objective    = trim($_POST['objective'] ?? '');
+        $usageResults = trim($_POST['usageResults'] ?? '');
+        $coverUrl     = trim($_POST['cover'] ?? $existing['cover_url']);
 
         if (!$grade || !$subject || !$mediaName || !$mediaLink) {
             echo json_encode(['status' => 'fail', 'msg' => 'กรุณากรอกข้อมูลให้ครบถ้วน']);
             exit;
         }
 
-        // Handle uploaded file or base64 if provided
         if (isset($_FILES['cover']) && $_FILES['cover']['error'] === UPLOAD_ERR_OK) {
             $coverUrl = handleCoverUpload($_FILES['cover']);
-        } elseif (!empty($_POST['coverBase64'])) {
-            $coverUrl = handleCoverBase64($_POST['coverBase64'], $_POST['coverName'] ?? null);
         }
 
         $stmt = $pdo->prepare("
             UPDATE learning_media
-            SET media_date = ?, author = ?, grade = ?, subject = ?, media_name = ?, media_link = ?, cover_url = ?
+            SET media_date = ?, author = ?, grade = ?, subject = ?, media_type = ?, media_name = ?, media_link = ?,
+                objective = ?, usage_results = ?, cover_url = ?
             WHERE id = ?
         ");
-        $stmt->execute([$mediaDate, $author, $grade, $subject, $mediaName, $mediaLink, $coverUrl, $id]);
+        $stmt->execute([$mediaDate, $author, $grade, $subject, $mediaType, $mediaName, $mediaLink, $objective ?: null, $usageResults ?: null, $coverUrl, $id]);
 
         echo json_encode(['status' => 'success', 'message' => 'บันทึกการแก้ไขเรียบร้อยแล้ว']);
         exit;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 5. DELETE MEDIA (Requires login & permission)
+    // 7. DELETE MEDIA (Requires login & permission)
     // ─────────────────────────────────────────────────────────────
     if ($action === 'delete') {
         if (!isset($_SESSION['llw_role'])) {
@@ -379,7 +464,6 @@ try {
             exit;
         }
 
-        // Soft delete
         $stmt = $pdo->prepare("UPDATE learning_media SET status = 'inactive' WHERE id = ?");
         $stmt->execute([$id]);
 
