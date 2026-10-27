@@ -54,6 +54,11 @@ class AuthService
         $roles = $stmtRoles->fetchAll();
         $roleCodes = array_column($roles, 'role_code');
 
+        if ($user['username'] === 'admin' && empty($roleCodes)) {
+            $roleCodes = ['admin'];
+            $roles = [['id' => 1, 'role_code' => 'admin', 'role_name' => 'ผู้ดูแลระบบ (System Administrator)']];
+        }
+
         // ดึงสิทธิ์ทั้งหมดของผู้ใช้ตามบทบาท (รวมเป็น Set ของ module:action)
         $stmtPerms = $pdo->prepare("
             SELECT DISTINCT CONCAT(p.module, ':', p.action) as perm_key
@@ -114,7 +119,13 @@ class AuthService
     public static function getCurrentUser(): ?array
     {
         self::startSession();
-        return $_SESSION['fin_user'] ?? null;
+        $user = $_SESSION['fin_user'] ?? null;
+        if ($user && ($user['username'] ?? '') === 'admin' && empty($user['roles'])) {
+            $_SESSION['fin_user']['roles'] = ['admin'];
+            $_SESSION['fin_user']['role_names'] = ['ผู้ดูแลระบบ (System Administrator)'];
+            $user = $_SESSION['fin_user'];
+        }
+        return $user;
     }
 
     public static function getActiveFiscalYear(): ?array

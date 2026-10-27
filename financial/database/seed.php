@@ -30,7 +30,7 @@ try {
     echo "  - ติดตั้งรายการสิทธิ์ (104 สิทธิ์) เรียบร้อย" . PHP_EOL;
 
     // 3. Role Permissions Mapping
-    $roleMap = $pdo->query("SELECT id, role_code FROM fin_roles")->fetchAll(PDO::FETCH_KEY_PAIR);
+    $roleMap = $pdo->query("SELECT role_code, id FROM fin_roles")->fetchAll(PDO::FETCH_KEY_PAIR);
     $permMap = $pdo->query("SELECT CONCAT(module, ':', action) as perm_key, id FROM fin_permissions")->fetchAll(PDO::FETCH_KEY_PAIR);
 
     $stmtRolePerm = $pdo->prepare("INSERT IGNORE INTO fin_role_permissions (role_id, permission_id) VALUES (?, ?)");

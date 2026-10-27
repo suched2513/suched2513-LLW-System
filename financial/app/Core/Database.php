@@ -89,6 +89,16 @@ class Database
             $hasUsers = $pdo->query("SHOW TABLES LIKE 'fin_users'")->rowCount() > 0;
             if (!$hasUsers) {
                 self::autoMigrate($pdo);
+            } else {
+                // ตรวจสอบว่าได้ seed สิทธิ์และบทบาทแล้วหรือยัง
+                $hasUserRoles = (int)$pdo->query("SELECT COUNT(*) FROM fin_user_roles")->fetchColumn();
+                $hasRolePerms = (int)$pdo->query("SELECT COUNT(*) FROM fin_role_permissions")->fetchColumn();
+                if ($hasUserRoles === 0 || $hasRolePerms === 0) {
+                    $seedFile = __DIR__ . '/../../database/seed.php';
+                    if (file_exists($seedFile)) {
+                        require_once $seedFile;
+                    }
+                }
             }
         } catch (\Throwable $e) {
             error_log('[Financial DB ensureTablesExist] ' . $e->getMessage());
