@@ -344,6 +344,7 @@ CREATE TABLE IF NOT EXISTS `fin_bank_accounts` (
     `account_no` VARCHAR(50) NOT NULL UNIQUE,
     `account_name` VARCHAR(150) NOT NULL,
     `account_type` ENUM('current', 'savings', 'fixed') NOT NULL DEFAULT 'savings',
+    `current_balance` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
     `funding_source_id` INT NULL,
     `gl_account_id` INT NULL COMMENT 'ผังบัญชีเงินฝากธนาคาร',
     `is_active` TINYINT(1) NOT NULL DEFAULT 1,

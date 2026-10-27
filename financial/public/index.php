@@ -61,6 +61,8 @@ use App\Controllers\ReceiptController;
 use App\Controllers\DisbursementController;
 use App\Controllers\AdvanceController;
 use App\Controllers\AccountController;
+use App\Controllers\BankController;
+use App\Controllers\SpecialProgramController;
 
 // 5. คำนวณ Base URL อัตโนมัติ
 $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
@@ -150,6 +152,24 @@ $router->get('/accounts/chart', [AccountController::class, 'chart'], ['auth', 'r
 $router->post('/accounts/chart', [AccountController::class, 'storeAccount'], ['auth', 'csrf', 'rbac:accounts,create']);
 $router->get('/accounts/ledger/{id}', [AccountController::class, 'ledger'], ['auth', 'rbac:accounts,view']);
 $router->get('/accounts/trial-balance', [AccountController::class, 'trialBalance'], ['auth', 'rbac:accounts,view']);
+
+// --- Bank Accounts & Reconciliation Module ---
+$router->get('/banks', [BankController::class, 'index'], ['auth', 'rbac:bank_reconciliation,view']);
+$router->post('/banks/store', [BankController::class, 'store'], ['auth', 'csrf', 'rbac:bank_reconciliation,create']);
+$router->get('/banks/ledger/{id}', [BankController::class, 'ledger'], ['auth', 'rbac:bank_reconciliation,view']);
+$router->get('/banks/statement/{id}', [BankController::class, 'statement'], ['auth', 'rbac:bank_reconciliation,view']);
+$router->post('/banks/statement/{id}', [BankController::class, 'importStatement'], ['auth', 'csrf', 'rbac:bank_reconciliation,edit']);
+$router->get('/banks/reconcile/{id}', [BankController::class, 'reconcile'], ['auth', 'rbac:bank_reconciliation,view']);
+
+// --- Special Programs & Tuition Fees Module ---
+$router->get('/special-programs', [SpecialProgramController::class, 'index'], ['auth', 'rbac:special_programs,view']);
+$router->get('/special-programs/rates', [SpecialProgramController::class, 'rates'], ['auth', 'rbac:special_programs,view']);
+$router->post('/special-programs/rates', [SpecialProgramController::class, 'storeRate'], ['auth', 'csrf', 'rbac:special_programs,create']);
+$router->get('/special-programs/charges', [SpecialProgramController::class, 'charges'], ['auth', 'rbac:special_programs,view']);
+$router->get('/special-programs/create-billing', [SpecialProgramController::class, 'createBilling'], ['auth', 'rbac:special_programs,create']);
+$router->post('/special-programs/create-billing', [SpecialProgramController::class, 'storeBilling'], ['auth', 'csrf', 'rbac:special_programs,create']);
+$router->post('/special-programs/pay', [SpecialProgramController::class, 'pay'], ['auth', 'csrf', 'rbac:special_programs,create']);
+$router->post('/special-programs/waive', [SpecialProgramController::class, 'waive'], ['auth', 'csrf', 'rbac:special_programs,edit']);
 
 // 7. Dispatch Request
 $request = new Request();

@@ -201,7 +201,19 @@ try {
     }
     echo "  - ติดตั้งแม่แบบเอกสารและรายงานราชการ (28 รายการ) เรียบร้อย" . PHP_EOL;
 
-    // 10. System Settings (ข้อมูลหน่วยงานและการตั้งค่านโยบาย)
+    // 10. Bank Accounts (บัญชีธนาคารโรงเรียนละลมวิทยา)
+    $bankAccounts = [
+        ['ธนาคารกรุงไทย', 'สาขาขุขันธ์', '328-0-12345-6', 'โรงเรียนละลมวิทยา (เงินรายได้สถานศึกษา)', 'savings', 250000.00, 2],
+        ['ธนาคารเพื่อการเกษตรและสหกรณ์การเกษตร (ธ.ก.ส.)', 'สาขาละลม', '020-1-98765-4', 'โรงเรียนละลมวิทยา (เงินอุดหนุน)', 'savings', 500000.00, 1],
+        ['ธนาคารกรุงไทย', 'สาขาขุขันธ์', '328-6-54321-0', 'โรงเรียนละลมวิทยา (กระแสรายวัน)', 'current', 100000.00, 1],
+    ];
+    $stmtBank = $pdo->prepare("INSERT INTO fin_bank_accounts (bank_name, branch_name, account_no, account_name, account_type, current_balance, funding_source_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE account_name=VALUES(account_name), current_balance=VALUES(current_balance)");
+    foreach ($bankAccounts as $ba) {
+        $stmtBank->execute($ba);
+    }
+    echo "  - ติดตั้งบัญชีเงินฝากธนาคารเริ่มต้น เรียบร้อย" . PHP_EOL;
+
+    // 11. System Settings (ข้อมูลหน่วยงานและการตั้งค่านโยบาย)
     $settings = [
         'school_name'            => 'โรงเรียนละลมวิทยา',
         'school_affiliation'     => 'สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาศรีสะเกษ ยโสธร',
