@@ -95,8 +95,8 @@ $baseUrl = defined('BASE_URL') ? BASE_URL : '';
         <!-- Top Navbar -->
         <header class="top-navbar d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-3">
-                <button class="btn btn-sm btn-outline-secondary d-md-none" id="sidebarToggle" type="button">
-                    <i class="bi bi-list"></i>
+                <button class="btn btn-sm btn-outline-secondary d-lg-none" id="sidebarToggle" type="button" aria-label="Toggle navigation">
+                    <i class="bi bi-list fs-5"></i>
                 </button>
                 <div class="fiscal-year-badge">
                     <i class="bi bi-calendar-check-fill"></i>
