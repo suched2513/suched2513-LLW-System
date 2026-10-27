@@ -68,8 +68,15 @@ use App\Controllers\InventoryController;
 use App\Controllers\ReportController;
 
 // 5. คำนวณ Base URL อัตโนมัติ
-$scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
-$baseUrl = ($scriptDir === '/' || $scriptDir === '\\') ? '' : rtrim($scriptDir, '/');
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+if (str_starts_with($requestUri, '/financial/public')) {
+    $baseUrl = '/financial/public';
+} elseif (str_starts_with($requestUri, '/financial')) {
+    $baseUrl = '/financial';
+} else {
+    $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+    $baseUrl = ($scriptDir === '/' || $scriptDir === '\\') ? '' : rtrim($scriptDir, '/');
+}
 define('BASE_URL', $baseUrl);
 
 // 6. กำหนดเส้นทาง URL (Routes)
@@ -82,6 +89,7 @@ $router->registerMiddleware('csrf', CsrfMiddleware::class);
 
 // --- Public & Auth Routes ---
 $router->get('/', [AuthController::class, 'showLogin']);
+$router->get('/index.php', [AuthController::class, 'showLogin']);
 $router->get('/login', [AuthController::class, 'showLogin']);
 $router->post('/login', [AuthController::class, 'login'], ['csrf']);
 $router->get('/logout', [AuthController::class, 'logout']);

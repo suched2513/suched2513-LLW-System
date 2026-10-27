@@ -51,22 +51,42 @@ class Request
 
     public function getUri(): string
     {
+        // Support route parameter passed via query string ?r=path or ?route=path
+        if (!empty($this->get['r'])) {
+            return '/' . ltrim((string)$this->get['r'], '/');
+        }
+        if (!empty($this->get['route'])) {
+            return '/' . ltrim((string)$this->get['route'], '/');
+        }
+
         $uri = $this->server['REQUEST_URI'] ?? '/';
         $path = parse_url($uri, PHP_URL_PATH) ?? '/';
-        
-        // Remove base subdirectory if running in subfolder like /financial/public
+
+        // 1. Strip known application prefixes if present
+        $knownPrefixes = ['/financial/public', '/financial'];
+        foreach ($knownPrefixes as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                $path = substr($path, strlen($prefix));
+                break;
+            }
+        }
+
+        // 2. Also strip scriptName dirname if different
         $scriptName = $this->server['SCRIPT_NAME'] ?? '';
         $baseDir = dirname($scriptName);
         if ($baseDir !== '/' && $baseDir !== '\\' && str_starts_with($path, $baseDir)) {
             $path = substr($path, strlen($baseDir));
         }
 
-        // Support route parameter passed via query string ?r=path or ?route=path
-        if (isset($this->get['r'])) {
-            return '/' . ltrim($this->get['r'], '/');
+        // 3. Strip index.php if in path
+        if ($path === '/index.php' || $path === 'index.php') {
+            $path = '/';
+        } elseif (str_starts_with($path, '/index.php/')) {
+            $path = substr($path, strlen('/index.php'));
         }
 
-        return '/' . trim($path, '/');
+        $clean = trim($path, '/');
+        return $clean === '' ? '/' : '/' . $clean;
     }
 
     public function input(string $key, mixed $default = null): mixed
