@@ -21,27 +21,27 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
 }
 
-// 4. โหลด Autoloader
+// 4. โหลด Autoloader สำหรับ App namespace เสมอ
+spl_autoload_register(function ($class) {
+    $prefix = 'App\\';
+    $baseDir = __DIR__ . '/../app/';
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) {
+        return;
+    }
+    $relativeClass = substr($class, $len);
+    $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
+    if (file_exists($file)) {
+        require_once $file;
+    }
+});
+
+require_once __DIR__ . '/../app/Helpers/functions.php';
+
+// โหลด Composer dependencies เพิ่มเติมถ้ามี
 $autoloadFile = __DIR__ . '/../vendor/autoload.php';
 if (file_exists($autoloadFile)) {
     require_once $autoloadFile;
-} else {
-    // Manual PSR-4 Fallback autoloader ถ้ายังไม่ได้รัน composer install
-    spl_autoload_register(function ($class) {
-        $prefix = 'App\\';
-        $baseDir = __DIR__ . '/../app/';
-        $len = strlen($prefix);
-        if (strncmp($prefix, $class, $len) !== 0) {
-            return;
-        }
-        $relativeClass = substr($class, $len);
-        $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
-        if (file_exists($file)) {
-            require $file;
-        }
-    });
-
-    require_once __DIR__ . '/../app/Helpers/functions.php';
 }
 
 use App\Core\Request;
