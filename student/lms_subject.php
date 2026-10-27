@@ -124,6 +124,7 @@ $_cls_filter = $_ex_cls_exists
     : '';
 $stmt = $pdo->prepare("
     SELECT e.id, e.exercise_title, e.description, e.max_score, e.due_date, e.allow_resubmit, e.is_remedial,
+           e.attachment_path, e.attachment_name, e.attachment_url,
            u.id AS unit_id, u.unit_name, u.order_no
     FROM lms_unit_exercises e
     JOIN lms_units u ON u.id = e.unit_id
@@ -451,6 +452,29 @@ body { font-family: 'Prompt', sans-serif; }
         <p class="text-xs text-blue-700 leading-relaxed"><?=nl2br(htmlspecialchars($ex['description'],ENT_QUOTES,'UTF-8'))?></p>
       </div>
       <?php endif; ?>
+      <?php if (!empty($ex['attachment_path']) || !empty($ex['attachment_url'])): ?>
+      <div class="mt-3 bg-emerald-50/80 border border-emerald-200 rounded-xl p-3">
+        <p class="text-[11px] font-black text-emerald-800 mb-2 flex items-center gap-1.5">
+          <i class="bi bi-paperclip text-emerald-600"></i> ใบงาน / เอกสารประกอบการเรียน:
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <?php if (!empty($ex['attachment_path'])): ?>
+          <a href="/lms/serve_exercise.php?f=<?=urlencode($ex['attachment_path'])?>&name=<?=urlencode($ex['attachment_name']?:'ใบงาน')?>" target="_blank"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-bold text-emerald-700 hover:bg-emerald-100 shadow-sm transition-all">
+            <i class="bi bi-file-earmark-arrow-down-fill text-emerald-600"></i>
+            <span><?=htmlspecialchars($ex['attachment_name']?:'ดาวน์โหลดใบงาน',ENT_QUOTES,'UTF-8')?></span>
+          </a>
+          <?php endif; ?>
+          <?php if (!empty($ex['attachment_url'])): ?>
+          <a href="<?=htmlspecialchars($ex['attachment_url'],ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-300 rounded-lg text-xs font-bold text-blue-700 hover:bg-blue-50 shadow-sm transition-all">
+            <i class="bi bi-box-arrow-up-right text-blue-500"></i>
+            <span>เปิดลิงก์ใบงาน</span>
+          </a>
+          <?php endif; ?>
+        </div>
+      </div>
+      <?php endif; ?>
     </div>
     <!-- Submit button -->
     <div class="px-4 pb-4">
@@ -528,6 +552,30 @@ body { font-family: 'Prompt', sans-serif; }
         <span class="flex-shrink-0 px-2.5 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full">ส่งแล้ว</span>
         <?php endif; ?>
       </div>
+
+      <?php if (!empty($ex['attachment_path']) || !empty($ex['attachment_url'])): ?>
+      <div class="mt-3 bg-emerald-50/80 border border-emerald-200 rounded-xl p-3">
+        <p class="text-[11px] font-black text-emerald-800 mb-2 flex items-center gap-1.5">
+          <i class="bi bi-paperclip text-emerald-600"></i> ใบงาน / เอกสารประกอบการเรียน:
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <?php if (!empty($ex['attachment_path'])): ?>
+          <a href="/lms/serve_exercise.php?f=<?=urlencode($ex['attachment_path'])?>&name=<?=urlencode($ex['attachment_name']?:'ใบงาน')?>" target="_blank"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-bold text-emerald-700 hover:bg-emerald-100 shadow-sm transition-all">
+            <i class="bi bi-file-earmark-arrow-down-fill text-emerald-600"></i>
+            <span><?=htmlspecialchars($ex['attachment_name']?:'ดาวน์โหลดใบงาน',ENT_QUOTES,'UTF-8')?></span>
+          </a>
+          <?php endif; ?>
+          <?php if (!empty($ex['attachment_url'])): ?>
+          <a href="<?=htmlspecialchars($ex['attachment_url'],ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-300 rounded-lg text-xs font-bold text-blue-700 hover:bg-blue-50 shadow-sm transition-all">
+            <i class="bi bi-box-arrow-up-right text-blue-500"></i>
+            <span>เปิดลิงก์ใบงาน</span>
+          </a>
+          <?php endif; ?>
+        </div>
+      </div>
+      <?php endif; ?>
 
       <!-- Teacher feedback -->
       <?php if ($reviewed && !empty($sub['feedback'])): ?>

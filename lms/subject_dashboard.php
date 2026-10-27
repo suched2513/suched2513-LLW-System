@@ -386,7 +386,7 @@ require_once __DIR__ . '/../components/layout_start.php';
 <?php else: ?>
 <div class="space-y-3">
   <?php foreach ($units as $u):
-    $exs = $pdo->prepare("SELECT * FROM lms_unit_exercises WHERE unit_id=? ORDER BY id");
+    $exs = $pdo->prepare("SELECT * FROM lms_unit_exercises WHERE unit_id=? AND deleted_at IS NULL ORDER BY id");
     $exs->execute([$u['id']]); $exs = $exs->fetchAll();
   ?>
   <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">

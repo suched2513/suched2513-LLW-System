@@ -9,9 +9,26 @@ $pdo        = getPdo();
 $teacher_id = (int)($_SESSION['teacher_id'] ?? 0);
 $is_admin   = $_SESSION['llw_role'] === 'super_admin';
 
-// ── POST: create exercise ────────────────────────────────────────
+// ── POST: create or delete exercise ───────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        $action = $_POST['action'] ?? 'create_exercise';
+
+        if ($action === 'delete_exercise') {
+            $ex_id      = (int)($_POST['exercise_id'] ?? 0);
+            $subject_id = (int)($_POST['subject_id'] ?? 0);
+            if (!$ex_id) throw new Exception('ไม่พบรหัสใบงานที่ต้องการลบ');
+            $ownedEx = lms_get_owned_exercise($pdo, $ex_id, $is_admin, $teacher_id);
+            if (!$ownedEx) throw new Exception('ไม่มีสิทธิ์ลบใบงานนี้ หรือไม่พบข้อมูล');
+
+            $pdo->prepare("UPDATE lms_unit_exercises SET deleted_at = NOW() WHERE id = ?")->execute([$ex_id]);
+            lms_log_activity($pdo, 'soft_delete', 'lms_unit_exercises', $ex_id, ['title' => $ownedEx['exercise_title']]);
+
+            $subjRedirect = $subject_id ?: (int)$ownedEx['subject_id'];
+            header('Location: assign_work.php?subject_id=' . $subjRedirect . '&deleted=1&ex=' . urlencode($ownedEx['exercise_title']));
+            exit();
+        }
+
         $subject_id = (int)$_POST['subject_id'];
         $unit_id    = (int)($_POST['unit_id'] ?? 0);
         $new_unit   = trim($_POST['new_unit_name'] ?? '');
@@ -20,12 +37,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $desc       = trim($_POST['description'] ?? '') ?: null;
         $score      = ($_POST['max_score'] ?? '') !== '' ? max(1, (int)$_POST['max_score']) : null;
         $due        = !empty($_POST['due_date']) ? $_POST['due_date'] : null;
+        $attach_url = !empty($_POST['attachment_url']) ? trim($_POST['attachment_url']) : null;
 
         if (!$title)      throw new Exception('กรุณาระบุชื่อใบงาน');
         if (!$subject_id) throw new Exception('กรุณาเลือกวิชา');
         if (empty($classrooms)) throw new Exception('กรุณาเลือกห้องเรียนอย่างน้อย 1 ห้อง');
         if (!lms_get_owned_subject($pdo, $subject_id, $is_admin, $teacher_id)) throw new Exception('ไม่มีสิทธิ์ใช้งานวิชานี้');
         if ($unit_id && !lms_get_owned_unit($pdo, $unit_id, $is_admin, $teacher_id)) throw new Exception('ไม่มีสิทธิ์ใช้งานหน่วยนี้');
+
+        // Handle attachment file upload
+        $attachment_path = null;
+        $attachment_name = null;
+        if (!empty($_FILES['attachment_file']['name']) && $_FILES['attachment_file']['error'] === UPLOAD_ERR_OK) {
+            $origName = $_FILES['attachment_file']['name'];
+            $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+            $allowed_exts = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'webp', 'zip'];
+            if (!in_array($ext, $allowed_exts)) {
+                throw new Exception('ประเภทไฟล์ใบงานไม่ถูกต้อง (รองรับ PDF, Word, Excel, PowerPoint, รูปภาพ หรือ ZIP)');
+            }
+            if ($_FILES['attachment_file']['size'] > 30 * 1024 * 1024) {
+                throw new Exception('ไฟล์ใบงานมีขนาดใหญ่เกิน 30MB');
+            }
+            $uploadDir = __DIR__ . '/uploads/exercises/';
+            if (!is_dir($uploadDir)) {
+                @mkdir($uploadDir, 0777, true);
+            }
+            $safeFileName = 'ws_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+            if (move_uploaded_file($_FILES['attachment_file']['tmp_name'], $uploadDir . $safeFileName)) {
+                $attachment_path = $safeFileName;
+                $attachment_name = $origName;
+            } else {
+                throw new Exception('ไม่สามารถบันทึกไฟล์ใบงานได้');
+            }
+        }
 
         $pdo->beginTransaction();
 
@@ -38,8 +82,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $unit_id = (int)$pdo->lastInsertId();
         }
 
-        $pdo->prepare("INSERT INTO lms_unit_exercises (unit_id, exercise_title, description, max_score, due_date) VALUES (?,?,?,?,?)")
-            ->execute([$unit_id, $title, $desc, $score, $due]);
+        $pdo->prepare("INSERT INTO lms_unit_exercises (unit_id, exercise_title, description, attachment_path, attachment_name, attachment_url, max_score, due_date) VALUES (?,?,?,?,?,?,?,?)")
+            ->execute([$unit_id, $title, $desc, $attachment_path, $attachment_name, $attach_url, $score, $due]);
         $ex_id = (int)$pdo->lastInsertId();
 
         $all_r = $pdo->prepare("SELECT classroom FROM lms_subject_classrooms WHERE subject_id=? ORDER BY classroom");
@@ -95,7 +139,8 @@ if ($sel_subject_id) {
 
     try {
         $r = $pdo->prepare("
-            SELECT e.id, e.exercise_title, e.max_score, e.due_date,
+            SELECT e.id, e.exercise_title, e.description, e.max_score, e.due_date,
+                   e.attachment_path, e.attachment_name, e.attachment_url,
                    u.unit_name, u.id AS unit_id,
                    GROUP_CONCAT(ec.classroom ORDER BY ec.classroom SEPARATOR ', ') AS ex_classes,
                    COUNT(DISTINCT se.id) AS sub_count
@@ -176,6 +221,15 @@ require_once __DIR__ . '/../components/layout_start.php';
   <div>
     <p class="font-black text-emerald-700 text-sm">สั่งงานสำเร็จ!</p>
     <p class="text-xs text-emerald-600">"<?=htmlspecialchars($_GET['ex']??'',ENT_QUOTES,'UTF-8')?>" → <?=htmlspecialchars($_GET['cls']??'',ENT_QUOTES,'UTF-8')?></p>
+  </div>
+</div>
+<?php endif; ?>
+<?php if (isset($_GET['deleted'])): ?>
+<div class="mb-4 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-3 flex items-center gap-3">
+  <i class="bi bi-trash3-fill text-emerald-600 text-lg flex-shrink-0"></i>
+  <div>
+    <p class="font-black text-emerald-700 text-sm">ลบใบงานสำเร็จ!</p>
+    <p class="text-xs text-emerald-600">ลบใบงาน "<?=htmlspecialchars($_GET['ex']??'',ENT_QUOTES,'UTF-8')?>" เรียบร้อยแล้ว</p>
   </div>
 </div>
 <?php endif; ?>
@@ -306,7 +360,7 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-black text-slate-700 truncate"><?=htmlspecialchars($re['exercise_title'],ENT_QUOTES,'UTF-8')?></p>
-          <p class="text-[10px] text-slate-400 mt-0.5 flex flex-wrap gap-x-2">
+          <div class="text-[10px] text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
             <span><i class="bi bi-door-open mr-0.5"></i><?=htmlspecialchars($cls_label,ENT_QUOTES,'UTF-8')?></span>
             <?php if ($re['due_date']): ?>
             <span class="<?=$is_due?'text-rose-400':''?>">
@@ -314,7 +368,19 @@ require_once __DIR__ . '/../components/layout_start.php';
               <?=$is_due?' · หมดเวลาแล้ว':''?>
             </span>
             <?php endif; ?>
-          </p>
+            <?php if (!empty($re['attachment_path'])): ?>
+            <a href="serve_exercise.php?f=<?=urlencode($re['attachment_path'])?>&name=<?=urlencode($re['attachment_name']?:'ใบงาน')?>" target="_blank"
+               class="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-900 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg hover:bg-emerald-100 transition-all shadow-sm">
+              <i class="bi bi-paperclip text-emerald-600"></i><?=htmlspecialchars($re['attachment_name']?:'ไฟล์ใบงาน',ENT_QUOTES,'UTF-8')?>
+            </a>
+            <?php endif; ?>
+            <?php if (!empty($re['attachment_url'])): ?>
+            <a href="<?=htmlspecialchars($re['attachment_url'],ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-1 text-blue-700 hover:text-blue-900 font-bold bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg hover:bg-blue-100 transition-all shadow-sm">
+              <i class="bi bi-box-arrow-up-right text-blue-500"></i>ลิงก์ใบงาน
+            </a>
+            <?php endif; ?>
+          </div>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
           <?php if ($re['max_score']): ?>
@@ -327,6 +393,11 @@ require_once __DIR__ . '/../components/layout_start.php';
              class="p-2 rounded-xl bg-teal-50 text-teal-600 hover:bg-teal-100 transition-all" title="ตรวจงาน">
             <i class="bi bi-check2-square text-sm"></i>
           </a>
+          <button type="button"
+                  onclick="confirmDeleteExercise(<?= (int)$re['id'] ?>, '<?= htmlspecialchars(addslashes($re['exercise_title']), ENT_QUOTES, 'UTF-8') ?>', <?= (int)$re['sub_count'] ?>)"
+                  class="p-2 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-700 transition-all" title="ลบใบงานที่สั่งผิด">
+            <i class="bi bi-trash3 text-sm"></i>
+          </button>
         </div>
       </div>
       <?php endforeach; ?>
@@ -365,7 +436,8 @@ require_once __DIR__ . '/../components/layout_start.php';
     </div>
 
     <!-- Modal body -->
-    <form method="POST" action="assign_work.php" class="overflow-y-auto max-h-[70vh]">
+    <form method="POST" action="assign_work.php" enctype="multipart/form-data" class="overflow-y-auto max-h-[70vh]">
+      <input type="hidden" name="action" value="create_exercise">
       <input type="hidden" name="subject_id" value="<?=$sel_subject_id?>">
       <div class="p-6 space-y-4">
 
@@ -465,6 +537,33 @@ require_once __DIR__ . '/../components/layout_start.php';
               class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-emerald-400 outline-none">
           </div>
         </div>
+
+        <!-- ⑥ แนบไฟล์ใบงานสำหรับนักเรียน -->
+        <div>
+          <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">
+            <i class="bi bi-paperclip text-emerald-500 mr-1"></i>
+            แนบไฟล์ใบงานให้นักเรียน <span class="text-slate-300 font-normal">(ไม่บังคับ)</span>
+          </label>
+          <div class="relative border-2 border-dashed border-slate-200 hover:border-emerald-400 rounded-2xl p-3.5 bg-slate-50/60 hover:bg-emerald-50/30 transition-all">
+            <input type="file" name="attachment_file" id="attachmentFileInput"
+                   accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.zip"
+                   class="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer">
+            <p class="text-[10px] text-slate-400 mt-2 flex items-center gap-1">
+              <i class="bi bi-info-circle text-emerald-500"></i> รองรับไฟล์ PDF, Word (.docx), Excel, PowerPoint, รูปภาพ หรือ ZIP (สูงสุด 30MB)
+            </p>
+          </div>
+        </div>
+
+        <!-- ⑦ แนบลิงก์ใบงานภายนอก -->
+        <div>
+          <label class="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">
+            <i class="bi bi-link-45deg text-emerald-500 mr-1"></i>
+            หรือแนบลิงก์ใบงานภายนอก <span class="text-slate-300 font-normal">(ไม่บังคับ)</span>
+          </label>
+          <input type="url" name="attachment_url" placeholder="https://drive.google.com/... หรือ https://www.canva.com/..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-medium focus:ring-2 focus:ring-emerald-400 outline-none">
+          <p class="text-[10px] text-slate-400 mt-1">ใส่อีกลิงก์กรณีใช้ Google Drive, Google Docs, Canva หรือ Liveworksheets</p>
+        </div>
       </div>
 
       <!-- Modal footer -->
@@ -481,6 +580,13 @@ require_once __DIR__ . '/../components/layout_start.php';
     </form>
   </div>
 </div>
+
+<!-- Hidden form for deleting mistakenly assigned exercise -->
+<form id="deleteExerciseForm" method="POST" action="assign_work.php" style="display:none;">
+  <input type="hidden" name="action" value="delete_exercise">
+  <input type="hidden" name="subject_id" value="<?=$sel_subject_id?>">
+  <input type="hidden" name="exercise_id" id="deleteExerciseId" value="">
+</form>
 
 <?php endif; ?>
 
@@ -567,6 +673,43 @@ function toggleNewUnit() {
     field.classList.add('hidden');
     field.required = false;
     field.value = '';
+  }
+}
+
+function confirmDeleteExercise(exId, title, subCount) {
+  let warningHtml = 'คุณต้องการลบใบงาน <strong>"' + title + '"</strong> ใช่หรือไม่?';
+  if (subCount > 0) {
+    warningHtml = '<div class="text-rose-600 font-bold mb-2"><i class="bi bi-exclamation-triangle-fill mr-1"></i> มีนักเรียนส่งงานแล้ว ' + subCount + ' คน</div>' +
+                  'หากลบใบงานนี้ ข้อมูลงานที่ส่งจะถูกซ่อนออกจากระบบ คุณแน่ใจหรือไม่ว่าต้องการลบ?';
+  }
+
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      icon: subCount > 0 ? 'warning' : 'question',
+      title: 'ยืนยันการลบใบงาน',
+      html: warningHtml,
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: '<i class="bi bi-trash3-fill mr-1"></i> ลบใบงาน',
+      cancelButtonText: 'ยกเลิก',
+      reverseButtons: true,
+      focusCancel: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        document.getElementById('deleteExerciseId').value = exId;
+        document.getElementById('deleteExerciseForm').submit();
+      }
+    });
+  } else {
+    let plainText = 'คุณต้องการลบใบงาน "' + title + '" ใช่หรือไม่?';
+    if (subCount > 0) {
+      plainText = 'ใบงานนี้มีนักเรียนส่งงานแล้ว ' + subCount + ' คน ต้องการลบใช่หรือไม่?';
+    }
+    if (confirm(plainText)) {
+      document.getElementById('deleteExerciseId').value = exId;
+      document.getElementById('deleteExerciseForm').submit();
+    }
   }
 }
 </script>

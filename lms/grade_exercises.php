@@ -294,6 +294,25 @@ require_once __DIR__ . '/../components/layout_start.php';
         <p class="text-xs text-blue-700"><?=nl2br(htmlspecialchars($exercise['description'],ENT_QUOTES,'UTF-8'))?></p>
       </div>
       <?php endif; ?>
+      <?php if (!empty($exercise['attachment_path']) || !empty($exercise['attachment_url'])): ?>
+      <div class="mt-3 bg-emerald-50/80 border border-emerald-200 rounded-xl px-3.5 py-2.5 flex flex-wrap items-center gap-2">
+        <span class="text-xs font-black text-emerald-800"><i class="bi bi-paperclip text-emerald-600 mr-1"></i>ใบงานแนบ:</span>
+        <?php if (!empty($exercise['attachment_path'])): ?>
+        <a href="serve_exercise.php?f=<?=urlencode($exercise['attachment_path'])?>&name=<?=urlencode($exercise['attachment_name']?:'ใบงาน')?>" target="_blank"
+           class="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-emerald-300 rounded-lg text-xs font-bold text-emerald-700 hover:bg-emerald-100 shadow-sm transition-all">
+          <i class="bi bi-file-earmark-arrow-down-fill text-emerald-600"></i>
+          <span><?=htmlspecialchars($exercise['attachment_name']?:'ดาวน์โหลดใบงาน',ENT_QUOTES,'UTF-8')?></span>
+        </a>
+        <?php endif; ?>
+        <?php if (!empty($exercise['attachment_url'])): ?>
+        <a href="<?=htmlspecialchars($exercise['attachment_url'],ENT_QUOTES,'UTF-8')?>" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-blue-300 rounded-lg text-xs font-bold text-blue-700 hover:bg-blue-50 shadow-sm transition-all">
+          <i class="bi bi-box-arrow-up-right text-blue-500"></i>
+          <span>ลิงก์ใบงาน</span>
+        </a>
+        <?php endif; ?>
+      </div>
+      <?php endif; ?>
     </div>
 
     <?php if (empty($submissions)): ?>

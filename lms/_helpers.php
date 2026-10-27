@@ -40,6 +40,16 @@ function lms_get_owned_topic(PDO $pdo, int $topic_id, bool $is_admin, int $teach
     return $row ?: null;
 }
 
+function lms_get_owned_exercise(PDO $pdo, int $exercise_id, bool $is_admin, int $teacher_id): ?array {
+    if (!$exercise_id) return null;
+    $sql = "SELECT e.*, u.subject_id FROM lms_unit_exercises e JOIN lms_units u ON u.id = e.unit_id JOIN lms_subjects s ON s.id = u.subject_id WHERE e.id=?";
+    if (!$is_admin) $sql .= " AND s.teacher_id=?";
+    $st = $pdo->prepare($sql);
+    $is_admin ? $st->execute([$exercise_id]) : $st->execute([$exercise_id, $teacher_id]);
+    $row = $st->fetch();
+    return $row ?: null;
+}
+
 function lms_owned_subject_ids(PDO $pdo, bool $is_admin, int $teacher_id): array {
     if ($is_admin) {
         return $pdo->query("SELECT id FROM lms_subjects")->fetchAll(PDO::FETCH_COLUMN);
@@ -559,6 +569,31 @@ function lms_log_activity(PDO $pdo, string $action, string $targetType, int $tar
 }
 
 
+function lms_ensure_exercise_columns(PDO $pdo): bool {
+    static $done = null;
+    if ($done !== null) return $done;
+    try {
+        $hasTbl = (bool)$pdo->query("SHOW TABLES LIKE 'lms_unit_exercises'")->fetchColumn();
+        if ($hasTbl) {
+            $cols = $pdo->query("SHOW COLUMNS FROM `lms_unit_exercises`")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('attachment_path', $cols, true)) {
+                $pdo->exec("ALTER TABLE `lms_unit_exercises` ADD COLUMN `attachment_path` VARCHAR(255) NULL DEFAULT NULL AFTER `description`");
+            }
+            if (!in_array('attachment_name', $cols, true)) {
+                $pdo->exec("ALTER TABLE `lms_unit_exercises` ADD COLUMN `attachment_name` VARCHAR(255) NULL DEFAULT NULL AFTER `attachment_path`");
+            }
+            if (!in_array('attachment_url', $cols, true)) {
+                $pdo->exec("ALTER TABLE `lms_unit_exercises` ADD COLUMN `attachment_url` TEXT NULL DEFAULT NULL AFTER `attachment_name`");
+            }
+        }
+        $done = true;
+    } catch (Throwable $e) {
+        error_log('[LMS] ensure exercise columns failed: ' . $e->getMessage());
+        $done = false;
+    }
+    return $done;
+}
+
 // ── Semester & Academic Year helpers for LMS ─────────────────────────────
 function lms_ensure_semester_columns(PDO $pdo): bool {
     static $done = null;
@@ -574,6 +609,7 @@ function lms_ensure_semester_columns(PDO $pdo): bool {
         if (!in_array('semester', $cols, true)) {
             $pdo->exec("ALTER TABLE `lms_subjects` ADD COLUMN `semester` TINYINT NOT NULL DEFAULT 1");
         }
+        lms_ensure_exercise_columns($pdo);
         $done = true;
     } catch (Throwable $e) {
         error_log('[LMS] ensure semester columns failed: ' . $e->getMessage());
@@ -858,14 +894,17 @@ function lms_clone_subject_to_term(
                     $exStmt = $pdo->prepare("SELECT * FROM lms_unit_exercises WHERE unit_id=? AND deleted_at IS NULL ORDER BY id");
                     $exStmt->execute([$oldUnitId]);
                     $insEx = $pdo->prepare("
-                        INSERT INTO lms_unit_exercises (unit_id, exercise_title, description, max_score, due_date, is_remedial, status)
-                        VALUES (?,?,?,?,NULL,?,?)
+                        INSERT INTO lms_unit_exercises (unit_id, exercise_title, description, attachment_path, attachment_name, attachment_url, max_score, due_date, is_remedial, status)
+                        VALUES (?,?,?,?,?,?,?,NULL,?,?)
                     ");
                     foreach ($exStmt->fetchAll(PDO::FETCH_ASSOC) as $ex) {
                         $insEx->execute([
                             $newUnitId,
                             $ex['exercise_title'],
                             $ex['description'],
+                            $ex['attachment_path'] ?? null,
+                            $ex['attachment_name'] ?? null,
+                            $ex['attachment_url'] ?? null,
                             $ex['max_score'],
                             $ex['is_remedial'] ?? 0,
                             $ex['status'] ?? 'published',
