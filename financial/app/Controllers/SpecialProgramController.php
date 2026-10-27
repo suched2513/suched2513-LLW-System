@@ -131,7 +131,7 @@ class SpecialProgramController extends Controller
         $classrooms = $pdo->query("SELECT DISTINCT classroom FROM fin_student_charges ORDER BY classroom ASC")->fetchAll(PDO::FETCH_COLUMN);
 
         // Bank Accounts for payment modal
-        $bankAccounts = $pdo->query("SELECT id, bank_name, account_number, account_name FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
+        $bankAccounts = $pdo->query("SELECT id, bank_name, account_no, account_no as account_number, account_name FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
 
         $this->render('special_programs/charges', [
             'pageTitle'    => 'ทะเบียนคุมการจัดเก็บค่าบำรุงการศึกษา',

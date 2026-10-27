@@ -29,7 +29,7 @@ class ReceiptController extends Controller
         $dateTo = trim((string)$this->request->query('date_to', ''));
 
         $sql = "
-            SELECT r.*, fs.source_name, u.full_name as creator_name, ba.bank_name, ba.account_number
+            SELECT r.*, fs.source_name, u.full_name as creator_name, ba.bank_name, ba.account_no, ba.account_no as account_number
             FROM fin_receipts r
             JOIN fin_funding_sources fs ON r.funding_source_id = fs.id
             LEFT JOIN fin_users u ON r.created_by = u.id
@@ -71,7 +71,7 @@ class ReceiptController extends Controller
         $cashForDeposit->execute([$fyId]);
         $undepositedCash = $cashForDeposit->fetchAll();
 
-        $bankAccounts = $pdo->query("SELECT id, bank_name, account_number, account_name FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
+        $bankAccounts = $pdo->query("SELECT id, bank_name, account_no, account_no as account_number, account_name FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
 
         $this->render('receipts/index', [
             'pageTitle'       => 'ระบบรับเงินและออกใบเสร็จ',
@@ -160,7 +160,7 @@ class ReceiptController extends Controller
         $pdo = Database::getConnection();
 
         $stmt = $pdo->prepare("
-            SELECT r.*, fs.source_name, u.full_name as creator_name, ba.bank_name, ba.account_number, ba.account_name
+            SELECT r.*, fs.source_name, u.full_name as creator_name, ba.bank_name, ba.account_no, ba.account_no as account_number, ba.account_name
             FROM fin_receipts r
             JOIN fin_funding_sources fs ON r.funding_source_id = fs.id
             LEFT JOIN fin_users u ON r.created_by = u.id

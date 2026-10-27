@@ -27,7 +27,15 @@ class FiscalYearController extends Controller
         $activeFy = AuthService::getActiveFiscalYear();
         $selectedYearId = (int)$this->request->query('year_id', $activeFy['id'] ?? ($years[0]['id'] ?? 0));
 
-        $stmtPeriods = $pdo->prepare("SELECT * FROM fin_accounting_periods WHERE fiscal_year_id = ? ORDER BY period_number ASC");
+        $stmtPeriods = $pdo->prepare("
+            SELECT *, 
+                   COALESCE(period_number, period_no) as period_number, 
+                   COALESCE(period_name, CONCAT('งวดที่ ', period_no)) as period_name,
+                   COALESCE(is_closed, CASE WHEN status = 'closed' OR status = 'locked' THEN 1 ELSE 0 END) as is_closed
+            FROM fin_accounting_periods 
+            WHERE fiscal_year_id = ? 
+            ORDER BY period_no ASC
+        ");
         $stmtPeriods->execute([$selectedYearId]);
         $periods = $stmtPeriods->fetchAll();
 
@@ -85,9 +93,14 @@ class FiscalYearController extends Controller
                 12 => ["งวดที่ 12 (กันยายน $yearBe)", "$yearCe-09-01", "$yearCe-09-30"],
             ];
 
-            $stmtPeriod = $pdo->prepare("INSERT INTO fin_accounting_periods (fiscal_year_id, period_number, period_name, start_date, end_date, is_closed) VALUES (?, ?, ?, ?, ?, 0)");
+            $stmtPeriod = $pdo->prepare("
+                INSERT INTO fin_accounting_periods 
+                (fiscal_year_id, period_no, month_no, year_ce, start_date, end_date, status, period_number, period_name, is_closed) 
+                VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, 0)
+            ");
             foreach ($periodsConfig as $num => [$name, $start, $end]) {
-                $stmtPeriod->execute([$fyId, $num, $name, $start, $end]);
+                $monthNo = ($num <= 3) ? ($num + 9) : ($num - 3);
+                $stmtPeriod->execute([$fyId, $num, $monthNo, $yearCe, $start, $end, $num, $name]);
             }
 
             $pdo->commit();
@@ -134,15 +147,21 @@ class FiscalYearController extends Controller
         $periodId = (int)$this->request->input('period_id');
         $pdo = Database::getConnection();
 
-        $stmt = $pdo->prepare("SELECT is_closed, period_name FROM fin_accounting_periods WHERE id = ?");
+        $stmt = $pdo->prepare("
+            SELECT id, status,
+                   COALESCE(is_closed, CASE WHEN status='closed' OR status='locked' THEN 1 ELSE 0 END) as is_closed,
+                   COALESCE(period_name, CONCAT('งวดที่ ', period_no)) as period_name 
+            FROM fin_accounting_periods WHERE id = ?
+        ");
         $stmt->execute([$periodId]);
         $period = $stmt->fetch();
 
         if ($period) {
             $newStatus = $period['is_closed'] ? 0 : 1;
-            $stmtUpdate = $pdo->prepare("UPDATE fin_accounting_periods SET is_closed = ?, closed_at = ? WHERE id = ?");
+            $statusEnum = $newStatus ? 'closed' : 'open';
+            $stmtUpdate = $pdo->prepare("UPDATE fin_accounting_periods SET is_closed = ?, status = ?, closed_at = ? WHERE id = ?");
             $closedAt = $newStatus ? date('Y-m-d H:i:s') : null;
-            $stmtUpdate->execute([$newStatus, $closedAt, $periodId]);
+            $stmtUpdate->execute([$newStatus, $statusEnum, $closedAt, $periodId]);
 
             $statusText = $newStatus ? 'ปิดงวดบัญชี (ห้ามลงบัญชีเพิ่มเติม)' : 'เปิดงวดบัญชี';
             AuditTrailService::log('accounting_period', 'toggle_lock', 'fin_accounting_periods', $periodId, ['is_closed' => $period['is_closed']], ['is_closed' => $newStatus], "{$statusText} {$period['period_name']}");

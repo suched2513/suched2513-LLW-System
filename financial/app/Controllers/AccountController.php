@@ -27,7 +27,7 @@ class AccountController extends Controller
         $dateTo = trim((string)$this->request->query('date_to', ''));
 
         $sql = "
-            SELECT e.*, p.period_name, u.full_name as creator_name
+            SELECT e.*, COALESCE(p.period_name, CONCAT('งวดที่ ', p.period_no)) as period_name, u.full_name as creator_name
             FROM fin_journal_entries e
             JOIN fin_accounting_periods p ON e.accounting_period_id = p.id
             LEFT JOIN fin_users u ON e.created_by = u.id
@@ -71,7 +71,7 @@ class AccountController extends Controller
         $pdo = Database::getConnection();
 
         $stmt = $pdo->prepare("
-            SELECT e.*, p.period_name, u.full_name as creator_name
+            SELECT e.*, COALESCE(p.period_name, CONCAT('งวดที่ ', p.period_no)) as period_name, u.full_name as creator_name
             FROM fin_journal_entries e
             JOIN fin_accounting_periods p ON e.accounting_period_id = p.id
             LEFT JOIN fin_users u ON e.created_by = u.id
@@ -216,7 +216,7 @@ class AccountController extends Controller
         $result = AccountingService::getTrialBalance($fyId, $periodId);
 
         $pdo = Database::getConnection();
-        $periods = $pdo->prepare("SELECT id, period_name, period_number FROM fin_accounting_periods WHERE fiscal_year_id = ? ORDER BY period_number ASC");
+        $periods = $pdo->prepare("SELECT id, COALESCE(period_name, CONCAT('งวดที่ ', period_no)) as period_name, COALESCE(period_number, period_no) as period_number FROM fin_accounting_periods WHERE fiscal_year_id = ? ORDER BY period_no ASC");
         $periods->execute([$fyId]);
         $allPeriods = $periods->fetchAll();
 

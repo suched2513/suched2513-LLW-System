@@ -102,8 +102,76 @@ class Database
                     }
                 }
             }
+
+            // ปรับปรุงคอลัมน์ที่จำเป็นสำหรับสภาพแวดล้อมต่างๆ (Schema Patching)
+            self::patchDatabaseSchema($pdo);
         } catch (\Throwable $e) {
             error_log('[Financial DB ensureTablesExist] ' . $e->getMessage());
+        }
+    }
+
+    public static function patchDatabaseSchema(PDO $pdo): void
+    {
+        try {
+            $hasColumn = function(string $table, string $column) use ($pdo): bool {
+                $stmt = $pdo->prepare("SHOW COLUMNS FROM `{$table}` LIKE ?");
+                $stmt->execute([$column]);
+                return $stmt->rowCount() > 0;
+            };
+
+            // 1. fin_bank_accounts
+            if ($pdo->query("SHOW TABLES LIKE 'fin_bank_accounts'")->rowCount() > 0) {
+                if (!$hasColumn('fin_bank_accounts', 'account_number')) {
+                    $pdo->exec("ALTER TABLE fin_bank_accounts ADD COLUMN account_number VARCHAR(50) NULL AFTER account_no");
+                    $pdo->exec("UPDATE fin_bank_accounts SET account_number = account_no WHERE account_number IS NULL OR account_number = ''");
+                }
+            }
+
+            // 2. fin_accounting_periods
+            if ($pdo->query("SHOW TABLES LIKE 'fin_accounting_periods'")->rowCount() > 0) {
+                if (!$hasColumn('fin_accounting_periods', 'period_number')) {
+                    $pdo->exec("ALTER TABLE fin_accounting_periods ADD COLUMN period_number INT NULL AFTER period_no");
+                    $pdo->exec("UPDATE fin_accounting_periods SET period_number = period_no WHERE period_number IS NULL");
+                }
+                if (!$hasColumn('fin_accounting_periods', 'period_name')) {
+                    $pdo->exec("ALTER TABLE fin_accounting_periods ADD COLUMN period_name VARCHAR(100) NULL AFTER period_number");
+                    $pdo->exec("UPDATE fin_accounting_periods SET period_name = CONCAT('งวดที่ ', period_no) WHERE period_name IS NULL OR period_name = ''");
+                }
+                if (!$hasColumn('fin_accounting_periods', 'is_closed')) {
+                    $pdo->exec("ALTER TABLE fin_accounting_periods ADD COLUMN is_closed TINYINT(1) NOT NULL DEFAULT 0 AFTER status");
+                    $pdo->exec("UPDATE fin_accounting_periods SET is_closed = CASE WHEN status = 'closed' OR status = 'locked' THEN 1 ELSE 0 END");
+                }
+            }
+
+            // 3. fin_audit_logs
+            if ($pdo->query("SHOW TABLES LIKE 'fin_audit_logs'")->rowCount() > 0) {
+                if (!$hasColumn('fin_audit_logs', 'module')) {
+                    $pdo->exec("ALTER TABLE fin_audit_logs ADD COLUMN module VARCHAR(50) NULL AFTER user_id");
+                    if ($hasColumn('fin_audit_logs', 'entity_type')) {
+                        $pdo->exec("UPDATE fin_audit_logs SET module = entity_type WHERE module IS NULL");
+                    }
+                }
+                if (!$hasColumn('fin_audit_logs', 'table_name')) {
+                    $pdo->exec("ALTER TABLE fin_audit_logs ADD COLUMN table_name VARCHAR(100) NULL AFTER module");
+                }
+                if (!$hasColumn('fin_audit_logs', 'record_id')) {
+                    $pdo->exec("ALTER TABLE fin_audit_logs ADD COLUMN record_id INT NULL AFTER table_name");
+                }
+                if (!$hasColumn('fin_audit_logs', 'old_values')) {
+                    $pdo->exec("ALTER TABLE fin_audit_logs ADD COLUMN old_values TEXT NULL");
+                }
+                if (!$hasColumn('fin_audit_logs', 'new_values')) {
+                    $pdo->exec("ALTER TABLE fin_audit_logs ADD COLUMN new_values TEXT NULL");
+                }
+                if (!$hasColumn('fin_audit_logs', 'notes')) {
+                    $pdo->exec("ALTER TABLE fin_audit_logs ADD COLUMN notes TEXT NULL");
+                    if ($hasColumn('fin_audit_logs', 'details')) {
+                        $pdo->exec("UPDATE fin_audit_logs SET notes = details WHERE notes IS NULL");
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[Financial DB patchDatabaseSchema] ' . $e->getMessage());
         }
     }
 

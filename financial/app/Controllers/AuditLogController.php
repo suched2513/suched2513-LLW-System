@@ -60,9 +60,20 @@ class AuditLogController extends Controller
         $logs = $stmt->fetchAll();
 
         // Get filter dropdown options
-        $modules = $pdo->query("SELECT DISTINCT module FROM fin_audit_logs ORDER BY module ASC")->fetchAll(PDO::FETCH_COLUMN);
-        $actions = $pdo->query("SELECT DISTINCT action FROM fin_audit_logs ORDER BY action ASC")->fetchAll(PDO::FETCH_COLUMN);
-        $users = $pdo->query("SELECT id, username, full_name FROM fin_users ORDER BY full_name ASC")->fetchAll();
+        $modules = [];
+        try {
+            $modules = $pdo->query("SELECT DISTINCT module FROM fin_audit_logs WHERE module IS NOT NULL AND module != '' ORDER BY module ASC")->fetchAll(PDO::FETCH_COLUMN);
+        } catch (\Throwable $e) {}
+
+        $actions = [];
+        try {
+            $actions = $pdo->query("SELECT DISTINCT action FROM fin_audit_logs WHERE action IS NOT NULL AND action != '' ORDER BY action ASC")->fetchAll(PDO::FETCH_COLUMN);
+        } catch (\Throwable $e) {}
+
+        $users = [];
+        try {
+            $users = $pdo->query("SELECT id, username, full_name FROM fin_users ORDER BY full_name ASC")->fetchAll();
+        } catch (\Throwable $e) {}
 
         $this->render('audit_logs/index', [
             'pageTitle' => 'ประวัติการใช้งานระบบ (Audit Trail)',

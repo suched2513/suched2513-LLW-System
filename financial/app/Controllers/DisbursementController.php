@@ -60,7 +60,7 @@ class DisbursementController extends Controller
         $payments = $stmt->fetchAll();
 
         // Bank Accounts for payment modal
-        $bankAccounts = $pdo->query("SELECT id, bank_name, account_number, account_name, current_balance FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
+        $bankAccounts = $pdo->query("SELECT id, bank_name, account_no, account_no as account_number, account_name, current_balance FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
 
         $this->render('disbursements/index', [
             'pageTitle'    => 'ระบบเบิกจ่ายเงินและใบสำคัญจ่าย',
@@ -174,7 +174,7 @@ class DisbursementController extends Controller
                 aud.full_name as auditor_name,
                 app.full_name as approver_name,
                 dis.full_name as disburser_name,
-                ba.bank_name, ba.account_number, ba.account_name
+                ba.bank_name, ba.account_no, ba.account_no as account_number, ba.account_name
             FROM fin_payments p
             JOIN fin_users u ON p.requester_id = u.id
             JOIN fin_budgets b ON p.budget_id = b.id
@@ -199,7 +199,7 @@ class DisbursementController extends Controller
         $items = $stmtItems->fetchAll();
 
         // Bank Accounts for disburse modal
-        $bankAccounts = $pdo->query("SELECT id, bank_name, account_number, account_name, current_balance FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
+        $bankAccounts = $pdo->query("SELECT id, bank_name, account_no, account_no as account_number, account_name, current_balance FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
 
         $this->render('disbursements/show', [
             'pageTitle'    => "ใบสำคัญจ่าย: {$payment['voucher_no']}",
