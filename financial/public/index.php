@@ -7,7 +7,7 @@
 declare(strict_types=1);
 
 // 1. ตรวจสอบ Error Reporting ตาม Environment
-ini_set('display_errors', '0');
+ini_set('display_errors', '1');
 error_reporting(E_ALL);
 
 // 2. กำหนด Timezone
