@@ -58,7 +58,10 @@ class AdvanceController extends Controller
         $stmt->execute($params);
         $advances = $stmt->fetchAll();
 
-        $bankAccounts = $pdo->query("SELECT id, bank_name, account_no, account_no as account_number, account_name, current_balance FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
+        $bankAccounts = $pdo->query("SELECT id, bank_name, account_no, account_no as account_number, account_name FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
+        foreach ($bankAccounts as &$ba) {
+            $ba['current_balance'] = $ba['current_balance'] ?? 0.00;
+        }
 
         $this->render('advances/index', [
             'pageTitle'     => 'ระบบเงินยืมราชการและล้างเงินยืม',
@@ -164,7 +167,10 @@ class AdvanceController extends Controller
         $stmtClr->execute([(int)$id]);
         $clearings = $stmtClr->fetchAll();
 
-        $bankAccounts = $pdo->query("SELECT id, bank_name, account_no, account_no as account_number, account_name, current_balance FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
+        $bankAccounts = $pdo->query("SELECT id, bank_name, account_no, account_no as account_number, account_name FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
+        foreach ($bankAccounts as &$ba) {
+            $ba['current_balance'] = $ba['current_balance'] ?? 0.00;
+        }
 
         $this->render('advances/show', [
             'pageTitle'    => "สัญญายืมเงิน: {$advance['contract_no']}",

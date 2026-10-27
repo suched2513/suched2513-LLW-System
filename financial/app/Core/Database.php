@@ -125,6 +125,9 @@ class Database
                     $pdo->exec("ALTER TABLE fin_bank_accounts ADD COLUMN account_number VARCHAR(50) NULL AFTER account_no");
                     $pdo->exec("UPDATE fin_bank_accounts SET account_number = account_no WHERE account_number IS NULL OR account_number = ''");
                 }
+                if (!$hasColumn('fin_bank_accounts', 'current_balance')) {
+                    $pdo->exec("ALTER TABLE fin_bank_accounts ADD COLUMN current_balance DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER account_type");
+                }
             }
 
             // 2. fin_accounting_periods

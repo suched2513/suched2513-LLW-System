@@ -60,7 +60,10 @@ class DisbursementController extends Controller
         $payments = $stmt->fetchAll();
 
         // Bank Accounts for payment modal
-        $bankAccounts = $pdo->query("SELECT id, bank_name, account_no, account_no as account_number, account_name, current_balance FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
+        $bankAccounts = $pdo->query("SELECT id, bank_name, account_no, account_no as account_number, account_name FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
+        foreach ($bankAccounts as &$ba) {
+            $ba['current_balance'] = $ba['current_balance'] ?? 0.00;
+        }
 
         $this->render('disbursements/index', [
             'pageTitle'    => 'ระบบเบิกจ่ายเงินและใบสำคัญจ่าย',
@@ -199,7 +202,10 @@ class DisbursementController extends Controller
         $items = $stmtItems->fetchAll();
 
         // Bank Accounts for disburse modal
-        $bankAccounts = $pdo->query("SELECT id, bank_name, account_no, account_no as account_number, account_name, current_balance FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
+        $bankAccounts = $pdo->query("SELECT id, bank_name, account_no, account_no as account_number, account_name FROM fin_bank_accounts WHERE is_active = 1")->fetchAll();
+        foreach ($bankAccounts as &$ba) {
+            $ba['current_balance'] = $ba['current_balance'] ?? 0.00;
+        }
 
         $this->render('disbursements/show', [
             'pageTitle'    => "ใบสำคัญจ่าย: {$payment['voucher_no']}",
