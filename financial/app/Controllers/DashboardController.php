@@ -28,30 +28,34 @@ class DashboardController extends Controller
         ];
 
         if ($fyId) {
-            $stmt = $pdo->prepare("
-                SELECT 
-                    COALESCE(SUM(current_allocation), 0) as allocated,
-                    COALESCE(SUM(committed_amount), 0) as committed,
-                    COALESCE(SUM(actual_spent), 0) as spent
-                FROM fin_budgets
-                WHERE fiscal_year_id = ?
-            ");
-            $stmt->execute([$fyId]);
-            $bRow = $stmt->fetch();
-            if ($bRow) {
-                $allocated = (float)$bRow['allocated'];
-                $committed = (float)$bRow['committed'];
-                $spent     = (float)$bRow['spent'];
-                $remaining = $allocated - ($committed + $spent);
-                $percent   = $allocated > 0 ? (($committed + $spent) / $allocated) * 100 : 0.0;
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        COALESCE(SUM(net_amount), 0) as allocated,
+                        COALESCE(SUM(committed_amount), 0) as committed,
+                        COALESCE(SUM(paid_amount), 0) as spent
+                    FROM fin_budgets
+                    WHERE fiscal_year_id = ?
+                ");
+                $stmt->execute([$fyId]);
+                $bRow = $stmt->fetch();
+                if ($bRow) {
+                    $allocated = (float)$bRow['allocated'];
+                    $committed = (float)$bRow['committed'];
+                    $spent     = (float)$bRow['spent'];
+                    $remaining = $allocated - ($committed + $spent);
+                    $percent   = $allocated > 0 ? (($committed + $spent) / $allocated) * 100 : 0.0;
 
-                $budgetSummary = [
-                    'total_allocated' => $allocated,
-                    'total_committed' => $committed,
-                    'total_spent'     => $spent,
-                    'total_remaining' => $remaining,
-                    'percent_spent'   => round($percent, 2)
-                ];
+                    $budgetSummary = [
+                        'total_allocated' => $allocated,
+                        'total_committed' => $committed,
+                        'total_spent'     => $spent,
+                        'total_remaining' => $remaining,
+                        'percent_spent'   => round($percent, 2)
+                    ];
+                }
+            } catch (\Throwable $e) {
+                error_log('[Dashboard Budget Error] ' . $e->getMessage());
             }
         }
 
