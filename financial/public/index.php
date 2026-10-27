@@ -45,6 +45,7 @@ if (file_exists($autoloadFile)) {
 }
 
 use App\Core\Request;
+use App\Core\Response;
 use App\Core\Router;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\RbacMiddleware;
@@ -200,5 +201,10 @@ $router->get('/reports', [ReportController::class, 'index'], ['auth', 'rbac:repo
 $router->get('/reports/show/{code}', [ReportController::class, 'show'], ['auth', 'rbac:reports,view']);
 
 // 7. Dispatch Request
-$request = new Request();
-$router->dispatch($request);
+try {
+    $request = new Request();
+    $router->dispatch($request);
+} catch (\Throwable $e) {
+    http_response_code(500);
+    Response::abort(500, "เกิดข้อผิดพลาด: " . $e->getMessage() . " (" . basename($e->getFile()) . ":" . $e->getLine() . ")");
+}
