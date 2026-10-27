@@ -10,7 +10,7 @@ use App\Core\Database;
 
 try {
     echo "--- เริ่มต้นการนำเข้าข้อมูลตั้งต้น (Seeding Initial Data) ---" . PHP_EOL;
-    $pdo = Database::getConnection();
+    $pdo = isset($pdo) && ($pdo instanceof PDO) ? $pdo : Database::getConnection();
     $permissionsConfig = require __DIR__ . '/../config/permissions.php';
 
     // 1. Roles (บทบาท)

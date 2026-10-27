@@ -206,7 +206,7 @@ class AuthService
         $canonicalModule = $moduleAliases[$module] ?? $module;
 
         $userRoles = $user['roles'] ?? [];
-        $isAdmin = in_array('admin', $userRoles, true);
+        $isAdmin = in_array('admin', $userRoles, true) || (($user['username'] ?? '') === 'admin');
 
         // ผู้ดูแลระบบ (admin) สามารถดูข้อมูลและจัดการระบบได้ทุกโมดูล
         // ยกเว้น "การอนุมัติการเงิน" (approve) ที่ต้องเป็นผู้อนุมัติตามสายการบังคับบัญชา (Separation of Duties)

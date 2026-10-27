@@ -34,6 +34,7 @@ class Database
             try {
                 $pdo = getPdo();
                 if ($pdo instanceof PDO) {
+                    self::$instance = $pdo;
                     self::ensureTablesExist($pdo);
                     return $pdo;
                 }
@@ -75,6 +76,7 @@ class Database
 
         try {
             $pdo = new PDO($dsn, $user, $pass, $options);
+            self::$instance = $pdo;
             self::ensureTablesExist($pdo);
             return $pdo;
         } catch (PDOException $e) {
