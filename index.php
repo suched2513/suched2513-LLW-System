@@ -33,8 +33,12 @@ if ($isLoggedIn) {
         } catch (Exception $e) {}
 
         try {
-            $s = $pdo->prepare("SELECT COUNT(*) FROM leave_requests WHERE status_boss1 = 0");
-            $s->execute(); $stats['leave_pending'] = (int)$s->fetchColumn();
+            $s1 = (int)$pdo->query("SELECT COUNT(*) FROM leave_requests WHERE status_boss1 = 0")->fetchColumn();
+            $s2 = 0;
+            try {
+                $s2 = (int)$pdo->query("SELECT COUNT(*) FROM tl_requests WHERE status = 'pending'")->fetchColumn();
+            } catch (Exception $e2) {}
+            $stats['leave_pending'] = $s1 + $s2;
         } catch (Exception $e) {}
     } catch (Exception $e) {}
 }

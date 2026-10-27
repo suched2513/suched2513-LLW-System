@@ -260,11 +260,11 @@ require_once 'components/layout_start.php';
                 <p class="text-3xl font-black text-slate-800"><?= number_format($countStudents) ?></p>
                 <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">นักเรียนทั้งหมด</p>
             </div>
-            <div class="glass-card p-6 border-l-4 border-l-amber-500">
-                <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-amber-200"><i class="bi bi-envelope-paper-fill"></i></div>
+            <a href="teacher_leave/index.php" class="glass-card p-6 border-l-4 border-l-amber-500 hover:scale-[1.02] transition-all block group">
+                <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-amber-200 group-hover:scale-110 transition-all"><i class="bi bi-envelope-paper-fill"></i></div>
                 <p class="text-3xl font-black text-slate-800"><?= $countPendingLeave ?></p>
-                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">ใบลาที่ค้างอยู่</p>
-            </div>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">ใบลาที่ค้างอยู่ <span class="text-amber-500">→</span></p>
+            </a>
             <div class="glass-card p-6">
                 <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-emerald-200"><i class="bi bi-calendar-check-fill"></i></div>
                 <p class="text-3xl font-black text-slate-800"><?= $countCheckedRooms ?></p>

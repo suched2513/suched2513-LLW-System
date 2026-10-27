@@ -2,7 +2,20 @@
 session_start();
 require_once '../config.php';
 if (!isset($_SESSION['llw_role'])) { header('Location: ' . $base_path . '/login.php'); exit(); }
-if (!in_array($_SESSION['llw_role'], ['super_admin', 'wfh_admin'])) {
+
+$isAdmin = function_exists('llw_has_any_role')
+    ? llw_has_any_role(['super_admin', 'wfh_admin', 'director', 'deputy_director'])
+    : in_array($_SESSION['llw_role'] ?? '', ['super_admin', 'wfh_admin', 'director', 'deputy_director']);
+
+if (!$isAdmin && !empty($_SESSION['user_id'])) {
+    try {
+        $stmtRole = getPdo()->prepare("SELECT 1 FROM llw_user_roles WHERE user_id = ? AND role IN ('super_admin', 'wfh_admin', 'director', 'deputy_director') LIMIT 1");
+        $stmtRole->execute([(int)$_SESSION['user_id']]);
+        if ($stmtRole->fetchColumn()) $isAdmin = true;
+    } catch (\Throwable $e) {}
+}
+
+if (!$isAdmin) {
     header('Location: ' . $base_path . '/teacher_leave/index.php'); exit();
 }
 
@@ -21,15 +34,15 @@ $typeMap = [
     'other'     => ['label' => 'ลาอื่นๆ',      'color' => 'slate',   'icon' => 'fas fa-file-alt'],
 ];
 
-// ── วันนี้ลา ──
+// ── วันนี้ลา (แสดงทั้งที่อนุมัติแล้ว และรออนุมัติ) ──
 $stmt = $pdo->prepare("
-    SELECT r.id, r.leave_type, r.date_start, r.date_end, r.days_count, r.reason,
-           u.firstname, u.lastname, u.position
+    SELECT r.id, r.leave_type, r.date_start, r.date_end, r.days_count, r.reason, r.status, r.level_at,
+           COALESCE(u.firstname, '') AS firstname, COALESCE(u.lastname, '') AS lastname, COALESCE(u.position, '') AS position
     FROM tl_requests r
-    JOIN llw_users u ON r.user_id = u.user_id
-    WHERE r.status = 'approved'
+    LEFT JOIN llw_users u ON r.user_id = u.user_id
+    WHERE r.status IN ('approved', 'pending')
       AND ? BETWEEN r.date_start AND r.date_end
-    ORDER BY r.leave_type, u.firstname
+    ORDER BY FIELD(r.status, 'approved', 'pending'), r.leave_type, u.firstname
 ");
 $stmt->execute([$today]);
 $today_leavers = $stmt->fetchAll();
@@ -37,6 +50,7 @@ $today_leavers = $stmt->fetchAll();
 // ── KPI counts ──
 $pending_staff    = (int)$pdo->query("SELECT COUNT(*) FROM tl_requests WHERE status='pending' AND level_at=1")->fetchColumn();
 $pending_director = (int)$pdo->query("SELECT COUNT(*) FROM tl_requests WHERE status='pending' AND level_at=2")->fetchColumn();
+$pending_total    = $pending_staff + $pending_director;
 $approved_month   = (int)$pdo->query("
     SELECT COUNT(*) FROM tl_requests
     WHERE status='approved'
@@ -47,9 +61,9 @@ $approved_month   = (int)$pdo->query("
 // ── รายการรอดำเนินการ (สูงสุด 20 รายการ) ──
 $pending_stmt = $pdo->query("
     SELECT r.id, r.leave_type, r.date_start, r.date_end, r.days_count, r.level_at, r.created_at,
-           u.firstname, u.lastname, u.position
+           COALESCE(u.firstname, '') AS firstname, COALESCE(u.lastname, '') AS lastname, COALESCE(u.position, '') AS position
     FROM tl_requests r
-    JOIN llw_users u ON r.user_id = u.user_id
+    LEFT JOIN llw_users u ON r.user_id = u.user_id
     WHERE r.status='pending'
     ORDER BY r.level_at ASC, r.created_at ASC
     LIMIT 20
@@ -71,11 +85,11 @@ $max_count = max(1, ...array_column($monthly_stats, 'cnt'));
 
 // ── 7 วันข้างหน้า ──
 $upcoming_stmt = $pdo->prepare("
-    SELECT r.leave_type, r.date_start, r.date_end, r.days_count,
-           u.firstname, u.lastname
+    SELECT r.leave_type, r.date_start, r.date_end, r.days_count, r.status,
+           COALESCE(u.firstname, '') AS firstname, COALESCE(u.lastname, '') AS lastname
     FROM tl_requests r
-    JOIN llw_users u ON r.user_id = u.user_id
-    WHERE r.status = 'approved'
+    LEFT JOIN llw_users u ON r.user_id = u.user_id
+    WHERE r.status IN ('approved', 'pending')
       AND r.date_start BETWEEN DATE_ADD(?, INTERVAL 1 DAY) AND DATE_ADD(?, INTERVAL 7 DAY)
     ORDER BY r.date_start ASC
     LIMIT 10
@@ -99,9 +113,9 @@ require_once '../components/layout_start.php';
             <h2 class="text-2xl font-black"><?= $todayStr ?></h2>
         </div>
         <div class="text-right">
-            <p class="text-xs font-black uppercase tracking-widest opacity-70 mb-1">ขาดราชการวันนี้</p>
+            <p class="text-xs font-black uppercase tracking-widest opacity-70 mb-1">บุคลากรลาวันนี้</p>
             <p class="text-6xl font-black leading-none"><?= count($today_leavers) ?></p>
-            <p class="text-sm font-black opacity-70 mt-1">คน</p>
+            <p class="text-sm font-black opacity-70 mt-1">คน (รวมรออนุมัติ)</p>
         </div>
     </div>
 </div>
@@ -123,7 +137,7 @@ require_once '../components/layout_start.php';
             <i class="fas fa-hourglass-half"></i>
         </div>
         <div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">รอตรวจสอบ</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">รอตรวจสอบ (Lv.1)</p>
             <p class="text-3xl font-black <?= $pending_staff > 0 ? 'text-amber-600' : 'text-slate-600' ?> leading-none mt-0.5"><?= $pending_staff ?></p>
             <p class="text-[10px] text-slate-400 font-bold">ใบ</p>
         </div>
@@ -133,9 +147,9 @@ require_once '../components/layout_start.php';
             <i class="fas fa-user-tie"></i>
         </div>
         <div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">รอ ผอ./รองฯ</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">รอ ผอ./รองฯ (Lv.2)</p>
             <p class="text-3xl font-black <?= $pending_director > 0 ? 'text-blue-600' : 'text-slate-600' ?> leading-none mt-0.5"><?= $pending_director ?></p>
-            <p class="text-[10px] text-slate-400 font-bold">ใบ</p>
+            <p class="text-[10px] text-slate-400 font-bold">ใบ (รวมรอ <?= $pending_total ?>)</p>
         </div>
     </div>
     <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
@@ -163,7 +177,7 @@ require_once '../components/layout_start.php';
                 <?php endif; ?>
             </h3>
             <a href="index.php" class="text-xs font-black text-rose-500 hover:underline flex items-center gap-1">
-                <i class="fas fa-list"></i> จัดการใบลา
+                <i class="fas fa-list"></i> จัดการและอนุมัติใบลา
             </a>
         </div>
 
@@ -178,6 +192,7 @@ require_once '../components/layout_start.php';
             <?php foreach ($today_leavers as $lv):
                 $tm = $typeMap[$lv['leave_type']] ?? $typeMap['other'];
                 $col = $tm['color'];
+                $isPending = ($lv['status'] === 'pending');
             ?>
             <div class="px-6 py-4 flex items-center gap-4 hover:bg-slate-50/50 transition-all">
                 <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-sm
@@ -189,9 +204,17 @@ require_once '../components/layout_start.php';
                     <i class="<?= $tm['icon'] ?>"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="font-black text-slate-800 text-sm leading-tight">
+                    <p class="font-black text-slate-800 text-sm leading-tight flex items-center gap-2">
                         <?= htmlspecialchars($lv['firstname'] . ' ' . $lv['lastname'], ENT_QUOTES, 'UTF-8') ?>
+                        <?php if ($isPending): ?>
+                        <span class="px-2 py-0.5 bg-amber-500 text-white text-[10px] font-black rounded-full">รออนุมัติ</span>
+                        <?php else: ?>
+                        <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full">อนุมัติแล้ว</span>
+                        <?php endif; ?>
                     </p>
+                    <?php if (!empty($lv['reason'])): ?>
+                    <p class="text-[11px] text-slate-500 truncate mt-0.5"><?= htmlspecialchars($lv['reason'], ENT_QUOTES, 'UTF-8') ?></p>
+                    <?php endif; ?>
                     <?php if (!empty($lv['position'])): ?>
                     <p class="text-[10px] text-slate-400 font-bold"><?= htmlspecialchars($lv['position'], ENT_QUOTES, 'UTF-8') ?></p>
                     <?php endif; ?>
@@ -209,10 +232,17 @@ require_once '../components/layout_start.php';
                         <span class="font-black">(<?= $lv['days_count'] ?> วัน)</span>
                     </p>
                 </div>
-                <a href="print_leave.php?id=<?= $lv['id'] ?>" target="_blank"
-                   class="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-slate-200 transition-all flex-shrink-0" title="พิมพ์">
-                    <i class="fas fa-print text-xs"></i>
-                </a>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <a href="print_leave.php?id=<?= $lv['id'] ?>" target="_blank"
+                       class="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-slate-200 transition-all" title="พิมพ์">
+                        <i class="fas fa-print text-xs"></i>
+                    </a>
+                    <?php if ($isPending): ?>
+                    <a href="index.php" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-black shadow-sm shadow-blue-100 hover:bg-blue-700 transition-all">
+                        พิจารณา
+                    </a>
+                    <?php endif; ?>
+                </div>
             </div>
             <?php endforeach; ?>
         </div>
@@ -279,6 +309,7 @@ require_once '../components/layout_start.php';
                 <?php else: ?>
                 <?php foreach ($upcoming as $up):
                     $tm3 = $typeMap[$up['leave_type']] ?? $typeMap['other'];
+                    $isPendingUp = ($up['status'] === 'pending');
                 ?>
                 <div class="px-5 py-3 flex items-center gap-3">
                     <div class="text-center flex-shrink-0 w-10">
@@ -287,7 +318,12 @@ require_once '../components/layout_start.php';
                     </div>
                     <div class="flex-1 min-w-0">
                         <p class="text-xs font-black text-slate-700 truncate"><?= htmlspecialchars($up['firstname'] . ' ' . $up['lastname'], ENT_QUOTES, 'UTF-8') ?></p>
-                        <p class="text-[10px] text-slate-400"><?= $tm3['label'] ?> · <?= $up['days_count'] ?> วัน</p>
+                        <p class="text-[10px] text-slate-400">
+                            <?= $tm3['label'] ?> · <?= $up['days_count'] ?> วัน
+                            <?php if ($isPendingUp): ?>
+                            <span class="text-amber-500 font-bold">(รออนุมัติ)</span>
+                            <?php endif; ?>
+                        </p>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -304,11 +340,11 @@ require_once '../components/layout_start.php';
     <div class="px-6 py-4 flex items-center justify-between border-b border-slate-50 bg-amber-50/30">
         <h3 class="font-black text-slate-800 flex items-center gap-2">
             <i class="fas fa-tasks text-amber-500"></i>
-            รอดำเนินการ
+            รายการที่รอดำเนินการ
             <span class="px-2 py-0.5 bg-amber-500 text-white text-xs font-black rounded-full"><?= count($pending_leaves) ?></span>
         </h3>
         <a href="index.php" class="px-4 py-2 bg-amber-500 text-white text-xs font-black rounded-xl hover:bg-amber-600 transition-all shadow-md shadow-amber-100 flex items-center gap-2">
-            <i class="fas fa-check-double"></i> ไปอนุมัติ
+            <i class="fas fa-check-double"></i> ไปหน้าอนุมัติทั้งหมด
         </a>
     </div>
     <div class="overflow-x-auto">
@@ -321,7 +357,7 @@ require_once '../components/layout_start.php';
                     <th class="px-6 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">จำนวน</th>
                     <th class="px-6 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">ขั้นตอน</th>
                     <th class="px-6 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">ยื่นเมื่อ</th>
-                    <th class="px-6 py-3"></th>
+                    <th class="px-6 py-3 text-right"></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-50">
@@ -359,11 +395,11 @@ require_once '../components/layout_start.php';
                 <td class="px-6 py-4 text-center">
                     <?php if ($pl['level_at'] <= 1): ?>
                     <span class="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-black rounded-lg whitespace-nowrap">
-                        <i class="fas fa-user-check mr-1"></i>รอเจ้าหน้าที่
+                        <i class="fas fa-user-check mr-1"></i>รอเจ้าหน้าที่ (Lv.1)
                     </span>
                     <?php else: ?>
                     <span class="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-lg whitespace-nowrap">
-                        <i class="fas fa-user-tie mr-1"></i>รอ ผอ./รองฯ
+                        <i class="fas fa-user-tie mr-1"></i>รอ ผอ./รองฯ (Lv.2)
                     </span>
                     <?php endif; ?>
                 </td>
@@ -378,8 +414,8 @@ require_once '../components/layout_start.php';
                        class="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-500 text-xs font-black rounded-lg hover:bg-slate-200 transition-all mr-1">
                         <i class="fas fa-print"></i>
                     </a>
-                    <a href="index.php" class="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-500 text-white text-xs font-black rounded-lg hover:bg-rose-600 transition-all shadow-sm shadow-rose-100">
-                        <i class="fas fa-pen"></i> ดำเนินการ
+                    <a href="index.php" class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-black rounded-lg hover:bg-blue-700 transition-all shadow-sm shadow-blue-100">
+                        <i class="fas fa-pen"></i> อนุมัติ
                     </a>
                 </td>
             </tr>

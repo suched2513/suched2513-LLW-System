@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * teacher_leave/form.php
  * Official Leave Form mimicking the paper equivalent
@@ -12,7 +12,7 @@ if (!isset($_SESSION['llw_role'])) {
 
 $pageTitle = 'แบบฟอร์มใบลาออนไลน์';
 $pageSubtitle = 'กรอกข้อมูลใบลาตามระเบียบสำนักนายกรัฐมนตรี';
-$activeSystem = 'leave';
+$activeSystem = 'teacher_leave';
 
 require_once '../components/layout_start.php';
 ?>
