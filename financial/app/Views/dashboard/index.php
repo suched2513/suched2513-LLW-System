@@ -1,10 +1,11 @@
 <?php
 $baseUrl = defined('BASE_URL') ? BASE_URL : '';
+$fyYearBe = $activeFiscalYear['year_be'] ?? thai_fiscal_year();
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="fw-bold mb-1" style="color: #0B2545;">แดชบอร์ดบริหารการเงินและงบประมาณ</h4>
-        <div class="text-muted small">ภาพรวมข้อมูลการเงิน บัญชี และงบประมาณประจำปี พ.ศ. <?= e($activeFiscalYear['year_be']) ?></div>
+        <div class="text-muted small">ภาพรวมข้อมูลการเงิน บัญชี และงบประมาณประจำปี พ.ศ. <?= e($fyYearBe) ?></div>
     </div>
     <div class="d-flex gap-2">
         <a href="<?= $baseUrl ?>/reports" class="btn btn-outline-secondary btn-sm">
@@ -22,7 +23,7 @@ $baseUrl = defined('BASE_URL') ? BASE_URL : '';
         <div class="stat-card">
             <div class="stat-label"><i class="bi bi-wallet2 text-primary me-1"></i> งบประมาณที่ได้รับจัดสรร</div>
             <div class="stat-value text-primary"><?= money_format_th($budgetSummary['total_allocated']) ?> <span class="fs-6 fw-normal text-muted">บาท</span></div>
-            <div class="small text-muted mt-2">ปีงบประมาณ พ.ศ. <?= e($activeFiscalYear['year_be']) ?></div>
+            <div class="small text-muted mt-2">ปีงบประมาณ พ.ศ. <?= e($fyYearBe) ?></div>
         </div>
     </div>
     <div class="col-sm-6 col-xl-3">

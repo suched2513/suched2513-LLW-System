@@ -59,7 +59,7 @@ class DashboardController extends Controller
         $bankAccounts = [];
         $totalBankBalance = 0.00;
         try {
-            $stmtBank = $pdo->query("SELECT bank_name, account_number, account_name, current_balance FROM fin_bank_accounts WHERE is_active = 1");
+            $stmtBank = $pdo->query("SELECT bank_name, account_no, account_no as account_number, account_name, current_balance FROM fin_bank_accounts WHERE is_active = 1");
             $bankAccounts = $stmtBank->fetchAll();
             foreach ($bankAccounts as $ba) {
                 $totalBankBalance += (float)$ba['current_balance'];
