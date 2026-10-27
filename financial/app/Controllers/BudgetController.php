@@ -91,11 +91,25 @@ class BudgetController extends Controller
         }
 
         try {
-            $stmt = $pdo->prepare("
-                INSERT INTO fin_projects (fiscal_year_id, project_code, project_name, department, responsible_person, planned_amount, status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, 'active', NOW())
-            ");
-            $stmt->execute([$fyId, $code, $name, $dept, $owner, $planAmt]);
+            Database::patchDatabaseSchema($pdo);
+
+            $stmtCols = $pdo->prepare("SHOW COLUMNS FROM fin_projects LIKE 'responsible_person'");
+            $stmtCols->execute();
+            $hasOwnerCol = $stmtCols->rowCount() > 0;
+
+            if ($hasOwnerCol) {
+                $stmt = $pdo->prepare("
+                    INSERT INTO fin_projects (fiscal_year_id, project_code, project_name, department, responsible_person, planned_amount, status, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, 'active', NOW())
+                ");
+                $stmt->execute([$fyId, $code, $name, $dept, $owner, $planAmt]);
+            } else {
+                $stmt = $pdo->prepare("
+                    INSERT INTO fin_projects (fiscal_year_id, project_code, project_name, department, status, created_at)
+                    VALUES (?, ?, ?, ?, 'active', NOW())
+                ");
+                $stmt->execute([$fyId, $code, $name, $dept]);
+            }
 
             $this->setFlash('success', "เพิ่มโครงการ '{$name}' เรียบร้อยแล้ว");
         } catch (\Throwable $e) {
