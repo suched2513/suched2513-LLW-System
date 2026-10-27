@@ -270,9 +270,15 @@ $mediaTypeNames = [
             text-align: center;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            padding: 12px 8px;
+            padding: 14px 8px;
             background: #fafafa;
             font-size: 11.5pt;
+        }
+        .dots-line {
+            display: inline-block;
+            width: 130px;
+            border-bottom: 1px dotted #475569;
+            margin-bottom: 2px;
         }
 
         .top-control-bar {
@@ -548,24 +554,24 @@ $mediaTypeNames = [
     <div class="sign-grid">
         <!-- 1. ผู้รายงาน -->
         <div class="sign-card">
-            <p style="margin: 0 0 45px 0;">ลงชื่อ ....................................................</p>
-            <p style="margin: 0; font-weight: 700;">( <?= $isLoggedIn && !empty($userName) ? htmlspecialchars($userName) : '....................................................' ?> )</p>
+            <p style="margin: 28px 0 6px 0; white-space: nowrap;">ลงชื่อ <span class="dots-line"></span></p>
+            <p style="margin: 0; font-weight: 700; white-space: nowrap;">(&nbsp;<?= $isLoggedIn && !empty($userName) ? htmlspecialchars($userName) : '<span class="dots-line" style="width:140px;"></span>' ?>&nbsp;)</p>
             <p style="margin: 2px 0; color: #64748b; font-size: 10.5pt;">เจ้าหน้าที่งานพัฒนาสื่อนวัตกรรม</p>
             <p style="margin: 4px 0 0 0; font-size: 10.5pt;">ผู้รวบรวมและรายงาน</p>
         </div>
 
         <!-- 2. หัวหน้าฝ่ายวิชาการ (นายเฉลิมชัย ศรีชัย) -->
         <div class="sign-card">
-            <p style="margin: 0 0 45px 0;">ลงชื่อ ....................................................</p>
-            <p style="margin: 0; font-weight: 700;">( นายเฉลิมชัย ศรีชัย )</p>
+            <p style="margin: 28px 0 6px 0; white-space: nowrap;">ลงชื่อ <span class="dots-line"></span></p>
+            <p style="margin: 0; font-weight: 700; white-space: nowrap;">(&nbsp;นายเฉลิมชัย ศรีชัย&nbsp;)</p>
             <p style="margin: 2px 0; color: #64748b; font-size: 10.5pt;">หัวหน้าฝ่ายบริหารงานวิชาการ</p>
             <p style="margin: 4px 0 0 0; font-size: 10.5pt;">ผู้ตรวจทานและเห็นชอบ</p>
         </div>
 
         <!-- 3. ผู้อำนวยการ (นายสถาน ปรางมาศ) -->
         <div class="sign-card">
-            <p style="margin: 0 0 45px 0;">ลงชื่อ ....................................................</p>
-            <p style="margin: 0; font-weight: 700;">( นายสถาน ปรางมาศ )</p>
+            <p style="margin: 28px 0 6px 0; white-space: nowrap;">ลงชื่อ <span class="dots-line"></span></p>
+            <p style="margin: 0; font-weight: 700; white-space: nowrap;">(&nbsp;นายสถาน ปรางมาศ&nbsp;)</p>
             <p style="margin: 2px 0; color: #64748b; font-size: 10.5pt;">ผู้อำนวยการโรงเรียนละลมวิทยา</p>
             <p style="margin: 4px 0 0 0; font-size: 10.5pt;">ผู้อนุมัติรายงาน</p>
         </div>
