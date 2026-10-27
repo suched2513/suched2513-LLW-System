@@ -94,7 +94,7 @@ require_once '../components/layout_start.php';
             <?php if ($isAdmin): ?>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="admin-stats-row">
                 <!-- รวมรออนุมัติ -->
-                <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 group hover:shadow-md transition-all">
+                <div onclick="filterStatus('pending')" class="cursor-pointer bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 group hover:shadow-md hover:border-rose-200 transition-all active:scale-95" title="คลิกเพื่อกรองเฉพาะรายการที่รออนุมัติ">
                     <div class="w-12 h-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-all">
                         <i class="bi bi-hourglass-split"></i>
                     </div>
@@ -104,7 +104,7 @@ require_once '../components/layout_start.php';
                     </div>
                 </div>
                 <!-- รอเจ้าหน้าที่ -->
-                <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 group hover:shadow-md transition-all">
+                <div onclick="filterLevel(1)" class="cursor-pointer bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 group hover:shadow-md hover:border-amber-200 transition-all active:scale-95" title="คลิกเพื่อกรองรายการที่รอการตรวจสอบ">
                     <div class="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-all">
                         <i class="bi bi-person-workspace"></i>
                     </div>
@@ -114,7 +114,7 @@ require_once '../components/layout_start.php';
                     </div>
                 </div>
                 <!-- รอ ผอ. -->
-                <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 group hover:shadow-md transition-all">
+                <div onclick="filterLevel(2)" class="cursor-pointer bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 group hover:shadow-md hover:border-blue-200 transition-all active:scale-95" title="คลิกเพื่อกรองรายการที่รอ ผอ./รองฯ">
                     <div class="w-12 h-12 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-all">
                         <i class="bi bi-mortarboard"></i>
                     </div>
@@ -124,7 +124,7 @@ require_once '../components/layout_start.php';
                     </div>
                 </div>
                 <!-- ลาวันนี้ -->
-                <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 group hover:shadow-md transition-all">
+                <div onclick="filterToday()" class="cursor-pointer bg-white rounded-3xl p-5 border border-slate-100 shadow-sm flex items-center gap-4 group hover:shadow-md hover:border-emerald-200 transition-all active:scale-95" title="คลิกเพื่อดูผู้ที่ลาวันนี้">
                     <div class="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-all">
                         <i class="bi bi-calendar-event"></i>
                     </div>
@@ -132,6 +132,29 @@ require_once '../components/layout_start.php';
                         <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ลางานวันนี้</p>
                         <p class="text-2xl font-black text-emerald-600" id="stat-on-leave-today">0</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Pending Action Banner (Admin/Director) -->
+            <div id="pending-alert-banner" class="hidden p-5 bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-transparent border-l-4 border-rose-500 rounded-3xl bg-white shadow-sm flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-lg shadow-md shadow-rose-200 shrink-0">
+                        <i class="bi bi-bell-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-black text-slate-800 text-sm flex items-center gap-2">
+                            มีรายการขอลาที่รอการพิจารณาอนุมัติ 
+                            <span id="banner-pending-count" class="px-2.5 py-0.5 rounded-full bg-rose-500 text-white text-xs font-black">0</span>
+                        </h4>
+                        <p class="text-xs text-slate-500 font-bold mt-0.5" id="banner-pending-desc">
+                            รายการล่าสุด: -
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="filterStatus('pending')" class="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-xs font-black shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all flex items-center gap-1.5">
+                        <i class="bi bi-funnel-fill"></i> กรองดูรออนุมัติ
+                    </button>
                 </div>
             </div>
             <?php endif; ?>
@@ -169,6 +192,8 @@ require_once '../components/layout_start.php';
                         <table id="leaveTable" class="min-w-full text-sm">
                             <thead class="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
                                 <tr>
+                                    <th class="hidden">ลำดับสถานะ</th>
+                                    <th class="hidden">เวลายื่น</th>
                                     <th class="px-6 py-5">ชื่อผู้ลา / ประเภทใบลา</th>
                                     <th class="px-6 py-5 text-center">จำนวน</th>
                                     <th class="px-6 py-5">สถานะ</th>
@@ -289,38 +314,79 @@ $(document).ready(function() {
             dataSrc: 'data' 
         },
         dom: 'rtip',
-        order: [[0, 'desc']],
+        pageLength: 25,
+        order: [[0, 'asc'], [1, 'desc']],
         columns: [
+            // 0: ลำดับสถานะ (ซ่อนไว้สำหรับจัดกลุ่ม: รออนุมัติ=0, อนุมัติแล้ว=1, ไม่อนุมัติ=2)
+            {
+                data: 'status',
+                visible: false,
+                searchable: false,
+                render: function(d) {
+                    if (d === 'pending') return 0;
+                    if (d === 'approved') return 1;
+                    return 2;
+                }
+            },
+            // 1: เวลายื่นคำขอ (ซ่อนไว้สำหรับเรียงลำดับใหม่สุดขึ้นก่อน)
+            {
+                data: 'created_at',
+                visible: false,
+                searchable: false,
+                render: function(d, t, r) {
+                    return d || r.date_start || '';
+                }
+            },
+            // 2: ข้อมูลผู้ลาและวันที่
             { 
                 data: 'date_start',
                 render: (d, t, r) => {
-                    const dt = new Date(d);
-                    const monthStr = dt.toLocaleString('th-TH', { month: 'short' });
-                    const dayNum = dt.getDate();
+                    // หาก DataTables กำลังเรียงลำดับคอลัมน์นี้ ให้เรียงตาม ISO timestamp
+                    if (t === 'sort' || t === 'type') {
+                        return r.created_at || d;
+                    }
+                    const dp = parseDateParts(d);
+                    const relBadge = getRelativeSubmitBadge(r.created_at, r.status);
                     return `
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 rounded-xl bg-slate-100 flex flex-col items-center justify-center font-black leading-none shrink-0 border border-slate-200">
-                                <span class="text-[9px] text-slate-400 uppercase">${monthStr}</span>
-                                <span class="text-base text-slate-700">${dayNum}</span>
+                                <span class="text-[9px] text-slate-400 uppercase">${dp.month}</span>
+                                <span class="text-base text-slate-700">${dp.day}</span>
                             </div>
                             <div>
-                                ${IS_ADMIN ? `<div class="text-xs font-black text-rose-600 uppercase tracking-wide mb-0.5">${r.t_name}</div>` : ''}
-                                <div class="font-bold text-slate-800 text-sm">${r.leave_type_text}</div>
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    ${IS_ADMIN ? `<span class="text-xs font-black text-rose-600 uppercase tracking-wide">${escapeHtml(r.t_name)}</span>` : ''}
+                                    ${relBadge}
+                                </div>
+                                <div class="font-bold text-slate-800 text-sm">${escapeHtml(r.leave_type_text)}</div>
                                 <div class="text-[11px] font-bold text-slate-400 tracking-wider">${d} ถึง ${r.date_end}</div>
-                                ${r.reason ? `<div class="text-[11px] text-slate-500 font-medium truncate max-w-[280px] mt-0.5" title="${r.reason}">เหตุผล: ${r.reason}</div>` : ''}
+                                ${r.reason ? `<div class="text-[11px] text-slate-500 font-medium truncate max-w-[280px] mt-0.5" title="${escapeHtml(r.reason)}">เหตุผล: ${escapeHtml(r.reason)}</div>` : ''}
                             </div>
                         </div>
                     `;
                 }
             },
+            // 3: จำนวนวัน
             { 
                 data: 'days_count',
                 className: 'text-center',
                 render: (d) => `<div class="font-black text-slate-700 text-base">${d} <span class="text-xs text-slate-400">วัน</span></div>`
             },
+            // 4: สถานะ
             { 
                 data: 'status',
                 render: (data, t, r) => {
+                    if (t === 'filter') {
+                        let filterVal = data;
+                        if (data === 'pending') {
+                            filterVal += ' level_' + r.level_at;
+                        }
+                        const todayStr = '<?= date('Y-m-d') ?>';
+                        if (r.date_start <= todayStr && r.date_end >= todayStr) {
+                            filterVal += ' on_today';
+                        }
+                        return filterVal;
+                    }
                     if (data === 'approved') {
                         return `<span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-xs font-black tracking-wider whitespace-nowrap">
                             <i class="bi bi-check-circle-fill"></i> อนุมัติแล้ว
@@ -348,6 +414,7 @@ $(document).ready(function() {
                     </span>`;
                 }
             },
+            // 5: จัดการ
             {
                 data: 'id',
                 className: 'text-right',
@@ -373,6 +440,28 @@ $(document).ready(function() {
         language: { 
             emptyTable: "ไม่พบข้อมูลการลา",
             zeroRecords: "ไม่พบข้อมูลที่ตรงกับตัวกรอง"
+        }
+    });
+
+    // ตรวจสอบเมื่อโหลดข้อมูลตารางเสร็จเพื่อแสดงแถบแจ้งเตือนรายการรออนุมัติ
+    leaveDataTable.on('xhr.dt', function(e, settings, json) {
+        if (json && json.data && IS_ADMIN) {
+            const pendingItems = json.data.filter(r => r.status === 'pending');
+            const banner = document.getElementById('pending-alert-banner');
+            if (banner) {
+                if (pendingItems.length > 0) {
+                    banner.classList.remove('hidden');
+                    document.getElementById('banner-pending-count').textContent = pendingItems.length;
+                    const latest = pendingItems[0];
+                    const latestName = latest.t_name || 'บุคลากร';
+                    const latestType = latest.leave_type_text || latest.leave_type;
+                    const latestDate = latest.date_start + ' ถึง ' + latest.date_end;
+                    document.getElementById('banner-pending-desc').textContent = 
+                        `ยื่นล่าสุด: ${latestName} (${latestType} ${latestDate})`;
+                } else {
+                    banner.classList.add('hidden');
+                }
+            }
         }
     });
 
@@ -452,7 +541,66 @@ $(document).ready(function() {
     if (IS_ADMIN) {
         updateAdminStats();
     }
+
+    // ตรวจสอบพารามิเตอร์ URL เช่น ?filter=pending
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('filter') === 'pending') {
+        filterStatus('pending');
+    }
 });
+
+function parseDateParts(dateStr) {
+    if (!dateStr) return { day: '-', month: '-' };
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        const months = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const mIdx = parseInt(parts[1], 10);
+        return {
+            day: parseInt(parts[2], 10),
+            month: months[mIdx] || '-'
+        };
+    }
+    return { day: '-', month: '-' };
+}
+
+function getRelativeSubmitBadge(createdAtStr, status) {
+    if (!createdAtStr) return '';
+    try {
+        const parts = createdAtStr.split(' ')[0].split('-');
+        if (parts.length !== 3) return '';
+        const createdYmd = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+        
+        const now = new Date();
+        const todayYmd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        
+        const yestDate = new Date();
+        yestDate.setDate(now.getDate() - 1);
+        const yestYmd = `${yestDate.getFullYear()}-${String(yestDate.getMonth() + 1).padStart(2, '0')}-${String(yestDate.getDate()).padStart(2, '0')}`;
+
+        if (status === 'pending') {
+            if (createdYmd === todayYmd) {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-black shadow-sm shadow-rose-200 animate-pulse"><i class="bi bi-bell-fill text-[9px]"></i> ยื่นวันนี้</span>`;
+            }
+            if (createdYmd === yestYmd) {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black shadow-sm shadow-amber-200"><i class="bi bi-clock-history text-[9px]"></i> ยื่นเมื่อวาน</span>`;
+            }
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200 text-[10px] font-black"><i class="bi bi-hourglass-split text-[9px]"></i> รอพิจารณา</span>`;
+        }
+    } catch (e) {}
+    return '';
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+}
 
 function updateAdminStats() {
     $.get(BASE_PATH + '/teacher_leave/api/get_admin_stats.php', function(res) {
@@ -471,14 +619,25 @@ function filterStatus(status) {
     $(`#btn-f-${status}`).addClass('bg-rose-50 text-rose-600').removeClass('text-slate-500');
 
     if (status === 'all') {
-        leaveDataTable.column(2).search('').draw();
+        leaveDataTable.column(4).search('').draw();
     } else if (status === 'pending') {
-        leaveDataTable.column(2).search('รอ').draw();
+        leaveDataTable.column(4).search('pending').draw();
     } else if (status === 'approved') {
-        leaveDataTable.column(2).search('อนุมัติแล้ว').draw();
+        leaveDataTable.column(4).search('approved').draw();
     } else if (status === 'rejected') {
-        leaveDataTable.column(2).search('ไม่อนุมัติ').draw();
+        leaveDataTable.column(4).search('rejected').draw();
     }
+}
+
+function filterLevel(level) {
+    $('.filter-tab').removeClass('bg-rose-50 text-rose-600').addClass('text-slate-500');
+    $('#btn-f-pending').addClass('bg-rose-50 text-rose-600').removeClass('text-slate-500');
+    leaveDataTable.column(4).search('level_' + level).draw();
+}
+
+function filterToday() {
+    $('.filter-tab').removeClass('bg-rose-50 text-rose-600').addClass('text-slate-500');
+    leaveDataTable.column(4).search('on_today').draw();
 }
 
 // ── Approval Modal Functions ──

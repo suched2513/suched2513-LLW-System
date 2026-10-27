@@ -238,7 +238,7 @@ require_once '../components/layout_start.php';
                         <i class="fas fa-print text-xs"></i>
                     </a>
                     <?php if ($isPending): ?>
-                    <a href="index.php" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-black shadow-sm shadow-blue-100 hover:bg-blue-700 transition-all">
+                    <a href="index.php?filter=pending" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-black shadow-sm shadow-blue-100 hover:bg-blue-700 transition-all">
                         พิจารณา
                     </a>
                     <?php endif; ?>
@@ -343,7 +343,7 @@ require_once '../components/layout_start.php';
             รายการที่รอดำเนินการ
             <span class="px-2 py-0.5 bg-amber-500 text-white text-xs font-black rounded-full"><?= count($pending_leaves) ?></span>
         </h3>
-        <a href="index.php" class="px-4 py-2 bg-amber-500 text-white text-xs font-black rounded-xl hover:bg-amber-600 transition-all shadow-md shadow-amber-100 flex items-center gap-2">
+        <a href="index.php?filter=pending" class="px-4 py-2 bg-amber-500 text-white text-xs font-black rounded-xl hover:bg-amber-600 transition-all shadow-md shadow-amber-100 flex items-center gap-2">
             <i class="fas fa-check-double"></i> ไปหน้าอนุมัติทั้งหมด
         </a>
     </div>
@@ -414,7 +414,7 @@ require_once '../components/layout_start.php';
                        class="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-500 text-xs font-black rounded-lg hover:bg-slate-200 transition-all mr-1">
                         <i class="fas fa-print"></i>
                     </a>
-                    <a href="index.php" class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-black rounded-lg hover:bg-blue-700 transition-all shadow-sm shadow-blue-100">
+                    <a href="index.php?filter=pending" class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-black rounded-lg hover:bg-blue-700 transition-all shadow-sm shadow-blue-100">
                         <i class="fas fa-pen"></i> อนุมัติ
                     </a>
                 </td>
