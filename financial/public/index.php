@@ -56,6 +56,11 @@ use App\Controllers\SettingController;
 use App\Controllers\FiscalYearController;
 use App\Controllers\UserController;
 use App\Controllers\AuditLogController;
+use App\Controllers\BudgetController;
+use App\Controllers\ReceiptController;
+use App\Controllers\DisbursementController;
+use App\Controllers\AdvanceController;
+use App\Controllers\AccountController;
 
 // 5. คำนวณ Base URL อัตโนมัติ
 $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
@@ -102,6 +107,49 @@ $router->post('/users/toggle-status', [UserController::class, 'toggleStatus'], [
 // --- Audit Logs Module ---
 $router->get('/audit-logs', [AuditLogController::class, 'index'], ['auth', 'rbac:audit_logs,view']);
 $router->get('/audit-logs/export', [AuditLogController::class, 'exportCsv'], ['auth', 'rbac:audit_logs,export']);
+
+// --- Budgets Module ---
+$router->get('/budgets', [BudgetController::class, 'index'], ['auth', 'rbac:budgets,view']);
+$router->post('/budgets/projects', [BudgetController::class, 'createProject'], ['auth', 'csrf', 'rbac:budgets,create']);
+$router->post('/budgets/allocate', [BudgetController::class, 'allocate'], ['auth', 'csrf', 'rbac:budgets,edit']);
+$router->post('/budgets/transfer', [BudgetController::class, 'transfer'], ['auth', 'csrf', 'rbac:budgets,edit']);
+
+// --- Receipts Module ---
+$router->get('/receipts', [ReceiptController::class, 'index'], ['auth', 'rbac:receipts,view']);
+$router->get('/receipts/create', [ReceiptController::class, 'create'], ['auth', 'rbac:receipts,create']);
+$router->post('/receipts/store', [ReceiptController::class, 'store'], ['auth', 'csrf', 'rbac:receipts,create']);
+$router->get('/receipts/show/{id}', [ReceiptController::class, 'show'], ['auth', 'rbac:receipts,view']);
+$router->post('/receipts/cancel', [ReceiptController::class, 'cancel'], ['auth', 'csrf', 'rbac:receipts,cancel']);
+$router->post('/receipts/deposit', [ReceiptController::class, 'deposit'], ['auth', 'csrf', 'rbac:receipts,edit']);
+
+// --- Disbursements Module ---
+$router->get('/disbursements', [DisbursementController::class, 'index'], ['auth', 'rbac:disbursements,view']);
+$router->get('/disbursements/create', [DisbursementController::class, 'create'], ['auth', 'rbac:disbursements,create']);
+$router->post('/disbursements/store', [DisbursementController::class, 'store'], ['auth', 'csrf', 'rbac:disbursements,create']);
+$router->get('/disbursements/show/{id}', [DisbursementController::class, 'show'], ['auth', 'rbac:disbursements,view']);
+$router->post('/disbursements/submit', [DisbursementController::class, 'submit'], ['auth', 'csrf', 'rbac:disbursements,propose']);
+$router->post('/disbursements/audit', [DisbursementController::class, 'audit'], ['auth', 'csrf', 'rbac:disbursements,audit']);
+$router->post('/disbursements/approve', [DisbursementController::class, 'approve'], ['auth', 'csrf', 'rbac:disbursements,approve']);
+$router->post('/disbursements/disburse', [DisbursementController::class, 'disburse'], ['auth', 'csrf', 'rbac:disbursements,disburse']);
+$router->post('/disbursements/reject', [DisbursementController::class, 'reject'], ['auth', 'csrf', 'rbac:disbursements,reject']);
+
+// --- Advances Module ---
+$router->get('/advances', [AdvanceController::class, 'index'], ['auth', 'rbac:advances,view']);
+$router->get('/advances/create', [AdvanceController::class, 'create'], ['auth', 'rbac:advances,create']);
+$router->post('/advances/store', [AdvanceController::class, 'store'], ['auth', 'csrf', 'rbac:advances,create']);
+$router->get('/advances/show/{id}', [AdvanceController::class, 'show'], ['auth', 'rbac:advances,view']);
+$router->post('/advances/approve', [AdvanceController::class, 'approve'], ['auth', 'csrf', 'rbac:advances,approve']);
+$router->post('/advances/disburse', [AdvanceController::class, 'disburse'], ['auth', 'csrf', 'rbac:advances,disburse']);
+$router->post('/advances/clearing', [AdvanceController::class, 'submitClearing'], ['auth', 'csrf', 'rbac:advances,clear']);
+$router->post('/advances/approve-clearing', [AdvanceController::class, 'approveClearing'], ['auth', 'csrf', 'rbac:advances,approve']);
+
+// --- Accounts & General Ledger Module ---
+$router->get('/accounts', [AccountController::class, 'index'], ['auth', 'rbac:accounts,view']);
+$router->get('/accounts/entry/{id}', [AccountController::class, 'showEntry'], ['auth', 'rbac:accounts,view']);
+$router->get('/accounts/chart', [AccountController::class, 'chart'], ['auth', 'rbac:accounts,view']);
+$router->post('/accounts/chart', [AccountController::class, 'storeAccount'], ['auth', 'csrf', 'rbac:accounts,create']);
+$router->get('/accounts/ledger/{id}', [AccountController::class, 'ledger'], ['auth', 'rbac:accounts,view']);
+$router->get('/accounts/trial-balance', [AccountController::class, 'trialBalance'], ['auth', 'rbac:accounts,view']);
 
 // 7. Dispatch Request
 $request = new Request();
