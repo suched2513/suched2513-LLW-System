@@ -225,28 +225,37 @@ if ($isLoggedIn) {
         color: #f59e0b;
         transform: scale(1.1);
     }
+<?php if (!$isLoggedIn): ?>
+    /* Override AdminLTE 2-column grid when viewing without sidebar */
+    body.layout-fixed .app-wrapper,
+    .app-wrapper {
+        display: block !important;
+        min-height: 100vh !important;
+        width: 100% !important;
+    }
+<?php endif; ?>
 </style>
 
 <?php if (!$isLoggedIn): ?>
 <!-- Public Top Nav for Guests / Students -->
-<nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm mb-4">
-    <div class="container px-3 py-1">
-        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-slate-800" href="<?= $isStudent ? '/student/dashboard.php' : '/index.php' ?>">
-            <div style="width:34px;height:34px;background:linear-gradient(135deg,#0284c7,#2563eb);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;">
+<nav class="navbar navbar-expand-lg bg-white border-bottom shadow-sm mb-4 sticky-top" style="z-index:1030;">
+    <div class="container px-3 py-1.5 d-flex align-items-center justify-content-between">
+        <a class="navbar-brand d-flex align-items-center gap-2.5 fw-bold text-slate-800 m-0" href="<?= $isStudent ? '/student/dashboard.php' : '/index.php' ?>">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,#0284c7,#2563eb);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;">
                 <i class="fas fa-book-open"></i>
             </div>
-            <span style="font-size:1.15rem;font-weight:800;">คลังสื่อการเรียนรู้ <span class="text-primary">ละลมวิทยา</span></span>
+            <span style="font-size:1.1rem;font-weight:800;">คลังสื่อการเรียนรู้ <span class="text-primary">ละลมวิทยา</span></span>
         </a>
         <div class="d-flex align-items-center gap-2 ms-auto">
             <?php if ($isStudent): ?>
-            <a href="/student/dashboard.php" class="btn btn-primary rounded-pill px-3 py-1 text-xs fw-bold shadow-sm" style="background:#0d9488;border-color:#0d9488;">
-                <i class="fas fa-arrow-left me-1"></i> พอร์ทัลนักเรียน
+            <a href="/student/dashboard.php" class="btn btn-primary rounded-pill px-3.5 py-1.5 text-xs fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" style="background:#0d9488;border-color:#0d9488;">
+                <i class="fas fa-arrow-left"></i> <span>กลับพอร์ทัลนักเรียน</span>
             </a>
             <?php else: ?>
-            <a href="/index.php" class="btn btn-light rounded-pill px-3 py-1 text-xs fw-bold border">
+            <a href="/index.php" class="btn btn-light rounded-pill px-3 py-1.5 text-xs fw-bold border">
                 <i class="fas fa-home me-1"></i> หน้าหลัก
             </a>
-            <a href="/login.php?redirect=/learning_media/index.php" class="btn btn-primary rounded-pill px-3 py-1 text-xs fw-bold shadow-sm" style="background:#2563eb;">
+            <a href="/login.php?redirect=/learning_media/index.php" class="btn btn-primary rounded-pill px-3 py-1.5 text-xs fw-bold shadow-sm" style="background:#2563eb;">
                 <i class="fas fa-sign-in-alt me-1"></i> เข้าสู่ระบบ (ครู)
             </a>
             <?php endif; ?>
@@ -672,8 +681,6 @@ if ($isLoggedIn) {
 
 <?php if (!$isLoggedIn): ?>
 </div> <!-- end container for public view -->
-<?php else: ?>
-<?php require_once __DIR__ . '/../components/layout_end.php'; ?>
 <?php endif; ?>
 
 <script>
@@ -1164,3 +1171,10 @@ function escapeHtml(str) {
 
 document.addEventListener('DOMContentLoaded', loadMediaList);
 </script>
+<?php if (!$isLoggedIn): ?>
+</div> <!-- end app-wrapper -->
+</body>
+</html>
+<?php else: ?>
+<?php require_once __DIR__ . '/../components/layout_end.php'; ?>
+<?php endif; ?>
