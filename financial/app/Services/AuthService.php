@@ -176,12 +176,42 @@ class AuthService
         $user = self::getCurrentUser();
         if (!$user) return false;
 
-        $userPerms = $user['permissions'] ?? [];
-        $key = "{$module}:{$action}";
+        $moduleAliases = [
+            'reports'             => 'report',
+            'receipts'            => 'receipt',
+            'disbursements'       => 'payment',
+            'payments'            => 'payment',
+            'advances'            => 'advance',
+            'accounts'            => 'accounting',
+            'banks'               => 'bank',
+            'bank_reconciliation' => 'bank',
+            'special_programs'    => 'special_program',
+            'users'               => 'setting',
+            'fiscal_years'        => 'setting',
+            'audit_logs'          => 'audit_log',
+            'settings'            => 'setting',
+            'budgets'             => 'budget',
+        ];
+        $canonicalModule = $moduleAliases[$module] ?? $module;
 
-        // Admin has manage/view on non-approval roles, but strict separation of duties applies:
-        // Admin cannot approve finances automatically unless granted.
-        return in_array($key, $userPerms, true);
+        $userRoles = $user['roles'] ?? [];
+        $isAdmin = in_array('admin', $userRoles, true);
+
+        // ผู้ดูแลระบบ (admin) สามารถดูข้อมูลและจัดการระบบได้ทุกโมดูล
+        // ยกเว้น "การอนุมัติการเงิน" (approve) ที่ต้องเป็นผู้อนุมัติตามสายการบังคับบัญชา (Separation of Duties)
+        if ($isAdmin) {
+            if ($action === 'approve') {
+                $userPerms = $user['permissions'] ?? [];
+                return in_array("{$canonicalModule}:{$action}", $userPerms, true) || in_array("{$module}:{$action}", $userPerms, true);
+            }
+            return true;
+        }
+
+        $userPerms = $user['permissions'] ?? [];
+        $key1 = "{$canonicalModule}:{$action}";
+        $key2 = "{$module}:{$action}";
+
+        return in_array($key1, $userPerms, true) || in_array($key2, $userPerms, true);
     }
 
     public static function getCsrfToken(): string
