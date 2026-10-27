@@ -23,13 +23,14 @@ if (isset($_GET['export']) || isset($_GET['template'])) {
     header('Content-Disposition: attachment; filename="'.$fn.'"');
     $out = fopen('php://output', 'w');
     fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
-    fputcsv($out, ['คำถาม','ตัวเลือก1','ตัวเลือก2','ตัวเลือก3','ตัวเลือก4','เฉลย(1-5)','ตัวเลือก5(ไม่บังคับ)']);
+    fputcsv($out, ['คำถาม','ตัวเลือก1','ตัวเลือก2','ตัวเลือก3','ตัวเลือก4','เฉลย(1-5 หรือ ก-จ)','ตัวเลือก5(ไม่บังคับ)']);
     if (isset($_GET['export'])) {
         $st = $pdo->prepare("SELECT question_text,choice1,choice2,choice3,choice4,correct_answer,choice5 FROM lms_final_questions WHERE subject_id=? AND question_type='choice' ORDER BY id");
         $st->execute([$subject_id]);
         foreach ($st->fetchAll() as $r) fputcsv($out, $r);
     } else {
-        fputcsv($out, ['1+1 เท่ากับเท่าไหร่?','1','2','3','4','2','']);
+        fputcsv($out, ['ข้อใดคืออวัยวะในระบบย่อยอาหาร?','กระเพาะอาหาร','หัวใจ','ปอด','ไต','1','']);
+        fputcsv($out, ['น้ำดีสร้างมาจากอวัยวะใด?','ตับอ่อน','ตับ','ถุงน้ำดี','ม้าม','ข','']);
     }
     fclose($out); exit();
 }
@@ -42,20 +43,37 @@ function lms_parse_lines(string $raw): array {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'import' && !empty($_FILES['csv_file']['name'])) {
-        $h = fopen($_FILES['csv_file']['tmp_name'], 'r');
-        $bom = fread($h, 3); if ($bom !== "\xEF\xBB\xBF") rewind($h);
-        fgetcsv($h); $cnt = 0;
-        while (($row = fgetcsv($h)) !== false) {
-            $choice5 = trim($row[6] ?? '');
-            $ansNum  = (int)($row[5] ?? 0);
-            if (count($row) >= 6 && trim($row[0]) && $ansNum >= 1 && $ansNum <= 5 && !($ansNum === 5 && $choice5 === '')) {
-                $pdo->prepare("INSERT INTO lms_final_questions (subject_id,question_text,choice1,choice2,choice3,choice4,choice5,correct_answer) VALUES (?,?,?,?,?,?,?,?)")
-                    ->execute([$subject_id,trim($row[0]),trim($row[1]),trim($row[2]),trim($row[3]),trim($row[4]),$choice5,$ansNum]);
+        $parsed = lms_parse_exam_csv($_FILES['csv_file']['tmp_name']);
+        if (!$parsed['ok']) {
+            header('Location: final_exam.php?subject_id='.$subject_id.'&msg='.urlencode('error:' . ($parsed['error'] ?: 'ไม่สามารถนำเข้าไฟล์ CSV ได้')));
+            exit();
+        }
+
+        $cnt = 0;
+        $stmt = $pdo->prepare("INSERT INTO lms_final_questions (subject_id,question_text,choice1,choice2,choice3,choice4,choice5,correct_answer) VALUES (?,?,?,?,?,?,?,?)");
+        $pdo->beginTransaction();
+        try {
+            foreach ($parsed['rows'] as $r) {
+                $stmt->execute([
+                    $subject_id,
+                    $r['question_text'],
+                    $r['choice1'],
+                    $r['choice2'],
+                    $r['choice3'],
+                    $r['choice4'],
+                    $r['choice5'],
+                    $r['correct_answer']
+                ]);
                 $cnt++;
             }
+            $pdo->commit();
+            header('Location: final_exam.php?subject_id='.$subject_id.'&msg='.urlencode("success:นำเข้าข้อสอบสำเร็จ $cnt ข้อ"));
+            exit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            header('Location: final_exam.php?subject_id='.$subject_id.'&msg='.urlencode('error:เกิดข้อผิดพลาดในการบันทึก: ' . $e->getMessage()));
+            exit();
         }
-        fclose($h);
-        header('Location: final_exam.php?subject_id='.$subject_id.'&msg='.urlencode("success:นำเข้าสำเร็จ $cnt ข้อ")); exit();
     }
 
     $qtext = trim($_POST['question_text'] ?? '');
@@ -270,6 +288,14 @@ require_once __DIR__ . '/../components/layout_start.php';
     <form method="POST" enctype="multipart/form-data" class="p-6">
       <input type="hidden" name="action" value="import">
       <input type="hidden" name="subject_id" value="<?=$subject_id?>">
+      <div class="mb-4 bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-[11px] text-emerald-800 space-y-1">
+        <p class="font-bold flex items-center gap-1"><i class="fas fa-check-circle text-emerald-600"></i> รองรับไฟล์ CSV ทุกรูปแบบ:</p>
+        <ul class="list-disc list-inside text-slate-600 space-y-0.5 pl-1">
+          <li>เซฟจาก Excel ภาษาไทย (UTF-8, Windows-874, TIS-620)</li>
+          <li>ช่องเฉลย ใส่ได้ทั้ง <strong>1-5</strong> หรือ <strong>ก, ข, ค, ง, จ</strong> หรือ <strong>A, B, C, D</strong></li>
+          <li>รองรับทั้งเครื่องหมายจุลภาค (,) และอัฒภาค (;)</li>
+        </ul>
+      </div>
       <input type="file" name="csv_file" accept=".csv" required class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm mb-4">
       <div class="flex justify-end gap-3">
         <button type="button" onclick="closeModal('importModal')" class="px-4 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl">ยกเลิก</button>

@@ -977,3 +977,181 @@ function lms_clone_subject_to_term(
         throw $e;
     }
 }
+
+/**
+ * Smart & Robust CSV parser for LMS exam questions
+ * Handles:
+ *   - UTF-8 with BOM, UTF-8, UTF-16LE, Windows-874 / TIS-620
+ *   - Auto-detect delimiter: comma (,), semicolon (;), tab (\t)
+ *   - Answer mapping: 1-5, ก-จ, A-E, ๑-๕, "ข้อ 1", "1."
+ *   - Both column layouts: [Q, C1, C2, C3, C4, Ans, C5] AND [Q, C1, C2, C3, C4, C5, Ans]
+ */
+function lms_parse_exam_csv(string $filePath): array {
+    if (!file_exists($filePath) || !is_file($filePath)) {
+        return ['ok' => false, 'rows' => [], 'error' => 'ไม่พบไฟล์หรืออ่านไฟล์ไม่สำเร็จ', 'total_read' => 0];
+    }
+
+    $raw = @file_get_contents($filePath);
+    if ($raw === false || trim($raw) === '') {
+        return ['ok' => false, 'rows' => [], 'error' => 'ไฟล์ว่างเปล่า กรุณาเลือกไฟล์ CSV ที่มีข้อมูลข้อสอบ', 'total_read' => 0];
+    }
+
+    // 1. Detect and convert encoding to clean UTF-8
+    if (substr($raw, 0, 3) === "\xEF\xBB\xBF") {
+        $raw = substr($raw, 3);
+    } elseif (substr($raw, 0, 2) === "\xFF\xFE") { // UTF-16LE
+        $raw = mb_convert_encoding(substr($raw, 2), 'UTF-8', 'UTF-16LE');
+    } elseif (substr($raw, 0, 2) === "\xFE\xFF") { // UTF-16BE
+        $raw = mb_convert_encoding(substr($raw, 2), 'UTF-8', 'UTF-16BE');
+    } else {
+        if (!mb_check_encoding($raw, 'UTF-8')) {
+            $converted = @iconv('Windows-874', 'UTF-8//IGNORE', $raw);
+            if ($converted !== false && mb_check_encoding($converted, 'UTF-8')) {
+                $raw = $converted;
+            } else {
+                $converted = @mb_convert_encoding($raw, 'UTF-8', 'TIS-620');
+                if ($converted) $raw = $converted;
+            }
+        }
+    }
+
+    // Normalize newlines
+    $raw = str_replace(["\r\n", "\r"], "\n", $raw);
+
+    // 2. Detect delimiter (comma, semicolon, tab)
+    $lines = array_values(array_filter(explode("\n", $raw), fn($l) => trim($l) !== ''));
+    if (empty($lines)) {
+        return ['ok' => false, 'rows' => [], 'error' => 'ไม่พบบรรทัดข้อมูลในไฟล์ CSV', 'total_read' => 0];
+    }
+
+    $firstLine = $lines[0];
+    $delimiters = [',', ';', "\t"];
+    $bestDelim = ',';
+    $maxCount = 0;
+    foreach ($delimiters as $d) {
+        $cnt = substr_count($firstLine, $d);
+        if ($cnt > $maxCount) {
+            $maxCount = $cnt;
+            $bestDelim = $d;
+        }
+    }
+
+    // 3. Parse stream
+    $fp = fopen('php://temp', 'r+');
+    fwrite($fp, $raw);
+    rewind($fp);
+
+    $rows = [];
+    $isFirst = true;
+    $totalRead = 0;
+
+    $mapAnswer = function($val): int {
+        $val = trim((string)$val);
+        $val = preg_replace('/[\x{00A0}\x{200B}-\x{200D}\x{FEFF}]/u', '', $val);
+        $val = preg_replace('/^(ข้อ|ตัวเลือก|ชอยส์|choice|คำตอบ|ที่)\s*/ui', '', $val);
+        $val = trim(rtrim($val, '.()'));
+
+        if (is_numeric($val)) {
+            $n = (int)$val;
+            return ($n >= 1 && $n <= 5) ? $n : 0;
+        }
+
+        $letterMap = [
+            'ก' => 1, 'ข' => 2, 'ค' => 3, 'ง' => 4, 'จ' => 5,
+            'a' => 1, 'b' => 2, 'c' => 3, 'd' => 4, 'e' => 5,
+            'A' => 1, 'B' => 2, 'C' => 3, 'D' => 4, 'E' => 5,
+            '๑' => 1, '๒' => 2, '๓' => 3, '๔' => 4, '๕' => 5,
+        ];
+        return $letterMap[$val] ?? 0;
+    };
+
+    while (($cells = fgetcsv($fp, 0, $bestDelim)) !== false) {
+        if ($cells === [null] || empty(array_filter($cells, fn($c) => trim((string)$c) !== ''))) {
+            continue;
+        }
+
+        $cells = array_map(function($c) {
+            $t = trim((string)$c);
+            return preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $t);
+        }, $cells);
+
+        // Check if first row is header
+        if ($isFirst) {
+            $isFirst = false;
+            $c0 = mb_strtolower($cells[0] ?? '');
+            if (str_contains($c0, 'คำถาม') || str_contains($c0, 'question') || str_contains($c0, 'ข้อที่') || $c0 === '#') {
+                continue;
+            }
+        }
+
+        $totalRead++;
+        $qtext = $cells[0] ?? '';
+        if ($qtext === '') continue;
+
+        $c1 = $cells[1] ?? '';
+        $c2 = $cells[2] ?? '';
+        $c3 = $cells[3] ?? '';
+        $c4 = $cells[4] ?? '';
+
+        // Layout detection:
+        // Layout 1 (standard template): [Q, C1, C2, C3, C4, Ans(1-5), C5]
+        // Layout 2 (intuitive Excel):   [Q, C1, C2, C3, C4, C5, Ans(1-5)]
+        $ans5 = $mapAnswer($cells[5] ?? '');
+        $ans6 = isset($cells[6]) ? $mapAnswer($cells[6]) : 0;
+        $c5   = '';
+        $ans  = 0;
+
+        if (!isset($cells[6]) || trim($cells[6]) === '') {
+            $ans = $ans5;
+            $c5  = '';
+        } elseif ($ans5 > 0 && $ans6 === 0) {
+            $ans = $ans5;
+            $c5  = $cells[6];
+        } elseif ($ans6 > 0 && $ans5 === 0) {
+            $ans = $ans6;
+            $c5  = $cells[5];
+        } elseif ($ans5 > 0 && $ans6 > 0) {
+            $v5 = trim($cells[5]);
+            $v6 = trim($cells[6]);
+            if (is_numeric($v6) && !is_numeric($v5)) {
+                $ans = $ans6;
+                $c5  = $cells[5];
+            } else {
+                $ans = $ans5;
+                $c5  = $cells[6];
+            }
+        }
+
+        if ($ans < 1 || $ans > 5) {
+            continue;
+        }
+
+        if ($ans === 5 && $c5 === '') {
+            continue;
+        }
+
+        $rows[] = [
+            'question_text'  => $qtext,
+            'choice1'        => $c1,
+            'choice2'        => $c2,
+            'choice3'        => $c3,
+            'choice4'        => $c4,
+            'choice5'        => $c5 !== '' ? $c5 : null,
+            'correct_answer' => $ans,
+        ];
+    }
+
+    fclose($fp);
+
+    if (empty($rows)) {
+        return [
+            'ok' => false,
+            'rows' => [],
+            'error' => 'อ่านข้อมูลได้ ' . $totalRead . ' แถว แต่ไม่มีข้อสอบที่ตรงตามรูปแบบ (กรุณาตรวจสอบว่ามี [คำถาม, ตัวเลือก 1-4, เฉลย (1-5 หรือ ก-จ)])',
+            'total_read' => $totalRead,
+            'delimiter'  => $bestDelim
+        ];
+    }
+
+    return ['ok' => true, 'rows' => $rows, 'error' => '', 'total_read' => $totalRead, 'delimiter' => $bestDelim];
+}
