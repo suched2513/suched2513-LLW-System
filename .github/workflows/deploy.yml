@@ -206,6 +206,17 @@ jobs:
                       }
                   }
               }
+              // Auto-migrate Financial & Accounting System
+              try {
+                  $finTableExists = $pdo->query("SHOW TABLES LIKE 'fin_users'")->rowCount() > 0;
+                  if (!$finTableExists && file_exists(__DIR__ . '/financial/database/migrate.php')) {
+                      require_once __DIR__ . '/financial/app/Core/Database.php';
+                      \App\Core\Database::setConnection($pdo);
+                      require_once __DIR__ . '/financial/database/migrate.php';
+                  }
+              } catch (Throwable $fe) {
+                  error_log('[Deploy Financial Migrate] ' . $fe->getMessage());
+              }
               echo "ok";
           } catch (Throwable $e) {
               error_log('[Deploy Auto-Migrate] ' . $e->getMessage());

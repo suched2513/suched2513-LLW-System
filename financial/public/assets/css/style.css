@@ -1,0 +1,219 @@
+:root {
+    --primary-navy: #0B2545;
+    --secondary-navy: #134074;
+    --navy-light: #EEF4F8;
+    --gold: #C59B27;
+    --gold-hover: #D4A936;
+    --gold-light: #FFF9E6;
+    --gov-body-bg: #F4F6F9;
+    --text-dark: #1E293B;
+    --border-color: #E2E8F0;
+    --sidebar-width: 260px;
+}
+
+body {
+    font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--gov-body-bg);
+    color: var(--text-dark);
+    font-size: 0.95rem;
+}
+
+/* Sidebar Styling */
+#sidebar {
+    width: var(--sidebar-width);
+    min-height: 100vh;
+    background-color: var(--primary-navy);
+    color: #FFFFFF;
+    transition: all 0.3s;
+    z-index: 1000;
+}
+
+#sidebar .sidebar-brand {
+    padding: 1.25rem 1rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+#sidebar .sidebar-brand .gold-emblem {
+    color: var(--gold);
+    font-size: 1.5rem;
+}
+
+#sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.82);
+    padding: 0.7rem 1.15rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.92rem;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+#sidebar .nav-link:hover {
+    color: #FFFFFF;
+    background-color: var(--secondary-navy);
+    border-left-color: var(--gold);
+}
+
+#sidebar .nav-link.active {
+    color: #FFFFFF;
+    background-color: var(--secondary-navy);
+    border-left-color: var(--gold);
+    font-weight: 600;
+}
+
+#sidebar .nav-header {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1rem 1.15rem 0.25rem;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 600;
+}
+
+/* Top Navbar */
+.top-navbar {
+    background-color: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.65rem 1.5rem;
+}
+
+.fiscal-year-badge {
+    background-color: var(--gold-light);
+    color: #8A6400;
+    border: 1px solid var(--gold);
+    padding: 0.3rem 0.75rem;
+    border-radius: 50rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* Content Area */
+.main-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+.content-area {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.page-body {
+    padding: 1.5rem;
+    flex-grow: 1;
+}
+
+/* Card & Tables */
+.card-gov {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    margin-bottom: 1.5rem;
+}
+
+.card-gov .card-header {
+    background-color: #FFFFFF;
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+    color: var(--primary-navy);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.table-gov thead th {
+    background-color: var(--navy-light);
+    color: var(--primary-navy);
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+    padding: 0.75rem 1rem;
+    white-space: nowrap;
+}
+
+.table-gov td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+}
+
+/* Buttons */
+.btn-primary-gov {
+    background-color: var(--primary-navy);
+    border-color: var(--primary-navy);
+    color: #FFFFFF;
+}
+
+.btn-primary-gov:hover {
+    background-color: var(--secondary-navy);
+    border-color: var(--secondary-navy);
+    color: #FFFFFF;
+}
+
+.btn-gold {
+    background-color: var(--gold);
+    border-color: var(--gold);
+    color: #FFFFFF;
+}
+
+.btn-gold:hover {
+    background-color: var(--gold-hover);
+    border-color: var(--gold-hover);
+    color: #FFFFFF;
+}
+
+/* Stat Cards */
+.stat-card {
+    border-left: 4px solid var(--primary-navy);
+    background: #FFFFFF;
+    border-radius: 6px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.stat-card.stat-gold {
+    border-left-color: var(--gold);
+}
+
+.stat-card.stat-success {
+    border-left-color: #10B981;
+}
+
+.stat-card.stat-danger {
+    border-left-color: #EF4444;
+}
+
+.stat-card .stat-label {
+    font-size: 0.85rem;
+    color: #64748B;
+    margin-bottom: 0.25rem;
+}
+
+.stat-card .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-navy);
+}
+
+/* Footer */
+footer.gov-footer {
+    background: #FFFFFF;
+    border-top: 1px solid var(--border-color);
+    padding: 0.85rem 1.5rem;
+    font-size: 0.85rem;
+    color: #64748B;
+}
