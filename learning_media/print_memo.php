@@ -6,6 +6,13 @@
 session_start();
 require_once __DIR__ . '/../config/database.php';
 
+// Auth guard: memo contains signatures — staff only
+if (!isset($_SESSION['llw_role'])) {
+    header('Location: /login.php?redirect=' . urlencode('/learning_media/print_memo.php?id=' . (int)($_GET['id'] ?? 0)));
+    exit();
+}
+$canApprove = in_array($_SESSION['llw_role'], ['super_admin'], true);
+
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
     die('ไม่พบรหัสสื่อการเรียนรู้');
@@ -412,6 +419,7 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
                     </div>
 
                     <!-- ปุ่มเซ็นชื่อ + ปุ่มอนุมัติ (ซ่อนตอนพิมพ์) -->
+                    <?php if ($canApprove): ?>
                     <div class="no-print" style="margin-top: 10px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;">
                         <button type="button" class="btn-sig" onclick="openMemoSigModal('head')">
                             <i class="fas fa-signature me-1"></i> เซ็นชื่อดิจิทัล
@@ -430,6 +438,7 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
                             </button>
                         <?php endif; ?>
                     </div>
+                    <?php endif; ?>
                 </div>
             </td>
 
@@ -469,6 +478,7 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
                     </div>
 
                     <!-- ปุ่มเซ็นชื่อ + ปุ่มอนุมัติ (ซ่อนตอนพิมพ์) -->
+                    <?php if ($canApprove): ?>
                     <div class="no-print" style="margin-top: 10px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap;">
                         <button type="button" class="btn-sig" style="background:#2563eb;" onclick="openMemoSigModal('director')">
                             <i class="fas fa-signature me-1"></i> เซ็นชื่อดิจิทัล
@@ -487,6 +497,7 @@ $typeName = $mediaTypesThai[$media['media_type']] ?? 'สื่อการเ�
                             </button>
                         <?php endif; ?>
                     </div>
+                    <?php endif; ?>
                 </div>
             </td>
         </tr>

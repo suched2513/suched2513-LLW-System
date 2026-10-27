@@ -58,73 +58,26 @@ function handleCoverUpload(array $file): ?string {
     return '/uploads/learning_media/' . $filename;
 }
 
+// Roles allowed to approve / sign on behalf of Academic Head & Director
+const LM_APPROVER_ROLES = ['super_admin'];
+
+// Guard: must be logged in AND have an approver role, otherwise exit with JSON
+function requireApprover(): void {
+    if (!isset($_SESSION['llw_role'])) {
+        http_response_code(401);
+        echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบ']);
+        exit;
+    }
+    if (!in_array($_SESSION['llw_role'], LM_APPROVER_ROLES, true)) {
+        http_response_code(403);
+        echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์']);
+        exit;
+    }
+}
+
 try {
     $pdo = getPdo();
-
-    // ── Self-healing: Ensure table and enhanced columns exist ──
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS learning_media (
-            id           INT AUTO_INCREMENT PRIMARY KEY,
-            user_id      INT NULL,
-            media_date   DATE NOT NULL,
-            author       VARCHAR(150) NOT NULL,
-            grade        VARCHAR(50) NOT NULL,
-            subject      VARCHAR(100) NOT NULL,
-            media_type   VARCHAR(50) NOT NULL DEFAULT 'slide',
-            media_name   VARCHAR(255) NOT NULL,
-            media_link   TEXT NOT NULL,
-            objective    TEXT NULL,
-            usage_results TEXT NULL,
-            cover_url    TEXT NULL,
-            views        INT NOT NULL DEFAULT 0,
-            rating_avg   DECIMAL(3,2) NOT NULL DEFAULT 0.00,
-            rating_count INT NOT NULL DEFAULT 0,
-            status       ENUM('active','inactive') NOT NULL DEFAULT 'active',
-            created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            INDEX idx_media_date (media_date),
-            INDEX idx_grade (grade),
-            INDEX idx_subject (subject),
-            INDEX idx_user_id (user_id),
-            INDEX idx_views (views)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    ");
-
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS learning_media_ratings (
-            id             INT AUTO_INCREMENT PRIMARY KEY,
-            media_id       INT NOT NULL,
-            rating         TINYINT NOT NULL DEFAULT 5,
-            feedback       TEXT NULL,
-            evaluator_name VARCHAR(100) NULL,
-            evaluator_role VARCHAR(50) NOT NULL DEFAULT 'student',
-            created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_lmr_media (media_id),
-            INDEX idx_lmr_created (created_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    ");
-
-    // Check if columns exist on previously created table
-    try {
-        $cols = $pdo->query("SHOW COLUMNS FROM learning_media")->fetchAll(PDO::FETCH_COLUMN);
-        if (!in_array('media_type', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN media_type VARCHAR(50) NOT NULL DEFAULT 'slide'");
-        if (!in_array('objective', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN objective TEXT NULL");
-        if (!in_array('usage_results', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN usage_results TEXT NULL");
-        if (!in_array('rating_avg', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN rating_avg DECIMAL(3,2) NOT NULL DEFAULT 0.00");
-        if (!in_array('rating_count', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN rating_count INT NOT NULL DEFAULT 0");
-
-        if (!in_array('academic_head_approved', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN academic_head_approved TINYINT(1) NOT NULL DEFAULT 0");
-        if (!in_array('academic_head_name', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN academic_head_name VARCHAR(100) NOT NULL DEFAULT 'นายเฉลิมชัย ศรีชัย'");
-        if (!in_array('academic_head_comment', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN academic_head_comment VARCHAR(255) NULL DEFAULT 'ทราบ และเห็นควรอนุมัติ'");
-        if (!in_array('academic_head_at', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN academic_head_at DATETIME NULL");
-        if (!in_array('academic_head_signature', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN academic_head_signature LONGTEXT NULL");
-
-        if (!in_array('director_approved', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN director_approved TINYINT(1) NOT NULL DEFAULT 0");
-        if (!in_array('director_name', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN director_name VARCHAR(100) NOT NULL DEFAULT 'นายสถาน ปรางมาศ'");
-        if (!in_array('director_comment', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN director_comment VARCHAR(255) NULL DEFAULT 'ทราบ และอนุมัติ'");
-        if (!in_array('director_at', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN director_at DATETIME NULL");
-        if (!in_array('director_signature', $cols, true)) $pdo->exec("ALTER TABLE learning_media ADD COLUMN director_signature LONGTEXT NULL");
-    } catch (Exception $e) {}
+    // Schema is managed by database/migrations/2026_10_26_*_learning_media*.php
 
     // ─────────────────────────────────────────────────────────────
     // 1. LIST MEDIA
@@ -137,8 +90,8 @@ try {
 
         $sql = "SELECT id, user_id, media_date, author, grade, subject, media_type, media_name, media_link,
                        objective, usage_results, cover_url, views, rating_avg, rating_count,
-                       academic_head_approved, academic_head_name, academic_head_comment, academic_head_at, academic_head_signature,
-                       director_approved, director_name, director_comment, director_at, director_signature,
+                       academic_head_approved, academic_head_name, academic_head_comment, academic_head_at,
+                       director_approved, director_name, director_comment, director_at,
                        created_at
                 FROM learning_media
                 WHERE status = 'active'";
@@ -197,12 +150,10 @@ try {
                 'academicHeadName'     => $r['academic_head_name'] ?: 'นายเฉลิมชัย ศรีชัย',
                 'academicHeadComment'  => $r['academic_head_comment'] ?: 'ทราบ และเห็นควรอนุมัติ',
                 'academicHeadAt'       => $r['academic_head_at'] ? toThaiDateString(substr($r['academic_head_at'], 0, 10)) : null,
-                'academicHeadSig'      => $r['academic_head_signature'],
                 'directorApproved'     => (int)($r['director_approved'] ?? 0),
                 'directorName'         => $r['director_name'] ?: 'นายสถาน ปรางมาศ',
                 'directorComment'      => $r['director_comment'] ?: 'ทราบ และอนุมัติ',
                 'directorAt'           => $r['director_at'] ? toThaiDateString(substr($r['director_at'], 0, 10)) : null,
-                'directorSig'          => $r['director_signature'],
                 'createdAt'            => $r['created_at'],
             ];
         }
@@ -500,11 +451,7 @@ try {
     // 8. APPROVE MEDIA (Academic Head & Director)
     // ─────────────────────────────────────────────────────────────
     if ($action === 'approve') {
-        if (!isset($_SESSION['llw_role'])) {
-            http_response_code(401);
-            echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบ']);
-            exit;
-        }
+        requireApprover();
 
         $id           = (int)($_POST['id'] ?? 0);
         $step         = trim($_POST['step'] ?? 'head'); // 'head' or 'director'
@@ -565,11 +512,7 @@ try {
     // 9. UNAPPROVE MEDIA (Reset)
     // ─────────────────────────────────────────────────────────────
     if ($action === 'unapprove') {
-        if (!isset($_SESSION['llw_role'])) {
-            http_response_code(401);
-            echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบ']);
-            exit;
-        }
+        requireApprover();
 
         $id   = (int)($_POST['id'] ?? 0);
         $step = trim($_POST['step'] ?? 'head');
@@ -596,12 +539,20 @@ try {
     // 10. SAVE SIGNATURE (For Head, Director, or Author)
     // ─────────────────────────────────────────────────────────────
     if ($action === 'save_signature') {
+        requireApprover();
+
         $id        = (int)($_POST['id'] ?? 0);
         $target    = trim($_POST['target'] ?? '');
         $signature = trim($_POST['signature'] ?? '');
 
-        if ($id <= 0 || !$target) {
+        if ($id <= 0 || !in_array($target, ['head', 'director'], true)) {
             echo json_encode(['status' => 'fail', 'msg' => 'ข้อมูลไม่ครบถ้วน']);
+            exit;
+        }
+
+        // Accept only PNG data URLs (max ~500KB) or empty string to clear
+        if ($signature !== '' && (strpos($signature, 'data:image/png;base64,') !== 0 || strlen($signature) > 700000)) {
+            echo json_encode(['status' => 'fail', 'msg' => 'รูปแบบลายเซ็นไม่ถูกต้อง']);
             exit;
         }
 
@@ -621,5 +572,5 @@ try {
 } catch (Exception $e) {
     error_log('[Learning Media API Error] ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['status' => 'fail', 'msg' => $e->getMessage()]);
+    echo json_encode(['status' => 'fail', 'msg' => 'เกิดข้อผิดพลาด', 'message' => 'เกิดข้อผิดพลาด']);
 }
