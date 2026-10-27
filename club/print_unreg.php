@@ -8,8 +8,11 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 
 $pdo = getPdo();
 $cfg = $pdo->query("SELECT * FROM club_settings WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-$semester = (int)($cfg['semester'] ?? 1);
-$year     = (int)($cfg['year'] ?? (date('Y') + 543));
+$defSem  = $cfg ? (int)$cfg['semester'] : (function_exists('llw_current_semester') ? llw_current_semester() : 2);
+$defYear = $cfg ? (int)$cfg['year']     : (function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569);
+
+$semester = isset($_GET['semester']) ? (int)$_GET['semester'] : $defSem;
+$year     = isset($_GET['year'])     ? (int)$_GET['year']     : $defYear;
 
 // Unregistered students
 $stmtUnreg = $pdo->prepare("
@@ -86,7 +89,7 @@ $unreg = $stmtUnreg->fetchAll(PDO::FETCH_ASSOC);
             <?php endforeach; ?>
             <?php if(empty($unreg)): ?>
             <tr>
-                <td colspan="4" class="text-center" style="color: green; padding: 20px;">นักเรียนทุกคนลงทะเบียนเรียบร้อยแล้ว</td>
+                <td colspan="4" class="text-center" style="color: green; padding: 20px;">นักเรียนทุกคนลงทะเบียนเรียบร้อยแล้วในภาคเรียนที่ <?= $semester ?>/<?= $year ?></td>
             </tr>
             <?php endif; ?>
         </tbody>

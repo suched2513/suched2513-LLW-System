@@ -15,8 +15,11 @@ $classroom = trim($_GET['classroom'] ?? '');
 if ($classroom === '') { header('Location: /club/report.php'); exit(); }
 
 $cfg      = $pdo->query("SELECT * FROM club_settings WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-$semester = (int)($cfg['semester'] ?? 1);
-$year     = (int)($cfg['year'] ?? (date('Y') + 543));
+$defSem   = $cfg ? (int)$cfg['semester'] : (function_exists('llw_current_semester') ? llw_current_semester() : 2);
+$defYear  = $cfg ? (int)$cfg['year']     : (function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569);
+
+$semester = isset($_GET['semester']) ? (int)$_GET['semester'] : $defSem;
+$year     = isset($_GET['year'])     ? (int)$_GET['year']     : $defYear;
 
 $stmt = $pdo->prepare("
     SELECT s.student_id, s.name,
@@ -33,16 +36,17 @@ $stmt->execute([$semester, $year, $classroom]);
 $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle    = 'รายชื่อนักเรียน ' . $classroom;
-$pageSubtitle = "ภาคเรียน $semester / $year";
+$pageSubtitle = "ภาคเรียนที่ $semester / $year";
 $activeSystem = 'club';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
 <div class="container-fluid">
     <div class="d-flex align-items-center gap-3 mb-4">
-        <a href="/club/report.php" class="btn btn-outline-secondary btn-sm rounded-2"><i class="fas fa-arrow-left me-1"></i>กลับ</a>
+        <a href="/club/report.php?semester=<?= $semester ?>&year=<?= $year ?>" class="btn btn-outline-secondary btn-sm rounded-2"><i class="fas fa-arrow-left me-1"></i>กลับ</a>
         <h5 class="mb-0 fw-bold">นักเรียนห้อง <?= htmlspecialchars($classroom, ENT_QUOTES, 'UTF-8') ?></h5>
         <span class="badge bg-secondary rounded-pill"><?= count($students) ?> คน</span>
+        <span class="badge bg-light text-dark border ms-auto small">ภาคเรียนที่ <?= $semester ?>/<?= $year ?></span>
     </div>
 
     <div class="card border-0 shadow-sm rounded-3">

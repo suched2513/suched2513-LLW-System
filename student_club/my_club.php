@@ -7,14 +7,25 @@ if (!isset($_SESSION['is_student']) || $_SESSION['is_student'] !== true) {
     exit();
 }
 
-$student_code  = $_SESSION['student_code'] ?? '';
+$student_code  = trim($_SESSION['student_code'] ?? '');
+if (preg_match('/^\d+$/', $student_code)) {
+    $student_code = str_pad($student_code, 5, '0', STR_PAD_LEFT);
+}
 $student_name  = $_SESSION['student_name'] ?? '';
 $student_class = $_SESSION['student_class'] ?? '';
 
 $pdo = getPdo();
 $cfg = $pdo->query("SELECT * FROM club_settings WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-$semester = (int)($cfg['semester'] ?? 0);
-$year     = (int)($cfg['year'] ?? 0);
+$activeSemester = (int)($cfg['semester'] ?? 0);
+$activeYear     = (int)($cfg['year'] ?? 0);
+
+if (!$activeSemester || !$activeYear) {
+    $activeSemester = function_exists('llw_current_semester') ? llw_current_semester() : 2;
+    $activeYear     = function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569;
+}
+
+$semester = isset($_GET['semester']) ? (int)$_GET['semester'] : $activeSemester;
+$year     = isset($_GET['year'])     ? (int)$_GET['year']     : $activeYear;
 
 $myReg = null;
 $sessions = [];
@@ -54,6 +65,17 @@ if ($semester) {
     }
 }
 
+// Check other terms registration history
+$otherRegs = $pdo->prepare("
+    SELECT cr.semester, cr.year, cg.name AS club_name 
+    FROM club_registrations cr
+    JOIN club_groups cg ON cg.id = cr.club_id
+    WHERE cr.student_id = ?
+    ORDER BY cr.year DESC, cr.semester DESC
+");
+$otherRegs->execute([$student_code]);
+$allMyRegs = $otherRegs->fetchAll(PDO::FETCH_ASSOC);
+
 // Attendance stats
 $totalDone   = count(array_filter($sessions, fn($s) => $s['session_status'] === 'done'));
 $presentCnt  = count(array_filter($sessions, fn($s) => $s['session_status'] === 'done' && in_array($s['att_status'], ['present','late'])));
@@ -71,7 +93,7 @@ function fmtDate($d, $months) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>ชุมนุมของฉัน | โรงเรียนละลมวิทยา</title>
+<title>ชุมนุมของฉัน ภาคเรียนที่ <?= $semester ?>/<?= $year ?> | โรงเรียนละลมวิทยา</title>
 <meta name="theme-color" content="#7c3aed">
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -88,20 +110,42 @@ function fmtDate($d, $months) {
         <button onclick="history.back()" class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center border border-white/20 active:bg-white/30 flex-shrink-0">
             <i class="bi bi-arrow-left text-lg"></i>
         </button>
-        <div>
-            <div class="font-black text-sm leading-tight">ชุมนุมของฉัน</div>
-            <div class="text-violet-200 text-xs font-bold"><?= htmlspecialchars($student_name, ENT_QUOTES, 'UTF-8') ?></div>
+        <div class="flex-1 min-w-0">
+            <div class="font-black text-sm leading-tight">ชุมนุมของฉัน (ภาคเรียนที่ <?= $semester ?>/<?= $year ?>)</div>
+            <div class="text-violet-200 text-xs font-bold truncate"><?= htmlspecialchars($student_name, ENT_QUOTES, 'UTF-8') ?> · <?= htmlspecialchars($student_class, ENT_QUOTES, 'UTF-8') ?></div>
         </div>
+        <a href="/student_club/index.php" class="px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded-xl text-xs font-bold flex items-center gap-1">
+            <i class="bi bi-grid"></i>
+            <span>เลือก</span>
+        </a>
     </div>
 </header>
 
 <div class="max-w-lg mx-auto px-4 py-5 space-y-4">
 
+<!-- Semester switch pills if student has multiple terms -->
+<?php if (!empty($allMyRegs) && count($allMyRegs) > 1): ?>
+<div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-bold">
+    <span class="text-slate-400">ดูประวัติ:</span>
+    <?php foreach ($allMyRegs as $ar): 
+        $isSel = ($ar['semester'] == $semester && $ar['year'] == $year);
+    ?>
+    <a href="/student_club/my_club.php?semester=<?= $ar['semester'] ?>&year=<?= $ar['year'] ?>"
+       class="px-3 py-1.5 rounded-xl border <?= $isSel ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-slate-600 border-slate-200' ?>">
+        เทอม <?= $ar['semester'] ?>/<?= $ar['year'] ?>
+    </a>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
 <?php if (!$myReg): ?>
 <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 text-center fade-up">
     <i class="bi bi-people text-4xl text-slate-300 block mb-2"></i>
-    <p class="font-black text-slate-600">ยังไม่ได้เลือกชุมนุม</p>
-    <a href="/student_club/index.php" class="inline-block mt-3 px-5 py-2 bg-violet-600 text-white rounded-2xl text-sm font-black">เลือกชุมนุม</a>
+    <p class="font-black text-slate-700">ยังไม่ได้เลือกชุมนุมในภาคเรียนที่ <?= $semester ?>/<?= $year ?></p>
+    <p class="text-slate-400 text-xs mt-1">กรุณากดปุ่มด้านล่างเพื่อเลือกชุมนุมที่คุณสนใจ</p>
+    <a href="/student_club/index.php" class="inline-block mt-4 px-6 py-2.5 bg-violet-600 text-white rounded-2xl text-sm font-black shadow-md hover:bg-violet-700 active:scale-95 transition-all">
+        <i class="bi bi-plus-circle me-1"></i>เลือกชุมนุมภาคเรียนที่ <?= $semester ?>/<?= $year ?>
+    </a>
 </div>
 <?php else: ?>
 
@@ -112,7 +156,10 @@ function fmtDate($d, $months) {
             <i class="bi bi-people-fill text-2xl"></i>
         </div>
         <div class="flex-1">
-            <p class="font-black text-lg leading-tight"><?= htmlspecialchars($myReg['club_name'], ENT_QUOTES, 'UTF-8') ?></p>
+            <div class="flex items-center gap-2">
+                <p class="font-black text-lg leading-tight"><?= htmlspecialchars($myReg['club_name'], ENT_QUOTES, 'UTF-8') ?></p>
+                <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">เทอม <?= $semester ?>/<?= $year ?></span>
+            </div>
             <p class="text-violet-200 text-xs mt-1">
                 <i class="bi bi-person me-1"></i><?= htmlspecialchars($myReg['teacher_name'] ?? '-', ENT_QUOTES, 'UTF-8') ?>
                 <?= $myReg['room'] ? ' · <i class="bi bi-door-open me-1"></i>'.htmlspecialchars($myReg['room'],ENT_QUOTES,'UTF-8') : '' ?>

@@ -11,14 +11,59 @@ if (!in_array($_SESSION['llw_role'], $allowed, true)) {
 }
 
 $pageTitle    = 'ระบบชุมนุม';
-$pageSubtitle = 'จัดการชุมนุมและกิจกรรม';
+$pageSubtitle = 'จัดการชุมนุมและกิจกรรมนักเรียน';
 $activeSystem = 'club';
 $userRole     = $_SESSION['llw_role'];
 $teacherId    = $_SESSION['teacher_id'] ?? 0;
+
+$pdo = getPdo();
+$activeSetting = $pdo->query("SELECT semester, year FROM club_settings WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+$currentSem  = $activeSetting ? (int)$activeSetting['semester'] : (function_exists('llw_current_semester') ? llw_current_semester() : 2);
+$currentYear = $activeSetting ? (int)$activeSetting['year']     : (function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569);
+
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
 
 <div class="container-fluid">
+
+    <!-- Top Action & Semester Bar -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-body py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="fw-bold text-muted small text-uppercase me-1"><i class="fas fa-calendar-alt text-violet-600 me-1" style="color:#7c3aed"></i>ภาคเรียน:</div>
+                <select id="term_selector" onchange="switchTerm(this.value)" class="form-select form-select-sm fw-bold rounded-3 shadow-none border-secondary-subtle" style="width:auto;min-width:180px">
+                    <option value="2-2569" <?= ($currentSem == 2 && $currentYear == 2569) ? 'selected' : '' ?>>ภาคเรียนที่ 2/2569 <?= ($currentSem == 2 && $currentYear == 2569) ? '★ (ปัจจุบัน)' : '' ?></option>
+                    <option value="1-2569" <?= ($currentSem == 1 && $currentYear == 2569) ? 'selected' : '' ?>>ภาคเรียนที่ 1/2569 <?= ($currentSem == 1 && $currentYear == 2569) ? '★ (ปัจจุบัน)' : '' ?></option>
+                </select>
+                <span id="term_active_badge" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">
+                    <i class="fas fa-check-circle me-1"></i>ภาคเรียนปัจจุบัน
+                </span>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                <?php if (in_array($userRole, ['super_admin', 'club_admin', 'att_teacher'])): ?>
+                <button type="button" onclick="confirmCloneClubs()" class="btn btn-sm btn-outline-primary rounded-3">
+                    <i class="fas fa-clone me-1"></i>คัดลอกชุมนุมจากเทอม 1
+                </button>
+                <?php endif; ?>
+
+                <?php if (in_array($userRole, ['super_admin', 'club_admin', 'att_teacher'])): ?>
+                <a id="btn_print_summary" href="/club/print_summary.php?semester=<?= $currentSem ?>&year=<?= $currentYear ?>" target="_blank" class="btn btn-sm btn-outline-secondary rounded-3">
+                    <i class="fas fa-print me-1"></i>พิมพ์สรุป
+                </a>
+                <?php endif; ?>
+
+                <?php if (in_array($userRole, ['super_admin', 'club_admin'])): ?>
+                <a href="/club/settings.php" class="btn btn-sm btn-outline-secondary rounded-3" title="ตั้งค่าภาคเรียนและลงทะเบียน">
+                    <i class="fas fa-cog me-1"></i>ตั้งค่าเทอม
+                </a>
+                <a href="/club/manage.php" class="btn btn-sm rounded-3 text-white" style="background:#7c3aed">
+                    <i class="fas fa-plus me-1"></i>สร้างชุมนุม
+                </a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
 
     <!-- KPI Row -->
     <div class="row g-3 mb-4" id="kpi_row">
@@ -56,26 +101,36 @@ require_once __DIR__ . '/../components/layout_start.php';
         </div>
     </div>
 
-    <!-- Club Table -->
+    <!-- Club Table Card -->
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-white border-0 d-flex align-items-center justify-content-between py-3">
-            <h6 class="mb-0 fw-bold"><i class="fas fa-users me-2" style="color:#7c3aed"></i>รายชื่อชุมนุม</h6>
-            <div>
-                <?php if (in_array($userRole, ['super_admin', 'club_admin', 'att_teacher'])): ?>
-                <a href="/club/print_summary.php" target="_blank" class="btn btn-sm btn-outline-secondary rounded-3 me-2">
-                    <i class="fas fa-print me-1"></i>พิมพ์สรุป
-                </a>
-                <?php endif; ?>
-                <?php if (in_array($userRole, ['super_admin', 'club_admin'])): ?>
-                <a href="/club/manage.php" class="btn btn-sm rounded-3 text-white" style="background:#7c3aed">
-                    <i class="fas fa-plus me-1"></i>สร้างชุมนุม
-                </a>
-                <?php endif; ?>
+            <div class="d-flex align-items-center gap-2">
+                <h6 class="mb-0 fw-bold"><i class="fas fa-users me-2" style="color:#7c3aed"></i>รายชื่อชุมนุม</h6>
+                <span id="table_term_badge" class="badge bg-light text-dark border small fw-normal">ภาคเรียนที่ <?= $currentSem ?>/<?= $currentYear ?></span>
             </div>
         </div>
         <div class="card-body p-0">
             <div id="table_loading" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>กำลังโหลด...</div>
-            <div id="table_empty" class="text-center py-5 text-muted d-none"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>ไม่มีชุมนุม</div>
+            
+            <!-- Empty state with 1-click clone suggestion -->
+            <div id="table_empty" class="text-center py-5 px-3 text-muted d-none">
+                <i class="fas fa-inbox fa-3x mb-3 text-secondary opacity-50 d-block"></i>
+                <h6 class="fw-bold text-dark mb-1">ยังไม่มีรายชื่อชุมนุมในภาคเรียนที่เลือก</h6>
+                <p class="small text-muted mb-3" id="table_empty_sub">ท่านสามารถคัดลอกรายชื่อชุมนุมจากภาคเรียนที่ 1 หรือสร้างชุมนุมใหม่ได้ทันที</p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <?php if (in_array($userRole, ['super_admin', 'club_admin', 'att_teacher'])): ?>
+                    <button type="button" onclick="confirmCloneClubs()" class="btn btn-sm text-white rounded-3 px-3" style="background:#7c3aed">
+                        <i class="fas fa-clone me-1"></i>คัดลอกชุมนุมจากภาคเรียนที่ 1 สู่เทอม 2
+                    </button>
+                    <?php endif; ?>
+                    <?php if (in_array($userRole, ['super_admin', 'club_admin'])): ?>
+                    <a href="/club/manage.php" class="btn btn-sm btn-outline-secondary rounded-3 px-3">
+                        <i class="fas fa-plus me-1"></i>สร้างชุมนุมใหม่
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table class="table table-hover mb-0" id="clubs_table" style="display:none">
                     <thead class="table-light">
@@ -99,14 +154,76 @@ require_once __DIR__ . '/../components/layout_start.php';
 <script>
 const userRole = <?= json_encode($userRole) ?>;
 const teacherId = <?= json_encode($teacherId) ?>;
+let activeSystemSem = <?= (int)$currentSem ?>;
+let activeSystemYear = <?= (int)$currentYear ?>;
+let selectedSem = <?= (int)$currentSem ?>;
+let selectedYear = <?= (int)$currentYear ?>;
+
 const STATUS_LABEL = { draft:'ร่าง', open:'เปิดรับ', closed:'ปิด', archived:'เก็บถาวร' };
 const STATUS_CLS   = { draft:'bg-secondary', open:'bg-success', closed:'bg-danger', archived:'bg-dark' };
 
+function switchTerm(val) {
+    const parts = val.split('-');
+    if (parts.length === 2) {
+        selectedSem = parseInt(parts[0]);
+        selectedYear = parseInt(parts[1]);
+        updateTermUI();
+        loadClubs();
+    }
+}
+
+function updateTermUI() {
+    const isCurrent = (selectedSem === activeSystemSem && selectedYear === activeSystemYear);
+    const badge = document.getElementById('term_active_badge');
+    if (badge) {
+        badge.className = isCurrent 
+            ? 'badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small' 
+            : 'badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-1 small';
+        badge.innerHTML = isCurrent 
+            ? '<i class="fas fa-check-circle me-1"></i>ภาคเรียนปัจจุบัน' 
+            : '<i class="fas fa-history me-1"></i>ข้อมูลย้อนหลัง';
+    }
+
+    const tBadge = document.getElementById('table_term_badge');
+    if (tBadge) {
+        tBadge.textContent = `ภาคเรียนที่ ${selectedSem}/${selectedYear}`;
+    }
+
+    const printBtn = document.getElementById('btn_print_summary');
+    if (printBtn) {
+        printBtn.href = `/club/print_summary.php?semester=${selectedSem}&year=${selectedYear}`;
+    }
+}
+
 async function loadClubs() {
+    document.getElementById('table_loading').classList.remove('d-none');
+    document.getElementById('table_empty').classList.add('d-none');
+    document.getElementById('clubs_table').style.display = 'none';
+
     try {
-        const res  = await fetch('/club/api/clubs_list.php');
+        const res = await fetch(`/club/api/clubs_list.php?semester=${selectedSem}&year=${selectedYear}`);
         const data = await res.json();
         document.getElementById('table_loading').classList.add('d-none');
+
+        if (data.active_semester && data.active_year) {
+            activeSystemSem = parseInt(data.active_semester);
+            activeSystemYear = parseInt(data.active_year);
+            updateTermUI();
+        }
+
+        // Populate terms in dropdown if returned and not present
+        if (data.terms && Array.isArray(data.terms)) {
+            const sel = document.getElementById('term_selector');
+            const currentVal = `${selectedSem}-${selectedYear}`;
+            let html = '';
+            data.terms.forEach(t => {
+                const val = `${t.semester}-${t.year}`;
+                const isCur = (t.semester == activeSystemSem && t.year == activeSystemYear);
+                const label = `ภาคเรียนที่ ${t.semester}/${t.year}` + (isCur ? ' ★ (ปัจจุบัน)' : '');
+                html += `<option value="${val}" ${val === currentVal ? 'selected' : ''}>${label}</option>`;
+            });
+            if (html) sel.innerHTML = html;
+        }
 
         if (!data.data || !data.data.length) {
             document.getElementById('table_empty').classList.remove('d-none');
@@ -168,7 +285,7 @@ async function loadClubs() {
         document.getElementById('clubs_table').style.display = '';
         setKpi(data.data.length, totalReg, data.total_students - totalReg, totalSess);
     } catch(e) {
-        document.getElementById('table_loading').innerHTML = '<div class="text-danger py-5 text-center">เกิดข้อผิดพลาด</div>';
+        document.getElementById('table_loading').innerHTML = '<div class="text-danger py-5 text-center">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
     }
 }
 
@@ -177,6 +294,49 @@ function setKpi(clubs, reg, unreg, sess) {
     document.getElementById('kpi_registered').textContent = reg;
     document.getElementById('kpi_unreg').textContent      = Math.max(0, unreg);
     document.getElementById('kpi_sessions').textContent   = sess;
+}
+
+async function confirmCloneClubs() {
+    const { isConfirmed } = await Swal.fire({
+        icon: 'question',
+        title: 'คัดลอกชุมนุมสู่ภาคเรียนที่ 2?',
+        html: `ต้องการคัดลอกรายชื่อชุมนุมเดิมจาก <b>ภาคเรียนที่ 1/2569</b> มายัง <b>ภาคเรียนที่ 2/2569</b> หรือไม่?<br><small class="text-muted">ระบบจะคัดลอกชื่อชุมนุม ครูที่ปรึกษา และห้อง โดยเปิดสถานะเป็น 'เปิดรับ' และเริ่มรับนักเรียนใหม่</small>`,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-clone me-1"></i>ยืนยันคัดลอก',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#7c3aed'
+    });
+    if (!isConfirmed) return;
+
+    Swal.fire({ title: 'กำลังคัดลอกข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+        const res = await fetch('/club/api/clone_clubs.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from_semester: 1, from_year: 2569, to_semester: 2, to_year: 2569 })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            await Swal.fire({
+                icon: 'success',
+                title: 'คัดลอกเรียบร้อย',
+                text: data.message,
+                confirmButtonColor: '#7c3aed'
+            });
+            // Switch dropdown to Term 2 and reload
+            selectedSem = 2;
+            selectedYear = 2569;
+            const sel = document.getElementById('term_selector');
+            if (sel) sel.value = '2-2569';
+            updateTermUI();
+            loadClubs();
+        } else {
+            Swal.fire({ icon: 'warning', title: 'แจ้งเตือน', text: data.message, confirmButtonColor: '#7c3aed' });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: e.message, confirmButtonColor: '#7c3aed' });
+    }
 }
 
 async function deleteClub(id, name) {
@@ -197,7 +357,10 @@ async function deleteClub(id, name) {
 }
 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-document.addEventListener('DOMContentLoaded', loadClubs);
+document.addEventListener('DOMContentLoaded', () => {
+    updateTermUI();
+    loadClubs();
+});
 </script>
 
 <?php require_once __DIR__ . '/../components/layout_end.php'; ?>

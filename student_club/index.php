@@ -19,6 +19,19 @@ $cfg = $pdo->query("SELECT * FROM club_settings WHERE is_active = 1 LIMIT 1")->f
 $semester = (int)($cfg['semester'] ?? 0);
 $year     = (int)($cfg['year'] ?? 0);
 
+if (!$cfg || !$semester || !$year) {
+    $semester = function_exists('llw_current_semester') ? llw_current_semester() : 2;
+    $year     = function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569;
+    $cfg = [
+        'semester'     => $semester,
+        'year'         => $year,
+        'reg_open'     => null,
+        'reg_close'    => null,
+        'allow_change' => 1,
+        'is_active'    => 1
+    ];
+}
+
 // Current registration
 $myReg = null;
 if ($semester) {
@@ -64,7 +77,7 @@ $canChange = $myReg && $cfg && $cfg['allow_change'] && $regOpen;
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>เลือกชุมนุม | โรงเรียนละลมวิทยา</title>
+<title>เลือกชุมนุม ภาคเรียนที่ <?= $semester ?>/<?= $year ?> | โรงเรียนละลมวิทยา</title>
 <meta name="theme-color" content="#7c3aed">
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -84,7 +97,7 @@ $canChange = $myReg && $cfg && $cfg['allow_change'] && $regOpen;
             <i class="bi bi-arrow-left text-lg"></i>
         </button>
         <div>
-            <div class="font-black text-sm leading-tight">เลือกชุมนุม</div>
+            <div class="font-black text-sm leading-tight">เลือกชุมนุม (ภาคเรียนที่ <?= $semester ?>/<?= $year ?>)</div>
             <div class="text-violet-200 text-xs font-bold"><?= htmlspecialchars($student_name, ENT_QUOTES, 'UTF-8') ?> · <?= htmlspecialchars($student_class, ENT_QUOTES, 'UTF-8') ?></div>
         </div>
     </div>
@@ -104,11 +117,11 @@ $canChange = $myReg && $cfg && $cfg['allow_change'] && $regOpen;
 <!-- Registration Status Banner -->
 <?php if (!$regOpen && $cfg['reg_close'] && $now > $cfg['reg_close']): ?>
 <div class="bg-red-50 border border-red-200 rounded-2xl p-3 text-center text-red-600 text-sm font-bold fade-up">
-    <i class="bi bi-x-circle me-1"></i>หมดเวลาลงทะเบียนแล้ว
+    <i class="bi bi-x-circle me-1"></i>หมดเวลาลงทะเบียนแล้ว (ภาคเรียนที่ <?= $semester ?>/<?= $year ?>)
 </div>
 <?php elseif (!$regOpen): ?>
 <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-center text-amber-700 text-sm font-bold fade-up">
-    <i class="bi bi-clock me-1"></i>ยังไม่ถึงเวลาลงทะเบียน
+    <i class="bi bi-clock me-1"></i>ยังไม่ถึงเวลาลงทะเบียน (ภาคเรียนที่ <?= $semester ?>/<?= $year ?>)
 </div>
 <?php endif; ?>
 
@@ -125,7 +138,7 @@ $canChange = $myReg && $cfg && $cfg['allow_change'] && $regOpen;
             <i class="bi bi-people-fill text-violet-600 text-lg"></i>
         </div>
         <div class="flex-1">
-            <p class="text-xs font-black text-violet-500 uppercase tracking-wider mb-1">ชุมนุมที่เลือก</p>
+            <p class="text-xs font-black text-violet-500 uppercase tracking-wider mb-1">ชุมนุมที่เลือก (ภาคเรียนที่ <?= $semester ?>/<?= $year ?>)</p>
             <p class="font-black text-slate-800"><?= htmlspecialchars($myReg['club_name'], ENT_QUOTES, 'UTF-8') ?></p>
             <p class="text-slate-500 text-xs mt-0.5">
                 <i class="bi bi-person me-1"></i><?= htmlspecialchars($myReg['teacher_name'] ?? '-', ENT_QUOTES, 'UTF-8') ?>
@@ -146,17 +159,21 @@ $canChange = $myReg && $cfg && $cfg['allow_change'] && $regOpen;
 <!-- Club List -->
 <?php if ($regOpen || !$myReg): ?>
 <div class="fade-up" style="animation-delay:.1s">
-    <div class="flex items-center gap-2 px-1 mb-3">
-        <div class="w-8 h-8 bg-violet-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <i class="bi bi-grid text-violet-600"></i>
+    <div class="flex items-center justify-between px-1 mb-3">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-violet-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                <i class="bi bi-grid text-violet-600"></i>
+            </div>
+            <h2 class="font-black text-slate-800">ชุมนุมทั้งหมด</h2>
         </div>
-        <h2 class="font-black text-slate-800">ชุมนุมทั้งหมด</h2>
+        <span class="text-xs font-bold text-violet-600 bg-violet-50 px-2.5 py-1 rounded-full">ภาคเรียนที่ <?= $semester ?>/<?= $year ?></span>
     </div>
 
     <?php if (empty($clubs)): ?>
     <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 text-center">
         <i class="bi bi-inbox text-4xl text-slate-300 block mb-2"></i>
-        <p class="text-slate-400 font-bold text-sm">ยังไม่มีชุมนุมที่เปิดรับ</p>
+        <p class="text-slate-500 font-bold text-sm">ยังไม่มีชุมนุมที่เปิดรับในภาคเรียนที่ <?= $semester ?>/<?= $year ?></p>
+        <p class="text-slate-400 text-xs mt-1">กรุณารอครูผู้รับผิดชอบเปิดรับสมัครชุมนุม</p>
     </div>
     <?php else: ?>
     <div class="space-y-3">

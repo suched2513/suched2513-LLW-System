@@ -53,8 +53,8 @@ $stmtT = $pdo->query("
 ");
 $teachers = $stmtT->fetchAll(PDO::FETCH_ASSOC);
 $cfg      = $pdo->query("SELECT * FROM club_settings WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-$defSem   = $cfg['semester'] ?? 1;
-$defYear  = $cfg['year']     ?? (date('Y') + 543);
+$defSem   = $cfg ? (int)$cfg['semester'] : (function_exists('llw_current_semester') ? llw_current_semester() : 2);
+$defYear  = $cfg ? (int)$cfg['year']     : (function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569);
 
 $pageTitle    = $id ? 'แก้ไขชุมนุม' : 'สร้างชุมนุม';
 $pageSubtitle = $id ? 'แก้ไขข้อมูลชุมนุม' : 'เพิ่มชุมนุมใหม่';

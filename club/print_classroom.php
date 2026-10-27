@@ -11,8 +11,11 @@ $classroom = trim($_GET['classroom'] ?? '');
 if ($classroom === '') { die("กรุณาระบุห้องเรียน"); }
 
 $cfg      = $pdo->query("SELECT * FROM club_settings WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-$semester = (int)($cfg['semester'] ?? 1);
-$year     = (int)($cfg['year'] ?? (date('Y') + 543));
+$defSem   = $cfg ? (int)$cfg['semester'] : (function_exists('llw_current_semester') ? llw_current_semester() : 2);
+$defYear  = $cfg ? (int)$cfg['year']     : (function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569);
+
+$semester = isset($_GET['semester']) ? (int)$_GET['semester'] : $defSem;
+$year     = isset($_GET['year'])     ? (int)$_GET['year']     : $defYear;
 
 $stmt = $pdo->prepare("
     SELECT s.student_id, s.name,
@@ -35,7 +38,7 @@ $reg   = count(array_filter($students, fn($s) => $s['is_registered']));
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>รายงานการลงทะเบียนชุมนุม ห้อง <?= htmlspecialchars($classroom) ?></title>
+    <title>รายงานการลงทะเบียนชุมนุม ห้อง <?= htmlspecialchars($classroom) ?> ภาคเรียนที่ <?= $semester ?>/<?= $year ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Sarabun', sans-serif; margin: 40px; font-size: 12pt; }

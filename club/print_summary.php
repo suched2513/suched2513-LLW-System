@@ -10,8 +10,11 @@ $pdo = getPdo();
 
 // Get active semester settings
 $settRow = $pdo->query("SELECT semester, year FROM club_settings WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-$activeSemester = $settRow['semester'] ?? '-';
-$activeYear = $settRow['year'] ?? '-';
+$defSem  = $settRow ? (int)$settRow['semester'] : (function_exists('llw_current_semester') ? llw_current_semester() : 2);
+$defYear = $settRow ? (int)$settRow['year']     : (function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569);
+
+$activeSemester = isset($_GET['semester']) ? (int)$_GET['semester'] : $defSem;
+$activeYear     = isset($_GET['year'])     ? (int)$_GET['year']     : $defYear;
 
 $sql = "SELECT cg.name, cg.room, cg.max_capacity, cg.semester, cg.year, cg.obstacles,
                t1.name AS teacher_name, t2.name AS teacher_name_2, t3.name AS teacher_name_3,
@@ -78,7 +81,7 @@ $unregStudents = $stmtUnreg->fetchAll(PDO::FETCH_ASSOC);
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>สรุปข้อมูลชุมนุม</title>
+    <title>สรุปข้อมูลชุมนุม ภาคเรียนที่ <?= htmlspecialchars($activeSemester) ?>/<?= htmlspecialchars($activeYear) ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -131,7 +134,7 @@ $unregStudents = $stmtUnreg->fetchAll(PDO::FETCH_ASSOC);
         <tbody>
             <?php if (count($clubs) === 0): ?>
             <tr>
-                <td colspan="8" class="text-center">ไม่พบข้อมูลชุมนุม</td>
+                <td colspan="8" class="text-center">ไม่พบข้อมูลชุมนุมในภาคเรียนที่ <?= htmlspecialchars($activeSemester) ?>/<?= htmlspecialchars($activeYear) ?></td>
             </tr>
             <?php else: ?>
                 <?php foreach ($clubs as $idx => $c): ?>

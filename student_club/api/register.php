@@ -30,9 +30,16 @@ try {
     // Get active settings
     $cfg = $pdo->query("SELECT * FROM club_settings WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
     if (!$cfg) {
-        $pdo->rollBack();
-        echo json_encode(['status' => 'error', 'message' => 'ยังไม่เปิดระบบลงทะเบียนชุมนุม']);
-        exit;
+        $fallbackSem  = function_exists('llw_current_semester') ? llw_current_semester() : 2;
+        $fallbackYear = function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569;
+        $cfg = [
+            'semester'     => $fallbackSem,
+            'year'         => $fallbackYear,
+            'reg_open'     => null,
+            'reg_close'    => null,
+            'allow_change' => 1,
+            'is_active'    => 1
+        ];
     }
 
     $now = date('Y-m-d H:i:s');

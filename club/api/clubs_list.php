@@ -16,14 +16,14 @@ try {
     $year     = isset($_GET['year'])     ? (int)$_GET['year']     : 0;
     $status   = $_GET['status'] ?? '';
 
-    // If no filter, use active semester settings
-    if ($semester === 0 || $year === 0) {
-        $settRow = $pdo->query("SELECT semester, year FROM club_settings WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-        if ($settRow) {
-            if ($semester === 0) $semester = (int)$settRow['semester'];
-            if ($year === 0) $year = (int)$settRow['year'];
-        }
-    }
+    // Active semester from settings or central academic config
+    $activeSetting = $pdo->query("SELECT semester, year FROM club_settings WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    $activeSem  = $activeSetting ? (int)$activeSetting['semester'] : (function_exists('llw_current_semester') ? llw_current_semester() : 2);
+    $activeYear = $activeSetting ? (int)$activeSetting['year']     : (function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569);
+
+    // If no filter requested, default to active term
+    if ($semester === 0) $semester = $activeSem;
+    if ($year === 0)     $year     = $activeYear;
 
     $where = [];
     $params = [];
@@ -71,9 +71,33 @@ try {
         WHERE classroom REGEXP '^ม\\.[1-6]/' AND status = 'active'
     ")->fetchColumn();
 
-    echo json_encode(['status' => 'success', 'data' => $clubs, 'total_students' => $totalStudents]);
+    // Query distinct terms from groups & settings
+    $terms = $pdo->query("
+        SELECT DISTINCT semester, year FROM (
+            SELECT semester, year FROM club_groups
+            UNION
+            SELECT semester, year FROM club_settings
+            UNION
+            SELECT 2 AS semester, 2569 AS year
+            UNION
+            SELECT 1 AS semester, 2569 AS year
+        ) t
+        WHERE semester > 0 AND year > 0
+        ORDER BY year DESC, semester DESC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+    echo json_encode([
+        'status' => 'success',
+        'data' => $clubs,
+        'total_students' => $totalStudents,
+        'filter_semester' => $semester,
+        'filter_year' => $year,
+        'active_semester' => $activeSem,
+        'active_year' => $activeYear,
+        'terms' => $terms
+    ]);
 } catch (Exception $e) {
     error_log('[clubs_list] ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
+    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()]);
 }

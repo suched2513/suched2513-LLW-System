@@ -15,8 +15,11 @@ $userRole  = $_SESSION['llw_role'];
 $teacherId = (int)($_SESSION['teacher_id'] ?? 0);
 
 $cfg = $pdo->query("SELECT * FROM club_settings WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-$semester = (int)($cfg['semester'] ?? 1);
-$year     = (int)($cfg['year'] ?? (date('Y') + 543));
+$activeSem  = $cfg ? (int)$cfg['semester'] : (function_exists('llw_current_semester') ? llw_current_semester() : 2);
+$activeYear = $cfg ? (int)$cfg['year']     : (function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569);
+
+$semester = isset($_GET['semester']) ? (int)$_GET['semester'] : $activeSem;
+$year     = isset($_GET['year'])     ? (int)$_GET['year']     : $activeYear;
 
 // Clubs (filtered by teacher if att_teacher — checks all 3 advisor slots)
 $clubParams = [$semester, $year, $semester, $year, $semester, $year];
@@ -75,7 +78,7 @@ $stmtByClass->execute([$semester, $year]);
 $byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle    = 'รายงานชุมนุม';
-$pageSubtitle = "ภาคเรียน $semester / $year";
+$pageSubtitle = "ภาคเรียนที่ $semester / $year";
 $activeSystem = 'club';
 require_once __DIR__ . '/../components/layout_start.php';
 ?>
@@ -90,13 +93,25 @@ require_once __DIR__ . '/../components/layout_start.php';
 </style>
 
 <div class="container-fluid">
-    <div class="d-flex justify-content-end gap-2 mb-3 no-print">
-        <a href="/club/print_summary.php" target="_blank" class="btn btn-primary rounded-3 shadow-sm">
-            <i class="fas fa-file-alt me-1"></i>รายงานสรุปภาพรวม (รายงาน ผอ.)
-        </a>
-        <button onclick="window.print()" class="btn btn-dark rounded-3 shadow-sm">
-            <i class="fas fa-print me-1"></i>พิมพ์หน้านี้
-        </button>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 no-print">
+        <div class="d-flex align-items-center gap-2">
+            <label class="fw-bold text-muted small text-uppercase"><i class="fas fa-calendar-alt text-violet-600 me-1" style="color:#7c3aed"></i>ภาคเรียน:</label>
+            <select onchange="location.href='/club/report.php?semester='+this.value.split('-')[0]+'&year='+this.value.split('-')[1]" class="form-select form-select-sm rounded-3 fw-bold" style="width:auto">
+                <option value="2-2569" <?= ($semester == 2 && $year == 2569) ? 'selected' : '' ?>>ภาคเรียนที่ 2/2569 <?= ($activeSem == 2 && $activeYear == 2569) ? '★ (ปัจจุบัน)' : '' ?></option>
+                <option value="1-2569" <?= ($semester == 1 && $year == 2569) ? 'selected' : '' ?>>ภาคเรียนที่ 1/2569 <?= ($activeSem == 1 && $activeYear == 2569) ? '★ (ปัจจุบัน)' : '' ?></option>
+            </select>
+            <?php if ($semester == $activeSem && $year == $activeYear): ?>
+            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">ภาคเรียนปัจจุบัน</span>
+            <?php endif; ?>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/club/print_summary.php?semester=<?= $semester ?>&year=<?= $year ?>" target="_blank" class="btn btn-primary rounded-3 shadow-sm">
+                <i class="fas fa-file-alt me-1"></i>รายงานสรุปภาพรวม (รายงาน ผอ.)
+            </a>
+            <button onclick="window.print()" class="btn btn-dark rounded-3 shadow-sm">
+                <i class="fas fa-print me-1"></i>พิมพ์หน้านี้
+            </button>
+        </div>
     </div>
 
     <!-- Summary KPIs -->
@@ -153,7 +168,7 @@ require_once __DIR__ . '/../components/layout_start.php';
     <?php if (!empty($clubs)): ?>
     <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-body">
-            <h6 class="fw-bold mb-3">กราฟเปรียบเทียบผลการประเมินรายชุมนุม</h6>
+            <h6 class="fw-bold mb-3">กราฟเปรียบเทียบผลการประเมินรายชุมนุม (ภาคเรียนที่ <?= $semester ?>/<?= $year ?>)</h6>
             <canvas id="resultChart" height="90"></canvas>
         </div>
     </div>
@@ -233,14 +248,14 @@ require_once __DIR__ . '/../components/layout_start.php';
                 <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 fw-bold text-danger">นักเรียนที่ยังไม่ลงทะเบียน (<?= count($unreg) ?> คน)</h6>
                     <?php if (!empty($unreg)): ?>
-                    <a href="/club/print_unreg.php" target="_blank" class="btn btn-dark btn-sm rounded-3 shadow-sm">
+                    <a href="/club/print_unreg.php?semester=<?= $semester ?>&year=<?= $year ?>" target="_blank" class="btn btn-dark btn-sm rounded-3 shadow-sm">
                         <i class="fas fa-print me-1"></i>พิมพ์รายชื่อ
                     </a>
                     <?php endif; ?>
                 </div>
                 <div class="card-body p-0">
                     <?php if (empty($unreg)): ?>
-                    <div class="text-center py-5 text-muted"><i class="fas fa-check-circle fa-2x text-success mb-2 d-block"></i>นักเรียนทุกคนลงทะเบียนแล้ว</div>
+                    <div class="text-center py-5 text-muted"><i class="fas fa-check-circle fa-2x text-success mb-2 d-block"></i>นักเรียนทุกคนลงทะเบียนแล้วในภาคเรียนที่ <?= $semester ?>/<?= $year ?></div>
                     <?php else: ?>
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
@@ -299,8 +314,8 @@ require_once __DIR__ . '/../components/layout_start.php';
                                 <td class="px-3 py-2 text-center"><span class="badge <?= $unreg_count > 0 ? 'bg-danger' : 'bg-secondary' ?> rounded-pill"><?= $unreg_count ?></span></td>
                                 <td class="px-3 py-2 text-center">
                                     <div class="btn-group">
-                                        <a href="/club/class_students.php?classroom=<?= urlencode($row['classroom']) ?>" class="btn btn-outline-secondary btn-sm rounded-2 me-1" title="ดูรายชื่อ"><i class="fas fa-search"></i></a>
-                                        <a href="/club/print_classroom.php?classroom=<?= urlencode($row['classroom']) ?>" target="_blank" class="btn btn-outline-dark btn-sm rounded-2" title="พิมพ์รายงานห้อง"><i class="fas fa-print"></i></a>
+                                        <a href="/club/class_students.php?classroom=<?= urlencode($row['classroom']) ?>&semester=<?= $semester ?>&year=<?= $year ?>" class="btn btn-outline-secondary btn-sm rounded-2 me-1" title="ดูรายชื่อ"><i class="fas fa-search"></i></a>
+                                        <a href="/club/print_classroom.php?classroom=<?= urlencode($row['classroom']) ?>&semester=<?= $semester ?>&year=<?= $year ?>" target="_blank" class="btn btn-outline-dark btn-sm rounded-2" title="พิมพ์รายงานห้อง"><i class="fas fa-print"></i></a>
                                     </div>
                                 </td>
                             </tr>
