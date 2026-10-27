@@ -228,6 +228,19 @@ body { font-family:'Prompt',sans-serif; overscroll-behavior-y:contain; }
         </div>
     </a>
 
+    <!-- คลังสื่อการเรียนรู้ -->
+    <a href="/learning_media/index.php"
+       class="col-span-2 bg-white rounded-3xl p-4 shadow-sm border border-sky-100 active:scale-95 transition-transform flex items-center gap-4">
+        <div class="w-12 h-12 bg-sky-50 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <i class="bi bi-collection-play-fill text-sky-500 text-2xl"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="font-black text-slate-700 text-sm leading-tight">คลังสื่อการเรียนรู้</p>
+            <p class="text-sky-500 text-sm font-bold mt-0.5">วิดีโอ · สไลด์ · ใบงาน · เกมการศึกษา</p>
+        </div>
+        <i class="bi bi-chevron-right text-sky-300 text-lg"></i>
+    </a>
+
     <!-- เวลาเรียน -->
     <a href="/student/attendance.php"
        class="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 active:scale-95 transition-transform flex flex-col gap-3">
