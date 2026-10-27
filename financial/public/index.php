@@ -63,6 +63,9 @@ use App\Controllers\AdvanceController;
 use App\Controllers\AccountController;
 use App\Controllers\BankController;
 use App\Controllers\SpecialProgramController;
+use App\Controllers\ProcurementController;
+use App\Controllers\InventoryController;
+use App\Controllers\ReportController;
 
 // 5. คำนวณ Base URL อัตโนมัติ
 $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
@@ -170,6 +173,23 @@ $router->get('/special-programs/create-billing', [SpecialProgramController::clas
 $router->post('/special-programs/create-billing', [SpecialProgramController::class, 'storeBilling'], ['auth', 'csrf', 'rbac:special_programs,create']);
 $router->post('/special-programs/pay', [SpecialProgramController::class, 'pay'], ['auth', 'csrf', 'rbac:special_programs,create']);
 $router->post('/special-programs/waive', [SpecialProgramController::class, 'waive'], ['auth', 'csrf', 'rbac:special_programs,edit']);
+
+// --- Procurement & Purchasing Module ---
+$router->get('/procurement', [ProcurementController::class, 'index'], ['auth', 'rbac:procurement,view']);
+$router->post('/procurement/requests', [ProcurementController::class, 'storePR'], ['auth', 'csrf', 'rbac:procurement,create']);
+$router->post('/procurement/approve-pr', [ProcurementController::class, 'approvePR'], ['auth', 'csrf', 'rbac:procurement,approve']);
+$router->post('/procurement/orders', [ProcurementController::class, 'storePO'], ['auth', 'csrf', 'rbac:procurement,create']);
+$router->post('/procurement/inspections', [ProcurementController::class, 'storeInspection'], ['auth', 'csrf', 'rbac:procurement,audit']);
+$router->post('/procurement/suppliers', [ProcurementController::class, 'storeSupplier'], ['auth', 'csrf', 'rbac:procurement,create']);
+
+// --- Inventory & Assets Module ---
+$router->get('/inventory', [InventoryController::class, 'index'], ['auth', 'rbac:inventory,view']);
+$router->post('/inventory/assets', [InventoryController::class, 'storeAsset'], ['auth', 'csrf', 'rbac:inventory,create']);
+$router->post('/inventory/movements', [InventoryController::class, 'storeMovement'], ['auth', 'csrf', 'rbac:inventory,edit']);
+
+// --- Reports & Documents Module ---
+$router->get('/reports', [ReportController::class, 'index'], ['auth', 'rbac:reports,view']);
+$router->get('/reports/show/{code}', [ReportController::class, 'show'], ['auth', 'rbac:reports,view']);
 
 // 7. Dispatch Request
 $request = new Request();
