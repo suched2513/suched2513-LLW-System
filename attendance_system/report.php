@@ -42,6 +42,7 @@ if ($selected_subject_id) {
             LEFT JOIN att_attendance a ON a.student_id=s.id
                 AND a.subject_id=:subject_id2
                 AND a.date BETWEEN :start_date AND :end_date
+            WHERE s.status = 'active'
             GROUP BY s.id ORDER BY s.student_id ASC
         ");
         $stmt->execute(['subject_id'=>$selected_subject_id,'subject_id2'=>$selected_subject_id,'start_date'=>$start_date,'end_date'=>$end_date]);
@@ -61,6 +62,7 @@ if ($selected_subject_id) {
                 AND a.subject_id=:subject_id
                 AND a.date BETWEEN :start_date AND :end_date
             WHERE s.classroom=:classroom
+              AND s.status = 'active'
               AND s.student_id REGEXP '^[0-9]+$'
               AND s.student_id NOT IN (SELECT subject_code FROM att_subjects)
             GROUP BY s.id ORDER BY s.student_id ASC

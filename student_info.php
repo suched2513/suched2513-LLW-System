@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * student_info.php — Detailed Student Information System (SIS)
  */
@@ -24,14 +24,14 @@ try {
 } catch (Exception $e) { $hasDemographics = false; }
 
 // --- Fetch Classrooms ---
-$stmtRooms = $pdo->prepare("SELECT DISTINCT classroom FROM att_students " . ($hasDemographics ? "WHERE academic_year = ? AND semester = ?" : "") . " ORDER BY classroom");
+$stmtRooms = $pdo->prepare("SELECT DISTINCT classroom FROM att_students WHERE (status = 'active' OR status IS NULL) " . ($hasDemographics ? "AND academic_year = ? AND semester = ?" : "") . " ORDER BY classroom");
 if ($hasDemographics) $stmtRooms->execute([$currentYear, $currentSemester]);
 else $stmtRooms->execute();
 $rooms = $stmtRooms->fetchAll(PDO::FETCH_COLUMN);
 
 // --- Build Query ---
 $params = [];
-$sql = "SELECT * FROM att_students WHERE 1=1";
+$sql = "SELECT * FROM att_students WHERE (status = 'active' OR status IS NULL)";
 
 if ($hasDemographics) {
     $sql .= " AND academic_year = ? AND semester = ?";

@@ -192,6 +192,7 @@ jobs:
                   '2026_10_26_231500_add_approvals_to_learning_media',
                   '2026_10_27_000001_add_attachments_to_lms_unit_exercises',
                   '2026_10_27_000002_set_club_semester_2',
+                  '2026_10_28_000001_add_inactive_to_att_students_status',
               ];
               foreach ($autoTargets as $mName) {
                   if (!in_array($mName, $executed, true)) {

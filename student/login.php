@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../config.php';
 
@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $pdo  = getPdo();
-            $stmt = $pdo->prepare("SELECT * FROM att_students WHERE student_id = ? AND national_id_hash IS NOT NULL LIMIT 1");
+            $stmt = $pdo->prepare("SELECT * FROM att_students WHERE student_id = ? AND (status = 'active' OR status IS NULL) AND national_id_hash IS NOT NULL LIMIT 1");
             $stmt->execute([$sid]);
             $student = $stmt->fetch(PDO::FETCH_ASSOC);
 

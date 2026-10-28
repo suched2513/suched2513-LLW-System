@@ -56,7 +56,7 @@ try {
         $hasDemographics = true;
     } catch (Exception $e) { $hasDemographics = false; }
 
-    $whereClause = $hasDemographics ? " WHERE academic_year = $currentYear AND semester = $currentSemester" : "";
+    $whereClause = $hasDemographics ? " WHERE academic_year = $currentYear AND semester = $currentSemester AND (status = 'active' OR status IS NULL)" : " WHERE (status = 'active' OR status IS NULL)";
 
     // 1. นักเรียนทั้งหมด (filtered)
     $countStudents = $pdo->query("SELECT COUNT(*) FROM att_students" . $whereClause)->fetchColumn() ?: 0;
@@ -184,7 +184,7 @@ try {
         FROM att_students s
         LEFT JOIN llw_class_advisors ca ON s.classroom = ca.classroom
         LEFT JOIN llw_users u ON ca.user_id = u.user_id
-        " . ($hasDemographics ? " WHERE s.academic_year = $currentYear AND s.semester = $currentSemester" : "") . "
+        " . ($hasDemographics ? " WHERE s.academic_year = $currentYear AND s.semester = $currentSemester AND (s.status = 'active' OR s.status IS NULL)" : " WHERE (s.status = 'active' OR s.status IS NULL)") . "
         GROUP BY s.classroom 
         ORDER BY s.classroom
     ";
@@ -194,7 +194,7 @@ try {
         $enrollmentStats = $stmtEnrollment->fetchAll(PDO::FETCH_ASSOC) ?: [];
     } catch (Exception $e) {
         // Fallback for missing gender column
-        $stmtFallback = $pdo->query("SELECT classroom, COUNT(*) as cnt, 0 as male_cnt, 0 as female_cnt, '' as advisors FROM att_students GROUP BY classroom ORDER BY classroom");
+        $stmtFallback = $pdo->query("SELECT classroom, COUNT(*) as cnt, 0 as male_cnt, 0 as female_cnt, '' as advisors FROM att_students WHERE (status = 'active' OR status IS NULL) GROUP BY classroom ORDER BY classroom");
         $enrollmentStats = $stmtFallback->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 } catch (Exception $e) {

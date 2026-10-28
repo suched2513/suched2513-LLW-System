@@ -102,6 +102,7 @@ if ($sid) {
             SELECT s.id, s.student_id, s.name
             FROM att_students s
             JOIN att_subject_students ss ON ss.student_id = s.id AND ss.subject_id = ?
+            WHERE s.status = 'active'
             ORDER BY s.student_id
         ");
         $stmt->execute([$sid]);
@@ -109,6 +110,7 @@ if ($sid) {
         $stmt = $pdo->prepare("
             SELECT id, student_id, name FROM att_students
             WHERE classroom = ?
+              AND status = 'active'
               AND student_id REGEXP '^[0-9]+$'
               AND student_id NOT IN (SELECT subject_code FROM att_subjects)
             ORDER BY student_id

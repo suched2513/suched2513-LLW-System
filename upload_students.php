@@ -17,7 +17,7 @@ if (($_POST['action'] ?? '') === 'import' && !empty($_POST['json_data'])) {
     csrf_verify();
     $rows = json_decode($_POST['json_data'], true) ?? [];
     try {
-        $stmt = $pdo->prepare("INSERT INTO att_students (student_id,name,classroom) VALUES(?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),classroom=VALUES(classroom)");
+        $stmt = $pdo->prepare("INSERT INTO att_students (student_id,name,classroom,status) VALUES(?,?,?,'active') ON DUPLICATE KEY UPDATE name=VALUES(name),classroom=VALUES(classroom),status='active'");
         $pdo->beginTransaction();
         foreach ($rows as $r) { $stmt->execute([$r[0],$r[1],$r[2]]); $count++; }
         $pdo->commit();
@@ -34,7 +34,7 @@ if (($_POST['action'] ?? '') === 'sync_all') {
     try {
         $students = $pdo->query("
             SELECT student_id, name, classroom FROM att_students
-            WHERE student_id IS NOT NULL AND TRIM(student_id) != ''
+            WHERE (status = 'active' OR status IS NULL) AND student_id IS NOT NULL AND TRIM(student_id) != ''
             GROUP BY student_id
         ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -101,7 +101,7 @@ if (($_POST['action'] ?? '') === 'preview' && isset($_FILES['csv'])) {
 }
 
 try {
-    $total = $pdo->query("SELECT COUNT(*) FROM att_students")->fetchColumn();
+    $total = $pdo->query("SELECT COUNT(*) FROM att_students WHERE (status = 'active' OR status IS NULL)")->fetchColumn();
 } catch(Throwable $e) {
     die('<pre style="color:red;padding:20px">QUERY ERROR: '.$e->getMessage().'</pre>');
 }

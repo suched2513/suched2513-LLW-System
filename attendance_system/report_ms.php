@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * report_ms.php — หน้าสรุปนักเรียนติด มส. ทั้งโรงเรียน (ส่งฝ่ายวิชาการ)
  * Role: super_admin, wfh_admin
@@ -40,7 +40,7 @@ if (isset($_GET['export'])) {
         FROM att_students st
         JOIN att_attendance a ON a.student_id = st.id
         JOIN att_subjects sj ON sj.id = a.subject_id
-        WHERE 1=1 $where
+        WHERE st.status = 'active' $where
         GROUP BY st.id, sj.id
         HAVING total_sessions > 0
             AND ROUND((cnt_come / total_sessions) * 100, 1) < $threshold
@@ -62,7 +62,7 @@ if (isset($_GET['export'])) {
 }
 
 // ── Data Fetching ───────────────────────────────────────────────
-$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE student_id REGEXP '^[0-9]+$' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE status='active' AND student_id REGEXP '^[0-9]+$' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
 $where  = "AND a.date BETWEEN :sd AND :ed ";
 $params = [':sd' => $start_date, ':ed' => $end_date, ':sd2' => $start_date, ':ed2' => $end_date];
@@ -82,7 +82,7 @@ $sql = "
     FROM att_students st
     JOIN att_attendance a ON a.student_id = st.id
     JOIN att_subjects sj ON sj.id = a.subject_id
-    WHERE 1=1 $where
+    WHERE st.status = 'active' $where
     GROUP BY st.id, sj.id
     HAVING total_sessions > 0
         AND ROUND((cnt_come / total_sessions) * 100, 1) < $threshold

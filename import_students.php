@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * import_students.php — หน้า import นักเรียนแบบ standalone
  * ใช้ layout กลาง (components/) ไม่ผ่าน attendance_system
@@ -28,7 +28,7 @@ if (($_POST['do'] ?? '') === 'add_student') {
         $msg = 'กรุณากรอกข้อมูลให้ครบถ้วน'; $msgType = 'error';
     } else {
         try {
-            $st = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom) VALUES (?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom)");
+            $st = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, status) VALUES (?,?,?,'active') ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), status='active'");
             $st->execute([$sid, $nm, $cls]);
             $msg = "เพิ่ม/อัปเดต '$nm' สำเร็จ"; $msgType = 'success';
         } catch (Exception $e) {
@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['do'] ?? '') === 'import' &
     $data = json_decode($_POST['json_data'], true);
     if ($data) {
         try {
-            $stmt = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom) VALUES (?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom)");
+            $stmt = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, status) VALUES (?,?,?,'active') ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), status='active'");
             $pdo->beginTransaction();
             foreach ($data as $p) {
                 $stmt->execute([$p['student_id'], $p['name'], $p['classroom']]);
@@ -103,16 +103,14 @@ if (($_POST['do'] ?? '') === 'delete_student') {
 
 // ── List students ──
 $filterCls  = trim($_GET['cls'] ?? '');
-$whereClause = $filterCls ? "WHERE classroom = ?" : '';
-$stmt       = $filterCls
-    ? $pdo->prepare("SELECT * FROM att_students $whereClause ORDER BY classroom, student_id")
-    : $pdo->prepare("SELECT * FROM att_students ORDER BY classroom, student_id");
+$whereClause = $filterCls ? "WHERE classroom = ? AND (status = 'active' OR status IS NULL)" : "WHERE (status = 'active' OR status IS NULL)";
+$stmt       = $pdo->prepare("SELECT * FROM att_students $whereClause ORDER BY classroom, student_id");
 if ($filterCls) $stmt->execute([$filterCls]);
 else $stmt->execute();
 $students = $stmt->fetchAll();
 
-$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE classroom != '' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
-$totalCount = $pdo->query("SELECT COUNT(*) FROM att_students")->fetchColumn();
+$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE classroom != '' AND (status = 'active' OR status IS NULL) ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+$totalCount = $pdo->query("SELECT COUNT(*) FROM att_students WHERE (status = 'active' OR status IS NULL)")->fetchColumn();
 
 $pageTitle    = 'จัดการข้อมูลนักเรียน';
 $pageSubtitle = 'นำเข้าและจัดการรายชื่อนักเรียนทั้งโรงเรียน';

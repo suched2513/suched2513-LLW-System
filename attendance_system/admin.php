@@ -571,6 +571,12 @@ require_once '../components/layout_start.php';
                             <td class="px-6 py-3.5 font-mono font-bold text-blue-600 text-xs"><?= htmlspecialchars($std['student_id']) ?></td>
                             <td class="px-6 py-3.5 font-bold text-slate-700"><?= htmlspecialchars($std['name']) ?></td>
                             <td class="px-6 py-3.5 text-center">
+                                <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold"><?= htmlspecialchars($std['classroom']) ?></span>
+                                <?php if (!empty($std['major'])): ?>
+                                <span class="px-2 py-0.5 rounded-lg bg-violet-50 text-violet-600 text-[10px] font-bold ms-1"><?= htmlspecialchars($std['major']) ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="px-6 py-3.5 text-center">
                                 <?php
                                 $status = $std['status'] ?? 'active';
                                 $badgeClass = 'bg-emerald-50 text-emerald-600';
@@ -578,6 +584,7 @@ require_once '../components/layout_start.php';
                                 if ($status === 'moved') { $badgeClass = 'bg-amber-50 text-amber-600'; $statusTh = 'ย้าย'; }
                                 elseif ($status === 'resigned') { $badgeClass = 'bg-rose-50 text-rose-600'; $statusTh = 'ออก'; }
                                 elseif ($status === 'suspended') { $badgeClass = 'bg-slate-100 text-slate-500'; $statusTh = 'พักการเรียน'; }
+                                elseif ($status === 'inactive') { $badgeClass = 'bg-slate-100 text-slate-500'; $statusTh = 'ปิดใช้งาน'; }
                                 ?>
                                 <span class="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase <?= $badgeClass ?>" title="<?= htmlspecialchars($std['status_note'] ?? '') ?>">
                                     <?= $statusTh ?>
@@ -1214,6 +1221,7 @@ function archiveStudent(id, name) {
                     <option value="moved">ย้ายสถานศึกษา (Moved)</option>
                     <option value="resigned">ลาออก (Resigned)</option>
                     <option value="suspended">พักการเรียน (Suspended)</option>
+                    <option value="inactive">ปิดใช้งาน / ไม่อยู่ในรายชื่อ (Inactive)</option>
                     <option value="active">ปกติ (Active)</option>
                 </select>
             </div>

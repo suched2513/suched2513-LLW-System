@@ -293,7 +293,7 @@ function saveAttendance($date, $period, $subject_id, $teacher_id, $student_id, $
  * เกณฑ์: มาเรียน < 80% (นับจากคาบที่เช็คชื่อไปแล้ว)
  */
 function getStudentsAtRisk($teacher_id, $pdo, $limit = 5) {
-    $where = $teacher_id > 0 ? "WHERE sj.teacher_id = :tid" : "";
+    $where = $teacher_id > 0 ? "WHERE s.status = 'active' AND sj.teacher_id = :tid" : "WHERE s.status = 'active'";
     $sql = "
         SELECT 
             s.id, s.student_id, s.name, s.classroom,
@@ -321,7 +321,7 @@ function getStudentsAtRisk($teacher_id, $pdo, $limit = 5) {
  * ดึงรายชื่อนักเรียนดีเด่น (Diligent) - มาเรียน 100%
  */
 function getStudentHighlights($teacher_id, $pdo, $limit = 5) {
-    $where = $teacher_id > 0 ? "WHERE sj.teacher_id = :tid" : "";
+    $where = $teacher_id > 0 ? "WHERE s.status = 'active' AND sj.teacher_id = :tid" : "WHERE s.status = 'active'";
     $sql = "
         SELECT 
             s.id, s.student_id, s.name, s.classroom,

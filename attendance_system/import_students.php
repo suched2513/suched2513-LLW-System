@@ -10,7 +10,7 @@ $activeSystem = 'attendance';
 $msg = ''; $msgType = ''; $preview = []; $errors = []; $importCount = 0;
 $syncMode = false; $toDeactivate = [];
 
-$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE (status = 'active' OR status IS NULL) ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
 function makeNidMasked(string $nid): string {
     return substr($nid,0,1).'-'.substr($nid,1,4).'-'.substr($nid,5,5).'-'.substr($nid,10,2).'-'.substr($nid,12,1);
@@ -36,9 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $hash   = password_hash($nid, PASSWORD_BCRYPT);
                 $masked = makeNidMasked($nid);
-                $st = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, academic_year, national_id_hash, national_id_masked)
-                    VALUES (?,?,?,2569,?,?)
-                    ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), academic_year=2569,
+                $st = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, academic_year, status, national_id_hash, national_id_masked)
+                    VALUES (?,?,?,2569,'active',?,?)
+                    ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), academic_year=2569, status='active',
                     national_id_hash=VALUES(national_id_hash), national_id_masked=VALUES(national_id_masked)");
                 $ok = $st->execute([$sid, $nm, $cls, $hash, $masked]);
                 $msg = $ok ? "บันทึกข้อมูล '$nm' สำเร็จ" : 'เกิดข้อผิดพลาด';
@@ -155,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ids = array_values(array_unique(array_column($preview, 'student_id')));
                 $ph  = implode(',', array_fill(0, count($ids), '?'));
                 $st  = $pdo->prepare("SELECT student_id, name, classroom FROM att_students
-                    WHERE status = 'active' AND student_id REGEXP '^[0-9]+$'
+                    WHERE (status = 'active' OR status IS NULL) AND student_id REGEXP '^[0-9]+$'
                       AND student_id NOT IN (SELECT subject_code FROM att_subjects)
                       AND student_id NOT IN ($ph)
                     ORDER BY classroom, student_id");
@@ -197,11 +197,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($doSync) {
                     $ids = array_values(array_unique(array_column($data, 'student_id')));
                     $ph  = implode(',', array_fill(0, count($ids), '?'));
-                    $up  = $pdo->prepare("UPDATE att_students SET status = 'inactive'
-                        WHERE status = 'active' AND student_id REGEXP '^[0-9]+$'
-                          AND student_id NOT IN ($ph)");
-                    $up->execute($ids);
-                    $deactivated = $up->rowCount();
+                    try {
+                        $up = $pdo->prepare("UPDATE att_students SET status = 'inactive'
+                            WHERE (status = 'active' OR status IS NULL) AND student_id REGEXP '^[0-9]+$'
+                              AND student_id NOT IN (SELECT subject_code FROM att_subjects)
+                              AND student_id NOT IN ($ph)");
+                        $up->execute($ids);
+                        $deactivated = $up->rowCount();
+                    } catch (PDOException $ex) {
+                        $up = $pdo->prepare("UPDATE att_students SET status = 'moved', status_note = 'ไม่อยู่ในไฟล์นำเข้า'
+                            WHERE (status = 'active' OR status IS NULL) AND student_id REGEXP '^[0-9]+$'
+                              AND student_id NOT IN (SELECT subject_code FROM att_subjects)
+                              AND student_id NOT IN ($ph)");
+                        $up->execute($ids);
+                        $deactivated = $up->rowCount();
+                    }
                 }
                 $pdo->commit();
                 $msg = "นำเข้าและตั้งรหัสผ่านสำเร็จ $importCount รายการ" . ($doSync ? " · ปิดใช้งานรายชื่อที่ไม่อยู่ในไฟล์ $deactivated คน" : '');
@@ -227,9 +237,9 @@ $invalidStudents = $pdo->query("
 
 $filterCls = $_GET['cls'] ?? '';
 $whereQ = $filterCls
-    ? "WHERE classroom = " . $pdo->quote($filterCls) . " AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)"
-    : "WHERE student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)";
-$students = $pdo->query("SELECT * FROM att_students $whereQ ORDER BY classroom, student_id LIMIT 500")->fetchAll();
+    ? "WHERE classroom = " . $pdo->quote($filterCls) . " AND (status = 'active' OR status IS NULL) AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)"
+    : "WHERE (status = 'active' OR status IS NULL) AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)";
+$students = $pdo->query("SELECT * FROM att_students $whereQ ORDER BY classroom, student_id LIMIT 2000")->fetchAll();
 
 require_once __DIR__ . '/components/layout_start.php';
 ?>
@@ -478,7 +488,7 @@ require_once __DIR__ . '/components/layout_start.php';
     <div class="glass-card rounded-[40px] overflow-hidden shadow-xl shadow-slate-200/50">
         <div class="px-8 py-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
             <h3 class="text-xl font-black text-slate-800 flex items-center gap-3">
-                <i class="bi bi-people-fill text-indigo-500"></i> รายชื่อนักเรียนปัจจุบัน
+                <i class="bi bi-people-fill text-indigo-500"></i> รายชื่อนักเรียนปัจจุบัน (<?= number_format(count($students)) ?> คน)
             </h3>
             <form method="GET" class="flex gap-2 w-full md:w-auto">
                 <input type="text" name="cls" value="<?= htmlspecialchars($filterCls) ?>" placeholder="กรองตามห้อง..."

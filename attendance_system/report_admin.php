@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * report_admin.php — Executive Dashboard: สถิติการเข้าเรียนสำหรับผู้บริหาร
  * Role: super_admin, wfh_admin
@@ -16,7 +16,7 @@ $pageSubtitle = 'สถิติการเข้าเรียนแยกห
 $activeSystem = 'attendance';
 
 // ดึง classrooms ที่มีในระบบ
-$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE student_id REGEXP '^[0-9]+$' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE status='active' AND student_id REGEXP '^[0-9]+$' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
 llw_ensure_semester_schema($pdo);
 $selected_sem     = isset($_GET['semester']) ? (int)$_GET['semester'] : llw_current_semester();
@@ -35,7 +35,7 @@ $chart_colors  = [];
 if ($selected_class) {
 
     // --- ดึงรายชื่อนักเรียน ---
-    $st = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) ORDER BY student_id");
+    $st = $pdo->prepare("SELECT * FROM att_students WHERE classroom=? AND status='active' AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects) ORDER BY student_id");
     $st->execute([$selected_class]);
     $students = $st->fetchAll();
 
