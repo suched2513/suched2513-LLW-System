@@ -88,14 +88,14 @@ if ($lat && $lng) {
     $distance = calcDistance((float)$lat, (float)$lng, (float)$school_lat, (float)$school_lng);
     if ($distance > $geofence_radius) {
         // ส่ง Telegram แจ้งเตือนแอดมินว่ามีการพยายามลงเวลานอกพื้นที่
-        if (!empty($telegram_token) && !empty($admin_chat_id)) {
-            $bot = new TelegramBot($telegram_token, $admin_chat_id);
-            $msg = "⚠️ <b>แจ้งเตือนการลงเวลานอกพื้นที่</b>\n";
-            $msg .= "👤: " . $fullname_session . "\n";
+        try {
+            $safeUser = htmlspecialchars($fullname_session, ENT_QUOTES, 'UTF-8');
+            $msg  = "⚠️ <b>แจ้งเตือนการลงเวลานอกพื้นที่</b>\n";
+            $msg .= "👤: {$safeUser}\n";
             $msg .= "📍: ห่างจากจุดกำหนด " . round($distance) . " เมตร\n";
-            $msg .= "⏰: " . $today . " " . $now;
-            $bot->sendMessage($msg);
-        }
+            $msg .= "⏰: {$today} {$now}";
+            Telegram::sendWfhNotify(getPdo(), $msg);
+        } catch (\Throwable $ignore) {}
         
         ob_end_clean(); echo json_encode(['success' => false, 'message' => 'คุณอยู่นอกพื้นที่ทำงาน (ห่าง ' . round($distance) . ' เมตร)']);
         exit();
@@ -154,13 +154,14 @@ if ($action === 'checkin') {
 
     if ($stmt->execute()) {
         // แจ้ง Telegram
-        if (!empty($telegram_token) && !empty($admin_chat_id)) {
-            $bot = new TelegramBot($telegram_token, $admin_chat_id);
-            $msg = "✅ <b>ลงเวลาเข้างาน</b>\n";
-            $msg .= "👤: " . $fullname_session . "\n";
-            $msg .= "⏰: " . $now . " (" . $status . ")";
-            $bot->sendMessage($msg);
-        }
+        try {
+            $safeUser   = htmlspecialchars($fullname_session, ENT_QUOTES, 'UTF-8');
+            $safeStatus = htmlspecialchars($status, ENT_QUOTES, 'UTF-8');
+            $msg  = "✅ <b>ลงเวลาเข้างาน</b>\n";
+            $msg .= "👤: {$safeUser}\n";
+            $msg .= "⏰: {$now} ({$safeStatus})";
+            Telegram::sendWfhNotify(getPdo(), $msg);
+        } catch (\Throwable $ignore) {}
 
         $msg = ($status === 'มาสาย') ? "ลงเวลาเข้างานสำเร็จ ($now) - สถานะ: มาสาย" : "ลงเวลาเข้างานสำเร็จ ($now) - สถานะ: ปกติ";
         ob_end_clean(); echo json_encode(['success' => true, 'message' => $msg]);
@@ -186,13 +187,13 @@ if ($action === 'checkin') {
 
     if ($stmt->execute()) {
         // แจ้ง Telegram
-        if (!empty($telegram_token) && !empty($admin_chat_id)) {
-            $bot = new TelegramBot($telegram_token, $admin_chat_id);
-            $msg = "👋 <b>ลงเวลาออกงาน</b>\n";
-            $msg .= "👤: " . $fullname_session . "\n";
-            $msg .= "⏰: " . $now;
-            $bot->sendMessage($msg);
-        }
+        try {
+            $safeUser = htmlspecialchars($fullname_session, ENT_QUOTES, 'UTF-8');
+            $msg  = "👋 <b>ลงเวลาออกงาน</b>\n";
+            $msg .= "👤: {$safeUser}\n";
+            $msg .= "⏰: {$now}";
+            Telegram::sendWfhNotify(getPdo(), $msg);
+        } catch (\Throwable $ignore) {}
 
         ob_end_clean(); echo json_encode(['success' => true, 'message' => "ลงเวลาออกงานสำเร็จ ($now)"]);
     } else {

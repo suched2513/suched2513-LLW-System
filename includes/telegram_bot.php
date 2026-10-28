@@ -6,16 +6,16 @@
  * ครอบคลุม:
  *  - sendTelegramMessage()  — ส่งข้อความ (backward compat function)
  *  - TelegramBot            — class เดิม (backward compat)
- *  - Telegram               — class ใหม่ พร้อม static methods ทั้งหมด
+ *  - Telegram               — class ใหม่ พร้อม static methods และระบบ Multi-Token / Multi-Chat Fallback
  */
 
 // ─── Backward-compatible function (ใช้ cURL ผ่าน Telegram class เพื่อความเสถียร) ───
 function sendTelegramMessage(string $token, string $chatId, string $message): bool
 {
-    if (empty($token) || empty($chatId)) return false;
+    if (empty(trim($token)) || empty(trim($chatId))) return false;
 
-    Telegram::init($token, $chatId);
-    $res = Telegram::sendMessage($message, $chatId);
+    Telegram::init(trim($token), trim($chatId));
+    $res = Telegram::sendMessage($message, trim($chatId));
     return (bool)($res['ok'] ?? false);
 }
 
@@ -27,8 +27,8 @@ class TelegramBot
 
     public function __construct(string $token, string $chatId)
     {
-        $this->token  = $token;
-        $this->chatId = $chatId;
+        $this->token  = trim($token);
+        $this->chatId = trim($chatId);
     }
 
     public function sendMessage(string $message): bool
@@ -45,7 +45,11 @@ class TelegramBot
  *   Telegram::init($token, $defaultChatId);  // ตั้งค่า 1 ครั้ง
  *   Telegram::sendMessage('สวัสดี', $chatId);
  *   Telegram::sendPhoto('/path/to/file.jpg', 'caption', $chatId);
- *   ...
+ *   Telegram::sendAttendanceNotify($pdo, $text, $customChatId);
+ *   Telegram::sendLeaveNotify($pdo, $text, $customChatId);
+ *   Telegram::sendDutyNotify($pdo, $text, $customChatId);
+ *   Telegram::sendDutyPhotos($pdo, $photoPaths, $caption, $customChatId);
+ *   Telegram::sendWfhNotify($pdo, $text, $customChatId);
  */
 class Telegram
 {
@@ -56,8 +60,8 @@ class Telegram
     // ─── ตั้งค่า token และ default chat_id ─────────────────────────
     public static function init(string $token, string $defaultChatId = ''): void
     {
-        self::$token  = $token;
-        self::$chatId = $defaultChatId;
+        self::$token  = trim($token);
+        self::$chatId = trim($defaultChatId);
     }
 
     // ─── Helper: เรียก Telegram Bot API ────────────────────────────
@@ -77,6 +81,25 @@ class Telegram
         }
         if (isset($params['chat_id']) && is_string($params['chat_id'])) {
             $params['chat_id'] = trim($params['chat_id']);
+        }
+
+        // ป้องกันข้อความยาวเกินลิมิตของ Telegram API (text <= 4096, caption <= 1024 ตัวอักษร)
+        if (isset($params['text']) && is_string($params['text'])) {
+            if (function_exists('mb_convert_encoding')) {
+                $params['text'] = mb_convert_encoding($params['text'], 'UTF-8', 'UTF-8');
+            }
+            if (function_exists('mb_strlen') && mb_strlen($params['text'], 'UTF-8') > 3950) {
+                $params['text'] = mb_substr($params['text'], 0, 3920, 'UTF-8') . "\n...(ข้อความถูกตัดทอนเนื่องจากยาวเกินกำหนด)";
+                unset($params['parse_mode']);
+                $params['text'] = strip_tags($params['text']);
+            }
+        }
+        if (isset($params['caption']) && is_string($params['caption'])) {
+            if (function_exists('mb_strlen') && mb_strlen($params['caption'], 'UTF-8') > 1000) {
+                $params['caption'] = mb_substr($params['caption'], 0, 980, 'UTF-8') . '...';
+                unset($params['parse_mode']);
+                $params['caption'] = strip_tags($params['caption']);
+            }
         }
 
         $url     = "https://api.telegram.org/bot" . $token . "/{$method}";
@@ -154,10 +177,13 @@ class Telegram
         }
 
         // กรณีข้อความมีอักขระพิเศษที่ทำให้ HTML parse พัง → ลองส่งใหม่แบบข้อความธรรมดาอัตโนมัติ
-        if (empty($decoded['ok']) && !empty($params['parse_mode']) && stripos($decoded['description'] ?? '', 'parse entities') !== false) {
+        if (empty($decoded['ok']) && !empty($params['parse_mode']) && preg_match('/parse|entity|entities|tag/i', (string)($decoded['description'] ?? ''))) {
             unset($params['parse_mode']);
-            if (isset($params['text'])) {
-                $params['text'] = strip_tags($params['text']);
+            if (isset($params['text']) && is_string($params['text'])) {
+                $params['text'] = html_entity_decode(strip_tags($params['text']), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            }
+            if (isset($params['caption']) && is_string($params['caption'])) {
+                $params['caption'] = html_entity_decode(strip_tags($params['caption']), ENT_QUOTES | ENT_HTML5, 'UTF-8');
             }
             return self::call($method, $params, $multipart);
         }
@@ -166,40 +192,243 @@ class Telegram
     }
 
     /**
-     * ส่งแจ้งเตือนสำหรับระบบเช็คชื่อ/นักเรียน (เข้าแถว, เครื่องแต่งกาย, รายคาบ, โฮมรูม, พฤติกรรม, ใบลานักเรียน)
-     * รองรับ fallback อัตโนมัติกรณี Token/Chat ID มีการสลับบอท หรือกลุ่มอัปเกรดเป็น Supergroup
+     * ตรวจสอบและรัน Migration ซ่อมแซมการตั้งค่า Telegram / สิทธิ์ครูที่ปรึกษาอัตโนมัติ (ครั้งเดียว)
      */
-    public static function sendAttendanceNotify(PDO $pdo, string $text, ?string $customChatId = null): array
+    private static bool $migrationChecked = false;
+    private static function ensureTelegramMigration(PDO $pdo): void
+    {
+        if (self::$migrationChecked) {
+            return;
+        }
+        self::$migrationChecked = true;
+        try {
+            $migName = '2026_10_29_000001_fix_roles_advisors_and_telegram_settings';
+            $chk = $pdo->prepare("SELECT 1 FROM _migrations WHERE migration = ? LIMIT 1");
+            $chk->execute([$migName]);
+            if (!$chk->fetchColumn()) {
+                $migFile = __DIR__ . '/../database/migrations/' . $migName . '.php';
+                if (file_exists($migFile)) {
+                    $migDef = require $migFile;
+                    if (is_array($migDef) && isset($migDef['up'])) {
+                        $migDef['up']($pdo);
+                        $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, 99)")->execute([$migName]);
+                    }
+                }
+            }
+        } catch (\Throwable $ignore) {}
+    }
+
+    /**
+     * ดึงรายการคู่ (token, chat_id, chat_col) ตามลำดับความสำคัญของแต่ละโมดูล พร้อมระบบ Fallback อัตโนมัติ
+     *
+     * @param  PDO         $pdo
+     * @param  string      $module  'attendance' | 'leave' | 'duty' | 'wfh'
+     * @param  string|null $customChatId
+     * @return array       [['token' => string, 'chat_id' => string, 'col' => string], ...]
+     */
+    public static function resolveModuleTargets(PDO $pdo, string $module, ?string $customChatId = null): array
+    {
+        self::ensureTelegramMigration($pdo);
+
+        $settings = [];
+        try {
+            $settings = $pdo->query("SELECT * FROM wfh_system_settings ORDER BY setting_id ASC LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $ignore) {}
+
+        $mainToken  = trim((string)($settings['telegram_token'] ?? ''));
+        $attToken   = trim((string)($settings['att_bot_token'] ?? ''));
+        $leaveToken = trim((string)($settings['leave_bot_token'] ?? ''));
+        $dutyToken  = trim((string)($settings['duty_bot_token'] ?? ''));
+
+        $adminChat  = trim((string)($settings['admin_chat_id'] ?? ''));
+        $attChat    = trim((string)($settings['att_chat_id'] ?? ''));
+        $leaveChat  = trim((string)($settings['leave_chat_id'] ?? ''));
+        $dutyChat   = trim((string)($settings['duty_chat_id'] ?? ''));
+        $customChat = trim((string)($customChatId ?? ''));
+
+        // สำหรับระบบครูเวร ตรวจสอบค่าจาก duty_settings เพิ่มเติมด้วย
+        $dutyGroupChat = '';
+        if ($module === 'duty') {
+            try {
+                $dsCols = $pdo->query("SHOW COLUMNS FROM `duty_settings`")->fetchAll(PDO::FETCH_COLUMN);
+                if (in_array('skey', $dsCols, true) && in_array('svalue', $dsCols, true)) {
+                    $dutyGroupChat = trim((string)($pdo->query("SELECT svalue FROM duty_settings WHERE skey IN ('duty_group_chat_id','group_chat_id','chat_id') AND svalue != '' LIMIT 1")->fetchColumn() ?: ''));
+                } elseif (in_array('setting_key', $dsCols, true) && in_array('setting_value', $dsCols, true)) {
+                    $dutyGroupChat = trim((string)($pdo->query("SELECT setting_value FROM duty_settings WHERE setting_key IN ('duty_group_chat_id','group_chat_id','chat_id') AND setting_value != '' LIMIT 1")->fetchColumn() ?: ''));
+                }
+            } catch (\Throwable $ignore) {}
+        }
+
+        switch ($module) {
+            case 'attendance':
+                $tokens = [$attToken, $mainToken, $leaveToken, $dutyToken];
+                $chats  = [
+                    ['id' => $customChat, 'col' => 'custom'],
+                    ['id' => $attChat,    'col' => 'att_chat_id'],
+                    ['id' => $adminChat,  'col' => 'admin_chat_id'],
+                ];
+                break;
+            case 'leave':
+                $tokens = [$leaveToken, $mainToken, $attToken, $dutyToken];
+                $chats  = [
+                    ['id' => $customChat, 'col' => 'custom'],
+                    ['id' => $leaveChat,  'col' => 'leave_chat_id'],
+                    ['id' => $adminChat,  'col' => 'admin_chat_id'],
+                    ['id' => $attChat,    'col' => 'att_chat_id'],
+                ];
+                break;
+            case 'duty':
+                $tokens = [$dutyToken, $mainToken, $attToken, $leaveToken];
+                $chats  = [
+                    ['id' => $customChat,    'col' => 'custom'],
+                    ['id' => $dutyChat,      'col' => 'duty_chat_id'],
+                    ['id' => $dutyGroupChat, 'col' => 'duty_group_chat_id'],
+                    ['id' => $adminChat,     'col' => 'admin_chat_id'],
+                    ['id' => $attChat,       'col' => 'att_chat_id'],
+                ];
+                break;
+            case 'wfh':
+            default:
+                $tokens = [$mainToken, $leaveToken, $attToken, $dutyToken];
+                $chats  = [
+                    ['id' => $customChat, 'col' => 'custom'],
+                    ['id' => $adminChat,  'col' => 'admin_chat_id'],
+                    ['id' => $leaveChat,  'col' => 'leave_chat_id'],
+                    ['id' => $attChat,    'col' => 'att_chat_id'],
+                ];
+                break;
+        }
+
+        $validTokens = array_values(array_unique(array_filter($tokens, fn($t) => $t !== '')));
+        $validChats  = [];
+        $seenChatIds = [];
+        foreach ($chats as $c) {
+            if ($c['id'] !== '' && !isset($seenChatIds[$c['id']])) {
+                $seenChatIds[$c['id']] = true;
+                $validChats[] = $c;
+            }
+        }
+
+        // สร้างลำดับการลองส่ง: ลอง Chat หลักกับทุก Token ที่เกี่ยวข้องก่อน แล้วจึงขยับไป Chat สำรอง
+        $targets = [];
+        foreach ($validChats as $c) {
+            foreach ($validTokens as $tk) {
+                $targets[] = [
+                    'token'   => $tk,
+                    'chat_id' => $c['id'],
+                    'col'     => $c['col'],
+                ];
+            }
+        }
+        return $targets;
+    }
+
+    /**
+     * บันทึก Chat ID ใหม่ลงฐานข้อมูลอัตโนมัติเมื่อกลุ่ม Telegram ถูกอัปเกรดเป็น Supergroup
+     */
+    private static function persistMigratedChat(PDO $pdo, string $col, string $newChatId): void
+    {
+        if ($newChatId === '' || !in_array($col, ['att_chat_id', 'leave_chat_id', 'duty_chat_id', 'admin_chat_id', 'duty_group_chat_id'], true)) {
+            return;
+        }
+        try {
+            if ($col === 'duty_group_chat_id') {
+                $dsCols = $pdo->query("SHOW COLUMNS FROM `duty_settings`")->fetchAll(PDO::FETCH_COLUMN);
+                if (in_array('skey', $dsCols, true)) {
+                    $pdo->prepare("UPDATE duty_settings SET svalue = ? WHERE skey IN ('duty_group_chat_id','group_chat_id','chat_id')")->execute([$newChatId]);
+                } elseif (in_array('setting_key', $dsCols, true)) {
+                    $pdo->prepare("UPDATE duty_settings SET setting_value = ? WHERE setting_key IN ('duty_group_chat_id','group_chat_id','chat_id')")->execute([$newChatId]);
+                }
+                $pdo->prepare("UPDATE wfh_system_settings SET duty_chat_id = ?")->execute([$newChatId]);
+            } else {
+                $pdo->prepare("UPDATE wfh_system_settings SET `{$col}` = ?")->execute([$newChatId]);
+            }
+        } catch (\Throwable $ignore) {}
+    }
+
+    /**
+     * ฟังก์ชันกลางสำหรับส่งข้อความแจ้งเตือนแยกตามโมดูล พร้อมระบบ Multi-Token & Multi-Chat Fallback
+     */
+    public static function sendModuleNotify(PDO $pdo, string $module, string $text, ?string $customChatId = null): array
     {
         try {
-            $settings    = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
-            $attToken    = trim((string)($settings['att_bot_token'] ?? ''));
-            $mainToken   = trim((string)($settings['telegram_token'] ?? ''));
-            $attChatId   = trim((string)($customChatId ?: ($settings['att_chat_id'] ?? '')));
-            $adminChatId = trim((string)($settings['admin_chat_id'] ?? ''));
-
-            $targetChat = $attChatId !== '' ? $attChatId : $adminChatId;
-            if ($targetChat === '') {
-                return ['ok' => false, 'description' => 'ยังไม่ได้ตั้งค่า Chat ID กลุ่มเช็คชื่อนักเรียน'];
-            }
-
-            // ลำดับ Token ที่จะลองส่งไปยังกลุ่มเช็คชื่อ: 1) att_bot_token 2) telegram_token (เผื่อบอทหลักอยู่ในกลุ่มเช็คชื่อ)
-            $tokensToTry = array_values(array_unique(array_filter([$attToken, $mainToken])));
-            if (empty($tokensToTry)) {
-                return ['ok' => false, 'description' => 'ยังไม่ได้ตั้งค่า Bot Token'];
+            $targets = self::resolveModuleTargets($pdo, $module, $customChatId);
+            if (empty($targets)) {
+                return ['ok' => false, 'description' => "ยังไม่ได้ตั้งค่า Telegram Token หรือ Chat ID สำหรับโมดูล {$module}"];
             }
 
             $lastRes = ['ok' => false, 'description' => 'Unknown error'];
-            foreach ($tokensToTry as $tk) {
-                self::init($tk, $targetChat);
-                $res = self::sendMessage($text, $targetChat);
+            foreach ($targets as $t) {
+                self::init($t['token'], $t['chat_id']);
+                $res = self::sendMessage($text, $t['chat_id']);
                 if (!empty($res['ok'])) {
-                    // ถ้ากลุ่มถูกอัปเกรดเป็น Supergroup อัปเดต att_chat_id ในฐานข้อมูลให้อัตโนมัติ
-                    if (!empty($res['migrated_chat']) && $customChatId === null && $attChatId !== '') {
-                        try {
-                            $up = $pdo->prepare("UPDATE wfh_system_settings SET att_chat_id = ? WHERE setting_id = 1");
-                            $up->execute([$res['migrated_chat']]);
-                        } catch (\Throwable $ignore) {}
+                    if (!empty($res['migrated_chat'])) {
+                        self::persistMigratedChat($pdo, $t['col'], (string)$res['migrated_chat']);
+                    }
+                    return $res;
+                }
+                $lastRes = $res;
+            }
+
+            error_log("[Telegram::sendModuleNotify:{$module}] Failed on all targets. Last error: " . ($lastRes['description'] ?? 'unknown'));
+            return $lastRes;
+        } catch (\Throwable $e) {
+            error_log("[Telegram::sendModuleNotify:{$module}] Exception: " . $e->getMessage());
+            return ['ok' => false, 'description' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * ส่งแจ้งเตือนสำหรับระบบเช็คชื่อ/นักเรียน (เข้าแถว, เครื่องแต่งกาย, รายคาบ, โฮมรูม, พฤติกรรม, ใบลานักเรียน)
+     */
+    public static function sendAttendanceNotify(PDO $pdo, string $text, ?string $customChatId = null): array
+    {
+        return self::sendModuleNotify($pdo, 'attendance', $text, $customChatId);
+    }
+
+    /**
+     * ส่งแจ้งเตือนสำหรับระบบการลา / ขออนุญาตออกนอกสถานที่ของครูและบุคลากร
+     */
+    public static function sendLeaveNotify(PDO $pdo, string $text, ?string $customChatId = null): array
+    {
+        return self::sendModuleNotify($pdo, 'leave', $text, $customChatId);
+    }
+
+    /**
+     * ส่งแจ้งเตือนสำหรับระบบครูเวร (Duty)
+     */
+    public static function sendDutyNotify(PDO $pdo, string $text, ?string $customChatId = null): array
+    {
+        return self::sendModuleNotify($pdo, 'duty', $text, $customChatId);
+    }
+
+    /**
+     * ส่งรูปภาพสำหรับระบบครูเวร (รองรับทั้งรูปเดี่ยวและอัลบั้ม พร้อม Fallback อัตโนมัติ)
+     */
+    public static function sendDutyPhotos(PDO $pdo, array $photoPaths, string $caption = '', ?string $customChatId = null): array
+    {
+        $validFiles = array_values(array_filter($photoPaths, fn($p) => is_string($p) && $p !== '' && file_exists($p)));
+        if (empty($validFiles)) {
+            return self::sendDutyNotify($pdo, $caption, $customChatId);
+        }
+
+        try {
+            $targets = self::resolveModuleTargets($pdo, 'duty', $customChatId);
+            if (empty($targets)) {
+                return ['ok' => false, 'description' => 'ยังไม่ได้ตั้งค่า Telegram สำหรับระบบครูเวร'];
+            }
+
+            $lastRes = ['ok' => false, 'description' => 'Unknown error'];
+            foreach ($targets as $t) {
+                self::init($t['token'], $t['chat_id']);
+                if (count($validFiles) === 1) {
+                    $res = self::sendPhoto($validFiles[0], $caption, $t['chat_id']);
+                } else {
+                    $res = self::sendMediaGroup($validFiles, $caption, $t['chat_id']);
+                }
+                if (!empty($res['ok'])) {
+                    if (!empty($res['migrated_chat'])) {
+                        self::persistMigratedChat($pdo, $t['col'], (string)$res['migrated_chat']);
                     }
                     return $res;
                 }
@@ -209,6 +438,14 @@ class Telegram
         } catch (\Throwable $e) {
             return ['ok' => false, 'description' => $e->getMessage()];
         }
+    }
+
+    /**
+     * ส่งแจ้งเตือนสำหรับระบบลงเวลาปฏิบัติงาน (WFH) และงานสารบรรณ (e-Document)
+     */
+    public static function sendWfhNotify(PDO $pdo, string $text, ?string $customChatId = null): array
+    {
+        return self::sendModuleNotify($pdo, 'wfh', $text, $customChatId);
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -323,12 +560,6 @@ class Telegram
      * @param  array       $inlineKeyboard  [[['text'=>'...','callback_data'=>'...'], ...], ...]
      * @param  string|null $chatId
      * @return array
-     *
-     * ตัวอย่าง $inlineKeyboard:
-     *   [
-     *     [['text' => 'จุดที่ 1', 'callback_data' => 'rpt:123']],
-     *     [['text' => 'จุดที่ 2', 'callback_data' => 'rpt:124']],
-     *   ]
      */
     public static function sendMessageWithKeyboard(string $text, array $inlineKeyboard, ?string $chatId = null): array
     {
@@ -400,14 +631,6 @@ class Telegram
     // ────────────────────────────────────────────────────────────────
     // 3.5 answerCallbackQuery — ตอบ callback query (กดปุ่ม Inline)
     // ────────────────────────────────────────────────────────────────
-    /**
-     * ตอบ callback_query เพื่อหยุด loading spinner ใน Telegram
-     *
-     * @param  string      $callbackQueryId
-     * @param  string|null $text  ข้อความ toast ที่แสดงชั่วคราว (ถ้ามี)
-     * @param  bool        $showAlert  true=แสดงเป็น alert modal
-     * @return array
-     */
     public static function answerCallbackQuery(
         string  $callbackQueryId,
         ?string $text      = null,
@@ -424,22 +647,14 @@ class Telegram
     // ────────────────────────────────────────────────────────────────
     // 3.6 setWebhook — ติดตั้ง Webhook
     // ────────────────────────────────────────────────────────────────
-    /**
-     * ติดตั้ง Telegram Webhook
-     *
-     * @param  string   $url           URL endpoint ของ webhook
-     * @param  string   $secretToken   Secret ตรวจ header X-Telegram-Bot-Api-Secret-Token
-     * @param  string[] $allowedUpdates  เช่น ['message','callback_query']
-     * @return array
-     */
     public static function setWebhook(
         string $url,
         string $secretToken    = '',
         array  $allowedUpdates = ['message', 'callback_query']
     ): array {
         $params = [
-            'url'             => $url,
-            'allowed_updates' => $allowedUpdates,
+            'url'                  => $url,
+            'allowed_updates'      => $allowedUpdates,
             'drop_pending_updates' => true,
         ];
         if ($secretToken !== '') {
@@ -475,22 +690,12 @@ class Telegram
     // ────────────────────────────────────────────────────────────────
     // Helper: สร้าง Thumbnail ด้วย GD
     // ────────────────────────────────────────────────────────────────
-    /**
-     * สร้าง thumbnail (max ด้านละ $maxSize px) จากไฟล์ภาพ
-     *
-     * @param  string $sourcePath  path ต้นฉบับ
-     * @param  string $destPath    path thumbnail ที่จะบันทึก
-     * @param  int    $maxSize     ขนาดสูงสุดด้านใดด้านหนึ่ง (px)
-     * @return bool
-     */
     public static function createThumbnail(string $sourcePath, string $destPath, int $maxSize = 400): bool
     {
         if (!extension_loaded('gd')) {
-            // ถ้าไม่มี GD ให้ copy ไฟล์เต็มเป็น thumbnail แทน
             return copy($sourcePath, $destPath);
         }
 
-        // ตรวจ MIME
         $mime = @mime_content_type($sourcePath);
         switch ($mime) {
             case 'image/jpeg':
@@ -511,9 +716,7 @@ class Telegram
         $origW = imagesx($src);
         $origH = imagesy($src);
 
-        // คำนวณ scale ให้ด้านที่ยาวกว่าไม่เกิน $maxSize
         if ($origW <= $maxSize && $origH <= $maxSize) {
-            // รูปเล็กกว่า maxSize อยู่แล้ว ไม่ต้อง resize
             imagedestroy($src);
             return copy($sourcePath, $destPath);
         }
@@ -524,7 +727,6 @@ class Telegram
 
         $thumb = imagecreatetruecolor($newW, $newH);
 
-        // PNG transparency
         if ($mime === 'image/png') {
             imagealphablending($thumb, false);
             imagesavealpha($thumb, true);
@@ -532,7 +734,6 @@ class Telegram
 
         imagecopyresampled($thumb, $src, 0, 0, 0, 0, $newW, $newH, $origW, $origH);
 
-        // บันทึก thumbnail (ใช้ JPEG เสมอเพื่อประหยัดพื้นที่)
         $dir = dirname($destPath);
         if (!is_dir($dir)) mkdir($dir, 0755, true);
 
@@ -547,12 +748,6 @@ class Telegram
     // ────────────────────────────────────────────────────────────────
     // Helper: Extract EXIF GPS
     // ────────────────────────────────────────────────────────────────
-    /**
-     * ดึง GPS coordinate จาก EXIF ของไฟล์ภาพ
-     *
-     * @param  string $filePath
-     * @return array|null  ['lat'=>float, 'lng'=>float] หรือ null ถ้าไม่มี GPS
-     */
     public static function extractExifGps(string $filePath): ?array
     {
         if (!function_exists('exif_read_data')) return null;

@@ -1,48 +1,28 @@
 <?php
 /**
  * assembly/api/save_all.php
- * POST JSON — บันทึกข้อมูลทั้งห้อง (batch upsert + Telegram notify)
+ * POST JSON — บันทึกข้อมูลเช็คแถวเช้าและเครื่องแต่งกายทั้งห้อง (batch upsert + Telegram notify)
  */
 header('Content-Type: application/json; charset=utf-8');
 session_start();
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/telegram_bot.php';
 
-if (!isset($_SESSION['llw_role'])) {
+if (!isset($_SESSION['llw_role']) || $_SESSION['llw_role'] === 'student') {
     http_response_code(401);
-    echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบ']);
+    echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบสำหรับครู/บุคลากร']);
     exit;
 }
 
 $input     = json_decode(file_get_contents('php://input'), true);
 $records   = $input['records']   ?? [];
-$date      = $input['date']      ?? date('Y-m-d');
-$classroom = $input['classroom'] ?? '';
+$date      = trim($input['date'] ?? date('Y-m-d')) ?: date('Y-m-d');
+$classroom = preg_replace('/^ม\.+/', 'ม.', trim($input['classroom'] ?? ''));
 
 if (empty($classroom) || empty($records)) {
     http_response_code(400);
     echo json_encode(['status' => 'error', 'message' => 'ข้อมูลไม่ครบถ้วน']);
     exit;
-}
-
-// ตรวจสิทธิ์ att_teacher → อนุญาตให้เช็คชื่อเฉพาะห้องที่ตนเป็นที่ปรึกษา
-if ($_SESSION['llw_role'] === 'att_teacher') {
-    try {
-        $pdo    = getPdo();
-        $userId = $_SESSION['user_id'] ?? 0;
-        
-        $check = $pdo->prepare("SELECT 1 FROM llw_class_advisors WHERE classroom = ? AND user_id = ?");
-        $check->execute([$classroom, $userId]);
-        if (!$check->fetch()) {
-            http_response_code(403);
-            echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์เข้าถึงห้องนี้']);
-            exit;
-        }
-    } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาด']);
-        exit;
-    }
 }
 
 try {
@@ -51,17 +31,31 @@ try {
     $added     = 0;
     $updated   = 0;
 
-    // ดึง teacher name จาก llw_class_advisors (ตารางที่ถูกต้อง)
-    $tcStmt = $pdo->prepare("
-        SELECT CONCAT(u.firstname, ' ', u.lastname)
-        FROM llw_class_advisors ca
-        JOIN llw_users u ON u.user_id = ca.user_id
-        WHERE ca.classroom = ?
-        ORDER BY u.firstname
-    ");
-    $tcStmt->execute([$classroom]);
-    $advisors = $tcStmt->fetchAll(PDO::FETCH_COLUMN);
-    $teacherName = !empty($advisors) ? implode(' / ', $advisors) : '-';
+    // ดึงชื่อครูที่ปรึกษาจาก llw_class_advisors + fallback assembly_classrooms
+    $advisors = [];
+    try {
+        $tcStmt = $pdo->prepare("
+            SELECT TRIM(CONCAT(COALESCE(u.firstname, ''), ' ', COALESCE(u.lastname, '')))
+            FROM llw_class_advisors ca
+            JOIN llw_users u ON u.user_id = ca.user_id
+            WHERE ca.classroom = ?
+            ORDER BY ca.id ASC
+        ");
+        $tcStmt->execute([$classroom]);
+        $advisors = array_values(array_filter(array_unique($tcStmt->fetchAll(PDO::FETCH_COLUMN))));
+    } catch (\Throwable $ignore) {}
+
+    if (empty($advisors)) {
+        try {
+            $acSt = $pdo->prepare("SELECT teacher_name FROM assembly_classrooms WHERE classroom = ? LIMIT 1");
+            $acSt->execute([$classroom]);
+            $acName = trim((string)($acSt->fetchColumn() ?: ''));
+            if ($acName !== '') $advisors = [$acName];
+        } catch (\Throwable $ignore) {}
+    }
+
+    $checkerName = trim((string)($_SESSION['fullname'] ?? ($_SESSION['teacher_name'] ?? ($_SESSION['username'] ?? ''))));
+    $teacherName = !empty($advisors) ? implode(' / ', $advisors) : ($checkerName !== '' ? $checkerName : '-');
 
     $upsert = $pdo->prepare("
         INSERT INTO assembly_attendance
@@ -77,20 +71,20 @@ try {
             socks      = VALUES(socks),
             shoes      = VALUES(shoes),
             note       = VALUES(note),
+            created_by = VALUES(created_by),
             updated_at = CURRENT_TIMESTAMP
     ");
+
+    $existCheck = $pdo->prepare("SELECT id FROM assembly_attendance WHERE date = ? AND student_id = ? AND classroom = ?");
 
     foreach ($records as $r) {
         $studentId = trim($r['student_id'] ?? $r['studentID'] ?? '');
         if ($studentId === '') continue;
 
-        // Normalize: pad to 5 digits
         if (preg_match('/^\d+$/', $studentId)) {
             $studentId = str_pad($studentId, 5, '0', STR_PAD_LEFT);
         }
 
-        // ตรวจว่ามีอยู่แล้วไหม (ต้อง filter classroom ด้วย)
-        $existCheck = $pdo->prepare("SELECT id FROM assembly_attendance WHERE date = ? AND student_id = ? AND classroom = ?");
         $existCheck->execute([$date, $studentId, $classroom]);
         $isUpdate = (bool)$existCheck->fetchColumn();
 
@@ -119,7 +113,7 @@ try {
         $present    = count(array_filter($records, fn($r) => ($r['status'] ?? '') === 'ม'));
         $absentList = array_filter($records, fn($r) => ($r['status'] ?? 'ม') !== 'ม');
 
-        // ดึงชื่อนักเรียนจาก att_students (ตารางหลักเดียวกับ get_students.php) + fallback assembly_students
+        // ดึงชื่อนักเรียนจาก att_students + fallback assembly_students
         $studentIds = array_values(array_filter(array_map(
             fn($r) => trim($r['student_id'] ?? $r['studentID'] ?? ''),
             $records
@@ -182,12 +176,16 @@ try {
 
         $safeRoom    = htmlspecialchars($classroom, ENT_QUOTES, 'UTF-8');
         $safeTeacher = htmlspecialchars($teacherName, ENT_QUOTES, 'UTF-8');
+        $safeChecker = htmlspecialchars($checkerName, ENT_QUOTES, 'UTF-8');
 
         $msg  = "🌅 <b>เช็คชื่อเข้าแถวเช้า & เครื่องแต่งกาย</b>\n";
         $msg .= "📅 วันที่: $thDateStr\n";
         $msg .= "🏫 ห้อง: $safeRoom\n";
-        $msg .= "👩‍🏫 ครูที่ปรึกษา: $safeTeacher\n\n";
-        $msg .= "👥 นักเรียนทั้งหมด: $total คน\n";
+        $msg .= "👩‍🏫 ครูที่ปรึกษา: $safeTeacher\n";
+        if ($safeChecker !== '' && strpos($safeTeacher, $safeChecker) === false) {
+            $msg .= "✍️ ผู้บันทึก: $safeChecker\n";
+        }
+        $msg .= "\n👥 นักเรียนทั้งหมด: $total คน\n";
         $msg .= "✅ มาเข้าแถว: $present คน\n";
 
         $statusMap = ['ข' => 'ขาด', 'ล' => 'ลา', 'ด' => 'โดด'];

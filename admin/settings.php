@@ -8,18 +8,7 @@ if (!isset($_SESSION['llw_role']) || !in_array($_SESSION['llw_role'], ['super_ad
 }
 
 $msg = '';
-
-// ── Auto-migrate: เพิ่มคอลัมน์ Telegram ทั้งหมดที่อาจยังไม่มี ──
-try {
-    $pdo = getPdo();
-    $existingCols = $pdo->query("SHOW COLUMNS FROM wfh_system_settings")->fetchAll(PDO::FETCH_COLUMN);
-    if (!in_array('leave_chat_id',   $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN leave_chat_id VARCHAR(100) NULL AFTER admin_chat_id");
-    if (!in_array('leave_bot_token', $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN leave_bot_token VARCHAR(200) NULL AFTER leave_chat_id");
-    if (!in_array('att_chat_id',     $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_chat_id VARCHAR(100) NULL AFTER leave_bot_token");
-    if (!in_array('att_bot_token',   $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN att_bot_token VARCHAR(200) NULL AFTER att_chat_id");
-    if (!in_array('duty_chat_id',    $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN duty_chat_id VARCHAR(100) NULL AFTER att_bot_token");
-    if (!in_array('duty_bot_token',  $existingCols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN duty_bot_token VARCHAR(200) NULL AFTER duty_chat_id");
-} catch (Exception $e) { error_log('settings auto-migrate: ' . $e->getMessage()); }
+$pdo = getPdo();
 
 // AJAX: ทดสอบบอทการลา (ใช้ leave_bot_token หรือ fallback telegram_token)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_leave_telegram') {
@@ -157,6 +146,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'test_
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
+    // ตรวจสอบให้แน่ใจว่ามีแถวใน wfh_system_settings อย่างน้อย 1 แถวก่อนทำ UPDATE
+    $chkRow = $conn->query("SELECT setting_id FROM wfh_system_settings ORDER BY setting_id ASC LIMIT 1")->fetch_assoc();
+    if (!$chkRow) {
+        $conn->query("INSERT INTO wfh_system_settings (setting_id, regular_time_in, late_time, school_lat, school_lng, geofence_radius) VALUES (1, '07:30:00', '08:01:00', 14.77685000, 104.65120000, 300)");
+    }
+
     if (isset($_POST['telegram_token'])) {
         $tg_token        = trim($_POST['telegram_token']);
         $tg_chat_id      = trim($_POST['admin_chat_id']);
@@ -166,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tg_att_token    = trim($_POST['att_bot_token']);
         $tg_duty_chat    = trim($_POST['duty_chat_id']);
         $tg_duty_token   = trim($_POST['duty_bot_token']);
-        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=?, leave_chat_id=?, leave_bot_token=?, att_chat_id=?, att_bot_token=?, duty_chat_id=?, duty_bot_token=? WHERE setting_id=1");
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET telegram_token=?, admin_chat_id=?, leave_chat_id=?, leave_bot_token=?, att_chat_id=?, att_bot_token=?, duty_chat_id=?, duty_bot_token=?");
         $stmt->bind_param('ssssssss', $tg_token, $tg_chat_id, $tg_leave_chat, $tg_leave_token, $tg_att_chat, $tg_att_token, $tg_duty_chat, $tg_duty_token);
         $stmt->execute();
         $stmt->close();
@@ -174,14 +169,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['regular_time_in'])) {
         $time_in   = $_POST['regular_time_in'];
         $time_late = $_POST['late_time'];
-        $stmt = $conn->prepare("UPDATE wfh_system_settings SET regular_time_in=?, late_time=? WHERE setting_id=1");
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET regular_time_in=?, late_time=?");
         $stmt->bind_param('ss', $time_in, $time_late);
         $stmt->execute();
         $stmt->close();
         $msg = 'บันทึกการตั้งค่าเวลาเรียบร้อย';
     } elseif (isset($_POST['boss_name'])) {
         $bossName = trim($_POST['boss_name']);
-        $stmt = $conn->prepare("UPDATE wfh_system_settings SET boss_name = ? WHERE setting_id = 1");
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET boss_name = ?");
         $stmt->bind_param('s', $bossName);
         $stmt->execute();
         $msg = 'บันทึกชื่อผู้อำนวยการเรียบร้อย';
@@ -189,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lat    = (float)$_POST['school_lat'];
         $lng    = (float)$_POST['school_lng'];
         $radius = max(50, min(2000, (int)$_POST['geofence_radius']));
-        $stmt = $conn->prepare("UPDATE wfh_system_settings SET school_lat=?, school_lng=?, geofence_radius=? WHERE setting_id=1");
+        $stmt = $conn->prepare("UPDATE wfh_system_settings SET school_lat=?, school_lng=?, geofence_radius=?");
         $stmt->bind_param('ssi', $lat, $lng, $radius);
         $stmt->execute();
         $stmt->close();
@@ -198,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pin = trim($_POST['boss_pin']);
         if (strlen($pin) >= 4 && strlen($pin) <= 6 && ctype_digit($pin)) {
             $hashed = password_hash($pin, PASSWORD_BCRYPT);
-            $stmt = $conn->prepare("UPDATE wfh_system_settings SET boss_pin = ? WHERE setting_id = 1");
+            $stmt = $conn->prepare("UPDATE wfh_system_settings SET boss_pin = ?");
             $stmt->bind_param('s', $hashed);
             $stmt->execute();
             $msg = 'ตั้ง PIN เรียบร้อยแล้ว';
@@ -724,16 +719,16 @@ function toggleAttToken() {
     }
 }
 
-// ทดสอบบอทเช็คชื่อ (ใช้ token แยก)
+// ทดสอบบอทเช็คชื่อ (ใช้ token แยก หรือ fallback บอทหลัก)
 function testAttTelegram() {
     const result = document.getElementById('tg-result-att');
-    const token  = document.getElementById('inp-att-token').value.trim();
-    const chatId = document.getElementById('inp-att-chat').value.trim();
+    const token  = document.getElementById('inp-att-token').value.trim() || document.getElementById('inp-tg-token').value.trim();
+    const chatId = document.getElementById('inp-att-chat').value.trim()  || document.getElementById('inp-tg-chat').value.trim();
     const btn    = event.currentTarget;
 
     if (!token || !chatId) {
         result.className = 'p-3 rounded-xl text-sm font-bold bg-amber-50 text-amber-700 border border-amber-100';
-        result.textContent = 'กรุณากรอก Bot Token และ Chat ID ของบอทเช็คชื่อก่อน';
+        result.textContent = 'กรุณากรอก Bot Token และ Chat ID ของบอทเช็คชื่อ (หรือบอทหลัก) ก่อน';
         result.classList.remove('hidden');
         return;
     }
@@ -779,16 +774,16 @@ function toggleDutyToken() {
     }
 }
 
-// ทดสอบบอทเวร (ใช้ token แยก)
+// ทดสอบบอทเวร (ใช้ token แยก หรือ fallback บอทหลัก)
 function testDutyTelegram() {
     const result = document.getElementById('tg-result-duty');
-    const token  = document.getElementById('inp-duty-token').value.trim();
-    const chatId = document.getElementById('inp-duty-chat').value.trim();
+    const token  = document.getElementById('inp-duty-token').value.trim() || document.getElementById('inp-tg-token').value.trim();
+    const chatId = document.getElementById('inp-duty-chat').value.trim()  || document.getElementById('inp-tg-chat').value.trim();
     const btn    = event.currentTarget;
 
     if (!token || !chatId) {
         result.className = 'p-3 rounded-xl text-sm font-bold bg-amber-50 text-amber-700 border border-amber-100';
-        result.textContent = 'กรุณากรอก Bot Token และ Chat ID ของบอทเวรก่อน';
+        result.textContent = 'กรุณากรอก Bot Token และ Chat ID ของบอทเวร (หรือบอทหลัก) ก่อน';
         result.classList.remove('hidden');
         return;
     }

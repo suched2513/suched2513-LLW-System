@@ -85,7 +85,7 @@ if ($reportId) {
                "กรุณาส่งรูปให้ครบก่อนเวลา {$deadline} น.\n\n" .
                "ส่งรูปได้เลยในแชทนี้ 📸";
 
-        $res = Telegram::sendMessage($msg, (string)$row['telegram_user_id']);
+        $res = Telegram::sendDutyNotify($pdo, $msg, (string)$row['telegram_user_id']);
         if ($res['ok'] ?? false) {
             $pdo->prepare("UPDATE duty_reports SET reminder_sent_at=NOW() WHERE id=?")->execute([$reportId]);
             $sent = true;

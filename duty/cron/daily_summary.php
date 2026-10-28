@@ -21,12 +21,6 @@ require_once __DIR__ . '/../../includes/telegram_bot.php';
 $pdo = getPdo();
 
 // ── Settings ──
-$stmtS = $pdo->query("SELECT duty_bot_token, duty_chat_id FROM wfh_system_settings LIMIT 1");
-$sys = $stmtS->fetch(PDO::FETCH_ASSOC);
-$botToken    = $sys['duty_bot_token'] ?? '';
-$groupChatId = $sys['duty_chat_id']   ?? '';
-Telegram::init($botToken, $groupChatId);
-
 $stmtDS = $pdo->query("SELECT skey, svalue FROM duty_settings");
 $ds = [];
 while ($r = $stmtDS->fetch()) $ds[$r['skey']] = $r['svalue'];
@@ -121,9 +115,9 @@ $lines[] = "ครบทั้งหมด <b>{$completeAll}/{$totalAll} จุ�
 
 $summaryText = implode("\n", $lines);
 
-// ── ส่งข้อความสรุป ──
-$res = Telegram::sendMessage($summaryText, $groupChatId);
-echo "[" . date('H:i:s') . "] ส่งสรุป: " . ($res['ok'] ? 'สำเร็จ' : 'ล้มเหลว') . "\n";
+// ── ส่งข้อความสรุป (พร้อมระบบ Multi-Token & Multi-Chat Fallback) ──
+$res = Telegram::sendDutyNotify($pdo, $summaryText);
+echo "[" . date('H:i:s') . "] ส่งสรุป: " . (($res['ok'] ?? false) ? 'สำเร็จ' : 'ล้มเหลว') . "\n";
 
 // ── ถ้าตั้งค่าให้แนบ preview รูป ──
 if ($attachPreview && ($res['ok'] ?? false)) {
@@ -151,6 +145,6 @@ if ($attachPreview && ($res['ok'] ?? false)) {
     if (!empty($photoPaths)) {
         // ส่งเป็น album (สูงสุด 10 รูป)
         $photoPaths = array_slice($photoPaths, 0, 10);
-        Telegram::sendMediaGroup($photoPaths, "📸 Preview รูปรายงานเวร", $groupChatId);
+        Telegram::sendDutyPhotos($pdo, $photoPaths, "📸 Preview รูปรายงานเวร");
     }
 }

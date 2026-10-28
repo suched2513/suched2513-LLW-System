@@ -35,19 +35,6 @@ if (php_sapi_name() !== 'cli' && !defined('DUTY_CRON_INTERNAL')) {
 
 $pdo = getPdo();
 
-// ── Settings ──────────────────────────────────────────────────────────────
-$stmtSet = $pdo->query("SELECT duty_bot_token, duty_chat_id FROM wfh_system_settings LIMIT 1");
-$sys     = $stmtSet->fetch(PDO::FETCH_ASSOC);
-$token   = $sys['duty_bot_token'] ?? '';
-$chatId  = $sys['duty_chat_id']   ?? '';
-
-if (!$token || !$chatId) {
-    echo "[" . date('H:i:s') . "] ยังไม่ได้ตั้งค่า duty_bot_token / duty_chat_id\n";
-    return;
-}
-
-Telegram::init($token);
-
 // ── Helpers ───────────────────────────────────────────────────────────────
 $dayTh = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 $monTh = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
@@ -157,8 +144,8 @@ $msg .= "\n━━━━━━━━━━━━━━━\n";
 $msg .= "📸 <b>ลิงก์ส่งรายงานเวร:</b>\n";
 $msg .= "👉 https://llw.krusuched.com/duty/\n";
 
-// ── ส่ง ──────────────────────────────────────────────────────────────────
-$res = Telegram::sendMessage($msg, $chatId);
+// ── ส่ง (พร้อมระบบ Multi-Token & Multi-Chat Fallback) ─────────────────────
+$res = Telegram::sendDutyNotify($pdo, $msg);
 $ok  = $res['ok'] ?? false;
 echo "[" . date('H:i:s') . "] notify_duty: " . ($ok ? "สำเร็จ" : "ล้มเหลว — " . ($res['description'] ?? '')) . "\n";
 if (!$ok) {

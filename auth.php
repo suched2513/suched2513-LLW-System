@@ -11,7 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-$username      = trim($_POST['username'] ?? '');
+$username       = trim($_POST['username'] ?? '');
+$username       = ltrim($username, '@');
 $password_plain = $_POST['password'] ?? '';
 
 if (!$username || !$password_plain) {
@@ -32,42 +33,67 @@ if (!$user || !password_verify($password_plain, $user['password'])) {
 }
 
 // ─── 2. ตั้งค่า Session ────────────────────────────────────────
-$_SESSION['user_id']  = $user['user_id'];
-$_SESSION['username'] = $user['username'];
-$_SESSION['fullname'] = trim($user['firstname'] . ' ' . $user['lastname']);
-$_SESSION['llw_role'] = $user['role'];
+session_regenerate_id(true);
+$primaryRole = trim((string)($user['role'] ?? ''));
 
-// Multi-role: ดึง role ทั้งหมดของผู้ใช้ (1:M) ใส่ใน session
-// llw_role = primary role (จาก llw_users.role) — เก็บไว้เพื่อ backward-compat
-// llw_roles = array ของทุก role สำหรับ fine-grained access check (llw_has_any_role)
-$rolesAll = [$user['role']];
+$rolesAll = $primaryRole !== '' ? [$primaryRole] : [];
 try {
-    $rs = $conn->prepare("SELECT role FROM llw_user_roles WHERE user_id = ?");
-    $rs->bind_param('i', $user['user_id']);
-    $rs->execute();
-    $rsResult = $rs->get_result();
-    $tmp = [];
-    while ($row = $rsResult->fetch_assoc()) $tmp[] = $row['role'];
-    $rs->close();
-    if (!empty($tmp)) $rolesAll = array_values(array_unique($tmp));
+    $rs = $conn->prepare("SELECT role, is_primary FROM llw_user_roles WHERE user_id = ? ORDER BY is_primary DESC");
+    if ($rs) {
+        $rs->bind_param('i', $user['user_id']);
+        $rs->execute();
+        $rsResult = $rs->get_result();
+        while ($row = $rsResult->fetch_assoc()) {
+            $rVal = trim((string)($row['role'] ?? ''));
+            if ($rVal !== '') {
+                $rolesAll[] = $rVal;
+                if ($primaryRole === '') {
+                    $primaryRole = $rVal;
+                }
+            }
+        }
+        $rs->close();
+    }
 } catch (Throwable $e) { /* ตารางอาจยังไม่ถูก migrate — fallback ที่ role เดียว */ }
+
+if ($primaryRole === '') {
+    $primaryRole = 'att_teacher';
+    $rolesAll[]  = 'att_teacher';
+}
+$rolesAll     = array_values(array_unique($rolesAll));
+$user['role'] = $primaryRole;
+
+$_SESSION['user_id']   = $user['user_id'];
+$_SESSION['username']  = $user['username'];
+$_SESSION['firstname'] = $user['firstname'];
+$_SESSION['fullname']  = trim($user['firstname'] . ' ' . $user['lastname']);
+$_SESSION['llw_role']  = $primaryRole;
 $_SESSION['llw_roles'] = $rolesAll;
 
 // backward-compat: WFH admin pages ตรวจ role === 'admin'
-$_SESSION['role'] = !empty(array_intersect($rolesAll, ['super_admin','wfh_admin'])) ? 'admin' : 'user';
+$_SESSION['role'] = !empty(array_intersect($rolesAll, ['super_admin', 'wfh_admin'])) ? 'admin' : 'user';
 
 // ─── 3. Attendance teacher/Student details ─────────────────────
-if (in_array($user['role'], ['att_teacher', 'super_admin', 'club_admin'])) {
-    $t = $conn->prepare("SELECT id, name FROM att_teachers WHERE username = ? LIMIT 1");
-    $t->bind_param('s', $username);
+if ($primaryRole !== 'student') {
+    $uidInt = (int)$user['user_id'];
+    $t = $conn->prepare("SELECT id, name FROM att_teachers WHERE llw_user_id = ? OR username = ? ORDER BY (llw_user_id = ?) DESC LIMIT 1");
+    $t->bind_param('isi', $uidInt, $username, $uidInt);
     $t->execute();
     $teacher = $t->get_result()->fetch_assoc();
     $t->close();
-    if ($teacher) {
-        $_SESSION['teacher_id']   = $teacher['id'];
-        $_SESSION['teacher_name'] = $teacher['name'];
+    if (!$teacher) {
+        $fullName = trim($user['firstname'] . ' ' . $user['lastname']);
+        $insT = $conn->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, '', ?)");
+        if ($insT) {
+            $insT->bind_param('ssi', $fullName, $username, $uidInt);
+            $insT->execute();
+            $teacher = ['id' => $insT->insert_id, 'name' => $fullName];
+            $insT->close();
+        }
     }
-} elseif ($user['role'] === 'student') {
+    $_SESSION['teacher_id']   = (int)($teacher['id'] ?? 0);
+    $_SESSION['teacher_name'] = $teacher['name'] ?? trim($user['firstname'] . ' ' . $user['lastname']);
+} else {
     $s = $conn->prepare("SELECT id, name, classroom FROM att_students WHERE llw_user_id = ? OR student_id = ? LIMIT 1");
     $s->bind_param('is', $user['user_id'], $username);
     $s->execute();

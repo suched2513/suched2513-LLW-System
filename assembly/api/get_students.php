@@ -7,13 +7,13 @@ header('Content-Type: application/json; charset=utf-8');
 session_start();
 require_once __DIR__ . '/../../config/database.php';
 
-if (!isset($_SESSION['llw_role'])) {
+if (!isset($_SESSION['llw_role']) || $_SESSION['llw_role'] === 'student') {
     http_response_code(401);
-    echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบ']);
+    echo json_encode(['status' => 'error', 'message' => 'กรุณาเข้าสู่ระบบสำหรับครู/บุคลากร']);
     exit;
 }
 
-$classroom = trim($_GET['classroom'] ?? '');
+$classroom = preg_replace('/^ม\.+/', 'ม.', trim($_GET['classroom'] ?? ''));
 $date      = trim($_GET['date'] ?? date('Y-m-d'));
 
 if ($classroom === '') {
@@ -25,40 +25,27 @@ if ($classroom === '') {
 try {
     $pdo = getPdo();
 
-    // ตรวจสิทธิ์ att_teacher → อนุญาตให้เช็คชื่อเฉพาะห้องที่ตนเป็นที่ปรึกษา
-    if ($_SESSION['llw_role'] === 'att_teacher') {
-        $userId = $_SESSION['user_id'] ?? 0;
-        
-        $check = $pdo->prepare("SELECT 1 FROM llw_class_advisors WHERE classroom = ? AND user_id = ?");
-        $check->execute([$classroom, $userId]);
-        if (!$check->fetch()) {
-            http_response_code(403);
-            echo json_encode(['status' => 'error', 'message' => 'คุณไม่มีสิทธิ์เข้าถึงห้องนี้']);
-            exit;
-        }
-    }
-
-    // ดึงนักเรียนจาก Central Table (att_students) — กรอง subject codes ออก
+    // ดึงนักเรียนจาก Central Table (att_students) — เฉพาะ active 548 คน และกรอง subject codes ออก
     $curYear = function_exists('llw_current_academic_year') ? llw_current_academic_year() : 2569;
-    $filterSql = "student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)";
+    $filterSql = "status = 'active' AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)";
     if ($classroom === 'all') {
-        $stmt = $pdo->prepare("SELECT student_id, name, classroom FROM att_students WHERE (academic_year = ? OR academic_year IS NULL) AND (status = 'active' OR status IS NULL) AND $filterSql ORDER BY classroom, student_id");
+        $stmt = $pdo->prepare("SELECT student_id, name, classroom FROM att_students WHERE (academic_year = ? OR academic_year IS NULL) AND $filterSql ORDER BY classroom, student_id");
         $stmt->execute([$curYear]);
         $students = $stmt->fetchAll();
         if (empty($students)) {
-            $students = $pdo->query("SELECT student_id, name, classroom FROM att_students WHERE (status = 'active' OR status IS NULL) AND $filterSql ORDER BY classroom, student_id")->fetchAll();
+            $students = $pdo->query("SELECT student_id, name, classroom FROM att_students WHERE $filterSql ORDER BY classroom, student_id")->fetchAll();
         }
     } else {
         $stmt = $pdo->prepare("
             SELECT student_id, name, classroom
             FROM att_students
-            WHERE classroom = ? AND (academic_year = ? OR academic_year IS NULL) AND (status = 'active' OR status IS NULL) AND $filterSql
+            WHERE classroom = ? AND (academic_year = ? OR academic_year IS NULL) AND $filterSql
             ORDER BY student_id
         ");
         $stmt->execute([$classroom, $curYear]);
         $students = $stmt->fetchAll();
         if (empty($students)) {
-            $stmt = $pdo->prepare("SELECT student_id, name, classroom FROM att_students WHERE classroom = ? AND (status = 'active' OR status IS NULL) AND $filterSql ORDER BY student_id");
+            $stmt = $pdo->prepare("SELECT student_id, name, classroom FROM att_students WHERE classroom = ? AND $filterSql ORDER BY student_id");
             $stmt->execute([$classroom]);
             $students = $stmt->fetchAll();
         }
@@ -68,7 +55,7 @@ try {
     $existingMorning = [];
     $existingEvening = [];
     $teacherName = '';
-    
+
     if ($classroom !== 'all') {
         // Morning
         $attStmt = $pdo->prepare("
@@ -92,16 +79,29 @@ try {
             $existingEvening[$row['student_id']] = $row;
         }
 
-        // Get Advisors from Central Table
-        $teacherQuery = $pdo->prepare("
-            SELECT CONCAT(u.firstname, ' ', u.lastname) as full_name 
-            FROM llw_class_advisors a
-            JOIN llw_users u ON a.user_id = u.user_id
-            WHERE a.classroom = ?
-            ORDER BY a.role_type ASC
-        ");
-        $teacherQuery->execute([$classroom]);
-        $teacherName = implode(', ', $teacherQuery->fetchAll(PDO::FETCH_COLUMN));
+        // Get Advisors from Central Table (llw_class_advisors) + fallback assembly_classrooms
+        try {
+            $teacherQuery = $pdo->prepare("
+                SELECT TRIM(CONCAT(COALESCE(u.firstname, ''), ' ', COALESCE(u.lastname, ''))) AS full_name
+                FROM llw_class_advisors a
+                JOIN llw_users u ON a.user_id = u.user_id
+                WHERE a.classroom = ?
+                ORDER BY a.id ASC
+            ");
+            $teacherQuery->execute([$classroom]);
+            $advNames = array_values(array_filter($teacherQuery->fetchAll(PDO::FETCH_COLUMN)));
+            if (!empty($advNames)) {
+                $teacherName = implode(' / ', array_unique($advNames));
+            }
+        } catch (Throwable $ignore) {}
+
+        if ($teacherName === '') {
+            try {
+                $acSt = $pdo->prepare("SELECT teacher_name FROM assembly_classrooms WHERE classroom = ? LIMIT 1");
+                $acSt->execute([$classroom]);
+                $teacherName = trim((string)($acSt->fetchColumn() ?: ''));
+            } catch (Throwable $ignore) {}
+        }
     }
 
     // Compute semester cumulative attendance stats per student
@@ -148,6 +148,7 @@ try {
             error_log('[Assembly] get_students stats error: ' . $statEx->getMessage());
         }
     }
+
     // Merge
     $result = [];
     foreach ($students as $s) {
@@ -161,7 +162,7 @@ try {
             'name'           => $s['name'],
             'classroom'      => $s['classroom'],
             'teacher'        => $teacherName,
-            'status'         => $mAtt['status'] ?? null,  // Keep 'status' for back-compat in first tab
+            'status'         => $mAtt['status'] ?? null,
             'morning_status' => $mAtt['status'] ?? null,
             'evening_status' => $eAtt['status'] ?? null,
             'nail'           => $mAtt['nail']   ?? null,
@@ -170,8 +171,6 @@ try {
             'pants'          => $mAtt['pants']  ?? null,
             'socks'          => $mAtt['socks']  ?? null,
             'shoes'          => $mAtt['shoes']  ?? null,
-            // Use evening note if morning note is empty, but usually we handle them separately.
-            // For back-compat, we'll keep 'note' pointing to morning for now as requested.
             'note'           => $mAtt['note']   ?? '',
             'evening_note'   => $eAtt['note']   ?? '',
             'sem_stats'      => $semSt,

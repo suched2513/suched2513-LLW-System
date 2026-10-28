@@ -67,6 +67,30 @@ try {
         }
     }
 
+    // 2.1 หากห้องนี้ยังไม่ได้เช็คชื่อเข้าแถวเช้า (assembly_attendance) ในวันนี้ ให้ซิงค์สถานะเบื้องต้นให้ด้วย (โดยไม่ทับข้อมูลที่มีอยู่แล้ว)
+    if (is_array($attendance) && !empty($attendance)) {
+        try {
+            $chkAsm = $pdo->prepare("SELECT COUNT(*) FROM assembly_attendance WHERE classroom = ? AND date = ?");
+            $chkAsm->execute([$classroom, $log_date]);
+            if ((int)$chkAsm->fetchColumn() === 0) {
+                $insAsm = $pdo->prepare("
+                    INSERT IGNORE INTO assembly_attendance
+                        (date, classroom, student_id, status, nail, hair, shirt, pants, socks, shoes, note, created_by)
+                    VALUES
+                        (?, ?, ?, ?, 'ถูก', 'ถูก', 'ถูก', 'ถูก', 'ถูก', 'ถูก', '', ?)
+                ");
+                $stToAsm = ['มา' => 'ม', 'สาย' => 'ม', 'ขาด' => 'ข', 'ลา' => 'ล', 'โดด' => 'ด'];
+                foreach ($attendance as $att) {
+                    $sid = llw_normalize_student_id($att['id'] ?? '');
+                    if ($sid === '') continue;
+                    $st  = trim($att['status'] ?? 'มา');
+                    $asmSt = $stToAsm[$st] ?? 'ม';
+                    $insAsm->execute([$log_date, $classroom, $sid, $asmSt, $user_id ?: null]);
+                }
+            }
+        } catch (Throwable $ignore) {}
+    }
+
     // 3. จัดการรูปภาพ (ถ้ามีอัปโหลดมา)
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
         $file    = $_FILES['photo'];
@@ -99,38 +123,44 @@ try {
     // 4. แจ้งเตือน Telegram เข้ากลุ่มเช็คชื่อนักเรียน (ใช้ sendAttendanceNotify)
     try {
         require_once __DIR__ . '/../../includes/telegram_bot.php';
-        if (is_array($attendance) && !empty($attendance)) {
-            $tcStmt = $pdo->prepare("
-                SELECT CONCAT(u.firstname, ' ', u.lastname)
-                FROM llw_class_advisors ca
-                JOIN llw_users u ON u.user_id = ca.user_id
-                WHERE ca.classroom = ?
-                ORDER BY u.firstname
-            ");
-            $tcStmt->execute([$classroom]);
-            $advisors    = $tcStmt->fetchAll(PDO::FETCH_COLUMN);
-            $teacherName = !empty($advisors) ? implode(' / ', $advisors) : ($_SESSION['fullname'] ?? '-');
+        $tcStmt = $pdo->prepare("
+            SELECT TRIM(CONCAT(COALESCE(u.firstname, ''), ' ', COALESCE(u.lastname, '')))
+            FROM llw_class_advisors ca
+            JOIN llw_users u ON u.user_id = ca.user_id
+            WHERE ca.classroom = ?
+            ORDER BY ca.id ASC
+        ");
+        $tcStmt->execute([$classroom]);
+        $advisors    = array_values(array_filter(array_unique($tcStmt->fetchAll(PDO::FETCH_COLUMN))));
+        $checkerName = trim((string)($_SESSION['fullname'] ?? ($_SESSION['teacher_name'] ?? '')));
+        $teacherName = !empty($advisors) ? implode(' / ', $advisors) : ($checkerName !== '' ? $checkerName : '-');
 
+        $thDate = date('j', strtotime($log_date));
+        $monthNames = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                       'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+        $month = (int)date('n', strtotime($log_date));
+        $thDateStr = "$thDate {$monthNames[$month]} " . (date('Y', strtotime($log_date)) + 543);
+
+        $safeRoom    = htmlspecialchars($classroom, ENT_QUOTES, 'UTF-8');
+        $safeTeacher = htmlspecialchars($teacherName, ENT_QUOTES, 'UTF-8');
+        $safeChecker = htmlspecialchars($checkerName, ENT_QUOTES, 'UTF-8');
+
+        $msg  = "🏫 <b>บันทึกกิจกรรมโฮมรูม & เช็คชื่อ</b>\n";
+        $msg .= "📅 วันที่: $thDateStr\n";
+        $msg .= "🏫 ห้อง: $safeRoom\n";
+        $msg .= "👩‍🏫 ครูที่ปรึกษา: $safeTeacher\n";
+        if ($safeChecker !== '' && strpos($safeTeacher, $safeChecker) === false) {
+            $msg .= "✍️ ผู้บันทึก: $safeChecker\n";
+        }
+        if ($topic !== '') {
+            $msg .= "📝 เรื่องที่แจ้ง: " . htmlspecialchars($topic, ENT_QUOTES, 'UTF-8') . "\n";
+        }
+
+        if (is_array($attendance) && !empty($attendance)) {
             $total      = count($attendance);
             $present    = count(array_filter($attendance, fn($r) => ($r['status'] ?? 'มา') === 'มา'));
             $absentList = array_filter($attendance, fn($r) => ($r['status'] ?? 'มา') !== 'มา');
 
-            $thDate = date('j', strtotime($log_date));
-            $monthNames = ['','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
-                           'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-            $month = (int)date('n', strtotime($log_date));
-            $thDateStr = "$thDate {$monthNames[$month]} " . (date('Y', strtotime($log_date)) + 543);
-
-            $safeRoom    = htmlspecialchars($classroom, ENT_QUOTES, 'UTF-8');
-            $safeTeacher = htmlspecialchars($teacherName, ENT_QUOTES, 'UTF-8');
-
-            $msg  = "🏫 <b>บันทึกกิจกรรมโฮมรูม & เช็คชื่อ</b>\n";
-            $msg .= "📅 วันที่: $thDateStr\n";
-            $msg .= "🏫 ห้อง: $safeRoom\n";
-            $msg .= "👩‍🏫 ครูที่ปรึกษา: $safeTeacher\n";
-            if ($topic !== '') {
-                $msg .= "📝 เรื่องที่แจ้ง: " . htmlspecialchars($topic, ENT_QUOTES, 'UTF-8') . "\n";
-            }
             $msg .= "\n👥 นักเรียนทั้งหมด: $total คน\n";
             $msg .= "✅ มาเรียน: $present คน\n";
 
@@ -144,10 +174,10 @@ try {
             } else {
                 $msg .= "🎉 นักเรียนมาครบทุกคน!\n";
             }
-            $msg .= "\n🕒 บันทึกเวลา: " . date('H:i:s');
-
-            Telegram::sendAttendanceNotify($pdo, $msg);
         }
+        $msg .= "\n🕒 บันทึกเวลา: " . date('H:i:s');
+
+        Telegram::sendAttendanceNotify($pdo, $msg);
     } catch (\Throwable $tgErr) {
         error_log('[homeroom/save_homeroom] Telegram error: ' . $tgErr->getMessage());
     }

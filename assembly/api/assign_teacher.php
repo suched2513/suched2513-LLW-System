@@ -1,7 +1,7 @@
 <?php
 /**
  * assembly/api/assign_teacher.php
- * POST JSON — ผูกครูกับห้องเรียน
+ * POST JSON — ผูกครูกับห้องเรียน (ซิงค์เข้า llw_class_advisors และ beh_advisors อัตโนมัติ)
  */
 header('Content-Type: application/json; charset=utf-8');
 session_start();
@@ -19,8 +19,8 @@ if ($_SESSION['llw_role'] !== 'super_admin') {
 }
 
 $input     = json_decode(file_get_contents('php://input'), true);
-$classroom = trim($input['classroom']   ?? '');
-$userId    = $input['llw_user_id'] !== '' && $input['llw_user_id'] !== null ? (int)$input['llw_user_id'] : null;
+$classroom = preg_replace('/^ม\.+/', 'ม.', trim($input['classroom'] ?? ''));
+$userId    = ($input['llw_user_id'] ?? '') !== '' && ($input['llw_user_id'] ?? null) !== null ? (int)$input['llw_user_id'] : null;
 
 if ($classroom === '') {
     http_response_code(400);
@@ -45,6 +45,26 @@ try {
         ON DUPLICATE KEY UPDATE llw_user_id = VALUES(llw_user_id), teacher_name = COALESCE(VALUES(teacher_name), teacher_name)
     ");
     $stmt->execute([':classroom' => $classroom, ':user_id' => $userId, ':teacher_name' => $teacherName]);
+
+    // ซิงค์เข้า llw_class_advisors และ beh_advisors เพื่อให้สิทธิ์เช็คชื่อเข้าแถวทำงานตรงกันทันที
+    if ($userId) {
+        try {
+            $caCols = $pdo->query("SHOW COLUMNS FROM `llw_class_advisors`")->fetchAll(PDO::FETCH_COLUMN);
+            if (in_array('role_type', $caCols, true)) {
+                $pdo->prepare("INSERT IGNORE INTO llw_class_advisors (classroom, user_id, role_type) VALUES (?, ?, 'primary')")->execute([$classroom, $userId]);
+            } else {
+                $pdo->prepare("INSERT IGNORE INTO llw_class_advisors (classroom, user_id) VALUES (?, ?)")->execute([$classroom, $userId]);
+            }
+        } catch (Throwable $ignore) {}
+
+        if (strpos($classroom, '/') !== false) {
+            try {
+                [$lvl, $subRm] = array_map('trim', explode('/', $classroom, 2));
+                $pdo->prepare("INSERT IGNORE INTO beh_advisors (user_id, level, room) VALUES (?, ?, ?)")->execute([$userId, $lvl, $subRm]);
+            } catch (Throwable $ignore) {}
+        }
+    }
+
     echo json_encode(['status' => 'success']);
 } catch (Exception $e) {
     error_log('[Assembly] assign_teacher: ' . $e->getMessage());

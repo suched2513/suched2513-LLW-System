@@ -109,24 +109,25 @@ try {
     ]);
 
     // ── Smart Notifications (Telegram) ──
-    $shouldNotify = ($type === 'ความดี' && $score >= 20) || ($type === 'ความผิด' && $score >= 10);
-    if ($shouldNotify) {
-        $settings = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
-        $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
-        $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id'] ?? '');
-        if ($attToken && $attChatId) {
-            $icon = ($type === 'ความดี') ? '🌟' : '🛑';
-            $msg = "$icon <b>สรุปบันทึกพฤติกรรม</b>\n";
-            $msg .= "👤 นักเรียน: $studentName ($studentId)\n";
-            $msg .= "📝 ประเภท: $type\n";
-            $msg .= "🔹 กิจกรรม: $activity\n";
-            $msg .= "💎 คะแนน: " . (($type === 'ความดี') ? '+' : '-') . "$score\n";
-            $msg .= "👨‍🏫 ผู้บันทึก: $teacher\n";
-            $msg .= "📅 วันที่: " . date('d/m/Y', strtotime($date));
-            
-            Telegram::init($attToken);
-            Telegram::sendMessage($msg, $attChatId);
-        }
+    try {
+        $icon     = ($type === 'ความดี') ? '🌟' : '🛑';
+        $safeName = htmlspecialchars($studentName, ENT_QUOTES, 'UTF-8');
+        $safeSid  = htmlspecialchars($studentId, ENT_QUOTES, 'UTF-8');
+        $safeType = htmlspecialchars($type, ENT_QUOTES, 'UTF-8');
+        $safeAct  = htmlspecialchars($activity, ENT_QUOTES, 'UTF-8');
+        $safeTch  = htmlspecialchars($teacher !== '' ? $teacher : ($_SESSION['fullname'] ?? '-'), ENT_QUOTES, 'UTF-8');
+
+        $msg  = "$icon <b>บันทึกพฤติกรรมนักเรียน</b>\n";
+        $msg .= "👤 นักเรียน: $safeName ($safeSid)\n";
+        $msg .= "📝 ประเภท: $safeType\n";
+        $msg .= "🔹 กิจกรรม: $safeAct\n";
+        $msg .= "💎 คะแนน: " . (($type === 'ความดี') ? '+' : '-') . "$score\n";
+        $msg .= "👨‍🏫 ผู้บันทึก: $safeTch\n";
+        $msg .= "📅 วันที่: " . date('d/m/Y', strtotime($date));
+
+        Telegram::sendAttendanceNotify($pdo, $msg);
+    } catch (\Throwable $tgErr) {
+        error_log('[behavior/save_record] Telegram error: ' . $tgErr->getMessage());
     }
 
     if (ob_get_length()) ob_clean();

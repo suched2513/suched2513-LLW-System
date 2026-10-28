@@ -156,64 +156,46 @@ try {
     exit;
 }
 
-// 4. ส่งแจ้งเตือน Telegram
+// 4. ส่งแจ้งเตือน Telegram (พร้อมระบบ Multi-Token & Multi-Chat Fallback)
 if (isset($requestId) && isset($status)) {
     try {
-        $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
-        $config  = $stmtSet ? $stmtSet->fetch() : null;
+        $stmtInfo = $pdo->prepare("SELECT u.firstname, u.lastname, r.leave_type FROM tl_requests r LEFT JOIN llw_users u ON r.user_id = u.user_id WHERE r.id = ?");
+        $stmtInfo->execute([$requestId]);
+        $info = $stmtInfo->fetch();
 
-        $leaveChatId   = '';
-        $leaveBotToken = '';
-        try {
-            $lcs = $pdo->query("SELECT leave_chat_id, leave_bot_token FROM wfh_system_settings LIMIT 1");
-            if ($lcs && ($lRow = $lcs->fetch(PDO::FETCH_ASSOC))) {
-                $leaveChatId   = (string)($lRow['leave_chat_id'] ?? '');
-                $leaveBotToken = (string)($lRow['leave_bot_token'] ?? '');
-            }
-        } catch (\Throwable $ignore) {}
+        $scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host     = $_SERVER['HTTP_HOST'] ?? 'llw.krusuched.com';
+        $leaveUrl = "{$scheme}://{$host}/teacher_leave/";
 
-        $tgToken  = !empty($leaveBotToken) ? $leaveBotToken : ($config['telegram_token'] ?? '');
-        $tgChatId = !empty($leaveChatId)   ? $leaveChatId   : ($config['admin_chat_id']  ?? '');
-
-        if (!empty($tgToken) && !empty($tgChatId)) {
-            $stmtInfo = $pdo->prepare("SELECT u.firstname, u.lastname, r.leave_type FROM tl_requests r LEFT JOIN llw_users u ON r.user_id = u.user_id WHERE r.id = ?");
-            $stmtInfo->execute([$requestId]);
-            $info = $stmtInfo->fetch();
-
-            $scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-            $host     = $_SERVER['HTTP_HOST'] ?? 'llw.krusuched.com';
-            $leaveUrl = "{$scheme}://{$host}/teacher_leave/";
-
-            if ($status == 1) {
-                $statusText = $wasFinalApproved ? "✅ <b>อนุมัติเสร็จสิ้น (ผอ.)</b>" : "🔍 <b>ตรวจสอบแล้วถูกต้อง (ส่งต่อ ผอ.)</b>";
-            } else {
-                $statusText = "❌ <b>ไม่อนุมัติ/ตีกลับ</b>";
-            }
-
-            $approverName = $_SESSION['fullname'] ?? 'เจ้าหน้าที่';
-            $typeMap   = ['sick' => 'ลาป่วย', 'personal' => 'ลากิจส่วนตัว', 'vacation' => 'ลาพักผ่อน', 'maternity' => 'ลาคลอดบุตร', 'other' => 'ลาอื่นๆ'];
-            $typeName  = $typeMap[$info['leave_type'] ?? ''] ?? 'ไม่ระบุ';
-            $requesterName = trim(($info['firstname'] ?? '') . ' ' . ($info['lastname'] ?? ''));
-
-            $msg  = "📢 <b>พิจารณาใบลา</b>\n";
-            $msg .= "👤 ผู้ลา: " . $requesterName . "\n";
-            $msg .= "📂 ประเภท: " . $typeName . "\n";
-            $msg .= "⚖️ สถานะ: " . $statusText . "\n";
-            $msg .= "โดย: " . $approverName . "\n";
-            if (!empty($comment)) {
-                $msg .= "📝 ความเห็น: " . $comment . "\n";
-            }
-            $msg .= "-------------------\n";
-
-            if ($status == 1 && !$wasFinalApproved) {
-                $msg .= "📍 รอการอนุมัติจาก ผอ./รองฯ\n";
-                $msg .= "🔗 <a href=\"{$leaveUrl}\">กดที่นี่เพื่ออนุมัติ</a>";
-            } elseif ($status == 1 && $wasFinalApproved) {
-                $msg .= "🏁 อนุมัติเสร็จสิ้นเรียบร้อย";
-            }
-
-            sendTelegramMessage($tgToken, $tgChatId, $msg);
+        if ($status == 1) {
+            $statusText = $wasFinalApproved ? "✅ <b>อนุมัติเสร็จสิ้น (ผอ.)</b>" : "🔍 <b>ตรวจสอบแล้วถูกต้อง (ส่งต่อ ผอ.)</b>";
+        } else {
+            $statusText = "❌ <b>ไม่อนุมัติ/ตีกลับ</b>";
         }
+
+        $approverName  = htmlspecialchars($_SESSION['fullname'] ?? 'เจ้าหน้าที่', ENT_QUOTES, 'UTF-8');
+        $typeMap       = ['sick' => 'ลาป่วย', 'personal' => 'ลากิจส่วนตัว', 'vacation' => 'ลาพักผ่อน', 'maternity' => 'ลาคลอดบุตร', 'other' => 'ลาอื่นๆ'];
+        $typeName      = htmlspecialchars($typeMap[$info['leave_type'] ?? ''] ?? 'ไม่ระบุ', ENT_QUOTES, 'UTF-8');
+        $requesterName = htmlspecialchars(trim(($info['firstname'] ?? '') . ' ' . ($info['lastname'] ?? '')), ENT_QUOTES, 'UTF-8');
+
+        $msg  = "📢 <b>พิจารณาใบลา</b>\n";
+        $msg .= "👤 ผู้ลา: " . $requesterName . "\n";
+        $msg .= "📂 ประเภท: " . $typeName . "\n";
+        $msg .= "⚖️ สถานะ: " . $statusText . "\n";
+        $msg .= "โดย: " . $approverName . "\n";
+        if (!empty($comment)) {
+            $msg .= "📝 ความเห็น: " . htmlspecialchars($comment, ENT_QUOTES, 'UTF-8') . "\n";
+        }
+        $msg .= "-------------------\n";
+
+        if ($status == 1 && !$wasFinalApproved) {
+            $msg .= "📍 รอการอนุมัติจาก ผอ./รองฯ\n";
+            $msg .= "🔗 <a href=\"{$leaveUrl}\">กดที่นี่เพื่ออนุมัติ</a>";
+        } elseif ($status == 1 && $wasFinalApproved) {
+            $msg .= "🏁 อนุมัติเสร็จสิ้นเรียบร้อย";
+        }
+
+        Telegram::sendLeaveNotify($pdo, $msg);
     } catch (\Throwable $tgEx) {
         error_log("Telegram Error: " . $tgEx->getMessage());
     }

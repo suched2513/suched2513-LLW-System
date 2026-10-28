@@ -100,19 +100,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($user && password_verify($password, $user['password'])) {
             session_regenerate_id(true);
+            $primaryRole = trim((string)($user['role'] ?? ''));
+
+            // ดึง multi-role จาก llw_user_roles (พร้อมซ่อมแซมกรณี primary role ว่าง)
+            $rolesAll = $primaryRole !== '' ? [$primaryRole] : [];
+            try {
+                $rs = $conn->prepare("SELECT role, is_primary FROM llw_user_roles WHERE user_id = ? ORDER BY is_primary DESC");
+                if ($rs) {
+                    $rs->bind_param('i', $user['user_id']);
+                    $rs->execute();
+                    $rsResult = $rs->get_result();
+                    while ($row = $rsResult->fetch_assoc()) {
+                        $rVal = trim((string)($row['role'] ?? ''));
+                        if ($rVal !== '') {
+                            $rolesAll[] = $rVal;
+                            if ($primaryRole === '') {
+                                $primaryRole = $rVal;
+                            }
+                        }
+                    }
+                    $rs->close();
+                }
+            } catch (Throwable $e) {}
+
+            if ($primaryRole === '') {
+                $primaryRole = 'att_teacher';
+                $rolesAll[]  = 'att_teacher';
+            }
+            $rolesAll = array_values(array_unique($rolesAll));
+            $user['role'] = $primaryRole;
+
             $_SESSION['user_id']   = $user['user_id'];
             $_SESSION['username']  = $user['username'];
             $_SESSION['firstname'] = $user['firstname'];
             $_SESSION['fullname']  = trim($user['firstname'] . ' ' . $user['lastname']);
-            $_SESSION['llw_role']  = $user['role'];
-            $_SESSION['role']      = in_array($user['role'], ['super_admin','wfh_admin']) ? 'admin' : 'user';
+            $_SESSION['llw_role']  = $primaryRole;
+            $_SESSION['llw_roles'] = $rolesAll;
+            $_SESSION['role']      = !empty(array_intersect($rolesAll, ['super_admin','wfh_admin'])) ? 'admin' : 'user';
             $_SESSION['force_password_change'] = (int)($user['force_password_change'] ?? 0);
 
-            if (in_array($user['role'], ['att_teacher','super_admin','club_admin'])) {
-                $t = $conn->prepare("SELECT id, name FROM att_teachers WHERE username = ? LIMIT 1");
-                $t->bind_param('s', $username); $t->execute();
-                $teacher = $t->get_result()->fetch_assoc(); $t->close();
-                $_SESSION['teacher_id']   = $teacher['id'] ?? 0;
+            if ($primaryRole !== 'student') {
+                $t = $conn->prepare("SELECT id, name FROM att_teachers WHERE llw_user_id = ? OR username = ? ORDER BY (llw_user_id = ?) DESC LIMIT 1");
+                $uidInt = (int)$user['user_id'];
+                $t->bind_param('isi', $uidInt, $username, $uidInt);
+                $t->execute();
+                $teacher = $t->get_result()->fetch_assoc();
+                $t->close();
+                if (!$teacher) {
+                    $fullName = trim($user['firstname'] . ' ' . $user['lastname']);
+                    $insT = $conn->prepare("INSERT INTO att_teachers (name, username, password, llw_user_id) VALUES (?, ?, '', ?)");
+                    if ($insT) {
+                        $insT->bind_param('ssi', $fullName, $username, $uidInt);
+                        $insT->execute();
+                        $teacher = ['id' => $insT->insert_id, 'name' => $fullName];
+                        $insT->close();
+                    }
+                }
+                $_SESSION['teacher_id']   = (int)($teacher['id'] ?? 0);
                 $_SESSION['teacher_name'] = $teacher['name'] ?? trim($user['firstname'] . ' ' . $user['lastname']);
             }
 

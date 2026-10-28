@@ -62,32 +62,29 @@ try {
 
     $pdo->commit();
 
-    // 3. ส่ง Telegram แจ้ง ผอ.
+    // 3. ส่ง Telegram แจ้ง ผอ. และกลุ่มการลา (พร้อมระบบ Fallback อัตโนมัติ)
     $teacher_name = isset($_SESSION['fullname']) ? $_SESSION['fullname'] : 
                     (isset($_SESSION['firstname']) ? $_SESSION['firstname'] : 'อาจารย์');
     
-    // ดึง settings จาก wfh_system_settings
     try {
-        $sStmt = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1");
-        $settings = $sStmt->fetch();
-        $tgToken  = !empty($settings['leave_bot_token']) ? $settings['leave_bot_token'] : ($settings['telegram_token'] ?? '');
-        $tgChatId = !empty($settings['leave_chat_id'])   ? $settings['leave_chat_id']   : ($settings['admin_chat_id']  ?? '');
-        
-        if ($tgToken && $tgChatId) {
-            $msg  = "🔔 <b>มีคำขอออกนอกบริเวณใหม่</b>\n";
-            $msg .= "👤 ผู้ขอ: " . $teacher_name . "\n";
-            $msg .= "📝 เหตุผล: " . ($input['reason'] ?? '') . " (" . ($input['reason_type'] ?? '') . ")\n";
-            $msg .= "⏰ เวลา: " . ($input['time_start'] ?? '') . " - " . ($input['time_end'] ?? '') . "\n";
-            $msg .= "📅 วันที่: " . date('d/m/Y') . "\n";
-            if (!empty($input['has_class'])) {
-                $msg .= "📚 มีคาบการสอน: " . count($input['cart'] ?? []) . " คาบ\n";
-            }
-            $msg .= "🔗 กรุณาตรวจสอบในระบบ LLW";
+        $safeTName  = htmlspecialchars($teacher_name, ENT_QUOTES, 'UTF-8');
+        $safeReason = htmlspecialchars($input['reason'] ?? '', ENT_QUOTES, 'UTF-8');
+        $safeType   = htmlspecialchars($input['reason_type'] ?? '', ENT_QUOTES, 'UTF-8');
+        $safeStart  = htmlspecialchars($input['time_start'] ?? '', ENT_QUOTES, 'UTF-8');
+        $safeEnd    = htmlspecialchars($input['time_end'] ?? '', ENT_QUOTES, 'UTF-8');
 
-            Telegram::init($tgToken);
-            Telegram::sendMessage($msg, $tgChatId);
+        $msg  = "🔔 <b>มีคำขอออกนอกบริเวณใหม่</b>\n";
+        $msg .= "👤 ผู้ขอ: {$safeTName}\n";
+        $msg .= "📝 เหตุผล: {$safeReason} ({$safeType})\n";
+        $msg .= "⏰ เวลา: {$safeStart} - {$safeEnd}\n";
+        $msg .= "📅 วันที่: " . date('d/m/Y') . "\n";
+        if (!empty($input['has_class'])) {
+            $msg .= "📚 มีคาบการสอน: " . count($input['cart'] ?? []) . " คาบ\n";
         }
-    } catch (Exception $e) {
+        $msg .= "🔗 กรุณาตรวจสอบในระบบ LLW";
+
+        Telegram::sendLeaveNotify($pdo, $msg);
+    } catch (\Throwable $e) {
         // ไม่ให้ Telegram error หยุดระบบ
     }
 

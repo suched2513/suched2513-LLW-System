@@ -74,19 +74,57 @@ try {
     ");
     $stmt->execute([$action, $teacher_id, $note ?: null, $id]);
 
-    // If approved: update att_attendance records 'ขาด' → 'ลา' for this student/date range
+    // If approved: update att_attendance (by integer PK) & assembly_attendance (by student_id code) 'ขาด'/'ข' → 'ลา'/'ล'
     if ($action === 'approved') {
-        $stmt = $pdo->prepare("
-            UPDATE att_attendance
-            SET status = 'ลา'
-            WHERE student_id = ?
-              AND date BETWEEN ? AND ?
-              AND status = 'ขาด'
-        ");
-        $stmt->execute([$req['student_id'], $req['date_from'], $req['date_to']]);
+        $stuPkStmt = $pdo->prepare("SELECT id FROM att_students WHERE student_id = ? LIMIT 1");
+        $stuPkStmt->execute([$req['student_id']]);
+        $stuPk = (int)$stuPkStmt->fetchColumn();
+        if ($stuPk > 0) {
+            $stmt = $pdo->prepare("
+                UPDATE att_attendance
+                SET status = 'ลา'
+                WHERE student_id = ?
+                  AND date BETWEEN ? AND ?
+                  AND status = 'ขาด'
+            ");
+            $stmt->execute([$stuPk, $req['date_from'], $req['date_to']]);
+        }
+
+        try {
+            $stmtAsm = $pdo->prepare("
+                UPDATE assembly_attendance
+                SET status = 'ล'
+                WHERE student_id = ?
+                  AND date BETWEEN ? AND ?
+                  AND status = 'ข'
+            ");
+            $stmtAsm->execute([$req['student_id'], $req['date_from'], $req['date_to']]);
+        } catch (\Throwable $ignore) {}
     }
 
     $pdo->commit();
+
+    // ── แจ้งเตือนผลการพิจารณาใบลานักเรียนทาง Telegram ──
+    try {
+        require_once __DIR__ . '/../../includes/telegram_bot.php';
+        $stInfo = $pdo->prepare("SELECT name, classroom FROM att_students WHERE student_id = ? LIMIT 1");
+        $stInfo->execute([$req['student_id']]);
+        $stu = $stInfo->fetch(PDO::FETCH_ASSOC);
+        $stuName = htmlspecialchars($stu['name'] ?? $req['student_id'], ENT_QUOTES, 'UTF-8');
+        $stuRoom = htmlspecialchars($stu['classroom'] ?? '-', ENT_QUOTES, 'UTF-8');
+        $approver = htmlspecialchars(trim((string)($_SESSION['fullname'] ?? ($_SESSION['teacher_name'] ?? 'ครูผู้ตรวจ'))), ENT_QUOTES, 'UTF-8');
+        $icon = ($action === 'approved') ? '✅' : '❌';
+        $actText = ($action === 'approved') ? 'อนุมัติใบลานักเรียน' : 'ไม่อนุมัติใบลานักเรียน';
+
+        $tgMsg  = "{$icon} <b>{$actText}</b>\n";
+        $tgMsg .= "👤 นักเรียน: {$stuName} ({$stuRoom})\n";
+        $tgMsg .= "📅 วันที่ลา: " . date('d/m/Y', strtotime($req['date_from'])) . " ถึง " . date('d/m/Y', strtotime($req['date_to'])) . "\n";
+        if ($note !== '') {
+            $tgMsg .= "💬 ความเห็นครู: " . htmlspecialchars($note, ENT_QUOTES, 'UTF-8') . "\n";
+        }
+        $tgMsg .= "👩‍🏫 ผู้พิจารณา: {$approver}";
+        Telegram::sendAttendanceNotify($pdo, $tgMsg);
+    } catch (\Throwable $ignore) {}
 
     $actionLabel = $action === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ';
     echo json_encode(['status' => 'success', 'message' => $actionLabel . 'คำขอเรียบร้อยแล้ว']);

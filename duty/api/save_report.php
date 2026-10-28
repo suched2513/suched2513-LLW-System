@@ -14,19 +14,6 @@ $assignmentId = (int)($_POST['assignment_id'] ?? 0);
 $reportNote   = trim($_POST['report_note'] ?? '');
 $photos       = $_FILES['photos'] ?? null;
 
-// ── Auto-migration: เพิ่ม report_note และ completed_at ถ้ายังไม่มี ──
-try {
-    $stmtCols = $pdo->query("SHOW COLUMNS FROM duty_reports");
-    $existingCols = $stmtCols->fetchAll(PDO::FETCH_COLUMN);
-    
-    if (!in_array('report_note', $existingCols)) {
-        $pdo->exec("ALTER TABLE duty_reports ADD COLUMN report_note TEXT NULL AFTER status");
-    }
-    if (!in_array('completed_at', $existingCols)) {
-        $pdo->exec("ALTER TABLE duty_reports ADD COLUMN completed_at DATETIME NULL AFTER report_note");
-    }
-} catch (Exception $e) { error_log("Auto-migration failed: " . $e->getMessage()); }
-
 if (!$assignmentId || !$photos) {
     echo json_encode(['status' => 'error', 'message' => 'ข้อมูลไม่ครบถ้วน']);
     exit;
@@ -116,72 +103,53 @@ try {
 
     $pdo->commit();
 
-    // ── 5. ส่งแจ้งเตือน Telegram ────────────────────────────────────────
+    // ── 5. ส่งแจ้งเตือน Telegram (พร้อมระบบ Multi-Token & Multi-Chat Fallback) ──
     try {
         require_once __DIR__ . '/../../includes/telegram_bot.php';
 
-        // auto-migrate duty columns ถ้ายังไม่มี
-        $cols = $pdo->query("SHOW COLUMNS FROM wfh_system_settings")->fetchAll(PDO::FETCH_COLUMN);
-        if (!in_array('duty_chat_id',   $cols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN duty_chat_id VARCHAR(100) NULL");
-        if (!in_array('duty_bot_token', $cols)) $pdo->exec("ALTER TABLE wfh_system_settings ADD COLUMN duty_bot_token VARCHAR(200) NULL");
+        // ชื่อครู
+        $stmtT = $pdo->prepare("SELECT prefix, full_name FROM duty_teachers WHERE id = ?");
+        $stmtT->execute([$schedule['teacher_id']]);
+        $teacher     = $stmtT->fetch();
+        $teacherName = htmlspecialchars(trim(($teacher['prefix'] ?? '') . ' ' . ($teacher['full_name'] ?? '')), ENT_QUOTES, 'UTF-8');
 
-        $stmtSet  = $pdo->query("SELECT duty_bot_token, duty_chat_id FROM wfh_system_settings LIMIT 1");
-        $tgCfg    = $stmtSet ? $stmtSet->fetch() : null;
-        $tgToken  = $tgCfg['duty_bot_token'] ?? '';
-        $tgChatId = $tgCfg['duty_chat_id']   ?? '';
+        // วันที่ภาษาไทย
+        $dayTh  = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+        $monTh  = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        $ts     = strtotime($schedule['duty_date']);
+        $dateStr = 'วัน' . $dayTh[date('w', $ts)] . 'ที่ ' . date('j', $ts)
+                 . ' ' . $monTh[(int)date('n', $ts)] . ' ' . (date('Y', $ts) + 543);
 
-        if (!empty($tgToken) && !empty($tgChatId)) {
-            // ชื่อครู
-            $stmtT = $pdo->prepare("SELECT prefix, full_name FROM duty_teachers WHERE id = ?");
-            $stmtT->execute([$schedule['teacher_id']]);
-            $teacher     = $stmtT->fetch();
-            $teacherName = trim(($teacher['prefix'] ?? '') . ' ' . ($teacher['full_name'] ?? ''));
+        $shiftLabel = ['day' => '🌞 กลางวัน', 'evening' => '🌆 เย็น', 'night' => '🌙 กลางคืน'];
+        $shiftText  = htmlspecialchars($shiftLabel[$schedule['shift']] ?? $schedule['shift'], ENT_QUOTES, 'UTF-8');
+        $statusIcon = ($status === 'complete') ? '✅ ครบแล้ว' : "⚠️ ยังไม่ครบ ({$photoCount}/{$required} รูป)";
 
-            // วันที่ภาษาไทย
-            $dayTh  = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
-            $monTh  = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-            $ts     = strtotime($schedule['duty_date']);
-            $dateStr = 'วัน' . $dayTh[date('w', $ts)] . 'ที่ ' . date('j', $ts)
-                     . ' ' . $monTh[(int)date('n', $ts)] . ' ' . (date('Y', $ts) + 543);
+        $caption  = "📸 <b>รายงานเวรประจำวัน</b>\n";
+        $caption .= "📍 จุดที่ " . (int)$schedule['point_no'] . " — {$shiftText}\n";
+        $caption .= "🗓 {$dateStr}\n";
+        $caption .= "👤 {$teacherName}\n";
+        if ($reportNote !== '') {
+            $caption .= "📝 " . htmlspecialchars($reportNote, ENT_QUOTES, 'UTF-8') . "\n";
+        }
+        $caption .= "สถานะ: {$statusIcon}";
 
-            $shiftLabel = ['day' => '🌞 กลางวัน', 'evening' => '🌆 เย็น', 'night' => '🌙 กลางคืน'];
-            $shiftText  = $shiftLabel[$schedule['shift']] ?? $schedule['shift'];
-            $statusIcon = ($status === 'complete') ? '✅ ครบแล้ว' : "⚠️ ยังไม่ครบ ({$photoCount}/{$required} รูป)";
+        // ดึง path รูปที่เพิ่งอัปโหลด (เฉพาะ round นี้)
+        $stmtPaths = $pdo->prepare("
+            SELECT file_path FROM duty_report_photos
+            WHERE report_id = ? AND is_deleted = 0
+            ORDER BY id DESC LIMIT 10
+        ");
+        $stmtPaths->execute([$reportId]);
+        $relPaths = $stmtPaths->fetchAll(PDO::FETCH_COLUMN);
+        $baseDir  = realpath(__DIR__ . '/../../');
+        $absPaths = array_values(array_filter(array_map(
+            fn($p) => $baseDir . '/' . ltrim(str_replace('\\', '/', $p), '/'),
+            $relPaths
+        ), 'file_exists'));
 
-            $caption  = "📸 <b>รายงานเวรประจำวัน</b>\n";
-            $caption .= "📍 จุดที่ {$schedule['point_no']} — {$shiftText}\n";
-            $caption .= "🗓 {$dateStr}\n";
-            $caption .= "👤 {$teacherName}\n";
-            if ($reportNote !== '') $caption .= "📝 {$reportNote}\n";
-            $caption .= "สถานะ: {$statusIcon}";
-
-            Telegram::init($tgToken);
-
-            // ดึง path รูปที่เพิ่งอัปโหลด (เฉพาะ round นี้)
-            $stmtPaths = $pdo->prepare("
-                SELECT file_path FROM duty_report_photos
-                WHERE report_id = ? AND is_deleted = 0
-                ORDER BY id DESC LIMIT 10
-            ");
-            $stmtPaths->execute([$reportId]);
-            $relPaths = $stmtPaths->fetchAll(PDO::FETCH_COLUMN);
-            $baseDir  = realpath(__DIR__ . '/../../');
-            $absPaths = array_filter(array_map(
-                fn($p) => $baseDir . '/' . ltrim(str_replace('\\', '/', $p), '/'),
-                $relPaths
-            ), 'file_exists');
-
-            if (!empty($absPaths)) {
-                // ส่งรูปพร้อม caption
-                $tgResult = Telegram::sendMediaGroup(array_values($absPaths), $caption, $tgChatId);
-            } else {
-                // ถ้าไม่มีรูป ส่งแค่ข้อความ
-                $tgResult = Telegram::sendMessage($caption, $tgChatId);
-            }
-
-            if (!($tgResult['ok'] ?? false)) {
-                error_log('[Duty] Telegram send failed: ' . ($tgResult['description'] ?? 'unknown'));
-            }
+        $tgResult = Telegram::sendDutyPhotos($pdo, $absPaths, $caption);
+        if (!($tgResult['ok'] ?? false)) {
+            error_log('[Duty] Telegram send failed: ' . ($tgResult['description'] ?? 'unknown'));
         }
     } catch (\Throwable $tgEx) {
         error_log('[Duty] Telegram notify error: ' . $tgEx->getMessage());

@@ -74,22 +74,20 @@ try {
 
     // Send Telegram Notification
     try {
-        $set = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
-        $attToken  = !empty($set['att_bot_token']) ? $set['att_bot_token'] : ($set['telegram_token'] ?? '');
-        $attChatId = !empty($set['att_chat_id'])   ? $set['att_chat_id']   : ($set['admin_chat_id'] ?? '');
-        if ($attToken && $attChatId) {
-            $msg = "📢 <b>มีบันทึกความดีใหม่รอยืนยัน</b>\n";
-            $msg .= "---------------------------\n";
-            $msg .= "👤 <b>นักเรียน:</b> " . $student['name'] . " (ม." . $level . "/" . $room . ")\n";
-            $msg .= "📝 <b>กิจกรรม:</b> " . $activity . "\n";
-            $msg .= "⭐ <b>คะแนนที่เสนอ:</b> +" . $score . "\n";
-            $msg .= "---------------------------\n";
-            $msg .= "🔗 <a href='https://llw.krusuched.com/behavior/dashboard.php'>เข้าสู่ระบบเพื่อตรวจสอบ</a>";
-            
-            Telegram::init($attToken);
-            Telegram::sendMessage($msg, $attChatId);
-        }
-    } catch (Exception $e) {
+        $safeName = htmlspecialchars($student['name'] ?? $sid, ENT_QUOTES, 'UTF-8');
+        $safeRoom = htmlspecialchars($className !== '' ? $className : "ม.{$level}/{$room}", ENT_QUOTES, 'UTF-8');
+        $safeAct  = htmlspecialchars($activity, ENT_QUOTES, 'UTF-8');
+
+        $msg  = "📢 <b>มีบันทึกความดีใหม่รอยืนยัน</b>\n";
+        $msg .= "---------------------------\n";
+        $msg .= "👤 <b>นักเรียน:</b> {$safeName} ({$safeRoom})\n";
+        $msg .= "📝 <b>กิจกรรม:</b> {$safeAct}\n";
+        $msg .= "⭐ <b>คะแนนที่เสนอ:</b> +{$score}\n";
+        $msg .= "---------------------------\n";
+        $msg .= "🔗 <a href='https://llw.krusuched.com/behavior/dashboard.php'>เข้าสู่ระบบเพื่อตรวจสอบ</a>";
+
+        Telegram::sendAttendanceNotify($pdo, $msg);
+    } catch (\Throwable $e) {
         error_log('[behavior] telegram notify error: ' . $e->getMessage());
     }
 

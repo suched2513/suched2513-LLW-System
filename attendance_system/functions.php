@@ -7,6 +7,7 @@ try {
         $autoMigs = [
             '2026_10_28_000003_force_exact_548_roster',
             '2026_10_28_000004_add_stability_indexes_and_constraints',
+            '2026_10_29_000001_fix_roles_advisors_and_telegram_settings',
         ];
         $chkMig = $pdo->prepare("SELECT 1 FROM _migrations WHERE migration = ? LIMIT 1");
         $insMig = $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, 99)");

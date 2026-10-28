@@ -507,10 +507,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Load initial data & auto-select teacher's homeroom for fast 1-click check-in
-    initRooms().then((rooms) => {
+    initRooms().then((roomData) => {
+        const rooms = (roomData && roomData.classrooms) ? roomData.classrooms : [];
+        const advRooms = (roomData && roomData.advisor_rooms) ? roomData.advisor_rooms : [];
         const urlParams = new URLSearchParams(window.location.search);
         const getRoom = urlParams.get('classroom');
-        const defaultRoom = getRoom || (rooms && rooms.length === 1 ? rooms[0] : (rooms && rooms.length > 0 && '<?= $_SESSION['llw_role'] ?? '' ?>' === 'att_teacher' ? rooms[0] : ''));
+        const defaultRoom = getRoom || (advRooms.length > 0 ? advRooms[0] : (rooms.length === 1 ? rooms[0] : ''));
         if (defaultRoom) {
             ['att-classroom', 'co-classroom', 'ov-classroom'].forEach(id => {
                 const el = document.getElementById(id);
@@ -545,16 +547,17 @@ async function initRooms() {
     const res = await window.api('/assembly/api/get_rooms.php');
     if (res.status !== 'success') {
         console.error("Room load failed:", res.message);
-        return;
+        return { classrooms: [], advisor_rooms: [] };
     }
-    console.log("Rooms loaded:", res.classrooms.length);
+    const advSet = new Set(res.advisor_rooms || []);
+    console.log("Rooms loaded:", res.classrooms.length, "Advisor rooms:", res.advisor_rooms);
     ['att-classroom', 'co-classroom', 'ov-classroom'].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         el.innerHTML = '<option value="">เลือกห้องเรียน...</option>' +
-            res.classrooms.map(c => `<option value="${c}">${c}</option>`).join('');
+            res.classrooms.map(c => `<option value="${c}">${advSet.has(c) ? '★ ' + c + ' (ห้องที่ปรึกษา)' : c}</option>`).join('');
     });
-    return res.classrooms || [];
+    return { classrooms: res.classrooms || [], advisor_rooms: res.advisor_rooms || [] };
 }
 
 // ─── ATTENDANCE ───
@@ -703,8 +706,6 @@ function resetAttForm() {
             <p class="text-xs mt-1">เลือกห้องเรียนและวันที่ แล้วกด "โหลดรายชื่อ" เพื่อเช็คชื่อห้องต่อไป</p>
         </td></tr>`;
     document.getElementById('att-actions').classList.add('hidden');
-    document.getElementById('att-classroom').value = '';
-    document.getElementById('att-date').value = '';
 }
 
 // ─── CHECKOUT ───

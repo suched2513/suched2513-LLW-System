@@ -114,42 +114,25 @@ try {
 
     $pdo->commit();
 
-    // ─── 8. ส่งแจ้งเตือน Telegram ───
+    // ─── 8. ส่งแจ้งเตือน Telegram (พร้อมระบบ Multi-Token & Multi-Chat Fallback) ───
     try {
-        // ดึง admin_chat_id ก่อน (มีอยู่แน่) แล้วค่อย leave_chat_id + leave_bot_token แยก
-        $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
-        $config  = $stmtSet ? $stmtSet->fetch() : null;
+        $typeMap    = ['sick' => 'ลาป่วย', 'personal' => 'ลากิจส่วนตัว', 'vacation' => 'ลาพักผ่อน', 'maternity' => 'ลาคลอดบุตร', 'other' => 'ลาอื่นๆ'];
+        $typeName   = htmlspecialchars($typeMap[$leaveType] ?? 'ไม่ระบุ', ENT_QUOTES, 'UTF-8');
+        $scheme     = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $leaveUrl   = "{$scheme}://" . ($_SERVER['HTTP_HOST'] ?? 'llw.krusuched.com') . "/teacher_leave/";
+        $safeUser   = htmlspecialchars($_SESSION['fullname'] ?? '-', ENT_QUOTES, 'UTF-8');
+        $safeReason = htmlspecialchars($reason, ENT_QUOTES, 'UTF-8');
 
-        $leaveChatId   = '';
-        $leaveBotToken = '';
-        try {
-            $lcs = $pdo->query("SELECT leave_chat_id, leave_bot_token FROM wfh_system_settings LIMIT 1");
-            if ($lcs && ($lRow = $lcs->fetch(PDO::FETCH_ASSOC))) {
-                $leaveChatId   = (string)($lRow['leave_chat_id'] ?? '');
-                $leaveBotToken = (string)($lRow['leave_bot_token'] ?? '');
-            }
-        } catch (\Throwable $ignore) {}
+        $msg  = $attachmentPath ? "📝📎 <b>ยื่นใบลาใหม่ (มีไฟล์แนบ)</b>\n" : "📝 <b>ยื่นใบลาใหม่</b>\n";
+        $msg .= "👤 ผู้ลา: {$safeUser}\n";
+        $msg .= "📂 ประเภท: {$typeName}\n";
+        $msg .= "🗓 วันที่: " . htmlspecialchars($dateStart, ENT_QUOTES, 'UTF-8') . " ถึง " . htmlspecialchars($dateEnd, ENT_QUOTES, 'UTF-8') . "\n";
+        $msg .= "⏱ จำนวน: {$daysCount} วัน\n";
+        $msg .= "🔍 เหตุผล: {$safeReason}\n";
+        $msg .= "-------------------\n";
+        $msg .= "🔗 <a href=\"{$leaveUrl}\">กดที่นี่เพื่ออนุมัติใบลา</a>";
 
-        $tgToken  = !empty($leaveBotToken) ? $leaveBotToken : ($config['telegram_token'] ?? '');
-        $tgChatId = !empty($leaveChatId)   ? $leaveChatId   : ($config['admin_chat_id']  ?? '');
-
-        if ($config && !empty($tgToken) && !empty($tgChatId)) {
-            $typeMap  = ['sick' => 'ลาป่วย', 'personal' => 'ลากิจส่วนตัว', 'vacation' => 'ลาพักผ่อน', 'maternity' => 'ลาคลอดบุตร', 'other' => 'ลาอื่นๆ'];
-            $typeName = $typeMap[$leaveType] ?? 'ไม่ระบุ';
-            $scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-            $leaveUrl = "{$scheme}://" . ($_SERVER['HTTP_HOST'] ?? 'llw.krusuched.com') . "/teacher_leave/";
-
-            $msg  = $attachmentPath ? "📝📎 <b>ยื่นใบลาใหม่ (มีไฟล์แนบ)</b>\n" : "📝 <b>ยื่นใบลาใหม่</b>\n";
-            $msg .= "👤 ผู้ลา: " . $_SESSION['fullname'] . "\n";
-            $msg .= "📂 ประเภท: " . $typeName . "\n";
-            $msg .= "🗓 วันที่: " . $dateStart . " ถึง " . $dateEnd . "\n";
-            $msg .= "⏱ จำนวน: " . $daysCount . " วัน\n";
-            $msg .= "🔍 เหตุผล: " . $reason . "\n";
-            $msg .= "-------------------\n";
-            $msg .= "🔗 <a href=\"{$leaveUrl}\">กดที่นี่เพื่ออนุมัติใบลา</a>";
-
-            sendTelegramMessage($tgToken, $tgChatId, $msg);
-        }
+        Telegram::sendLeaveNotify($pdo, $msg);
     } catch (\Throwable $tgEx) {
         error_log("Telegram Error: " . $tgEx->getMessage());
     }

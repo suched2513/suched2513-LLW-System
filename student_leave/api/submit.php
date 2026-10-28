@@ -100,34 +100,31 @@ try {
 
     $pdo->commit();
 
-    // ── แจ้งเตือน Telegram เข้ากลุ่มเช็คชื่อนักเรียน (att_bot_token + att_chat_id) ──
+    // ── แจ้งเตือน Telegram เข้ากลุ่มเช็คชื่อนักเรียน (พร้อมระบบ Fallback อัตโนมัติ) ──
     try {
         require_once __DIR__ . '/../../includes/telegram_bot.php';
         $stInfo = $pdo->prepare("SELECT name, classroom FROM att_students WHERE student_id = ? LIMIT 1");
         $stInfo->execute([$student_id]);
         $stu = $stInfo->fetch(PDO::FETCH_ASSOC);
-        $stuName = $stu['name'] ?? $student_id;
-        $stuRoom = $stu['classroom'] ?? '-';
+        $stuName = htmlspecialchars($stu['name'] ?? $student_id, ENT_QUOTES, 'UTF-8');
+        $stuRoom = htmlspecialchars($stu['classroom'] ?? '-', ENT_QUOTES, 'UTF-8');
+        $safeSid = htmlspecialchars($student_id, ENT_QUOTES, 'UTF-8');
+        $safeReason = htmlspecialchars($reason, ENT_QUOTES, 'UTF-8');
 
-        $settings  = $pdo->query("SELECT * FROM wfh_system_settings LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-        $attToken  = !empty($settings['att_bot_token']) ? $settings['att_bot_token'] : ($settings['telegram_token'] ?? '');
-        $attChatId = !empty($settings['att_chat_id'])   ? $settings['att_chat_id']   : ($settings['admin_chat_id']  ?? '');
-
-        if ($attToken && $attChatId) {
-            $typeMap = ['sick' => 'ลาป่วย', 'personal' => 'ลากิจ', 'other' => 'ลาอื่นๆ'];
-            $tLabel  = $typeMap[$leave_type] ?? $leave_type;
-            $msg  = "📄 <b>แจ้งใบลานักเรียนใหม่</b>\n";
-            $msg .= "👤 นักเรียน: {$stuName} (รหัส {$student_id})\n";
-            $msg .= "🏫 ชั้น: {$stuRoom}\n";
-            $msg .= "📂 ประเภท: {$tLabel} ({$days} วัน)\n";
-            $msg .= "📅 วันที่ลา: " . date('d/m/Y', strtotime($date_from)) . " ถึง " . date('d/m/Y', strtotime($date_to)) . "\n";
-            $msg .= "📝 เหตุผล: {$reason}";
-            if ($parent_name) {
-                $msg .= "\n👪 ผู้ปกครอง: {$parent_name}" . ($parent_phone ? " ({$parent_phone})" : "");
-            }
-            Telegram::init($attToken);
-            Telegram::sendMessage($msg, $attChatId);
+        $typeMap = ['sick' => 'ลาป่วย', 'personal' => 'ลากิจ', 'other' => 'ลาอื่นๆ'];
+        $tLabel  = htmlspecialchars($typeMap[$leave_type] ?? $leave_type, ENT_QUOTES, 'UTF-8');
+        $msg  = "📄 <b>แจ้งใบลานักเรียนใหม่</b>\n";
+        $msg .= "👤 นักเรียน: {$stuName} (รหัส {$safeSid})\n";
+        $msg .= "🏫 ชั้น: {$stuRoom}\n";
+        $msg .= "📂 ประเภท: {$tLabel} ({$days} วัน)\n";
+        $msg .= "📅 วันที่ลา: " . date('d/m/Y', strtotime($date_from)) . " ถึง " . date('d/m/Y', strtotime($date_to)) . "\n";
+        $msg .= "📝 เหตุผล: {$safeReason}";
+        if ($parent_name) {
+            $safeParent = htmlspecialchars($parent_name, ENT_QUOTES, 'UTF-8');
+            $safePhone  = htmlspecialchars($parent_phone, ENT_QUOTES, 'UTF-8');
+            $msg .= "\n👪 ผู้ปกครอง: {$safeParent}" . ($safePhone ? " ({$safePhone})" : "");
         }
+        Telegram::sendAttendanceNotify($pdo, $msg);
     } catch (\Throwable $tgErr) {
         error_log('[stl submit telegram] ' . $tgErr->getMessage());
     }

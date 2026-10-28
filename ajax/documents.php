@@ -276,17 +276,7 @@ function handleSendTelegram(PDO $pdo): void {
     $text .= 'เรื่อง: ' . htmlspecialchars($doc['subject'], ENT_QUOTES, 'UTF-8') . "\n";
     $text .= 'แจ้งโดย: ' . htmlspecialchars($_SESSION['firstname'] ?? 'ระบบ', ENT_QUOTES, 'UTF-8');
 
-    $stmtSet = $pdo->query("SELECT telegram_token, admin_chat_id FROM wfh_system_settings LIMIT 1");
-    $tgSet   = $stmtSet ? $stmtSet->fetch(PDO::FETCH_ASSOC) : [];
-    $tgToken = $tgSet['telegram_token'] ?? '';
-    $tgChat  = $tgSet['admin_chat_id']  ?? '';
-
-    if (empty($tgToken) || empty($tgChat)) {
-        throw new Exception('ไม่ได้ตั้งค่า Telegram Token/ChatID ในระบบ');
-    }
-
-    Telegram::init($tgToken);
-    $res = Telegram::sendMessage($text, $tgChat);
+    $res = Telegram::sendWfhNotify($pdo, $text);
     if (!($res['ok'] ?? false)) {
         throw new Exception('ไม่สามารถส่ง Telegram ได้: ' . ($res['description'] ?? ''));
     }

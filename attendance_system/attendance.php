@@ -97,7 +97,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['status'])) {
                 $msg .= "\n\n<b>รายชื่อ:</b>\n" . implode("\n", $absentees);
             }
 
-            $tgResult = Telegram::sendAttendanceNotify($pdo, $msg, $customSubChat);
+            $tgResult = Telegram::sendAttendanceNotify($pdo, $msg, null);
+            if ($customSubChat !== null && trim((string)$customSubChat) !== '') {
+                Telegram::sendAttendanceNotify($pdo, $msg, $customSubChat);
+            }
             if (!($tgResult['ok'] ?? false)) {
                 error_log('[Attendance] Telegram failed: ' . ($tgResult['description'] ?? 'unknown'));
             }
