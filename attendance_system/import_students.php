@@ -8,9 +8,9 @@ $pageSubtitle = 'นำเข้าและจัดการรายชื่
 $activeSystem = 'attendance';
 
 $msg = ''; $msgType = ''; $preview = []; $errors = []; $importCount = 0;
-$syncMode = false; $toDeactivate = [];
+$syncMode = false; $toDeactivate = []; $previewClassCounts = [];
 
-$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE (status = 'active' OR status IS NULL) ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+$classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE status = 'active' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
 function makeNidMasked(string $nid): string {
     return substr($nid,0,1).'-'.substr($nid,1,4).'-'.substr($nid,5,5).'-'.substr($nid,10,2).'-'.substr($nid,12,1);
@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $nm  = trim($_POST['name'] ?? '');
         $cls = trim($_POST['classroom'] ?? '');
         $nid = trim($_POST['national_id'] ?? '');
-        $nid = preg_replace('/[^a-zA-Z0-9]/', '', $nid); // Allow G and other letters, remove only special chars like -
+        $nid = preg_replace('/[^a-zA-Z0-9]/', '', $nid);
 
         if (!$sid || !$nm || !$cls || strlen($nid) !== 13) {
             $msg = !$sid || !$nm || !$cls ? 'กรุณากรอกข้อมูลให้ครบถ้วน' : 'เลขบัตรประชาชนต้องมี 13 หลัก';
@@ -36,11 +36,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $hash   = password_hash($nid, PASSWORD_BCRYPT);
                 $masked = makeNidMasked($nid);
-                $st = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, academic_year, status, national_id_hash, national_id_masked)
-                    VALUES (?,?,?,2569,'active',?,?)
-                    ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), academic_year=2569, status='active',
-                    national_id_hash=VALUES(national_id_hash), national_id_masked=VALUES(national_id_masked)");
-                $ok = $st->execute([$sid, $nm, $cls, $hash, $masked]);
+                $chk = $pdo->prepare("SELECT id FROM att_students WHERE student_id = ? ORDER BY id ASC LIMIT 1");
+                $chk->execute([$sid]);
+                $exId = (int)$chk->fetchColumn();
+                if ($exId > 0) {
+                    $st = $pdo->prepare("UPDATE att_students SET name=?, classroom=?, academic_year=2569, status='active', national_id_hash=?, national_id_masked=? WHERE id=?");
+                    $ok = $st->execute([$nm, $cls, $hash, $masked, $exId]);
+                } else {
+                    $st = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, academic_year, status, national_id_hash, national_id_masked)
+                        VALUES (?,?,?,2569,'active',?,?)");
+                    $ok = $st->execute([$sid, $nm, $cls, $hash, $masked]);
+                }
+                if ($ok && function_exists('llw_sync_student_to_modules')) {
+                    llw_sync_student_to_modules($pdo, $sid, $nm, $cls, 'active');
+                }
                 $msg = $ok ? "บันทึกข้อมูล '$nm' สำเร็จ" : 'เกิดข้อผิดพลาด';
                 $msgType = $ok ? 'success' : 'error';
             } catch (Exception $e) { error_log($e->getMessage()); $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error'; }
@@ -68,18 +77,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->prepare("UPDATE att_students SET name=?, classroom=? WHERE id=?")
                         ->execute([$nm, $cls, $dbid]);
                 }
+                $stInfo = $pdo->prepare("SELECT student_id, status FROM att_students WHERE id=? LIMIT 1");
+                $stInfo->execute([$dbid]);
+                if ($sRow = $stInfo->fetch(PDO::FETCH_ASSOC)) {
+                    if (function_exists('llw_sync_student_to_modules')) {
+                        llw_sync_student_to_modules($pdo, $sRow['student_id'], $nm, $cls, $sRow['status'] ?: 'active');
+                    }
+                }
                 $msg = 'อัปเดตข้อมูลสำเร็จ'; $msgType = 'success';
             } catch (Exception $e) { error_log($e->getMessage()); $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error'; }
         }
     }
 
-    // -- Delete student --
+    // -- Delete / Deactivate student --
     if ($do === 'delete_student') {
         $dbid = (int)($_POST['student_db_id'] ?? 0);
         if ($dbid > 0) {
             try {
-                $pdo->prepare("DELETE FROM att_students WHERE id=?")->execute([$dbid]);
-                $msg = 'ลบข้อมูลสำเร็จ'; $msgType = 'success';
+                $stInfo = $pdo->prepare("SELECT student_id, name, classroom FROM att_students WHERE id=? LIMIT 1");
+                $stInfo->execute([$dbid]);
+                $sRow = $stInfo->fetch(PDO::FETCH_ASSOC);
+                try {
+                    $pdo->prepare("UPDATE att_students SET status='inactive' WHERE id=?")->execute([$dbid]);
+                } catch (PDOException $ex) {
+                    $pdo->prepare("UPDATE att_students SET status='moved', status_note='นำออกจากรายชื่อปัจจุบัน' WHERE id=?")->execute([$dbid]);
+                }
+                if ($sRow && function_exists('llw_sync_student_to_modules')) {
+                    llw_sync_student_to_modules($pdo, $sRow['student_id'], $sRow['name'], $sRow['classroom'], 'inactive');
+                }
+                $msg = 'นำรายชื่อออกจากรายการปัจจุบันแล้ว (ประวัติการเช็คชื่อยังถูกเก็บไว้)'; $msgType = 'success';
             } catch (Exception $e) { error_log($e->getMessage()); $msg = 'เกิดข้อผิดพลาด'; $msgType = 'error'; }
         }
     }
@@ -87,7 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // -- Clean invalid (subject codes imported as students) --
     if ($do === 'clean_invalid') {
         try {
-            // ลบ: (1) student_id ตรงกับ subject_code  (2) student_id ไม่ใช่ตัวเลขล้วน
             $del = $pdo->prepare("
                 DELETE FROM att_students
                 WHERE student_id NOT REGEXP '^[0-9]+$'
@@ -110,11 +135,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $content = file_get_contents($file['tmp_name']);
             $content = ltrim($content, "\xEF\xBB\xBF");
             if (!mb_check_encoding($content, 'UTF-8')) {
-                $content = @iconv('TIS-620', 'UTF-8//IGNORE', $content);
+                $converted = @iconv('Windows-874', 'UTF-8//IGNORE', $content);
+                if ($converted === false || $converted === '') {
+                    $converted = @iconv('TIS-620', 'UTF-8//IGNORE', $content);
+                }
+                if ($converted !== false && $converted !== '') {
+                    $content = $converted;
+                }
             }
-            $delimiter = (strpos($content, ';') !== false && strpos($content, ',') === false) ? ';' : ',';
+            $delimiter = (substr_count($content, ';') > substr_count($content, ',')) ? ';' : ',';
             $lines = explode("\n", str_replace(["\r\n", "\r"], "\n", $content));
             $is_first = true;
+            $seenSids = [];
             foreach ($lines as $idx => $line) {
                 if (empty(trim($line))) continue;
                 $row = str_getcsv($line, $delimiter);
@@ -124,27 +156,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $sid  = trim($row[0] ?? '');
                 if (preg_match('/^\d+$/', $sid)) $sid = str_pad($sid, 5, '0', STR_PAD_LEFT);
                 $name = trim($row[1] ?? '');
-                $cls  = trim($row[2] ?? $_POST['classroom_fixed'] ?? '');
+                $fixedCls = trim($_POST['classroom_fixed'] ?? '');
+                $cls  = $fixedCls !== '' ? $fixedCls : trim($row[2] ?? '');
                 $nid  = trim($row[3] ?? '');
                 $nid  = preg_replace('/[^a-zA-Z0-9]/', '', $nid);
-                $mj   = trim($row[4] ?? ''); // Major from 5th column
-                $mj   = preg_replace('/\s+/', ' ', $mj); // Normalize spaces to single space
+                $mj   = trim($row[4] ?? '');
+                $mj   = preg_replace('/\s+/', ' ', $mj);
                 
                 $nid_valid  = strlen($nid) === 13;
                 $nid_masked = $nid_valid ? makeNidMasked($nid) : null;
 
-                if ($sid && $name) {
+                if ($sid && $name && !isset($seenSids[$sid])) {
+                    $seenSids[$sid] = true;
                     $preview[] = [
-                        'student_id'      => $sid,
-                        'name'            => $name,
-                        'classroom'       => $cls,
-                        'major'           => $mj,
-                        'row'             => $idx + 1,
-                        'national_id'     => $nid_valid ? $nid : null,
+                        'student_id'         => $sid,
+                        'name'               => $name,
+                        'classroom'          => $cls,
+                        'major'              => $mj,
+                        'row'                => $idx + 1,
+                        'national_id'        => $nid_valid ? $nid : null,
                         'national_id_masked' => $nid_masked,
-                        'nid_valid'       => $nid_valid,
+                        'nid_valid'          => $nid_valid,
                     ];
+                    $previewClassCounts[$cls] = ($previewClassCounts[$cls] ?? 0) + 1;
                 }
+            }
+            if (!empty($previewClassCounts)) {
+                uksort($previewClassCounts, 'strnatcasecmp');
             }
         }
 
@@ -155,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ids = array_values(array_unique(array_column($preview, 'student_id')));
                 $ph  = implode(',', array_fill(0, count($ids), '?'));
                 $st  = $pdo->prepare("SELECT student_id, name, classroom FROM att_students
-                    WHERE (status = 'active' OR status IS NULL) AND student_id REGEXP '^[0-9]+$'
+                    WHERE status = 'active' AND student_id REGEXP '^[0-9]+$'
                       AND student_id NOT IN (SELECT subject_code FROM att_subjects)
                       AND student_id NOT IN ($ph)
                     ORDER BY classroom, student_id");
@@ -174,23 +212,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $existingMap = [];
             try {
                 foreach ($pdo->query("SELECT id, student_id, national_id_hash, national_id_masked FROM att_students ORDER BY id ASC") as $er) {
-                    if (!isset($existingMap[$er['student_id']])) $existingMap[$er['student_id']] = $er;
+                    $normSid = preg_match('/^\d+$/', trim($er['student_id'])) ? str_pad(trim($er['student_id']), 5, '0', STR_PAD_LEFT) : trim($er['student_id']);
+                    if (!isset($existingMap[$normSid])) $existingMap[$normSid] = $er;
                 }
             } catch (Exception $e) {}
 
-            $stmtUp = $pdo->prepare("UPDATE att_students SET name=:name, classroom=:cls, major=COALESCE( NULLIF(:mj,''), major ), academic_year=2569, status='active',
+            $stmtUp = $pdo->prepare("UPDATE att_students SET student_id=:sid, name=:name, classroom=:cls, major=COALESCE( NULLIF(:mj,''), major ), academic_year=2569, status='active', status_note=NULL,
                 national_id_hash=COALESCE(:nid_hash, national_id_hash),
                 national_id_masked=COALESCE(:nid_masked, national_id_masked)
                 WHERE id=:id");
             $stmtIns = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, major, academic_year, status, national_id_hash, national_id_masked)
-                VALUES (:sid, :name, :cls, :mj, 2569, 'active', :nid_hash, :nid_masked)
-                ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), major=COALESCE(NULLIF(VALUES(major),''), major), academic_year=2569, status='active',
-                national_id_hash=IF(VALUES(national_id_hash) IS NOT NULL, VALUES(national_id_hash), national_id_hash),
-                national_id_masked=IF(VALUES(national_id_masked) IS NOT NULL, VALUES(national_id_masked), national_id_masked)");
+                VALUES (:sid, :name, :cls, :mj, 2569, 'active', :nid_hash, :nid_masked)");
+
+            $keptIds = [];
             $pdo->beginTransaction();
             try {
                 foreach ($data as $p) {
-                    $sid = $p['student_id'];
+                    $sid = preg_match('/^\d+$/', trim($p['student_id'])) ? str_pad(trim($p['student_id']), 5, '0', STR_PAD_LEFT) : trim($p['student_id']);
                     $masked = $p['national_id_masked'] ?? null;
                     $ex = $existingMap[$sid] ?? null;
                     $nid_hash = null;
@@ -201,6 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     if ($ex) {
                         $stmtUp->execute([
+                            ':sid'        => $sid,
                             ':name'       => $p['name'],
                             ':cls'        => $p['classroom'],
                             ':mj'         => $p['major'] ?? null,
@@ -208,6 +247,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ':nid_masked' => $masked,
                             ':id'         => $ex['id'],
                         ]);
+                        $keptIds[] = (int)$ex['id'];
                     } else {
                         $stmtIns->execute([
                             ':sid'        => $sid,
@@ -217,31 +257,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ':nid_hash'   => $nid_hash,
                             ':nid_masked' => $masked,
                         ]);
+                        $newId = (int)$pdo->lastInsertId();
+                        if ($newId > 0) {
+                            $keptIds[] = $newId;
+                            $existingMap[$sid] = ['id' => $newId, 'student_id' => $sid, 'national_id_hash' => $nid_hash, 'national_id_masked' => $masked];
+                        }
                     }
                     $importCount++;
                 }
                 $deactivated = 0;
-                if ($doSync) {
-                    $ids = array_values(array_unique(array_column($data, 'student_id')));
-                    $ph  = implode(',', array_fill(0, count($ids), '?'));
+                if ($doSync && !empty($keptIds)) {
+                    $keptIds = array_values(array_unique($keptIds));
+                    $ph  = implode(',', array_fill(0, count($keptIds), '?'));
                     try {
                         $up = $pdo->prepare("UPDATE att_students SET status = 'inactive'
-                            WHERE (status = 'active' OR status IS NULL) AND student_id REGEXP '^[0-9]+$'
-                              AND student_id NOT IN (SELECT subject_code FROM att_subjects)
-                              AND student_id NOT IN ($ph)");
-                        $up->execute($ids);
+                            WHERE status = 'active' AND id NOT IN ($ph)");
+                        $up->execute($keptIds);
                         $deactivated = $up->rowCount();
                     } catch (PDOException $ex) {
                         $up = $pdo->prepare("UPDATE att_students SET status = 'moved', status_note = 'ไม่อยู่ในไฟล์นำเข้า'
-                            WHERE (status = 'active' OR status IS NULL) AND student_id REGEXP '^[0-9]+$'
-                              AND student_id NOT IN (SELECT subject_code FROM att_subjects)
-                              AND student_id NOT IN ($ph)");
-                        $up->execute($ids);
+                            WHERE status = 'active' AND id NOT IN ($ph)");
+                        $up->execute($keptIds);
                         $deactivated = $up->rowCount();
                     }
                 }
                 $pdo->commit();
-                $msg = "นำเข้าและตั้งรหัสผ่านสำเร็จ $importCount รายการ" . ($doSync ? " · ปิดใช้งานรายชื่อที่ไม่อยู่ในไฟล์ $deactivated คน" : '');
+                if (function_exists('llw_sync_all_active_students_to_modules')) {
+                    llw_sync_all_active_students_to_modules($pdo);
+                }
+                $msg = "นำเข้าและซิงค์ทุกโมดูลสำเร็จ $importCount รายการ" . ($doSync ? " · ปิดใช้งานรายชื่อที่ไม่อยู่ในไฟล์ $deactivated รายการ" : '');
                 $msgType = 'success';
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
@@ -264,8 +308,8 @@ $invalidStudents = $pdo->query("
 
 $filterCls = $_GET['cls'] ?? '';
 $whereQ = $filterCls
-    ? "WHERE classroom = " . $pdo->quote($filterCls) . " AND (status = 'active' OR status IS NULL) AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)"
-    : "WHERE (status = 'active' OR status IS NULL) AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)";
+    ? "WHERE classroom = " . $pdo->quote($filterCls) . " AND status = 'active' AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)"
+    : "WHERE status = 'active' AND student_id REGEXP '^[0-9]+$' AND student_id NOT IN (SELECT subject_code FROM att_subjects)";
 $students = $pdo->query("SELECT * FROM att_students $whereQ ORDER BY classroom, student_id LIMIT 2000")->fetchAll();
 
 require_once __DIR__ . '/components/layout_start.php';
@@ -300,7 +344,6 @@ require_once __DIR__ . '/components/layout_start.php';
                 </button>
             </form>
         </div>
-        <!-- รายการผิดพลาด -->
         <div class="mt-4 max-h-40 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
         <?php foreach ($invalidStudents as $inv): ?>
             <div class="bg-white/70 rounded-xl px-3 py-2 text-xs border border-rose-100">
@@ -324,7 +367,7 @@ require_once __DIR__ . '/components/layout_start.php';
                     </div>
                     <div>
                         <h2 class="text-2xl font-black text-slate-800">นำเข้าข้อมูลนักเรียนแบบกลุ่ม</h2>
-                        <p class="text-sm text-slate-500">อัปเดตห้องเรียน รายชื่อ และรหัสผ่าน (เลขบัตร) ผ่านไฟล์ CSV</p>
+                        <p class="text-sm text-slate-500">อัปเดตห้องเรียน รายชื่อ และรหัสผ่าน (เลขบัตร) พร้อมซิงค์ทุกโมดูลอัตโนมัติ</p>
                     </div>
                 </div>
 
@@ -335,7 +378,7 @@ require_once __DIR__ . '/components/layout_start.php';
                     <div id="dropZone" class="drop-zone rounded-[32px] p-10 flex flex-col items-center justify-center cursor-pointer group">
                         <i class="bi bi-file-earmark-spreadsheet text-5xl text-slate-300 group-hover:text-indigo-500 mb-4 transition-colors"></i>
                         <p class="text-slate-600 font-bold">ลากไฟล์ CSV มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
-                        <p class="text-xs text-slate-400 uppercase tracking-widest mt-2">รองรับ .CSV เท่านั้น (Thai/TIS-620 หรือ UTF-8)</p>
+                        <p class="text-xs text-slate-400 uppercase tracking-widest mt-2">รองรับ .CSV ทุกแบบ (Windows-874 / TIS-620 / UTF-8)</p>
                         <input type="file" name="csvfile" id="fileInput" accept=".csv" class="hidden">
                     </div>
 
@@ -369,9 +412,9 @@ require_once __DIR__ . '/components/layout_start.php';
                             <i class="bi bi-ui-checks"></i>
                         </div>
                         <div>
-                            <h3 class="font-black text-lg">ตรวจสอบความถูกต้อง</h3>
+                            <h3 class="font-black text-lg">ตรวจสอบความถูกต้องก่อนบันทึก</h3>
                             <p class="text-xs opacity-80">
-                                พบ <span class="font-black"><?= count($preview) ?></span> รายการ
+                                พบ <span class="font-black"><?= count($preview) ?></span> รายการ (<?= count($previewClassCounts) ?> ห้องเรียน)
                                 <?php if (count($missingNid) > 0): ?>
                                 · <span class="text-amber-300 font-black"><?= count($missingNid) ?> รายการไม่มีเลขบัตร</span>
                                 <?php endif; ?>
@@ -389,6 +432,24 @@ require_once __DIR__ . '/components/layout_start.php';
                         </button>
                     </form>
                 </div>
+
+                <!-- Classroom Headcount Summary -->
+                <?php if (!empty($previewClassCounts)): ?>
+                <div class="px-8 py-5 bg-indigo-50/60 border-b border-indigo-100">
+                    <p class="text-xs font-black text-indigo-700 uppercase tracking-wider mb-3">
+                        <i class="bi bi-bar-chart-fill me-1.5"></i>สรุปจำนวนนักเรียนแยกตามห้องเรียนในไฟล์ (รวม <?= count($preview) ?> คน)
+                    </p>
+                    <div class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-6 gap-2">
+                        <?php foreach ($previewClassCounts as $clsName => $clsCnt): ?>
+                        <div class="bg-white rounded-xl px-3 py-2 border border-indigo-100 flex items-center justify-between text-xs shadow-sm">
+                            <span class="font-black text-slate-700"><?= htmlspecialchars($clsName ?: '-', ENT_QUOTES, 'UTF-8') ?></span>
+                            <span class="font-mono font-black text-indigo-600"><?= (int)$clsCnt ?> คน</span>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <?php if ($syncMode): ?>
                 <div class="px-8 py-5 bg-rose-50 border-b border-rose-100">
                     <p class="text-sm font-black text-rose-700"><i class="bi bi-person-dash-fill me-2"></i>โหมดแทนที่: จะปิดใช้งาน <?= count($toDeactivate) ?> คนที่ไม่อยู่ในไฟล์</p>
@@ -496,11 +557,11 @@ require_once __DIR__ . '/components/layout_start.php';
                 <div class="absolute -right-10 -bottom-10 text-9xl text-white/10 rotate-12"><i class="bi bi-info-circle"></i></div>
                 <h3 class="font-black text-lg mb-4">รูปแบบไฟล์ CSV</h3>
                 <ul class="text-xs space-y-3 font-medium opacity-90">
-                    <li class="flex gap-2"><i class="bi bi-check-circle"></i> คอลัมน์ 1: เลขประจำตัว (4-5 หลัก)</li>
+                    <li class="flex gap-2"><i class="bi bi-check-circle"></i> คอลัมน์ 1: เลขประจำตัว (4-5 หลัก ระบบเติม 0 ให้อัตโนมัติ)</li>
                     <li class="flex gap-2"><i class="bi bi-check-circle"></i> คอลัมน์ 2: ชื่อ-นามสกุล</li>
                     <li class="flex gap-2"><i class="bi bi-check-circle"></i> คอลัมน์ 3: ห้องเรียน (เช่น ม.1/1)</li>
                     <li class="flex gap-2"><i class="bi bi-shield-lock-fill text-amber-300"></i> <span><strong>คอลัมน์ 4: เลขบัตรประชาชน 13 หลัก</strong><br>ใช้เป็นรหัสผ่านเข้าระบบนักเรียน</span></li>
-                    <li class="flex gap-2"><i class="bi bi-exclamation-circle text-amber-300"></i> หากมีชื่อเดิมอยู่แล้ว ระบบจะอัปเดตห้องและรหัสผ่านให้</li>
+                    <li class="flex gap-2"><i class="bi bi-arrow-repeat text-emerald-300"></i> ซิงค์รายชื่อไปยังหน้าเสาธง พฤติกรรม รถรับ-ส่ง และ Chromebook อัตโนมัติ</li>
                 </ul>
                 <a href="data:text/csv;charset=utf-8,%EF%BB%BFstudent_id%2Cname%2Cclassroom%2Cnational_id%0A04684%2C%E0%B9%80%E0%B8%94%E0%B9%87%E0%B8%81%E0%B8%82%E0%B8%B2%E0%B8%A2%E0%B8%81%E0%B8%B4%E0%B8%95%E0%B8%95%E0%B8%B4%E0%B8%A8%E0%B8%B1%E0%B8%81%E0%B8%94%E0%B8%B4%E0%B9%8C%2C%E0%B8%A1.1%2F1%2C1234567890123"
                    download="student_template.csv"
@@ -663,8 +724,8 @@ require_once __DIR__ . '/components/layout_start.php';
 
     function deleteStudent(id, name) {
         Swal.fire({
-            title: 'ลบข้อมูล?', text: `ต้องการลบรายชื่อ "${name}" ออกจากระบบหรือไม่?`, icon: 'warning',
-            showCancelButton: true, confirmButtonText: 'ใช่, ลบออก', cancelButtonText: 'ยกเลิก',
+            title: 'นำออกจากรายชื่อปัจจุบัน?', text: `ต้องการนำ "${name}" ออกจากรายชื่อนักเรียนปัจจุบันหรือไม่? (ประวัติการเช็คชื่อจะยังถูกเก็บไว้)`, icon: 'warning',
+            showCancelButton: true, confirmButtonText: 'ใช่, นำออก', cancelButtonText: 'ยกเลิก',
             confirmButtonColor: '#e11d48', cancelButtonColor: '#94a3b8',
             customClass: { popup: 'rounded-[32px]', confirmButton: 'rounded-xl px-6 py-3', cancelButton: 'rounded-xl px-6 py-3' }
         }).then(r => {

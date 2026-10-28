@@ -1,25 +1,31 @@
 <?php
 require_once 'db.php';
 
-// Auto-apply pending 548 roster migration once if not yet applied
+// Auto-apply pending roster & stability migrations once if not yet applied
 try {
     if (isset($pdo)) {
-        $migName = '2026_10_28_000003_force_exact_548_roster';
+        $autoMigs = [
+            '2026_10_28_000003_force_exact_548_roster',
+            '2026_10_28_000004_add_stability_indexes_and_constraints',
+        ];
         $chkMig = $pdo->prepare("SELECT 1 FROM _migrations WHERE migration = ? LIMIT 1");
-        $chkMig->execute([$migName]);
-        if (!$chkMig->fetchColumn()) {
-            $migFile = __DIR__ . '/../database/migrations/' . $migName . '.php';
-            if (file_exists($migFile)) {
-                $migDef = require $migFile;
-                if (is_array($migDef) && isset($migDef['up'])) {
-                    $migDef['up']($pdo);
-                    $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, 99)")->execute([$migName]);
+        $insMig = $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, 99)");
+        foreach ($autoMigs as $migName) {
+            $chkMig->execute([$migName]);
+            if (!$chkMig->fetchColumn()) {
+                $migFile = __DIR__ . '/../database/migrations/' . $migName . '.php';
+                if (file_exists($migFile)) {
+                    $migDef = require $migFile;
+                    if (is_array($migDef) && isset($migDef['up'])) {
+                        $migDef['up']($pdo);
+                        $insMig->execute([$migName]);
+                    }
                 }
             }
         }
     }
 } catch (Throwable $e) {
-    error_log('[functions auto-roster] ' . $e->getMessage());
+    error_log('[functions auto-migrate] ' . $e->getMessage());
 }
 
 // เปิดใช้งาน session
@@ -94,8 +100,6 @@ function checkLogin() {
         exit();
     }
 
-    // 2. ถ้ามี Role แต่ไม่มี teacher_id (กรณีย้ายเครื่อง หรือ Session บางส่วนหาย)
-    // พยายามดึง teacher_id จาก username หรือกำหนดเป็น 0 สำหรับ admin
     // 2. ถ้ามี Role แต่ไม่มี teacher_id (หรือเป็น 0)
     // ต้องทำให้แน่ใจว่าทุกคนที่เข้าหน้านี้มีเรคอร์ดใน att_teachers เพื่อป้องกัน FK Violation
     if (!isset($_SESSION['teacher_id']) || (int)$_SESSION['teacher_id'] === 0) {
@@ -258,12 +262,12 @@ function timeToMinutes($timeStr) {
 }
 
 /**
- * บันทึกการเช็คชื่อ
+ * บันทึกการเช็คชื่อ (ใช้ att_students.id เป็น integer FK และป้องกันการกดบันทึกซ้ำ)
  */
 function saveAttendance($date, $period, $subject_id, $teacher_id, $student_id, $status, $time_in, $start_time, $note, $pdo) {
-    // 0. Normalize student ID
-    if (preg_match('/^\d+$/', $student_id)) {
-        $student_id = str_pad($student_id, 5, '0', STR_PAD_LEFT);
+    $student_db_id = (int)$student_id;
+    if ($student_db_id <= 0) {
+        return false;
     }
 
     // 1. Calculate Late Status automatically
@@ -276,12 +280,12 @@ function saveAttendance($date, $period, $subject_id, $teacher_id, $student_id, $
     }
 
     // 2. Check for existing record
-    $checkStmt = $pdo->prepare("SELECT id FROM att_attendance WHERE date = :date AND period = :period AND subject_id = :subject_id AND student_id = :student_id");
+    $checkStmt = $pdo->prepare("SELECT id FROM att_attendance WHERE date = :date AND period = :period AND subject_id = :subject_id AND student_id = :student_id LIMIT 1");
     $checkStmt->execute([
         'date' => $date,
         'period' => $period,
         'subject_id' => $subject_id,
-        'student_id' => $student_id
+        'student_id' => $student_db_id
     ]);
     $existing = $checkStmt->fetch();
 
@@ -302,11 +306,128 @@ function saveAttendance($date, $period, $subject_id, $teacher_id, $student_id, $
         $params['date']       = $date;
         $params['period']     = $period;
         $params['subject_id'] = $subject_id;
-        $params['student_id'] = $student_id;
+        $params['student_id'] = $student_db_id;
         $stmt = $pdo->prepare("INSERT INTO att_attendance (date, period, subject_id, teacher_id, student_id, status, time_in, note) 
-                              VALUES (:date, :period, :subject_id, :teacher_id, :student_id, :status, :time_in, :note)");
+                              VALUES (:date, :period, :subject_id, :teacher_id, :student_id, :status, :time_in, :note)
+                              ON DUPLICATE KEY UPDATE status=VALUES(status), time_in=VALUES(time_in), note=VALUES(note), teacher_id=VALUES(teacher_id)");
         return $stmt->execute($params);
     }
+}
+
+/**
+ * ซิงค์ข้อมูลนักเรียนรายบุคคลไปยังโมดูลอื่นๆ (Assembly, Behavior, Bus, Chromebook)
+ * เพื่อให้ทุกโมดูลมีข้อมูลตรงกับ att_students เสมอ (Single Source of Truth)
+ */
+function llw_sync_student_to_modules(PDO $pdo, string $student_id, string $name, string $classroom, string $status = 'active'): void {
+    $sid = preg_match('/^\d+$/', trim($student_id)) ? str_pad(trim($student_id), 5, '0', STR_PAD_LEFT) : trim($student_id);
+    if ($sid === '') return;
+
+    $isActive = ($status === 'active');
+
+    // 1. assembly_students
+    try {
+        if ($isActive) {
+            $st = $pdo->prepare("INSERT INTO assembly_students (student_id, name, classroom) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom)");
+            $st->execute([$sid, $name, $classroom]);
+        } else {
+            $pdo->prepare("DELETE FROM assembly_students WHERE student_id = ?")->execute([$sid]);
+        }
+    } catch (Throwable $e) {}
+
+    // 2. beh_students
+    try {
+        if ($isActive) {
+            $level = $classroom;
+            $room  = '';
+            if (strpos($classroom, '/') !== false) {
+                [$level, $room] = array_map('trim', explode('/', $classroom, 2));
+            }
+            $st = $pdo->prepare("INSERT INTO beh_students (student_id, name, level, room, status) VALUES (?, ?, ?, ?, 'active') ON DUPLICATE KEY UPDATE name=VALUES(name), level=VALUES(level), room=VALUES(room), status='active'");
+            $st->execute([$sid, $name, $level, $room]);
+        } else {
+            $pdo->prepare("UPDATE beh_students SET status = 'inactive' WHERE student_id = ?")->execute([$sid]);
+        }
+    } catch (Throwable $e) {}
+
+    // 3. bus_students
+    try {
+        if ($isActive) {
+            $pdo->prepare("UPDATE bus_students SET name = ?, classroom = ? WHERE student_id = ?")->execute([$name, $classroom, $sid]);
+        } else {
+            $pdo->prepare("UPDATE bus_students SET is_active = 0 WHERE student_id = ?")->execute([$sid]);
+        }
+    } catch (Throwable $e) {}
+
+    // 4. cb_students
+    try {
+        if ($isActive) {
+            $st = $pdo->prepare("INSERT INTO cb_students (student_id, name, class_name) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name), class_name=VALUES(class_name)");
+            $st->execute([$sid, $name, $classroom]);
+        }
+    } catch (Throwable $e) {}
+}
+
+/**
+ * ซิงค์รายชื่อนักเรียนที่ active ทั้งหมดจาก att_students ไปยังโมดูลอื่นๆ
+ */
+function llw_sync_all_active_students_to_modules(PDO $pdo): void {
+    try {
+        $rows = $pdo->query("
+            SELECT student_id, name, classroom
+            FROM att_students
+            WHERE status = 'active'
+              AND student_id REGEXP '^[0-9]+$'
+              AND student_id NOT IN (SELECT subject_code FROM att_subjects)
+            ORDER BY id ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        return;
+    }
+
+    if (empty($rows)) return;
+
+    $activeSids = array_values(array_unique(array_column($rows, 'student_id')));
+    $phSids = implode(',', array_fill(0, count($activeSids), '?'));
+
+    // 1. assembly_students
+    try {
+        $pdo->prepare("DELETE FROM assembly_students WHERE student_id NOT IN ($phSids)")->execute($activeSids);
+        $stAsm = $pdo->prepare("INSERT INTO assembly_students (student_id, name, classroom) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom)");
+        foreach ($rows as $r) {
+            $stAsm->execute([$r['student_id'], $r['name'], $r['classroom']]);
+        }
+    } catch (Throwable $e) {}
+
+    // 2. beh_students
+    try {
+        $pdo->prepare("UPDATE beh_students SET status = 'inactive' WHERE student_id NOT IN ($phSids)")->execute($activeSids);
+        $stBeh = $pdo->prepare("INSERT INTO beh_students (student_id, name, level, room, status) VALUES (?, ?, ?, ?, 'active') ON DUPLICATE KEY UPDATE name=VALUES(name), level=VALUES(level), room=VALUES(room), status='active'");
+        foreach ($rows as $r) {
+            $level = $r['classroom'];
+            $room  = '';
+            if (strpos($r['classroom'], '/') !== false) {
+                [$level, $room] = array_map('trim', explode('/', $r['classroom'], 2));
+            }
+            $stBeh->execute([$r['student_id'], $r['name'], $level, $room]);
+        }
+    } catch (Throwable $e) {}
+
+    // 3. bus_students
+    try {
+        $pdo->prepare("UPDATE bus_students SET is_active = 0 WHERE student_id NOT IN ($phSids)")->execute($activeSids);
+        $stBus = $pdo->prepare("UPDATE bus_students SET name = ?, classroom = ? WHERE student_id = ?");
+        foreach ($rows as $r) {
+            $stBus->execute([$r['name'], $r['classroom'], $r['student_id']]);
+        }
+    } catch (Throwable $e) {}
+
+    // 4. cb_students
+    try {
+        $stCb = $pdo->prepare("INSERT INTO cb_students (student_id, name, class_name) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name), class_name=VALUES(class_name)");
+        foreach ($rows as $r) {
+            $stCb->execute([$r['student_id'], $r['name'], $r['classroom']]);
+        }
+    } catch (Throwable $e) {}
 }
 
 /**

@@ -177,39 +177,23 @@ jobs:
               $pdo->exec("CREATE TABLE IF NOT EXISTS _migrations (id INT AUTO_INCREMENT PRIMARY KEY, migration VARCHAR(255) NOT NULL UNIQUE, batch INT NOT NULL DEFAULT 1, executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
               $executed = $pdo->query("SELECT migration FROM _migrations")->fetchAll(PDO::FETCH_COLUMN);
               $batch = (int)$pdo->query("SELECT COALESCE(MAX(batch), 0) + 1 FROM _migrations")->fetchColumn();
-              $autoTargets = [
-                  '2026_05_05_000001_create_hr_daily_attendance',
-                  '2026_05_09_000002_add_leave_chat_id_to_wfh_system_settings',
-                  '2026_05_09_000003_add_duty_chat_id_and_evening_shift',
-                  '2026_05_09_000004_add_duty_bot_token_to_settings',
-                  '2026_05_09_000005_add_att_chat_id_to_wfh_system_settings',
-                  '2026_05_09_000006_add_att_bot_token_to_wfh_system_settings',
-                  '2026_10_20_233000_add_semester_support',
-                  '2026_10_24_233000_system_stability_and_performance',
-                  '2026_10_25_000001_add_leave_bot_token_to_wfh_system_settings',
-                  '2026_10_26_220000_create_learning_media_table',
-                  '2026_10_26_223000_enhance_learning_media_system',
-                  '2026_10_26_231500_add_approvals_to_learning_media',
-                  '2026_10_27_000001_add_attachments_to_lms_unit_exercises',
-                  '2026_10_27_000002_set_club_semester_2',
-                  '2026_10_28_000001_add_inactive_to_att_students_status',
-                  '2026_10_28_000002_sync_official_548_students',
-                  '2026_10_28_000003_force_exact_548_roster',
-              ];
-              foreach ($autoTargets as $mName) {
+              $migFiles = glob(__DIR__ . '/database/migrations/*.php') ?: [];
+              sort($migFiles);
+              foreach ($migFiles as $mFile) {
+                  $mName = basename($mFile, '.php');
+                  if ($mName < '2026_05_05') {
+                      continue;
+                  }
                   if (!in_array($mName, $executed, true)) {
-                      $mFile = __DIR__ . '/database/migrations/' . $mName . '.php';
-                      if (file_exists($mFile)) {
-                          try {
-                              $m = require $mFile;
-                              if (is_array($m) && isset($m['up'])) {
-                                  $m['up']($pdo);
-                                  $st = $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, ?)");
-                                  $st->execute([$mName, $batch]);
-                              }
-                          } catch (Throwable $me) {
-                              error_log('[Deploy Auto-Migrate ' . $mName . '] ' . $me->getMessage());
+                      try {
+                          $m = require $mFile;
+                          if (is_array($m) && isset($m['up'])) {
+                              $m['up']($pdo);
+                              $st = $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, ?)");
+                              $st->execute([$mName, $batch]);
                           }
+                      } catch (Throwable $me) {
+                          error_log('[Deploy Auto-Migrate ' . $mName . '] ' . $me->getMessage());
                       }
                   }
               }

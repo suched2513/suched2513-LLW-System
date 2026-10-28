@@ -445,13 +445,13 @@ require_once '../components/layout_start.php';
         </form>
     </div>
     <?php elseif ($selected_subject_id):
-        // วินิจฉัย: ดูว่าห้องนี้มีนักเรียนกี่คนในระบบ
+        // วินิจฉัย: ดูว่าห้องนี้มีนักเรียนกี่คนในระบบ (เฉพาะ active)
         $diagCls      = $subject_info['classroom'] ?? '';
-        $diagAllCount = (int)$pdo->query("SELECT COUNT(*) FROM att_students")->fetchColumn();
-        $diagCls2     = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
+        $diagAllCount = (int)$pdo->query("SELECT COUNT(*) FROM att_students WHERE status = 'active'")->fetchColumn();
+        $diagCls2     = $pdo->query("SELECT DISTINCT classroom FROM att_students WHERE status = 'active' ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
         $diagCount = 0;
         if ($diagCls) {
-            $dStmt = $pdo->prepare("SELECT COUNT(*) FROM att_students WHERE classroom=?");
+            $dStmt = $pdo->prepare("SELECT COUNT(*) FROM att_students WHERE classroom=? AND status = 'active'");
             $dStmt->execute([$diagCls]);
             $diagCount = (int)$dStmt->fetchColumn();
         }
@@ -590,8 +590,11 @@ require_once '../components/layout_start.php';
         document.getElementById('count-อื่น').textContent = 'อื่นๆ ' + other;
     }
 
+    let isSubmittingAttendance = false;
     function confirmSave(e) {
         e.preventDefault();
+        if (isSubmittingAttendance) return false;
+
         let absent=0, skip=0;
         document.querySelectorAll('input[type="radio"]:checked').forEach(r => { 
             if(r.value==='ขาด') absent++; 
@@ -613,7 +616,13 @@ require_once '../components/layout_start.php';
             confirmButtonColor: '#2563eb',
             borderRadius: '20px'
         }).then(r => {
-            if(r.isConfirmed) {
+            if(r.isConfirmed && !isSubmittingAttendance) {
+                isSubmittingAttendance = true;
+                const saveBtn = document.getElementById('save-btn');
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
                 Swal.fire({ title: 'กำลังดำเนินการ...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
                 document.getElementById('attendance-form').submit();
             }

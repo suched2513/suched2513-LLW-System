@@ -94,11 +94,22 @@ if ($action === 'add_student') {
     $cls   = trim($_POST['student_classroom']);
     if (!$sname || !$sid || !$cls) { $msg = 'กรุณากรอกข้อมูลให้ครบถ้วน'; $msgType = 'error'; }
     else {
-        $chk = $pdo->prepare("SELECT id FROM att_students WHERE student_id=? AND classroom=?");
-        $chk->execute([$sid, $cls]);
-        if ($chk->fetch()) { $msg = "รหัส '$sid' มีอยู่ในห้องนี้แล้ว"; $msgType = 'error'; }
-        else {
-            $pdo->prepare("INSERT INTO att_students (student_id, name, classroom) VALUES (?,?,?)")->execute([$sid, $sname, $cls]);
+        $chk = $pdo->prepare("SELECT id, status FROM att_students WHERE student_id=? LIMIT 1");
+        $chk->execute([$sid]);
+        $exRow = $chk->fetch(PDO::FETCH_ASSOC);
+        if ($exRow && ($exRow['status'] ?? 'active') === 'active') {
+            $msg = "รหัส '$sid' มีอยู่ในระบบแล้ว"; $msgType = 'error';
+        } elseif ($exRow) {
+            $pdo->prepare("UPDATE att_students SET name=?, classroom=?, status='active', status_note=NULL WHERE id=?")->execute([$sname, $cls, $exRow['id']]);
+            if (function_exists('llw_sync_student_to_modules')) {
+                llw_sync_student_to_modules($pdo, $sid, $sname, $cls, 'active');
+            }
+            $msg = "เปิดใช้งานและอัปเดตนักเรียน '$sname' สำเร็จ";
+        } else {
+            $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, status) VALUES (?,?,?,'active')")->execute([$sid, $sname, $cls]);
+            if (function_exists('llw_sync_student_to_modules')) {
+                llw_sync_student_to_modules($pdo, $sid, $sname, $cls, 'active');
+            }
             $msg = "เพิ่มนักเรียน '$sname' สำเร็จ";
         }
     }
@@ -112,6 +123,12 @@ if ($action === 'add_student') {
     $cls   = trim($_POST['student_classroom']);
     if ($eid && $sname && $sid && $cls) {
         $pdo->prepare("UPDATE att_students SET name=?, student_id=?, classroom=? WHERE id=?")->execute([$sname, $sid, $cls, $eid]);
+        $stCur = $pdo->prepare("SELECT status FROM att_students WHERE id=? LIMIT 1");
+        $stCur->execute([$eid]);
+        $curStatus = $stCur->fetchColumn() ?: 'active';
+        if (function_exists('llw_sync_student_to_modules')) {
+            llw_sync_student_to_modules($pdo, $sid, $sname, $cls, (string)$curStatus);
+        }
         $msg = 'แก้ไขนักเรียนสำเร็จ';
     }
 } elseif ($action === 'delete_student') {
@@ -120,6 +137,13 @@ if ($action === 'add_student') {
     $note   = trim($_POST['status_note'] ?? '');
     if ($eid) {
         $pdo->prepare("UPDATE att_students SET status=?, status_note=? WHERE id=?")->execute([$status, $note, $eid]);
+        $stInfo = $pdo->prepare("SELECT student_id, name, classroom FROM att_students WHERE id=? LIMIT 1");
+        $stInfo->execute([$eid]);
+        if ($sRow = $stInfo->fetch(PDO::FETCH_ASSOC)) {
+            if (function_exists('llw_sync_student_to_modules')) {
+                llw_sync_student_to_modules($pdo, $sRow['student_id'], $sRow['name'], $sRow['classroom'], $status);
+            }
+        }
         $msg = 'ปรับสถานะนักเรียนเรียบร้อย';
     }
 }
