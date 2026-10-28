@@ -194,16 +194,21 @@ jobs:
                   '2026_10_27_000002_set_club_semester_2',
                   '2026_10_28_000001_add_inactive_to_att_students_status',
                   '2026_10_28_000002_sync_official_548_students',
+                  '2026_10_28_000003_force_exact_548_roster',
               ];
               foreach ($autoTargets as $mName) {
                   if (!in_array($mName, $executed, true)) {
                       $mFile = __DIR__ . '/database/migrations/' . $mName . '.php';
                       if (file_exists($mFile)) {
-                          $m = require $mFile;
-                          if (is_array($m) && isset($m['up'])) {
-                              $m['up']($pdo);
-                              $st = $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, ?)");
-                              $st->execute([$mName, $batch]);
+                          try {
+                              $m = require $mFile;
+                              if (is_array($m) && isset($m['up'])) {
+                                  $m['up']($pdo);
+                                  $st = $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, ?)");
+                                  $st->execute([$mName, $batch]);
+                              }
+                          } catch (Throwable $me) {
+                              error_log('[Deploy Auto-Migrate ' . $mName . '] ' . $me->getMessage());
                           }
                       }
                   }

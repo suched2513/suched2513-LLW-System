@@ -1,6 +1,27 @@
 <?php
 require_once 'db.php';
 
+// Auto-apply pending 548 roster migration once if not yet applied
+try {
+    if (isset($pdo)) {
+        $migName = '2026_10_28_000003_force_exact_548_roster';
+        $chkMig = $pdo->prepare("SELECT 1 FROM _migrations WHERE migration = ? LIMIT 1");
+        $chkMig->execute([$migName]);
+        if (!$chkMig->fetchColumn()) {
+            $migFile = __DIR__ . '/../database/migrations/' . $migName . '.php';
+            if (file_exists($migFile)) {
+                $migDef = require $migFile;
+                if (is_array($migDef) && isset($migDef['up'])) {
+                    $migDef['up']($pdo);
+                    $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, 99)")->execute([$migName]);
+                }
+            }
+        }
+    }
+} catch (Throwable $e) {
+    error_log('[functions auto-roster] ' . $e->getMessage());
+}
+
 // เปิดใช้งาน session
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
