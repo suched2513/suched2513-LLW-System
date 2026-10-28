@@ -171,26 +171,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = json_decode($_POST['json_data'], true);
         $doSync = ($_POST['sync_mode'] ?? '') === '1';
         if ($data) {
-            $stmt = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, major, academic_year, status, national_id_hash, national_id_masked)
+            $existingMap = [];
+            try {
+                foreach ($pdo->query("SELECT id, student_id, national_id_hash, national_id_masked FROM att_students ORDER BY id ASC") as $er) {
+                    if (!isset($existingMap[$er['student_id']])) $existingMap[$er['student_id']] = $er;
+                }
+            } catch (Exception $e) {}
+
+            $stmtUp = $pdo->prepare("UPDATE att_students SET name=:name, classroom=:cls, major=COALESCE( NULLIF(:mj,''), major ), academic_year=2569, status='active',
+                national_id_hash=COALESCE(:nid_hash, national_id_hash),
+                national_id_masked=COALESCE(:nid_masked, national_id_masked)
+                WHERE id=:id");
+            $stmtIns = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, major, academic_year, status, national_id_hash, national_id_masked)
                 VALUES (:sid, :name, :cls, :mj, 2569, 'active', :nid_hash, :nid_masked)
-                ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), major=VALUES(major), academic_year=2569, status='active',
+                ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), major=COALESCE(NULLIF(VALUES(major),''), major), academic_year=2569, status='active',
                 national_id_hash=IF(VALUES(national_id_hash) IS NOT NULL, VALUES(national_id_hash), national_id_hash),
                 national_id_masked=IF(VALUES(national_id_masked) IS NOT NULL, VALUES(national_id_masked), national_id_masked)");
             $pdo->beginTransaction();
             try {
                 foreach ($data as $p) {
+                    $sid = $p['student_id'];
+                    $masked = $p['national_id_masked'] ?? null;
+                    $ex = $existingMap[$sid] ?? null;
                     $nid_hash = null;
-                    if (!empty($p['national_id'])) {
-                        $nid_hash = password_hash($p['national_id'], PASSWORD_BCRYPT);
+                    if ($ex && !empty($ex['national_id_hash']) && $ex['national_id_masked'] === $masked) {
+                        $nid_hash = $ex['national_id_hash'];
+                    } elseif (!empty($p['national_id'])) {
+                        $nid_hash = password_hash($p['national_id'], PASSWORD_BCRYPT, ['cost' => 5]);
                     }
-                    $stmt->execute([
-                        ':sid'        => $p['student_id'],
-                        ':name'       => $p['name'],
-                        ':cls'        => $p['classroom'],
-                        ':mj'         => $p['major'] ?? null,
-                        ':nid_hash'   => $nid_hash,
-                        ':nid_masked' => $p['national_id_masked'] ?? null,
-                    ]);
+                    if ($ex) {
+                        $stmtUp->execute([
+                            ':name'       => $p['name'],
+                            ':cls'        => $p['classroom'],
+                            ':mj'         => $p['major'] ?? null,
+                            ':nid_hash'   => $nid_hash,
+                            ':nid_masked' => $masked,
+                            ':id'         => $ex['id'],
+                        ]);
+                    } else {
+                        $stmtIns->execute([
+                            ':sid'        => $sid,
+                            ':name'       => $p['name'],
+                            ':cls'        => $p['classroom'],
+                            ':mj'         => $p['major'] ?? null,
+                            ':nid_hash'   => $nid_hash,
+                            ':nid_masked' => $masked,
+                        ]);
+                    }
                     $importCount++;
                 }
                 $deactivated = 0;
