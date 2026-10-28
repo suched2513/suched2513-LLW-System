@@ -202,16 +202,22 @@ class Telegram
         }
         self::$migrationChecked = true;
         try {
-            $migName = '2026_10_29_000001_fix_roles_advisors_and_telegram_settings';
+            $migNames = [
+                '2026_10_29_000001_fix_roles_advisors_and_telegram_settings',
+                '2026_10_29_000002_verify_llw20_and_relink_advisors_by_name',
+            ];
             $chk = $pdo->prepare("SELECT 1 FROM _migrations WHERE migration = ? LIMIT 1");
-            $chk->execute([$migName]);
-            if (!$chk->fetchColumn()) {
-                $migFile = __DIR__ . '/../database/migrations/' . $migName . '.php';
-                if (file_exists($migFile)) {
-                    $migDef = require $migFile;
-                    if (is_array($migDef) && isset($migDef['up'])) {
-                        $migDef['up']($pdo);
-                        $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, 99)")->execute([$migName]);
+            $ins = $pdo->prepare("INSERT IGNORE INTO _migrations (migration, batch) VALUES (?, 99)");
+            foreach ($migNames as $migName) {
+                $chk->execute([$migName]);
+                if (!$chk->fetchColumn()) {
+                    $migFile = __DIR__ . '/../database/migrations/' . $migName . '.php';
+                    if (file_exists($migFile)) {
+                        $migDef = require $migFile;
+                        if (is_array($migDef) && isset($migDef['up'])) {
+                            $migDef['up']($pdo);
+                            $ins->execute([$migName]);
+                        }
                     }
                 }
             }
