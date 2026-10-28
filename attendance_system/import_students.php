@@ -8,6 +8,7 @@ $pageSubtitle = 'นำเข้าและจัดการรายชื่
 $activeSystem = 'attendance';
 
 $msg = ''; $msgType = ''; $preview = []; $errors = []; $importCount = 0;
+$syncMode = false; $toDeactivate = [];
 
 $classrooms = $pdo->query("SELECT DISTINCT classroom FROM att_students ORDER BY classroom")->fetchAll(PDO::FETCH_COLUMN);
 
@@ -146,16 +147,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+
+        // โหมดแทนที่รายชื่อทั้งหมด: หาคนที่ active อยู่แต่ไม่มีในไฟล์
+        $syncMode = !empty($_POST['sync_mode']) && trim($_POST['classroom_fixed'] ?? '') === '';
+        if ($syncMode && !empty($preview)) {
+            try {
+                $ids = array_values(array_unique(array_column($preview, 'student_id')));
+                $ph  = implode(',', array_fill(0, count($ids), '?'));
+                $st  = $pdo->prepare("SELECT student_id, name, classroom FROM att_students
+                    WHERE status = 'active' AND student_id REGEXP '^[0-9]+$'
+                      AND student_id NOT IN (SELECT subject_code FROM att_subjects)
+                      AND student_id NOT IN ($ph)
+                    ORDER BY classroom, student_id");
+                $st->execute($ids);
+                $toDeactivate = $st->fetchAll();
+            } catch (Exception $e) { error_log($e->getMessage()); $syncMode = false; }
+        }
     }
 
     // -- Import (hash NID here to avoid timeout during preview) --
     if ($do === 'import' && !empty($_POST['json_data'])) {
         set_time_limit(300);
         $data = json_decode($_POST['json_data'], true);
+        $doSync = ($_POST['sync_mode'] ?? '') === '1';
         if ($data) {
-            $stmt = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, major, academic_year, national_id_hash, national_id_masked)
-                VALUES (:sid, :name, :cls, :mj, 2569, :nid_hash, :nid_masked)
-                ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), major=VALUES(major), academic_year=2569,
+            $stmt = $pdo->prepare("INSERT INTO att_students (student_id, name, classroom, major, academic_year, status, national_id_hash, national_id_masked)
+                VALUES (:sid, :name, :cls, :mj, 2569, 'active', :nid_hash, :nid_masked)
+                ON DUPLICATE KEY UPDATE name=VALUES(name), classroom=VALUES(classroom), major=VALUES(major), academic_year=2569, status='active',
                 national_id_hash=IF(VALUES(national_id_hash) IS NOT NULL, VALUES(national_id_hash), national_id_hash),
                 national_id_masked=IF(VALUES(national_id_masked) IS NOT NULL, VALUES(national_id_masked), national_id_masked)");
             $pdo->beginTransaction();
@@ -175,8 +193,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                     $importCount++;
                 }
+                $deactivated = 0;
+                if ($doSync) {
+                    $ids = array_values(array_unique(array_column($data, 'student_id')));
+                    $ph  = implode(',', array_fill(0, count($ids), '?'));
+                    $up  = $pdo->prepare("UPDATE att_students SET status = 'inactive'
+                        WHERE status = 'active' AND student_id REGEXP '^[0-9]+$'
+                          AND student_id NOT IN ($ph)");
+                    $up->execute($ids);
+                    $deactivated = $up->rowCount();
+                }
                 $pdo->commit();
-                $msg = "นำเข้าและตั้งรหัสผ่านสำเร็จ $importCount รายการ";
+                $msg = "นำเข้าและตั้งรหัสผ่านสำเร็จ $importCount รายการ" . ($doSync ? " · ปิดใช้งานรายชื่อที่ไม่อยู่ในไฟล์ $deactivated คน" : '');
                 $msgType = 'success';
             } catch (Exception $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
@@ -279,6 +307,10 @@ require_once __DIR__ . '/components/layout_start.php';
                             <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-4">บังคับห้องเรียน (ถ้ามี)</label>
                             <input type="text" name="classroom_fixed" placeholder="เช่น ม.1/1 (เว้นว่างไว้เพื่อใช้ค่าจากไฟล์)"
                                    class="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all">
+                            <label for="syncMode" class="flex items-start gap-2 ml-4 mt-3 cursor-pointer text-xs text-slate-600">
+                                <input type="checkbox" name="sync_mode" value="1" id="syncMode" class="mt-0.5 accent-rose-600">
+                                <span><strong class="text-rose-600">แทนที่รายชื่อทั้งหมด</strong> — นักเรียนที่ไม่อยู่ในไฟล์จะถูกปิดใช้งาน (ไม่ลบ ประวัติยังอยู่) · ใช้ไม่ได้เมื่อบังคับห้องเรียน</span>
+                            </label>
                         </div>
                         <div class="flex items-end">
                             <button type="submit" class="w-full bg-slate-900 text-white rounded-2xl px-8 py-4 font-black text-sm hover:bg-black hover:-translate-y-1 transition-all shadow-xl shadow-slate-200">
@@ -312,13 +344,30 @@ require_once __DIR__ . '/components/layout_start.php';
                     <form method="POST">
                         <?= csrf_field() ?>
                         <input type="hidden" name="do" value="import">
+                        <input type="hidden" name="sync_mode" value="<?= $syncMode ? '1' : '0' ?>">
                         <input type="hidden" name="json_data" value='<?= htmlspecialchars(json_encode($preview, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>'>
                         <button type="submit" class="bg-white text-indigo-600 px-8 py-3 rounded-2xl font-black text-sm hover:scale-105 active:scale-95 transition-all shadow-xl shadow-indigo-900/20"
-                                onclick="return confirmImport(<?= count($missingNid) ?>)">
+                                onclick="return confirmImport(<?= count($missingNid) ?>, <?= $syncMode ? count($toDeactivate) : -1 ?>)">
                             <i class="bi bi-check2-circle mr-2"></i> ยืนยันการนำเข้า
                         </button>
                     </form>
                 </div>
+                <?php if ($syncMode): ?>
+                <div class="px-8 py-5 bg-rose-50 border-b border-rose-100">
+                    <p class="text-sm font-black text-rose-700"><i class="bi bi-person-dash-fill me-2"></i>โหมดแทนที่: จะปิดใช้งาน <?= count($toDeactivate) ?> คนที่ไม่อยู่ในไฟล์</p>
+                    <?php if (!empty($toDeactivate)): ?>
+                    <div class="mt-3 max-h-48 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        <?php foreach ($toDeactivate as $d): ?>
+                        <div class="bg-white rounded-xl px-3 py-2 text-xs border border-rose-100">
+                            <span class="font-black text-slate-500"><?= htmlspecialchars($d['classroom'], ENT_QUOTES, 'UTF-8') ?></span>
+                            <span class="font-mono text-rose-600 ms-1"><?= htmlspecialchars($d['student_id'], ENT_QUOTES, 'UTF-8') ?></span>
+                            <span class="text-slate-600 ms-1"><?= htmlspecialchars($d['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
                 <div class="max-h-[500px] overflow-y-auto">
                     <table class="w-full">
                         <thead class="bg-slate-50 sticky top-0 z-10">
@@ -554,9 +603,12 @@ require_once __DIR__ . '/components/layout_start.php';
         document.getElementById('importForm').submit();
     };
 
-    function confirmImport(missingCount) {
-        if (missingCount > 0) {
-            return confirm(`มีนักเรียน ${missingCount} คนที่ไม่มีเลขบัตรประชาชน จะไม่สามารถเข้าระบบนักเรียนได้\nยืนยันการนำเข้าต่อไปหรือไม่?`);
+    function confirmImport(missingCount, deactivateCount) {
+        if (missingCount > 0 && !confirm(`มีนักเรียน ${missingCount} คนที่ไม่มีเลขบัตรประชาชน จะไม่สามารถเข้าระบบนักเรียนได้\nยืนยันการนำเข้าต่อไปหรือไม่?`)) {
+            return false;
+        }
+        if (deactivateCount > 0) {
+            return confirm(`โหมดแทนที่รายชื่อ: จะปิดใช้งานนักเรียน ${deactivateCount} คนที่ไม่อยู่ในไฟล์\nยืนยันหรือไม่?`);
         }
         return true;
     }
