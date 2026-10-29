@@ -436,61 +436,71 @@ $specs = $doc['specs'] ?? [];
 
 <!-- ================= PAGE 2: การตรวจสอบการเงิน และคำสั่งผู้อำนวยการ ================= -->
 <div class="page">
-    <div class="form-id-badge" style="font-size: 12pt;">
-        หน้า 2
+    <div class="form-id-badge">
+        แบบ ผง 1/1 (ต่อ)
     </div>
 
-    <table class="approval-table" style="margin-top: 6mm;">
+    <table class="approval-table" style="margin-top: 10mm;">
         <tr>
             <!-- กล่องที่ 3: การเงิน -->
-            <td>
-                <div class="box-title">การตรวจสอบและรับรอง</div>
-                <div style="margin-top: 6px; text-indent: 1.2cm;">
+            <td style="padding: 14px 12px; height: 145mm; vertical-align: top;">
+                <div class="box-title" style="font-size: 13.5pt;">การตรวจสอบและรับรอง</div>
+                <div style="margin-top: 10px; text-indent: 1.2cm; font-size: 13pt; line-height: 1.5;">
                     ได้ทำการตรวจสอบเอกสารหลักฐานแล้วถูกต้อง ไม่มีเงินยืมค้างและมีงบประมาณเพียงพอ เห็นควร:
                 </div>
-                <div style="margin-top: 10px; margin-left: 10px;">
+                <div style="margin-top: 16px; margin-left: 15px; font-size: 13pt; line-height: 1.7;">
                     <div class="checkbox-item"><span class="checkbox-square"></span> อนุมัติ</div>
                     <div class="checkbox-item" style="margin-top: 6px;"><span class="checkbox-square"></span> ไม่อนุมัติ ให้เบิกจ่ายตามโครงการ</div>
                 </div>
-                <div style="text-align: center; margin-top: 50px;">
+                <div style="text-align: center; margin-top: 85px;">
                     <div>ลงชื่อ....................................................</div>
-                    <div style="margin-top: 2px;">( <?= e($financeHeadName) ?> )</div>
-                    <div style="font-size: 11pt; color: #475569;">หัวหน้างานการเงิน</div>
+                    <div style="margin-top: 4px; font-size: 12.5pt;">( <?= e($financeHeadName) ?> )</div>
+                    <div style="font-size: 11.5pt; color: #475569; margin-top: 2px;">หัวหน้างานการเงิน</div>
                 </div>
             </td>
 
             <!-- กล่องที่ 4: ผู้อำนวยการโรงเรียน -->
-            <td>
-                <div class="box-title">ความเห็นของผู้อำนวยการโรงเรียน</div>
-                <div style="margin-top: 6px; text-indent: 1.2cm;">
+            <td style="padding: 14px 12px; height: 145mm; vertical-align: top;">
+                <div class="box-title" style="font-size: 13.5pt;">ความเห็นของผู้อำนวยการโรงเรียน</div>
+                <div style="margin-top: 10px; text-indent: 1.2cm; font-size: 13pt; line-height: 1.5;">
                     ได้ทำการตรวจสอบรายการตามเสนอแล้ว:
                 </div>
-                <div style="margin-top: 6px; margin-left: 10px;">
+                <div style="margin-top: 12px; margin-left: 15px; font-size: 13pt; line-height: 1.7;">
                     <div class="checkbox-item"><span class="checkbox-square"></span> <strong>อนุมัติ</strong></div>
-                    <div class="checkbox-item"><span class="checkbox-square"></span> ไม่อนุมัติ</div>
+                    <div class="checkbox-item" style="margin-top: 6px;"><span class="checkbox-square"></span> ไม่อนุมัติ</div>
                 </div>
-                <div style="margin-top: 5px; font-weight: bold;">โดยใช้เงิน:</div>
-                <div style="margin-left: 10px; margin-top: 3px;">
+                <div style="margin-top: 12px; font-weight: bold; font-size: 13pt;">โดยใช้เงิน:</div>
+                <div style="margin-left: 15px; margin-top: 6px; font-size: 13pt; line-height: 1.7;">
                     <div class="checkbox-item"><span class="checkbox-square"></span> เงินอุดหนุนทั่วไป</div>
                     <div class="checkbox-item"><span class="checkbox-square"></span> เงินรายได้สถานศึกษา</div>
                     <div class="checkbox-item"><span class="checkbox-square"></span> เงินบริจาค</div>
                     <div class="checkbox-item"><span class="checkbox-square"></span> เงินอื่น ๆ .....................................................</div>
                 </div>
-                <div style="text-align: center; margin-top: 20px;">
+                <div style="text-align: center; margin-top: 45px;">
                     <div>ลงชื่อ....................................................</div>
-                    <div style="margin-top: 2px;">( <?= e($directorName) ?> )</div>
-                    <div style="font-size: 11pt; color: #475569;">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
+                    <div style="margin-top: 4px; font-size: 12.5pt;">( <?= e($directorName) ?> )</div>
+                    <div style="font-size: 11.5pt; color: #475569; margin-top: 2px;">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
                 </div>
             </td>
         </tr>
     </table>
+</div>
 
-    <div style="margin-top: 12mm;">
-        <h3 style="text-align: center; font-size: 16pt; margin-bottom: 4px;">
+<!-- ================= PAGE 3: รายละเอียดแนบท้ายบันทึกขออนุมัติใช้เงินงบประมาณ ================= -->
+<div class="page">
+    <div class="form-id-badge" style="font-size: 12pt;">
+        เอกสารแนบท้าย
+    </div>
+
+    <div style="margin-top: 6mm;">
+        <h3 style="text-align: center; font-size: 17pt; font-weight: bold; margin-bottom: 4px;">
             รายละเอียดแนบท้ายบันทึกขออนุมัติใช้เงินงบประมาณตามแผนปฏิบัติราชการ
         </h3>
-        <div style="text-align: center; font-size: 14pt; margin-bottom: 12px;">
-            ประจำปีงบประมาณ พ.ศ. <?= e($fiscalYearBe) ?>
+        <div style="text-align: center; font-size: 14.5pt; margin-bottom: 6px;">
+            แนบท้ายบันทึกข้อความ ที่ <?= e($docNo) ?> ลงวันที่ <?= e($docDate) ?>
+        </div>
+        <div style="text-align: center; font-size: 13.5pt; color: #334155; margin-bottom: 16px;">
+            ประจำปีงบประมาณ พ.ศ. <?= e($fiscalYearBe) ?> ( กิจกรรม: <?= e($activityName) ?> )
         </div>
 
         <table class="attachment-table">
@@ -498,9 +508,9 @@ $specs = $doc['specs'] ?? [];
                 <tr>
                     <th style="width: 55px;">ลำดับที่</th>
                     <th>รายการ</th>
-                    <th style="width: 110px;">จำนวน / หน่วย</th>
-                    <th style="width: 120px;">ราคา / หน่วย</th>
-                    <th style="width: 140px;">จำนวนเงิน (บาท)</th>
+                    <th style="width: 120px;">จำนวน / หน่วย</th>
+                    <th style="width: 130px;">ราคา / หน่วย</th>
+                    <th style="width: 150px;">จำนวนเงิน (บาท)</th>
                 </tr>
             </thead>
             <tbody>
@@ -516,18 +526,18 @@ $specs = $doc['specs'] ?? [];
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="4" style="text-align: center; font-weight: bold;">รวมทั้งสิ้น</td>
-                    <td style="text-align: right; font-weight: bold; font-size: 15pt;"><?= money_format_th($totalAmount) ?></td>
+                    <td colspan="4" style="text-align: center; font-weight: bold; font-size: 15pt;">รวมทั้งสิ้น</td>
+                    <td style="text-align: right; font-weight: bold; font-size: 16pt;"><?= money_format_th($totalAmount) ?></td>
                 </tr>
                 <tr>
-                    <td colspan="5" style="text-align: center; font-weight: bold; background-color: #F8FAFC;">
+                    <td colspan="5" style="text-align: center; font-weight: bold; font-size: 14.5pt; background-color: #F8FAFC;">
                         ( <?= e($totalAmountText) ?> )
                     </td>
                 </tr>
             </tfoot>
         </table>
 
-        <div style="margin-top: 25px; display: flex; justify-content: flex-end;">
+        <div style="margin-top: 30px; display: flex; justify-content: flex-end;">
             <div style="text-align: center; white-space: nowrap;">
                 <div style="white-space: nowrap; font-size: 13.5pt;">ลงชื่อ................................................ผู้ขอใช้ / ผู้กำหนดรายละเอียด</div>
                 <div style="margin-top: 5px; font-size: 13pt;">( <?= e($requesterName) ?> )</div>
@@ -538,13 +548,13 @@ $specs = $doc['specs'] ?? [];
 </div>
 
 <?php if (!empty($specs)): ?>
-<!-- ================= PAGE 3: รายละเอียดคุณลักษณะเฉพาะ (ถ้ามี) ================= -->
+<!-- ================= PAGE 4: รายละเอียดคุณลักษณะเฉพาะ (ถ้ามี) ================= -->
 <div class="page">
     <div class="form-id-badge" style="font-size: 12pt;">
-        หน้า 3
+        คุณลักษณะเฉพาะ
     </div>
 
-    <div style="margin-top: 8mm;">
+    <div style="margin-top: 6mm;">
         <h3 style="text-align: center; font-size: 16pt; margin-bottom: 6px;">
             ตารางแสดงรายละเอียดคุณลักษณะเฉพาะของพัสดุ/ครุภัณฑ์
         </h3>
