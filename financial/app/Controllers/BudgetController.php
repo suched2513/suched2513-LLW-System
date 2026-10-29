@@ -364,12 +364,6 @@ class BudgetController extends Controller
             'specs'                => $specs
         ];
 
-        $viewPath = __DIR__ . '/../../financial/app/Views/documents/phong11.php';
-        if (!file_exists($viewPath)) {
-            $viewPath = 'C:/xampp/htdocs/llw/financial/app/Views/documents/phong11.php';
-        }
-        extract(['doc' => $doc]);
-        require $viewPath;
-        exit;
+        $this->render('documents/phong11', ['doc' => $doc], null);
     }
 }

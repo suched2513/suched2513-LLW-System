@@ -363,9 +363,6 @@ class DisbursementController extends Controller
             'specs'                => []
         ];
 
-        $viewPath = 'C:/xampp/htdocs/llw/financial/app/Views/documents/phong11.php';
-        extract(['doc' => $doc]);
-        require $viewPath;
-        exit;
+        $this->render('documents/phong11', ['doc' => $doc], null);
     }
 }
