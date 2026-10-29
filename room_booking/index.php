@@ -1,4 +1,5 @@
 <?php
+// BUILD_VERSION: 2026-10-29-7ROOMS-FINAL
 /**
  * room_booking/index.php
  * หน้าหลักระบบจองห้องประชุม (ปฏิทินรายเดือนและตารางการใช้ห้อง)
@@ -10,7 +11,34 @@ $pageTitle = 'ปฏิทินการใช้ห้องประชุม
 require_once __DIR__ . '/includes/header.php';
 
 $pdo = getRoomBookingPdo();
-syncSchoolRooms($pdo);
+
+// ซิงก์รายชื่อ 7 ห้องหลักอย่างเป็นทางการของโรงเรียนละลมวิทยา
+$officialRooms = [
+    1 => ['R01', 'ห้องประชุม 30 ปี', 'อาคาร 30 ปี', 'ชั้น 2', 120, 'เครื่องปรับอากาศ, โปรเจกเตอร์, จอ LED, เครื่องเสียง, ไมค์ลอย 4 ตัว, โพเดียม', '#2563eb'],
+    2 => ['R02', 'ห้องประชุมเจียละออ', 'อาคารเรียน', 'ชั้น 1', 60, 'เครื่องปรับอากาศ, Smart TV / จอฉาย, ระบบเครื่องเสียง, ไมค์ลอย', '#059669'],
+    3 => ['R03', 'ห้องประชุมราชพฤกษ์', 'อาคารราชพฤกษ์', 'ชั้น 2', 50, 'เครื่องปรับอากาศ, โต๊ะประชุม U-Shape, โปรเจกเตอร์, เครื่องเสียง', '#d97706'],
+    4 => ['R04', 'ห้องทูบี', 'ศูนย์เพื่อนใจ TO BE NUMBER ONE', 'ชั้น 1', 40, 'เครื่องปรับอากาศ, เครื่องเสียง, ชุดรับแขก, บอร์ดกิจกรรม, เก้าอี้ประชุม', '#e11d48'],
+    5 => ['R05', 'ห้องคอมพิวเตอร์1', 'อาคารปฏิบัติการ', 'ชั้น 2', 45, 'เครื่องคอมพิวเตอร์ 40 เครื่อง, จอฉายโปรเจกเตอร์, เครือข่าย Fiber Optic, แอร์', '#0284c7'],
+    6 => ['R06', 'ห้องคอมพิวเตอร์2', 'อาคารปฏิบัติการ', 'ชั้น 2', 45, 'เครื่องคอมพิวเตอร์ 40 เครื่อง, จอฉายโปรเจกเตอร์, เครือข่าย Fiber Optic, แอร์', '#7c3aed'],
+    7 => ['R07', 'โดมอเนกประสงค์', 'ลานโดมกิจกรรม', 'ชั้นล่าง', 500, 'เวทีกิจกรรม, ระบบเครื่องเสียงกลางแจ้ง, ไมค์สาย/ไร้สาย, อัฒจันทร์, พัดลมระบายอากาศ', '#ea580c'],
+];
+try {
+    foreach ($officialRooms as $id => $rm) {
+        $pdo->prepare("
+            INSERT INTO rb_rooms (id, room_code, room_name, building, floor, capacity, facilities, color_code, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            ON DUPLICATE KEY UPDATE
+                room_code = VALUES(room_code),
+                room_name = VALUES(room_name),
+                building = VALUES(building),
+                floor = VALUES(floor),
+                capacity = VALUES(capacity),
+                facilities = VALUES(facilities),
+                color_code = VALUES(color_code),
+                is_active = 1
+        ")->execute([$id, $rm[0], $rm[1], $rm[2], $rm[3], $rm[4], $rm[5], $rm[6]]);
+    }
+} catch (\Throwable $e) {}
 
 // ดึงรายการห้องประชุมที่เปิดใช้งาน
 $roomsStmt = $pdo->query("SELECT * FROM rb_rooms WHERE is_active = 1 ORDER BY id ASC");
