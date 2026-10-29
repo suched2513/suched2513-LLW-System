@@ -58,6 +58,7 @@ if ($isLoggedIn) {
                 ['url' => 'edocument/index.php',              'icon' => 'bi-file-earmark-text',   'label' => 'e-สารบรรณ',    'color' => 'blue'],
                 ['url' => 'school_project/homeroom/admin/daily_overview.php', 'icon' => 'bi-journal-check', 'label' => 'โฮมรูม', 'color' => 'amber'],
                 ['url' => 'school_project/admin/dashboard.php','icon'=> 'bi-cash-coin',           'label' => 'งบประมาณ SBMS', 'color' => 'amber'],
+                ['url' => 'room_booking/index.php',          'icon' => 'bi-door-open-fill',      'label' => 'จองห้องประชุม',  'color' => 'indigo'],
                 ['url' => 'financial/index.php',              'icon' => 'bi-bank2',               'label' => 'การเงินและบัญชี', 'color' => 'amber'],
                 ['url' => 'duty/admin/reports.php',           'icon' => 'bi-shield-check',       'label' => 'รายงานเวร',      'color' => 'rose'],
             ];
@@ -71,6 +72,7 @@ if ($isLoggedIn) {
                 ['url' => 'behavior/dashboard.php',           'icon' => 'bi-journal-text',        'label' => 'พฤติกรรม',      'color' => 'violet'],
                 ['url' => 'edocument/index.php',              'icon' => 'bi-file-earmark-text',   'label' => 'e-สารบรรณ',    'color' => 'blue'],
                 ['url' => 'school_project/admin/dashboard.php','icon'=> 'bi-cash-coin',           'label' => 'งบประมาณ SBMS', 'color' => 'amber'],
+                ['url' => 'room_booking/index.php',          'icon' => 'bi-door-open-fill',      'label' => 'จองห้องประชุม',  'color' => 'indigo'],
                 ['url' => 'financial/index.php',              'icon' => 'bi-bank2',               'label' => 'การเงินและบัญชี', 'color' => 'amber'],
                 ['url' => 'duty/admin/reports.php',           'icon' => 'bi-shield-check',       'label' => 'รายงานเวร',      'color' => 'rose'],
             ];
@@ -85,6 +87,7 @@ if ($isLoggedIn) {
                 ['url' => 'behavior/dashboard.php',          'icon' => 'bi-journal-text',        'label' => 'พฤติกรรม',      'color' => 'violet'],
                 ['url' => 'school_project/homeroom/daily/log.php', 'icon' => 'bi-journal-check', 'label' => 'บันทึกโฮมรูม', 'color' => 'amber'],
                 ['url' => 'school_project/index.php',        'icon' => 'bi-cash-coin',           'label' => 'งบประมาณ SBMS', 'color' => 'amber'],
+                ['url' => 'room_booking/index.php',          'icon' => 'bi-door-open-fill',      'label' => 'จองห้องประชุม',  'color' => 'indigo'],
             ];
             break;
         case 'cb_admin':
@@ -148,6 +151,7 @@ $modules = [
     ['url'=>'school_project/homeroom/daily/log.php','roles'=>$_T,'icon'=>'bi-journal-check',       'bgIcon'=>'bi-journal-text',         'title'=>'บันทึกโฮมรูม',       'short'=>'โฮมรูม',    'desc'=>'บันทึกการเข้าแถว เช็คชื่อนักเรียนรายคน กิจกรรมประจำวัน พร้อมรายงานให้ผู้บริหาร', 'color'=>'amber',  'gradient'=>'from-amber-600 to-orange-500',   'delay'=>1.05],
     ['url'=>'school_project/index.php',        'roles'=>null,'icon'=>'bi-cash-coin',               'bgIcon'=>'bi-wallet2',              'title'=>'ระบบงบประมาณ (SBMS)', 'short'=>'งบประมาณ',  'desc'=>'จัดการโครงการ ขอดำเนินการ เบิกจ่ายงบประมาณ และพิมพ์เอกสารอนุมัติ (2569)',       'color'=>'amber',  'gradient'=>'from-amber-500 to-orange-500',   'delay'=>1.1],
     ['url'=>'financial/index.php',             'roles'=>null,'icon'=>'bi-bank2',                   'bgIcon'=>'bi-cash-stack',           'title'=>'ระบบบริหารการเงินและบัญชีสถานศึกษา', 'short'=>'การเงินและบัญชี', 'desc'=>'บริหารการเงิน รับ-จ่าย เงินยืม บัญชีคู่ภาครัฐ พัสดุครุภัณฑ์ และกระทบยอดธนาคาร', 'color'=>'amber',  'gradient'=>'from-blue-900 via-indigo-900 to-amber-700', 'delay'=>1.12, 'isPublic'=>true],
+    ['url'=>'room_booking/index.php',          'roles'=>null,'icon'=>'bi-door-open-fill',          'bgIcon'=>'bi-building-check',       'title'=>'ระบบจองห้องประชุม',        'short'=>'จองห้องประชุม', 'desc'=>'ตรวจสอบตารางเวลาว่าง จองห้องประชุมออนไลน์ พร้อมระบบป้องกันเวลาชนและปฏิทินกลาง', 'color'=>'indigo', 'gradient'=>'from-indigo-600 via-blue-600 to-cyan-600', 'delay'=>1.14, 'isPublic'=>true],
     ['url'=>'parent_meeting/index.php',        'roles'=>$_T, 'icon'=>'bi-handshake-fill',          'bgIcon'=>'bi-people',               'title'=>'ระบบประชุมผู้ปกครอง', 'short'=>'ประชุมผู้ปกครอง','desc'=>'ระบบบันทึกรายงานการประชุมและเครือข่ายผู้ปกครองตามแบบฟอร์ม ลลว.๐๑ - ลลว.๐๖', 'color'=>'indigo', 'gradient'=>'from-indigo-600 to-blue-600',    'delay'=>1.15],
     ['url'=>'bus/admin/dashboard.php',         'roles'=>$_B, 'icon'=>'bi-bus-front-fill',          'bgIcon'=>'bi-bus-front',            'title'=>'ระบบจัดการรถรับส่ง', 'short'=>'รถรับส่ง',  'desc'=>'จัดการสายรถรับส่ง ลงทะเบียนนักเรียน และบันทึกการชำระเงินค่าบริการ',             'color'=>'orange', 'gradient'=>'from-orange-500 to-amber-500',   'delay'=>1.2],
     ['url'=>'bus/index.php',                   'roles'=>null,'icon'=>'bi-person-badge-fill',       'bgIcon'=>'bi-person-badge',         'title'=>'พอร์ทัลนักเรียน (รถ)','short'=>'นักเรียนรถ','desc'=>'นักเรียนลงทะเบียนและติดตามการใช้บริการรถรับส่ง ตรวจสอบยอดชำระเงิน',           'color'=>'orange', 'gradient'=>'from-amber-500 to-orange-600',   'delay'=>1.3, 'isPublic'=>true],

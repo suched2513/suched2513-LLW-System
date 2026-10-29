@@ -65,6 +65,8 @@ try {
     $stmtLeave = $pdo->prepare("SELECT COUNT(*) FROM tl_requests WHERE status = 'pending'");
     $stmtLeave->execute();
     $countPendingLeave = (int)$stmtLeave->fetchColumn();
+    $countPendingRooms = 0;
+    try { $countPendingRooms = (int)$pdo->query("SELECT COUNT(*) FROM rb_bookings WHERE status = 'pending'")->fetchColumn(); } catch (Exception $e) {}
 
     // 3. ห้องเรียนที่เช็คชื่อแล้ววันนี้
     $countTotalRooms = (int)$pdo->query("SELECT COUNT(DISTINCT classroom) FROM att_students" . $whereClause)->fetchColumn();
@@ -264,6 +266,11 @@ require_once 'components/layout_start.php';
                 <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-amber-200 group-hover:scale-110 transition-all"><i class="bi bi-envelope-paper-fill"></i></div>
                 <p class="text-3xl font-black text-slate-800"><?= $countPendingLeave ?></p>
                 <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">ใบลาที่ค้างอยู่ <span class="text-amber-500">→</span></p>
+            </a>
+            <a href="room_booking/admin/requests.php" class="glass-card p-6 border-l-4 border-l-blue-500 hover:scale-[1.02] transition-all block group">
+                <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-blue-200 group-hover:scale-110 transition-all"><i class="bi bi-door-open-fill"></i></div>
+                <p class="text-3xl font-black text-slate-800"><?= $countPendingRooms ?></p>
+                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">จองห้องรออนุมัติ <span class="text-blue-500">→</span></p>
             </a>
             <div class="glass-card p-6">
                 <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-xl mb-4 shadow-lg shadow-emerald-200"><i class="bi bi-calendar-check-fill"></i></div>
