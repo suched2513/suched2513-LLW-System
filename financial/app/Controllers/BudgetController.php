@@ -381,6 +381,7 @@ class BudgetController extends Controller
 
         if ($actionType === 'save_and_print' && $totalAmount > 0) {
             $pdo = Database::getConnection();
+            Database::ensureBudgetRequestsTable($pdo);
             $user = $this->user();
             $userId = (int)($user['id'] ?? 1);
             $activeFy = AuthService::getActiveFiscalYear();
@@ -448,6 +449,7 @@ class BudgetController extends Controller
     {
         $this->checkPermission('budgets', 'view');
         $pdo = Database::getConnection();
+        Database::ensureBudgetRequestsTable($pdo);
 
         $activeFy = AuthService::getActiveFiscalYear();
         $fyId = (int)$activeFy['id'];
@@ -497,6 +499,7 @@ class BudgetController extends Controller
     {
         $this->checkPermission('budgets', 'view');
         $pdo = Database::getConnection();
+        Database::ensureBudgetRequestsTable($pdo);
 
         $activeFy = AuthService::getActiveFiscalYear();
         $fyId = (int)$activeFy['id'];
@@ -634,6 +637,7 @@ class BudgetController extends Controller
 
         if ($actionType === 'save_and_print' && $totalAmount > 0) {
             $pdo = Database::getConnection();
+            Database::ensureBudgetRequestsTable($pdo);
             $user = $this->user();
             $userId = (int)($user['id'] ?? 1);
             $activeFy = AuthService::getActiveFiscalYear();
@@ -690,6 +694,7 @@ class BudgetController extends Controller
     {
         $this->checkPermission('budgets', 'view');
         $pdo = Database::getConnection();
+        Database::ensureBudgetRequestsTable($pdo);
 
         $stmt = $pdo->prepare("SELECT * FROM fin_budget_requests WHERE id = ?");
         $stmt->execute([(int)$id]);
