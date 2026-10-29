@@ -7,6 +7,9 @@ $baseUrl = defined('BASE_URL') ? BASE_URL : '';
         <div class="text-muted small">จัดสรรงบประมาณ ควบคุมยอดผูกพัน และโอนเปลี่ยนแปลงงบประมาณประจำปี พ.ศ. <?= e($activeFiscalYear['year_be']) ?></div>
     </div>
     <div class="d-flex gap-2">
+        <a href="<?= $baseUrl ?>/funding-sources" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-tags me-1"></i> จัดการประเภทการเงิน
+        </a>
         <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newProjectModal">
             <i class="bi bi-folder-plus me-1"></i> เพิ่มโครงการใหม่
         </button>

@@ -169,10 +169,22 @@ class AccountingService
         $debitAccCode = $isBank ? '1113' : '1111'; // 1113=เงินฝากธนาคาร, 1111=เงินสด
         $debitAccId = self::getAccountIdByCode($debitAccCode);
 
-        // หาบัญชีรายได้
-        $creditAccId = self::getAccountIdByCode('4210'); // Default: รายได้สถานศึกษา
-        if ($receipt['funding_source_id'] == 1) {
-            $creditAccId = self::getAccountIdByCode('4110'); // เงินอุดหนุน
+        // หาบัญชีรายได้ตามประเภทแหล่งเงิน (Funding Source Type)
+        $fsType = 'revenue';
+        if (!empty($receipt['funding_source_id'])) {
+            $stmtFs = $pdo->prepare("SELECT source_type FROM fin_funding_sources WHERE id = ?");
+            $stmtFs->execute([(int)$receipt['funding_source_id']]);
+            $fsType = $stmtFs->fetchColumn() ?: 'revenue';
+        }
+
+        if ($fsType === 'subsidy') {
+            $creditAccId = self::getAccountIdByCode('410101') ?? self::getAccountIdByCode('4110'); // เงินอุดหนุน
+        } elseif ($fsType === 'donation') {
+            $creditAccId = self::getAccountIdByCode('410103') ?? self::getAccountIdByCode('4130'); // เงินบริจาค
+        } elseif ($fsType === 'tuition_fee') {
+            $creditAccId = self::getAccountIdByCode('410104') ?? self::getAccountIdByCode('4220'); // ค่าบำรุงการศึกษา
+        } else {
+            $creditAccId = self::getAccountIdByCode('410102') ?? self::getAccountIdByCode('4210'); // เงินรายได้สถานศึกษา/อื่นๆ
         }
 
         $lines = [

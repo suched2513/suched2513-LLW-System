@@ -8,11 +8,12 @@ declare(strict_types=1);
  */
 
 $testFiles = [
-    'BahtTextTest.php'              => 'Phase 1: BahtText & Thai Localization',
-    'Phase2CoreTest.php'            => 'Phase 2: MVC Core, Router, RBAC & Security',
-    'Phase3FinanceTest.php'         => 'Phase 3: Budget, Receipts, Payments & Double-Entry Accounting',
-    'Phase4BankAndProgramsTest.php' => 'Phase 4: Bank Accounts, Reconciliation & Special Programs',
+    'BahtTextTest.php'                  => 'Phase 1: BahtText & Thai Localization',
+    'Phase2CoreTest.php'                => 'Phase 2: MVC Core, Router, RBAC & Security',
+    'Phase3FinanceTest.php'             => 'Phase 3: Budget, Receipts, Payments & Double-Entry Accounting',
+    'Phase4BankAndProgramsTest.php'     => 'Phase 4: Bank Accounts, Reconciliation & Special Programs',
     'Phase5ProcurementAndAssetTest.php' => 'Phase 5: Procurement, Inventory/Assets & 28 Reports',
+    'Phase6FundingSourcesTest.php'      => 'Phase 6: Funding Sources & Financial Types Management',
 ];
 
 echo "=====================================================================" . PHP_EOL;

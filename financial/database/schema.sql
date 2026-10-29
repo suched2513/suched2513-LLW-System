@@ -96,6 +96,22 @@ CREATE TABLE IF NOT EXISTS `fin_funding_sources` (
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ข้อมูลตั้งต้นประเภทการเงินและแหล่งเงินสถานศึกษา
+INSERT INTO `fin_funding_sources` (`source_code`, `source_name`, `source_type`, `is_active`) VALUES
+('SUB-01', 'ค่าจัดการเรียนการสอน', 'subsidy', 1),
+('SUB-02', 'กิจกรรมพัฒนาคุณภาพผู้เรียน', 'subsidy', 1),
+('SUB-03', 'ค่าอุปกรณ์การเรียน', 'subsidy', 1),
+('SUB-04', 'ค่าหนังสือเรียน', 'subsidy', 1),
+('SUB-05', 'ค่าเครื่องแต่งกาย', 'subsidy', 1),
+('SUB-06', 'เงินปัจจัยพื้นฐาน นร.ยากจน', 'subsidy', 1),
+('REV-01', 'เงินรายได้สถานศึกษา', 'revenue', 1),
+('DON-01', 'เงินบริจาค', 'donation', 1),
+('SUB-07', 'เงินค่ากระแสไฟฟ้า', 'subsidy', 1),
+('SUB-08', 'เงินค่ารถรับ-ส่ง นักเรียน', 'subsidy', 1),
+('OTH-01', 'เงินสนับสนุนอื่นๆ', 'other', 1),
+('FEE-01', 'ค่าบำรุงการศึกษาห้องเรียนพิเศษ', 'tuition_fee', 1)
+ON DUPLICATE KEY UPDATE `source_name` = VALUES(`source_name`), `source_type` = VALUES(`source_type`);
+
 CREATE TABLE IF NOT EXISTS `fin_projects` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `fiscal_year_id` INT NOT NULL,

@@ -87,6 +87,7 @@ use App\Controllers\FiscalYearController;
 use App\Controllers\UserController;
 use App\Controllers\AuditLogController;
 use App\Controllers\BudgetController;
+use App\Controllers\FundingSourceController;
 use App\Controllers\ReceiptController;
 use App\Controllers\DisbursementController;
 use App\Controllers\AdvanceController;
@@ -156,6 +157,12 @@ $router->get('/budgets', [BudgetController::class, 'index'], ['auth', 'rbac:budg
 $router->post('/budgets/projects', [BudgetController::class, 'createProject'], ['auth', 'csrf', 'rbac:budgets,create']);
 $router->post('/budgets/allocate', [BudgetController::class, 'allocate'], ['auth', 'csrf', 'rbac:budgets,edit']);
 $router->post('/budgets/transfer', [BudgetController::class, 'transfer'], ['auth', 'csrf', 'rbac:budgets,edit']);
+
+// --- Funding Sources (ประเภทการเงินและแหล่งเงินสถานศึกษา) ---
+$router->get('/funding-sources', [FundingSourceController::class, 'index'], ['auth', 'rbac:budgets,view']);
+$router->post('/funding-sources/store', [FundingSourceController::class, 'store'], ['auth', 'csrf', 'rbac:budgets,create']);
+$router->post('/funding-sources/update/{id}', [FundingSourceController::class, 'update'], ['auth', 'csrf', 'rbac:budgets,edit']);
+$router->post('/funding-sources/toggle/{id}', [FundingSourceController::class, 'toggle'], ['auth', 'csrf', 'rbac:budgets,edit']);
 
 // --- Receipts Module ---
 $router->get('/receipts', [ReceiptController::class, 'index'], ['auth', 'rbac:receipts,view']);

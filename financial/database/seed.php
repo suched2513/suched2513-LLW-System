@@ -135,19 +135,33 @@ try {
     }
     echo "  - ติดตั้งผังบัญชีมาตรฐานภาครัฐ 5 หมวด (24 บัญชี) เรียบร้อย" . PHP_EOL;
 
-    // 7. Funding Sources (แหล่งเงิน)
+    // 7. Funding Sources (แหล่งเงิน / ประเภทการเงินของสถานศึกษา)
     $fundingSources = [
-        ['SUB-01', 'เงินอุดหนุนรายหัวนักเรียน', 'subsidy'],
+        // 5 รายการเงินอุดหนุนรายหัว (Per-pupil Basic Education Subsidies)
+        ['SUB-01', 'ค่าจัดการเรียนการสอน', 'subsidy'],
+        ['SUB-02', 'กิจกรรมพัฒนาคุณภาพผู้เรียน', 'subsidy'],
+        ['SUB-03', 'ค่าอุปกรณ์การเรียน', 'subsidy'],
+        ['SUB-04', 'ค่าหนังสือเรียน', 'subsidy'],
+        ['SUB-05', 'ค่าเครื่องแต่งกาย', 'subsidy'],
+        // เงินปัจจัยพื้นฐานนักเรียนยากจน (กสศ. / สพฐ.)
+        ['SUB-06', 'เงินปัจจัยพื้นฐาน นร.ยากจน', 'subsidy'],
+        // เงินรายได้สถานศึกษา
         ['REV-01', 'เงินรายได้สถานศึกษา', 'revenue'],
-        ['DON-01', 'เงินบริจาคเพื่อการศึกษา', 'donation'],
-        ['FEE-01', 'ค่าบำรุงการศึกษาห้องเรียนพิเศษ', 'tuition_fee'],
+        // เงินบริจาค
+        ['DON-01', 'เงินบริจาค', 'donation'],
+        // สาธารณูปโภคและพาหนะ
+        ['SUB-07', 'เงินค่ากระแสไฟฟ้า', 'subsidy'],
+        ['SUB-08', 'เงินค่ารถรับ-ส่ง นักเรียน', 'subsidy'],
+        // เงินสนับสนุนอื่นๆ
         ['OTH-01', 'เงินสนับสนุนอื่นๆ', 'other'],
+        // ค่าบำรุงการศึกษา (สำหรับห้องเรียนพิเศษ)
+        ['FEE-01', 'ค่าบำรุงการศึกษาห้องเรียนพิเศษ', 'tuition_fee'],
     ];
     $stmtFs = $pdo->prepare("INSERT INTO fin_funding_sources (source_code, source_name, source_type, is_active) VALUES (?, ?, ?, 1) ON DUPLICATE KEY UPDATE source_name=VALUES(source_name), source_type=VALUES(source_type)");
     foreach ($fundingSources as $fs) {
         $stmtFs->execute($fs);
     }
-    echo "  - ติดตั้งแหล่งเงินตั้งต้น (5 แหล่งเงิน) เรียบร้อย" . PHP_EOL;
+    echo "  - ติดตั้งประเภทการเงินและแหล่งเงินสถานศึกษา 11 ประเภทหลัก เรียบร้อย" . PHP_EOL;
 
     // 8. Special Programs (ห้องเรียนพิเศษ)
     $specialPrograms = [

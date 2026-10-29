@@ -183,6 +183,30 @@ class Database
                     $pdo->exec("ALTER TABLE fin_projects ADD COLUMN planned_amount DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER responsible_person");
                 }
             }
+
+            // 5. fin_funding_sources: ประเภทการเงินและแหล่งเงินสถานศึกษา 11 ประเภท
+            if ($pdo->query("SHOW TABLES LIKE 'fin_funding_sources'")->rowCount() > 0) {
+                $fundingSources = [
+                    ['SUB-01', 'ค่าจัดการเรียนการสอน', 'subsidy'],
+                    ['SUB-02', 'กิจกรรมพัฒนาคุณภาพผู้เรียน', 'subsidy'],
+                    ['SUB-03', 'ค่าอุปกรณ์การเรียน', 'subsidy'],
+                    ['SUB-04', 'ค่าหนังสือเรียน', 'subsidy'],
+                    ['SUB-05', 'ค่าเครื่องแต่งกาย', 'subsidy'],
+                    ['SUB-06', 'เงินปัจจัยพื้นฐาน นร.ยากจน', 'subsidy'],
+                    ['REV-01', 'เงินรายได้สถานศึกษา', 'revenue'],
+                    ['DON-01', 'เงินบริจาค', 'donation'],
+                    ['SUB-07', 'เงินค่ากระแสไฟฟ้า', 'subsidy'],
+                    ['SUB-08', 'เงินค่ารถรับ-ส่ง นักเรียน', 'subsidy'],
+                    ['OTH-01', 'เงินสนับสนุนอื่นๆ', 'other'],
+                    ['FEE-01', 'ค่าบำรุงการศึกษาห้องเรียนพิเศษ', 'tuition_fee'],
+                ];
+                $stmtFs = $pdo->prepare("INSERT INTO fin_funding_sources (source_code, source_name, source_type, is_active) 
+                                         VALUES (?, ?, ?, 1) 
+                                         ON DUPLICATE KEY UPDATE source_name = VALUES(source_name), source_type = VALUES(source_type)");
+                foreach ($fundingSources as $fs) {
+                    $stmtFs->execute($fs);
+                }
+            }
         } catch (\Throwable $e) {
             error_log('[Financial DB patchDatabaseSchema] ' . $e->getMessage());
         }
