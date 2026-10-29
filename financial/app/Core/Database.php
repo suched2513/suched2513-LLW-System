@@ -176,11 +176,17 @@ class Database
 
             // 4. fin_projects
             if ($pdo->query("SHOW TABLES LIKE 'fin_projects'")->rowCount() > 0) {
+                if (!$hasColumn('fin_projects', 'activity_name')) {
+                    $pdo->exec("ALTER TABLE fin_projects ADD COLUMN activity_name VARCHAR(255) NULL AFTER project_name");
+                }
                 if (!$hasColumn('fin_projects', 'responsible_person')) {
                     $pdo->exec("ALTER TABLE fin_projects ADD COLUMN responsible_person VARCHAR(150) NULL AFTER department");
                 }
                 if (!$hasColumn('fin_projects', 'planned_amount')) {
                     $pdo->exec("ALTER TABLE fin_projects ADD COLUMN planned_amount DECIMAL(14,2) NOT NULL DEFAULT 0.00 AFTER responsible_person");
+                }
+                if (!$hasColumn('fin_projects', 'notes')) {
+                    $pdo->exec("ALTER TABLE fin_projects ADD COLUMN notes TEXT NULL AFTER planned_amount");
                 }
             }
 
@@ -205,6 +211,23 @@ class Database
                                          ON DUPLICATE KEY UPDATE source_name = VALUES(source_name), source_type = VALUES(source_type)");
                 foreach ($fundingSources as $fs) {
                     $stmtFs->execute($fs);
+                }
+            }
+
+            // 6. ตรวจสอบการนำเข้าแผนงบประมาณปี 2570 ครบทั้ง 4 ฝ่าย
+            if ($pdo->query("SHOW TABLES LIKE 'fin_projects'")->rowCount() > 0 &&
+                $pdo->query("SHOW TABLES LIKE 'fin_fiscal_years'")->rowCount() > 0) {
+                $hasProjects2570 = (int)$pdo->query("
+                    SELECT COUNT(*) FROM fin_projects p 
+                    JOIN fin_fiscal_years fy ON p.fiscal_year_id = fy.id 
+                    WHERE fy.year_be = 2570
+                ")->fetchColumn();
+                if ($hasProjects2570 === 0) {
+                    $importScript = __DIR__ . '/../../database/import_school_plan_2570.php';
+                    if (file_exists($importScript)) {
+                        require_once $importScript;
+                        runSchoolPlanImport($pdo);
+                    }
                 }
             }
         } catch (\Throwable $e) {

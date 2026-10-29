@@ -23,20 +23,43 @@ class BudgetController extends Controller
         $activeFy = AuthService::getActiveFiscalYear();
         $fyId = (int)$activeFy['id'];
 
+        $selectedDept = trim((string)$this->request->query('dept', ''));
+
         $sql = "
             SELECT 
                 b.*,
-                p.project_code, p.project_name, p.department,
+                p.project_code, p.project_name, p.activity_name, p.department, p.responsible_person,
                 fs.source_name, fs.source_type
             FROM fin_budgets b
             JOIN fin_projects p ON b.project_id = p.id
             JOIN fin_funding_sources fs ON b.funding_source_id = fs.id
             WHERE b.fiscal_year_id = ?
-            ORDER BY p.project_code ASC, b.budget_category ASC
         ";
+        $params = [$fyId];
+        if (!empty($selectedDept)) {
+            $sql .= " AND p.department = ?";
+            $params[] = $selectedDept;
+        }
+        $sql .= " ORDER BY p.project_code ASC, b.budget_category ASC";
+
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$fyId]);
+        $stmt->execute($params);
         $budgets = $stmt->fetchAll();
+
+        // Department summaries
+        $deptStmt = $pdo->prepare("
+            SELECT p.department, 
+                   COUNT(DISTINCT p.id) as project_count, 
+                   COALESCE(SUM(b.initial_amount), 0) as total_initial, 
+                   COALESCE(SUM(b.paid_amount), 0) as total_paid
+            FROM fin_projects p
+            LEFT JOIN fin_budgets b ON b.project_id = p.id AND b.fiscal_year_id = ?
+            WHERE p.fiscal_year_id = ?
+            GROUP BY p.department
+            ORDER BY p.department ASC
+        ");
+        $deptStmt->execute([$fyId, $fyId]);
+        $deptSummaries = $deptStmt->fetchAll();
 
         // Projects for allocation modal
         $projects = $pdo->prepare("SELECT * FROM fin_projects WHERE fiscal_year_id = ? ORDER BY project_code ASC");
@@ -67,7 +90,9 @@ class BudgetController extends Controller
             'budgets'        => $budgets,
             'projects'       => $allProjects,
             'fundingSources' => $fundingSources,
-            'transfers'      => $allTransfers
+            'transfers'      => $allTransfers,
+            'selectedDept'   => $selectedDept,
+            'deptSummaries'  => $deptSummaries
         ]);
     }
 
@@ -171,6 +196,29 @@ class BudgetController extends Controller
             $this->setFlash('danger', $result['message']);
         }
 
+        $this->redirect('/budgets');
+    }
+
+    public function importPlan(): void
+    {
+        $this->checkPermission('budgets', 'create');
+        $pdo = Database::getConnection();
+        try {
+            require_once __DIR__ . '/../../database/import_school_plan_2570.php';
+            $res = runSchoolPlanImport($pdo);
+            AuditTrailService::log(
+                $this->currentUserId(),
+                'create',
+                'fin_budgets',
+                0,
+                null,
+                $res,
+                "นำเข้าแผนปฏิบัติการและงบประมาณปี 2570 ครบทั้ง 4 ฝ่าย ({$res['total_activities']} กิจกรรม) รวม " . number_format($res['grand_total'], 2) . " บาท"
+            );
+            $this->setFlash('success', "นำเข้าแผนงานโครงการปี 2570 ครบทุกฝ่ายสำเร็จ ({$res['total_activities']} กิจกรรม) วงเงินจัดสรรรวม " . number_format($res['grand_total'], 2) . " บาท");
+        } catch (\Throwable $e) {
+            $this->setFlash('danger', "เกิดข้อผิดพลาดในการนำเข้าข้อมูล: " . $e->getMessage());
+        }
         $this->redirect('/budgets');
     }
 }

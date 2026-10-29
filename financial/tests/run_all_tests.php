@@ -14,6 +14,7 @@ $testFiles = [
     'Phase4BankAndProgramsTest.php'     => 'Phase 4: Bank Accounts, Reconciliation & Special Programs',
     'Phase5ProcurementAndAssetTest.php' => 'Phase 5: Procurement, Inventory/Assets & 28 Reports',
     'Phase6FundingSourcesTest.php'      => 'Phase 6: Funding Sources & Financial Types Management',
+    'Phase7SchoolPlanImportTest.php'    => 'Phase 7: School Action Plan & Budget 2570 Import',
 ];
 
 echo "=====================================================================" . PHP_EOL;

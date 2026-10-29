@@ -157,6 +157,7 @@ $router->get('/budgets', [BudgetController::class, 'index'], ['auth', 'rbac:budg
 $router->post('/budgets/projects', [BudgetController::class, 'createProject'], ['auth', 'csrf', 'rbac:budgets,create']);
 $router->post('/budgets/allocate', [BudgetController::class, 'allocate'], ['auth', 'csrf', 'rbac:budgets,edit']);
 $router->post('/budgets/transfer', [BudgetController::class, 'transfer'], ['auth', 'csrf', 'rbac:budgets,edit']);
+$router->post('/budgets/import-plan', [BudgetController::class, 'importPlan'], ['auth', 'csrf', 'rbac:budgets,create']);
 
 // --- Funding Sources (ประเภทการเงินและแหล่งเงินสถานศึกษา) ---
 $router->get('/funding-sources', [FundingSourceController::class, 'index'], ['auth', 'rbac:budgets,view']);

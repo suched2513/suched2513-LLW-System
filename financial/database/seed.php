@@ -246,6 +246,14 @@ try {
     }
     echo "  - ติดตั้งข้อมูลองค์กรโรงเรียนละลมวิทยาและการตั้งค่าระบบ เรียบร้อย" . PHP_EOL;
 
+    // 12. Import แผนปฏิบัติการและงบประมาณประจำปี 2570 ครบทุกฝ่าย
+    $importFile = __DIR__ . '/import_school_plan_2570.php';
+    if (file_exists($importFile)) {
+        require_once $importFile;
+        $importRes = runSchoolPlanImport($pdo);
+        echo "  - นำเข้าแผนงานโครงการ/กิจกรรมปี 2570 ครบทั้ง 4 ฝ่าย ({$importRes['total_activities']} กิจกรรม) รวม " . number_format($importRes['grand_total'], 2) . " บาท เรียบร้อย" . PHP_EOL;
+    }
+
     echo "=== ดำเนินการนำเข้าข้อมูลตั้งต้น (SEEDING) สำเร็จสมบูรณ์ 100% ===" . PHP_EOL;
 
 } catch (Throwable $e) {
