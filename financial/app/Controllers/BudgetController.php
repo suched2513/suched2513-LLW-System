@@ -221,4 +221,155 @@ class BudgetController extends Controller
         }
         $this->redirect('/budgets');
     }
+
+    public function phong11(): void
+    {
+        $this->checkPermission('budgets', 'view');
+        $pdo = Database::getConnection();
+
+        $activeFy = AuthService::getActiveFiscalYear();
+        $fyId = (int)$activeFy['id'];
+
+        $selectedBudgetId = (int)$this->request->query('id', 0);
+
+        // Fetch all budgets with project details
+        $stmt = $pdo->prepare("
+            SELECT 
+                b.*,
+                p.project_code, p.project_name, p.activity_name, p.department, p.responsible_person,
+                fs.source_name, fs.source_type
+            FROM fin_budgets b
+            JOIN fin_projects p ON b.project_id = p.id
+            JOIN fin_funding_sources fs ON b.funding_source_id = fs.id
+            WHERE b.fiscal_year_id = ?
+            ORDER BY p.project_code ASC, b.budget_category ASC
+        ");
+        $stmt->execute([$fyId]);
+        $allBudgets = $stmt->fetchAll();
+
+        $preBudget = null;
+        if ($selectedBudgetId > 0) {
+            foreach ($allBudgets as $b) {
+                if ((int)$b['id'] === $selectedBudgetId) {
+                    $preBudget = $b;
+                    break;
+                }
+            }
+        }
+
+        $this->render('documents/form_phong11', [
+            'pageTitle'  => 'จัดทำเอกสาร แบบ ผง 1/1',
+            'allBudgets' => $allBudgets,
+            'preBudget'  => $preBudget
+        ]);
+    }
+
+    public function previewPhong11(): void
+    {
+        $this->checkPermission('budgets', 'view');
+
+        $docNo = (string)$this->request->input('doc_no');
+        $docDate = (string)$this->request->input('doc_date');
+        $schoolName = (string)$this->request->input('school_name', 'โรงเรียนละลมวิทยา');
+        $affiliation = (string)$this->request->input('affiliation', 'สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาศรีสะเกษ ยโสธร');
+        $fiscalYearBe = (string)$this->request->input('fiscal_year_be', '2570');
+        $department = (string)$this->request->input('department');
+        $workSection = (string)$this->request->input('work_section');
+        $requesterName = (string)$this->request->input('requester_name');
+        $requesterPosition = (string)$this->request->input('requester_position', 'ครู');
+        $projectName = (string)$this->request->input('project_name');
+        $activityName = (string)$this->request->input('activity_name');
+        $objective = (string)$this->request->input('objective');
+        $inspectorName = (string)$this->request->input('inspector_name');
+        $budgetAllocated = (float)$this->request->input('budget_allocated', 0);
+        $budgetSpentPrev = (float)$this->request->input('budget_spent_prev', 0);
+        $totalAmount = (float)$this->request->input('total_amount', 0);
+
+        $activityLeaderName = (string)$this->request->input('activity_leader_name', $requesterName);
+        $budgetHeadName = (string)$this->request->input('budget_head_name', 'นางชลลัดดา มากนวล');
+        $planHeadName = (string)$this->request->input('plan_head_name', 'นางชลลัดดา มากนวล');
+        $procurementHeadName = (string)$this->request->input('procurement_head_name', 'นางบานเย็น ภูรักษา');
+        $financeHeadName = (string)$this->request->input('finance_head_name', 'นางรัตนา หงษ์โสภา');
+        $directorName = (string)$this->request->input('director_name', 'นายสถาน ปรางมาศ');
+
+        // Items
+        $itemNames = (array)$this->request->input('item_name', []);
+        $itemQuantities = (array)$this->request->input('item_quantity', []);
+        $itemUnits = (array)$this->request->input('item_unit', []);
+        $itemUnitPrices = (array)$this->request->input('item_unit_price', []);
+        $itemAmounts = (array)$this->request->input('item_amount', []);
+
+        $items = [];
+        $calculatedTotal = 0;
+        for ($i = 0; $i < count($itemNames); $i++) {
+            if (!empty(trim($itemNames[$i]))) {
+                $qty = (float)($itemQuantities[$i] ?? 1);
+                $unit = trim((string)($itemUnits[$i] ?? ''));
+                $price = (float)($itemUnitPrices[$i] ?? 0);
+                $amt = (float)($itemAmounts[$i] ?? ($qty * $price));
+                $calculatedTotal += $amt;
+                $items[] = [
+                    'item_name'  => $itemNames[$i],
+                    'quantity'   => $qty,
+                    'unit'       => $unit,
+                    'unit_price' => $price,
+                    'amount'     => $amt
+                ];
+            }
+        }
+        if ($totalAmount <= 0 && $calculatedTotal > 0) {
+            $totalAmount = $calculatedTotal;
+        }
+
+        // Specs
+        $specItemNos = (array)$this->request->input('spec_item_no', []);
+        $specDescriptions = (array)$this->request->input('spec_description', []);
+        $specNotes = (array)$this->request->input('spec_note', []);
+        $specs = [];
+        for ($j = 0; $j < count($specItemNos); $j++) {
+            if (!empty(trim($specItemNos[$j])) || !empty(trim($specDescriptions[$j] ?? ''))) {
+                $specs[] = [
+                    'item_no'     => $specItemNos[$j],
+                    'description' => $specDescriptions[$j] ?? '',
+                    'note'        => $specNotes[$j] ?? ''
+                ];
+            }
+        }
+
+        $doc = [
+            'doc_no'               => $docNo,
+            'doc_date'             => $docDate,
+            'school_name'          => $schoolName,
+            'affiliation'          => $affiliation,
+            'fiscal_year_be'       => $fiscalYearBe,
+            'department'           => $department,
+            'work_section'         => $workSection,
+            'requester_name'       => $requesterName,
+            'requester_position'   => $requesterPosition,
+            'project_name'         => $projectName,
+            'activity_name'        => $activityName,
+            'objective'            => $objective,
+            'inspector_name'       => $inspectorName,
+            'budget_allocated'     => $budgetAllocated,
+            'budget_spent_prev'    => $budgetSpentPrev,
+            'total_amount'         => $totalAmount,
+            'total_amount_text'    => baht_text($totalAmount),
+            'activity_leader_name' => $activityLeaderName,
+            'budget_head_name'     => $budgetHeadName,
+            'plan_head_name'       => $planHeadName,
+            'procurement_head_name'=> $procurementHeadName,
+            'finance_head_name'    => $financeHeadName,
+            'director_name'        => $directorName,
+            'items'                => $items,
+            'specs'                => $specs
+        ];
+
+        $viewPath = __DIR__ . '/../../financial/app/Views/documents/phong11.php';
+        if (!file_exists($viewPath)) {
+            $viewPath = 'C:/xampp/htdocs/llw/financial/app/Views/documents/phong11.php';
+        }
+        extract(['doc' => $doc]);
+        require $viewPath;
+        exit;
+    }
 }

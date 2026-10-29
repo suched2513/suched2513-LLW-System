@@ -281,4 +281,91 @@ class DisbursementController extends Controller
         $this->setFlash($res['success'] ? 'success' : 'danger', $res['message']);
         $this->redirect("/disbursements/show/{$id}");
     }
+
+    public function printPhong11(string $id): void
+    {
+        $this->checkPermission('disbursements', 'view');
+        $pdo = Database::getConnection();
+
+        $stmt = $pdo->prepare("
+            SELECT 
+                p.*,
+                u.full_name as requester_name, u.email as requester_email,
+                b.budget_category, b.net_amount as budget_net, b.paid_amount as budget_paid, b.committed_amount as budget_committed,
+                proj.project_code, proj.project_name, proj.activity_name, proj.department, proj.responsible_person,
+                fs.source_name,
+                aud.full_name as auditor_name,
+                app.full_name as approver_name,
+                dis.full_name as disburser_name
+            FROM fin_payments p
+            JOIN fin_users u ON p.requester_id = u.id
+            JOIN fin_budgets b ON p.budget_id = b.id
+            JOIN fin_projects proj ON b.project_id = proj.id
+            JOIN fin_funding_sources fs ON b.funding_source_id = fs.id
+            LEFT JOIN fin_users aud ON p.audited_by = aud.id
+            LEFT JOIN fin_users app ON p.approved_by = app.id
+            LEFT JOIN fin_users dis ON p.disbursed_by = dis.id
+            WHERE p.id = ?
+        ");
+        $stmt->execute([(int)$id]);
+        $payment = $stmt->fetch();
+
+        if (!$payment) {
+            $this->setFlash('danger', 'ไม่พบใบสำคัญจ่ายที่ระบุ');
+            $this->redirect('/disbursements');
+        }
+
+        $stmtItems = $pdo->prepare("SELECT * FROM fin_payment_items WHERE payment_id = ?");
+        $stmtItems->execute([(int)$id]);
+        $rawItems = $stmtItems->fetchAll();
+
+        $items = [];
+        foreach ($rawItems as $it) {
+            $items[] = [
+                'item_name'  => $it['description'],
+                'quantity'   => (float)$it['quantity'],
+                'unit'       => 'รายการ',
+                'unit_price' => (float)$it['unit_price'],
+                'amount'     => (float)$it['amount']
+            ];
+        }
+
+        $spentPrev = (float)($payment['budget_paid'] ?? 0) - (float)($payment['net_amount'] ?? 0);
+        if ($spentPrev < 0) {
+            $spentPrev = 0;
+        }
+
+        $doc = [
+            'doc_no'               => $payment['voucher_no'] ?? '     /2570',
+            'doc_date'             => thai_date($payment['payment_date'] ?? date('Y-m-d'), false, true),
+            'school_name'          => 'โรงเรียนละลมวิทยา',
+            'affiliation'          => 'สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาศรีสะเกษ ยโสธร',
+            'fiscal_year_be'       => '2570',
+            'department'           => $payment['department'] ?? 'ฝ่ายบริหารงานวิชาการ',
+            'work_section'         => $payment['department'] ?? 'งานตามแผนปฏิบัติราชการ',
+            'requester_name'       => $payment['requester_name'] ?? '...................................................',
+            'requester_position'   => 'ครู',
+            'project_name'         => $payment['project_name'] ?? '',
+            'activity_name'        => !empty($payment['activity_name']) ? $payment['activity_name'] : $payment['project_name'],
+            'objective'            => $payment['description'] ?: 'เพื่อใช้ในการดำเนินกิจกรรมตามแผนปฏิบัติราชการ',
+            'inspector_name'       => $payment['auditor_name'] ?? 'นางชลลัดดา มากนวล',
+            'budget_allocated'     => (float)$payment['budget_net'],
+            'budget_spent_prev'    => $spentPrev,
+            'total_amount'         => (float)$payment['net_amount'],
+            'total_amount_text'    => baht_text((float)$payment['net_amount']),
+            'activity_leader_name' => $payment['responsible_person'] ?? $payment['requester_name'],
+            'budget_head_name'     => 'นางชลลัดดา มากนวล',
+            'plan_head_name'       => 'นางชลลัดดา มากนวล',
+            'procurement_head_name'=> 'นางบานเย็น ภูรักษา',
+            'finance_head_name'    => 'นางรัตนา หงษ์โสภา',
+            'director_name'        => 'นายสถาน ปรางมาศ',
+            'items'                => $items,
+            'specs'                => []
+        ];
+
+        $viewPath = 'C:/xampp/htdocs/llw/financial/app/Views/documents/phong11.php';
+        extract(['doc' => $doc]);
+        require $viewPath;
+        exit;
+    }
 }

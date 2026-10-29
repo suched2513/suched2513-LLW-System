@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /**
  * Test Suite Runner for School Financial & Accounting System
- * รันการทดสอบระบบทุกขั้นตอน (Phases 1-6) แบบครบวงจร
+ * รันการทดสอบระบบทุกขั้นตอน (Phases 1-8) แบบครบวงจร
  */
 
 $testFiles = [
@@ -15,6 +15,7 @@ $testFiles = [
     'Phase5ProcurementAndAssetTest.php' => 'Phase 5: Procurement, Inventory/Assets & 28 Reports',
     'Phase6FundingSourcesTest.php'      => 'Phase 6: Funding Sources & Financial Types Management',
     'Phase7SchoolPlanImportTest.php'    => 'Phase 7: School Action Plan & Budget 2570 Import',
+    'Phase8Phong11Test.php'             => 'Phase 8: แบบ ผง 1/1 Budget Approval Document Generator',
 ];
 
 echo "=====================================================================" . PHP_EOL;
@@ -48,12 +49,15 @@ foreach ($testFiles as $file => $description) {
 
 echo "=====================================================================" . PHP_EOL;
 echo "สรุปผลการทดสอบทั้งหมด:" . PHP_EOL;
-echo "  ชุดการทดสอบ: {$passedSuites} / {$totalSuites} ชุด ผ่านสมบูรณ์ (100%)" . PHP_EOL;
+echo "  ชุดการทดสอบทั้งหมด: {$totalSuites}" . PHP_EOL;
+echo "  ผ่านสมบูรณ์: {$passedSuites}" . PHP_EOL;
+echo "  ล้มเหลว: " . ($totalSuites - $passedSuites) . PHP_EOL;
+echo "=====================================================================" . PHP_EOL;
 
 if ($allPassed) {
-    echo "  สถานะระบบ: PASSED ALL TESTS (ระบบผ่านเกณฑ์ความถูกต้องทางการเงินและบัญชีทุกเงื่อนไข)" . PHP_EOL;
+    echo "ผลลัพธ์: ทุกชุดการทดสอบผ่าน 100% (ALL SUITES PASSED - READY FOR PRODUCTION)" . PHP_EOL;
+    exit(0);
 } else {
-    echo "  สถานะระบบ: FAILED (มีบางรายการทดสอบไม่ผ่าน)" . PHP_EOL;
+    echo "ผลลัพธ์: มีข้อผิดพลาดในชุดการทดสอบ (SOME SUITES FAILED)" . PHP_EOL;
     exit(1);
 }
-echo "=====================================================================" . PHP_EOL;

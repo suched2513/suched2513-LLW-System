@@ -158,6 +158,8 @@ $router->post('/budgets/projects', [BudgetController::class, 'createProject'], [
 $router->post('/budgets/allocate', [BudgetController::class, 'allocate'], ['auth', 'csrf', 'rbac:budgets,edit']);
 $router->post('/budgets/transfer', [BudgetController::class, 'transfer'], ['auth', 'csrf', 'rbac:budgets,edit']);
 $router->post('/budgets/import-plan', [BudgetController::class, 'importPlan'], ['auth', 'csrf', 'rbac:budgets,create']);
+$router->get('/budgets/phong11', [BudgetController::class, 'phong11'], ['auth', 'rbac:budgets,view']);
+$router->post('/budgets/phong11/preview', [BudgetController::class, 'previewPhong11'], ['auth', 'csrf', 'rbac:budgets,view']);
 
 // --- Funding Sources (ประเภทการเงินและแหล่งเงินสถานศึกษา) ---
 $router->get('/funding-sources', [FundingSourceController::class, 'index'], ['auth', 'rbac:budgets,view']);
@@ -178,6 +180,7 @@ $router->get('/disbursements', [DisbursementController::class, 'index'], ['auth'
 $router->get('/disbursements/create', [DisbursementController::class, 'create'], ['auth', 'rbac:disbursements,create']);
 $router->post('/disbursements/store', [DisbursementController::class, 'store'], ['auth', 'csrf', 'rbac:disbursements,create']);
 $router->get('/disbursements/show/{id}', [DisbursementController::class, 'show'], ['auth', 'rbac:disbursements,view']);
+$router->get('/disbursements/phong11/{id}', [DisbursementController::class, 'printPhong11'], ['auth', 'rbac:disbursements,view']);
 $router->post('/disbursements/submit', [DisbursementController::class, 'submit'], ['auth', 'csrf', 'rbac:disbursements,propose']);
 $router->post('/disbursements/audit', [DisbursementController::class, 'audit'], ['auth', 'csrf', 'rbac:disbursements,audit']);
 $router->post('/disbursements/approve', [DisbursementController::class, 'approve'], ['auth', 'csrf', 'rbac:disbursements,approve']);

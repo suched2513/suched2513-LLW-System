@@ -39,6 +39,9 @@ $status = $payment['workflow_status'];
         <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.print()">
             <i class="bi bi-printer me-1"></i> พิมพ์ใบสำคัญจ่าย
         </button>
+        <a href="<?= $baseUrl ?>/disbursements/phong11/<?= $payment['id'] ?>" target="_blank" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-file-earmark-text me-1"></i> พิมพ์แบบ ผง 1/1
+        </a>
 
         <!-- Workflow Action Buttons -->
         <?php if ($status === 'draft'): ?>

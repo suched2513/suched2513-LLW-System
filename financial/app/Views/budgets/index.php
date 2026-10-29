@@ -21,6 +21,7 @@ $deptSummaries = $deptSummaries ?? [];
         <button type="button" class="btn btn-primary-gov btn-sm" data-bs-toggle="modal" data-bs-target="#allocateModal">
             <i class="bi bi-pie-chart-fill me-1"></i> จัดสรรงบประมาณ
         </button>
+        <a href="<?= $baseUrl ?>/budgets/phong11" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-text me-1"></i> เขียนแบบ ผง 1/1</a>
         <button type="button" class="btn btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#transferModal">
             <i class="bi bi-arrow-left-right me-1"></i> โอนเปลี่ยนแปลงงบ
         </button>
@@ -68,12 +69,13 @@ $deptSummaries = $deptSummaries ?? [];
                     <th class="text-end" style="width: 110px;">เบิกจ่ายแล้ว</th>
                     <th class="text-end" style="width: 120px;">งบคงเหลือ</th>
                     <th class="text-center" style="width: 110px;">สถานะการใช้</th>
+                    <th class="text-center" style="width: 100px;">จัดทำเอกสาร</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($budgets)): ?>
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-5">
+                        <td colspan="10" class="text-center text-muted py-5">
                             <i class="bi bi-folder-x fs-1 text-secondary d-block mb-2"></i>
                             <div>ยังไม่มีการจัดสรรงบประมาณในปี พ.ศ. <?= e($activeFiscalYear['year_be']) ?></div>
                             <div class="small mt-2">
@@ -129,6 +131,11 @@ $deptSummaries = $deptSummaries ?? [];
                                     </div>
                                 </div>
                                 <small class="text-muted" style="font-size: 0.72rem;"><?= round($percent, 1) ?>%</small>
+                            </td>
+                            <td class="text-center">
+                                <a href="<?= $baseUrl ?>/budgets/phong11?id=<?= $b['id'] ?>" class="btn btn-outline-primary btn-sm py-0 px-2" title="เขียนแบบ ผง 1/1 สำหรับกิจกรรมนี้">
+                                    <i class="bi bi-file-earmark-text me-1"></i>ผง 1/1
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
