@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /**
  * Test Suite Runner for School Financial & Accounting System
- * รันการทดสอบระบบทุกขั้นตอน (Phases 1-8) แบบครบวงจร
+ * รันการทดสอบระบบทุกขั้นตอน (Phases 1-9) แบบครบวงจร
  */
 
 $testFiles = [
@@ -16,6 +16,7 @@ $testFiles = [
     'Phase6FundingSourcesTest.php'      => 'Phase 6: Funding Sources & Financial Types Management',
     'Phase7SchoolPlanImportTest.php'    => 'Phase 7: School Action Plan & Budget 2570 Import',
     'Phase8Phong11Test.php'             => 'Phase 8: แบบ ผง 1/1 Budget Approval Document Generator',
+    'Phase9Phong12AndPersistenceTest.php'=> 'Phase 9: แบบ ผง 1/2 Report Document & Persistence Registry',
 ];
 
 echo "=====================================================================" . PHP_EOL;

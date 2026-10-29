@@ -231,6 +231,51 @@ class Database
                 }
             }
         } catch (\Throwable $e) {
+                        // 7. ตาราง fin_budget_requests สำหรับแบบ ผง 1/1 และ ผง 1/2
+            if ($pdo->query("SHOW TABLES LIKE 'fin_budget_requests'")->rowCount() === 0) {
+                $pdo->exec("
+                    CREATE TABLE IF NOT EXISTS `fin_budget_requests` (
+                        `id` INT AUTO_INCREMENT PRIMARY KEY,
+                        `doc_type` ENUM('phong11', 'phong12') NOT NULL DEFAULT 'phong11',
+                        `doc_no` VARCHAR(50) NOT NULL,
+                        `doc_date` VARCHAR(50) NOT NULL,
+                        `fiscal_year_id` INT NOT NULL,
+                        `budget_id` INT NOT NULL,
+                        `requester_id` INT NULL,
+                        `requester_name` VARCHAR(150) NOT NULL,
+                        `requester_position` VARCHAR(100) NULL,
+                        `department` VARCHAR(100) NOT NULL,
+                        `work_section` VARCHAR(150) NULL,
+                        `project_name` VARCHAR(255) NOT NULL,
+                        `activity_name` VARCHAR(255) NOT NULL,
+                        `objective` TEXT NOT NULL,
+                        `inspector_name` VARCHAR(150) NULL,
+                        `total_amount` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+                        `budget_allocated` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+                        `budget_spent_prev` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+                        `budget_remaining_before` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+                        `budget_remaining_after` DECIMAL(14,2) NOT NULL DEFAULT 0.00,
+                        `activity_leader_name` VARCHAR(150) NULL,
+                        `budget_head_name` VARCHAR(150) NULL,
+                        `plan_head_name` VARCHAR(150) NULL,
+                        `procurement_head_name` VARCHAR(150) NULL,
+                        `finance_head_name` VARCHAR(150) NULL,
+                        `director_name` VARCHAR(150) NULL,
+                        `items_json` LONGTEXT NULL,
+                        `specs_json` LONGTEXT NULL,
+                        `status` ENUM('pending', 'approved', 'reported', 'disbursed', 'cancelled') NOT NULL DEFAULT 'approved',
+                        `related_request_id` INT NULL,
+                        `created_by` INT NULL,
+                        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX `idx_req_type` (`doc_type`),
+                        INDEX `idx_req_fy` (`fiscal_year_id`),
+                        INDEX `idx_req_budget` (`budget_id`),
+                        INDEX `idx_req_status` (`status`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                ");
+            }
+        } catch (\Throwable $e) {
             error_log('[Financial DB patchDatabaseSchema] ' . $e->getMessage());
         }
     }

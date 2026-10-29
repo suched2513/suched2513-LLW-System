@@ -160,6 +160,12 @@ $router->post('/budgets/transfer', [BudgetController::class, 'transfer'], ['auth
 $router->post('/budgets/import-plan', [BudgetController::class, 'importPlan'], ['auth', 'csrf', 'rbac:budgets,create']);
 $router->get('/budgets/phong11', [BudgetController::class, 'phong11'], ['auth', 'rbac:budgets,view']);
 $router->post('/budgets/phong11/preview', [BudgetController::class, 'previewPhong11'], ['auth', 'csrf', 'rbac:budgets,view']);
+$router->post('/budgets/phong11/submit', [BudgetController::class, 'submitPhong11'], ['auth', 'csrf', 'rbac:budgets,view']);
+$router->get('/budgets/documents', [BudgetController::class, 'documents'], ['auth', 'rbac:budgets,view']);
+$router->get('/budgets/documents/print/{id}', [BudgetController::class, 'printDocument'], ['auth', 'rbac:budgets,view']);
+$router->get('/budgets/phong12', [BudgetController::class, 'phong12'], ['auth', 'rbac:budgets,view']);
+$router->post('/budgets/phong12/submit', [BudgetController::class, 'submitPhong12'], ['auth', 'csrf', 'rbac:budgets,view']);
+$router->post('/budgets/phong12/preview', [BudgetController::class, 'submitPhong12'], ['auth', 'csrf', 'rbac:budgets,view']);
 
 // --- Funding Sources (ประเภทการเงินและแหล่งเงินสถานศึกษา) ---
 $router->get('/funding-sources', [FundingSourceController::class, 'index'], ['auth', 'rbac:budgets,view']);

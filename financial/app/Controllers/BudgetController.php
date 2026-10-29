@@ -376,6 +376,362 @@ class BudgetController extends Controller
             'specs'                => $specs
         ];
 
+                $actionType = (string)$this->request->input('action_type', 'save_and_print');
+        $budgetId = (int)$this->request->input('budget_id', 0);
+
+        if ($actionType === 'save_and_print' && $totalAmount > 0) {
+            $pdo = Database::getConnection();
+            $user = $this->user();
+            $userId = (int)($user['id'] ?? 1);
+            $activeFy = AuthService::getActiveFiscalYear();
+            $fyId = (int)$activeFy['id'];
+
+            $stmtIns = $pdo->prepare("
+                INSERT INTO fin_budget_requests (
+                    doc_type, doc_no, doc_date, fiscal_year_id, budget_id, requester_id,
+                    requester_name, requester_position, department, work_section,
+                    project_name, activity_name, objective, inspector_name,
+                    total_amount, budget_allocated, budget_spent_prev, budget_remaining_before, budget_remaining_after,
+                    activity_leader_name, budget_head_name, plan_head_name, procurement_head_name,
+                    finance_head_name, director_name, items_json, specs_json, status, created_by
+                ) VALUES (
+                    'phong11', ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?, 'approved', ?
+                )
+            ");
+            $stmtIns->execute([
+                $docNo, $docDate, $fyId, $budgetId, $userId,
+                $requesterName, $requesterPosition, $department, $workSection,
+                $projectName, $activityName, $objective, $inspectorName,
+                $totalAmount, $budgetAllocated, $budgetSpentPrev, ($budgetAllocated - $budgetSpentPrev), ($budgetAllocated - $budgetSpentPrev - $totalAmount),
+                $activityLeaderName, $budgetHeadName, $planHeadName, $procurementHeadName,
+                $financeHeadName, $directorName, json_encode($items, JSON_UNESCAPED_UNICODE), json_encode($specs, JSON_UNESCAPED_UNICODE), $userId
+            ]);
+            $requestId = (int)$pdo->lastInsertId();
+
+            // Update committed amount in budget
+            if ($budgetId > 0) {
+                $pdo->prepare("UPDATE fin_budgets SET committed_amount = committed_amount + ? WHERE id = ?")
+                    ->execute([$totalAmount, $budgetId]);
+
+                // Record commitment
+                try {
+                    $pdo->prepare("INSERT INTO fin_budget_commitments (budget_id, reference_type, reference_id, amount, status) VALUES (?, 'purchase_request', ?, ?, 'active')")
+                        ->execute([$budgetId, $requestId, $totalAmount]);
+                } catch (\Throwable $e) {}
+            }
+
+            AuditTrailService::log(
+                $userId,
+                'create',
+                'fin_budget_requests',
+                $requestId,
+                null,
+                ['doc_no' => $docNo, 'total_amount' => $totalAmount],
+                "สร้างและบันทึกเอกสารขออนุมัติใช้เงินงบประมาณ (แบบ ผง 1/1) เลขที่ {$docNo} จำนวน " . number_format($totalAmount, 2) . " บาท"
+            );
+        }
+
         $this->render('documents/phong11', ['doc' => $doc], null);
+    }
+
+    public function submitPhong11(): void
+    {
+        $this->previewPhong11();
+    }
+
+    public function documents(): void
+    {
+        $this->checkPermission('budgets', 'view');
+        $pdo = Database::getConnection();
+
+        $activeFy = AuthService::getActiveFiscalYear();
+        $fyId = (int)$activeFy['id'];
+
+        $type = (string)$this->request->query('type', 'all');
+
+        $sql = "
+            SELECT r.*, p.project_code, b.budget_category
+            FROM fin_budget_requests r
+            LEFT JOIN fin_budgets b ON r.budget_id = b.id
+            LEFT JOIN fin_projects p ON b.project_id = p.id
+            WHERE r.fiscal_year_id = ?
+        ";
+        $params = [$fyId];
+        if ($type === 'phong11' || $type === 'phong12') {
+            $sql .= " AND r.doc_type = ?";
+            $params[] = $type;
+        }
+        $sql .= " ORDER BY r.id DESC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $requests = $stmt->fetchAll();
+
+        // Stats
+        $statStmt = $pdo->prepare("
+            SELECT 
+                COUNT(CASE WHEN doc_type = 'phong11' THEN 1 END) as total_phong11,
+                COALESCE(SUM(CASE WHEN doc_type = 'phong11' THEN total_amount ELSE 0 END), 0) as amount_phong11,
+                COUNT(CASE WHEN doc_type = 'phong12' THEN 1 END) as total_phong12,
+                COALESCE(SUM(CASE WHEN doc_type = 'phong12' THEN total_amount ELSE 0 END), 0) as amount_phong12
+            FROM fin_budget_requests
+            WHERE fiscal_year_id = ?
+        ");
+        $statStmt->execute([$fyId]);
+        $stats = $statStmt->fetch() ?: [];
+
+        $this->render('documents/index', [
+            'pageTitle'    => 'ทะเบียนเอกสารงบประมาณ (แบบ ผง 1/1 - ผง 1/2)',
+            'requests'     => $requests,
+            'currentType'  => $type,
+            'stats'        => $stats
+        ]);
+    }
+
+    public function phong12(): void
+    {
+        $this->checkPermission('budgets', 'view');
+        $pdo = Database::getConnection();
+
+        $activeFy = AuthService::getActiveFiscalYear();
+        $fyId = (int)$activeFy['id'];
+
+        $fromId = (int)$this->request->query('from_id', 0);
+        $fromPhong11 = null;
+        if ($fromId > 0) {
+            $stmtF = $pdo->prepare("SELECT * FROM fin_budget_requests WHERE id = ?");
+            $stmtF->execute([$fromId]);
+            $fromPhong11 = $stmtF->fetch() ?: null;
+        }
+
+        // Fetch all budgets
+        $stmt = $pdo->prepare("
+            SELECT 
+                b.*,
+                p.project_code, p.project_name, p.activity_name, p.department, p.responsible_person,
+                fs.source_name, fs.source_type
+            FROM fin_budgets b
+            JOIN fin_projects p ON b.project_id = p.id
+            JOIN fin_funding_sources fs ON b.funding_source_id = fs.id
+            WHERE b.fiscal_year_id = ?
+            ORDER BY p.project_code ASC, b.budget_category ASC
+        ");
+        $stmt->execute([$fyId]);
+        $allBudgets = $stmt->fetchAll();
+
+        $this->render('documents/form_phong12', [
+            'pageTitle'    => 'จัดทำเอกสาร แบบ ผง 1/2',
+            'allBudgets'   => $allBudgets,
+            'fromPhong11'  => $fromPhong11
+        ]);
+    }
+
+    public function submitPhong12(): void
+    {
+        $this->checkPermission('budgets', 'view');
+
+        $docNo = (string)$this->request->input('doc_no');
+        $docDate = (string)$this->request->input('doc_date');
+        $schoolName = (string)$this->request->input('school_name', 'โรงเรียนละลมวิทยา');
+        $affiliation = (string)$this->request->input('affiliation', 'สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาศรีสะเกษ ยโสธร');
+        $fiscalYearBe = (string)$this->request->input('fiscal_year_be', '2570');
+        $department = (string)$this->request->input('department');
+        $workSection = (string)$this->request->input('work_section');
+        $requesterName = (string)$this->request->input('requester_name');
+        $requesterPosition = (string)$this->request->input('requester_position', 'ครู');
+        $projectName = (string)$this->request->input('project_name');
+        $activityName = (string)$this->request->input('activity_name');
+        $objective = (string)$this->request->input('objective');
+        $inspectorName = (string)$this->request->input('inspector_name');
+        $budgetAllocated = (float)$this->request->input('budget_allocated', 0);
+        $budgetSpentPrev = (float)$this->request->input('budget_spent_prev', 0);
+        $totalAmount = (float)$this->request->input('total_amount', 0);
+        $relatedRequestId = (int)$this->request->input('related_request_id', 0);
+
+        $activityLeaderName = (string)$this->request->input('activity_leader_name', $requesterName);
+        $budgetHeadName = (string)$this->request->input('plan_head_name', 'นางชลลัดดา มากนวล');
+        $planHeadName = (string)$this->request->input('plan_head_name', 'นางชลลัดดา มากนวล');
+        $procurementHeadName = (string)$this->request->input('procurement_head_name', 'นางบานเย็น ภูรักษา');
+        $financeHeadName = (string)$this->request->input('finance_head_name', 'นางรัตนา หงษ์โสภา');
+        $directorName = (string)$this->request->input('director_name', 'นายสถาน ปรางมาศ');
+
+        // Items
+        $itemNames = (array)$this->request->input('item_name', []);
+        $itemQuantities = (array)($this->request->input('quantity') ?: $this->request->input('item_quantity', []));
+        $itemUnits = (array)($this->request->input('unit') ?: $this->request->input('item_unit', []));
+        $itemUnitPrices = (array)($this->request->input('unit_price') ?: $this->request->input('item_unit_price', []));
+        $itemAmounts = (array)$this->request->input('item_amount', []);
+
+        $items = [];
+        $calculatedTotal = 0;
+        for ($i = 0; $i < count($itemNames); $i++) {
+            $name = trim((string)($itemNames[$i] ?? ''));
+            if ($name !== '') {
+                $qty = (float)($itemQuantities[$i] ?? 1);
+                $unit = trim((string)($itemUnits[$i] ?? ''));
+                $price = (float)($itemUnitPrices[$i] ?? 0);
+                $amt = (float)($itemAmounts[$i] ?? ($qty * $price));
+                if ($amt <= 0 && $price > 0) {
+                    $amt = $qty * $price;
+                }
+                $calculatedTotal += $amt;
+                $items[] = [
+                    'item_name'  => $name,
+                    'quantity'   => $qty,
+                    'unit'       => $unit ?: 'หน่วย',
+                    'unit_price' => $price,
+                    'amount'     => $amt
+                ];
+            }
+        }
+        if ($totalAmount <= 0 && $calculatedTotal > 0) {
+            $totalAmount = $calculatedTotal;
+        } elseif ($totalAmount > 0 && empty($items)) {
+            $items[] = [
+                'item_name'  => $objective ?: 'เพื่อใช้ในการดำเนินกิจกรรมตามแผนปฏิบัติราชการ',
+                'quantity'   => 1,
+                'unit'       => 'งาน',
+                'unit_price' => $totalAmount,
+                'amount'     => $totalAmount
+            ];
+        }
+
+        $doc = [
+            'doc_no'               => $docNo,
+            'doc_date'             => $docDate,
+            'school_name'          => $schoolName,
+            'affiliation'          => $affiliation,
+            'fiscal_year_be'       => $fiscalYearBe,
+            'department'           => $department,
+            'work_section'         => $workSection,
+            'requester_name'       => $requesterName,
+            'requester_position'   => $requesterPosition,
+            'project_name'         => $projectName,
+            'activity_name'        => $activityName,
+            'objective'            => $objective,
+            'inspector_name'       => $inspectorName,
+            'budget_allocated'     => $budgetAllocated,
+            'budget_spent_prev'    => $budgetSpentPrev,
+            'total_amount'         => $totalAmount,
+            'total_amount_text'    => baht_text($totalAmount),
+            'activity_leader_name' => $activityLeaderName,
+            'budget_head_name'     => $budgetHeadName,
+            'plan_head_name'       => $planHeadName,
+            'procurement_head_name'=> $procurementHeadName,
+            'finance_head_name'    => $financeHeadName,
+            'director_name'        => $directorName,
+            'items'                => $items,
+            'specs'                => []
+        ];
+
+        $actionType = (string)$this->request->input('action_type', 'save_and_print');
+        $budgetId = (int)$this->request->input('budget_id', 0);
+
+        if ($actionType === 'save_and_print' && $totalAmount > 0) {
+            $pdo = Database::getConnection();
+            $user = $this->user();
+            $userId = (int)($user['id'] ?? 1);
+            $activeFy = AuthService::getActiveFiscalYear();
+            $fyId = (int)$activeFy['id'];
+
+            $stmtIns = $pdo->prepare("
+                INSERT INTO fin_budget_requests (
+                    doc_type, doc_no, doc_date, fiscal_year_id, budget_id, requester_id,
+                    requester_name, requester_position, department, work_section,
+                    project_name, activity_name, objective, inspector_name,
+                    total_amount, budget_allocated, budget_spent_prev, budget_remaining_before, budget_remaining_after,
+                    activity_leader_name, budget_head_name, plan_head_name, procurement_head_name,
+                    finance_head_name, director_name, items_json, specs_json, status, related_request_id, created_by
+                ) VALUES (
+                    'phong12', ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, ?, ?, 'reported', ?, ?
+                )
+            ");
+            $stmtIns->execute([
+                $docNo, $docDate, $fyId, $budgetId, $userId,
+                $requesterName, $requesterPosition, $department, $workSection,
+                $projectName, $activityName, $objective, $inspectorName,
+                $totalAmount, $budgetAllocated, $budgetSpentPrev, ($budgetAllocated - $budgetSpentPrev), ($budgetAllocated - $budgetSpentPrev - $totalAmount),
+                $activityLeaderName, $budgetHeadName, $planHeadName, $procurementHeadName,
+                $financeHeadName, $directorName, json_encode($items, JSON_UNESCAPED_UNICODE), json_encode([], JSON_UNESCAPED_UNICODE),
+                $relatedRequestId > 0 ? $relatedRequestId : null, $userId
+            ]);
+            $requestId = (int)$pdo->lastInsertId();
+
+            if ($relatedRequestId > 0) {
+                $pdo->prepare("UPDATE fin_budget_requests SET status = 'reported' WHERE id = ?")
+                    ->execute([$relatedRequestId]);
+            }
+
+            AuditTrailService::log(
+                $userId,
+                'create',
+                'fin_budget_requests',
+                $requestId,
+                null,
+                ['doc_no' => $docNo, 'total_amount' => $totalAmount],
+                "สร้างและบันทึกเอกสารรายงานการใช้เงินงบประมาณ (แบบ ผง 1/2) เลขที่ {$docNo} จำนวน " . number_format($totalAmount, 2) . " บาท"
+            );
+        }
+
+        $this->render('documents/phong12', ['doc' => $doc], null);
+    }
+
+    public function printDocument(string $id): void
+    {
+        $this->checkPermission('budgets', 'view');
+        $pdo = Database::getConnection();
+
+        $stmt = $pdo->prepare("SELECT * FROM fin_budget_requests WHERE id = ?");
+        $stmt->execute([(int)$id]);
+        $row = $stmt->fetch();
+
+        if (!$row) {
+            $this->setFlash('danger', 'ไม่พบเอกสารงบประมาณที่ระบุ');
+            $this->redirect('/budgets/documents');
+        }
+
+        $items = !empty($row['items_json']) ? json_decode($row['items_json'], true) : [];
+        $specs = !empty($row['specs_json']) ? json_decode($row['specs_json'], true) : [];
+
+        $doc = [
+            'doc_no'               => $row['doc_no'],
+            'doc_date'             => $row['doc_date'],
+            'school_name'          => 'โรงเรียนละลมวิทยา',
+            'affiliation'          => 'สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาศรีสะเกษ ยโสธร',
+            'fiscal_year_be'       => '2570',
+            'department'           => $row['department'],
+            'work_section'         => $row['work_section'],
+            'requester_name'       => $row['requester_name'],
+            'requester_position'   => $row['requester_position'],
+            'project_name'         => $row['project_name'],
+            'activity_name'        => $row['activity_name'],
+            'objective'            => $row['objective'],
+            'inspector_name'       => $row['inspector_name'],
+            'budget_allocated'     => (float)$row['budget_allocated'],
+            'budget_spent_prev'    => (float)$row['budget_spent_prev'],
+            'total_amount'         => (float)$row['total_amount'],
+            'total_amount_text'    => baht_text((float)$row['total_amount']),
+            'activity_leader_name' => $row['activity_leader_name'],
+            'budget_head_name'     => $row['budget_head_name'],
+            'plan_head_name'       => $row['plan_head_name'],
+            'procurement_head_name'=> $row['procurement_head_name'],
+            'finance_head_name'    => $row['finance_head_name'],
+            'director_name'        => $row['director_name'],
+            'items'                => $items,
+            'specs'                => $specs
+        ];
+
+        $viewName = ($row['doc_type'] === 'phong12') ? 'documents/phong12' : 'documents/phong11';
+        $this->render($viewName, ['doc' => $doc], null);
     }
 }

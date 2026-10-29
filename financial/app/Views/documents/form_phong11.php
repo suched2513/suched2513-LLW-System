@@ -16,7 +16,7 @@ $preBudget = $preBudget ?? null;
     </div>
 </div>
 
-<form method="POST" action="<?= $baseUrl ?>/budgets/phong11/preview" target="_blank" id="phong11Form">
+<form method="POST" action="<?= $baseUrl ?>/budgets/phong11/submit" target="_blank" id="phong11Form">
     <input type="hidden" name="_token" value="<?= e($csrfToken) ?>">
     <input type="hidden" name="total_amount" id="totalAmountInput" value="0">
 
@@ -210,8 +210,11 @@ $preBudget = $preBudget ?? null;
 
             <!-- ปุ่มดำเนินการ -->
             <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-primary py-2 fw-bold">
-                    <i class="bi bi-printer-fill me-2"></i> สร้างและพิมพ์เอกสาร แบบ ผง 1/1
+                <button type="submit" name="action_type" value="save_and_print" class="btn btn-primary py-2 fw-bold">
+                    <i class="bi bi-save2 me-2"></i> บันทึกคำขอและพิมพ์เอกสาร (แนะนำ)
+                </button>
+                <button type="submit" name="action_type" value="preview" class="btn btn-outline-secondary py-2">
+                    <i class="bi bi-printer me-2"></i> พิมพ์ตัวอย่าง (ไม่บันทึก)
                 </button>
             </div>
         </div>

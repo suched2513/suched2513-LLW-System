@@ -21,7 +21,9 @@ $deptSummaries = $deptSummaries ?? [];
         <button type="button" class="btn btn-primary-gov btn-sm" data-bs-toggle="modal" data-bs-target="#allocateModal">
             <i class="bi bi-pie-chart-fill me-1"></i> จัดสรรงบประมาณ
         </button>
+        <a href="<?= $baseUrl ?>/budgets/documents" class="btn btn-outline-success btn-sm"><i class="bi bi-folder2-open me-1"></i> ทะเบียนเอกสาร ผง.</a>
         <a href="<?= $baseUrl ?>/budgets/phong11" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-text me-1"></i> เขียนแบบ ผง 1/1</a>
+        <a href="<?= $baseUrl ?>/budgets/phong12" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-check me-1"></i> เขียนแบบ ผง 1/2</a>
         <button type="button" class="btn btn-gold btn-sm" data-bs-toggle="modal" data-bs-target="#transferModal">
             <i class="bi bi-arrow-left-right me-1"></i> โอนเปลี่ยนแปลงงบ
         </button>

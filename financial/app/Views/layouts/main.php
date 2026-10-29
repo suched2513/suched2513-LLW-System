@@ -53,6 +53,9 @@ $baseUrl = defined('BASE_URL') ? BASE_URL : '';
             <a href="<?= $baseUrl ?>/budgets" class="nav-link <?= str_contains($currentRoute, '/budgets') ? 'active' : '' ?>">
                 <i class="bi bi-pie-chart"></i> บริหารงบประมาณ
             </a>
+            <a href="<?= $baseUrl ?>/budgets/documents" class="nav-link <?= (str_contains($currentRoute, '/budgets/documents') || str_contains($currentRoute, '/phong')) ? 'active' : '' ?>">
+                <i class="bi bi-file-earmark-ruled"></i> ทะเบียนเอกสาร ผง.
+            </a>
             <a href="<?= $baseUrl ?>/funding-sources" class="nav-link <?= str_contains($currentRoute, '/funding-sources') ? 'active' : '' ?>">
                 <i class="bi bi-tags"></i> ประเภทการเงิน
             </a>
