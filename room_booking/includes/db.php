@@ -50,24 +50,8 @@ function ensureRoomBookingTables(PDO $pdo): void {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
 
-        // เพิ่มข้อมูลห้องเริ่มต้นของโรงเรียนหากตารางยังว่างอยู่
-        $roomCount = (int)$pdo->query("SELECT COUNT(*) FROM rb_rooms")->fetchColumn();
-        if ($roomCount === 0) {
-            $defaultRooms = [
-                ['R01', 'ห้องประชุมเกียรติยศ (อาคาร 1)', 'อาคาร 1', 'ชั้น 2', 80, 'เครื่องปรับอากาศ, โปรเจกเตอร์, จอ LED, เครื่องเสียง, ไมค์ลอย 4 ตัว, โพเดียม', '#3b82f6', 'bi-award-fill'],
-                ['R02', 'ห้องโสตทัศนศึกษา', 'อาคาร 2', 'ชั้น 1', 120, 'ระบบเสียงสเตอริโอ, โปรเจกเตอร์คู่, ระบบบันทึกภาพ/สตรีมมิ่ง, แอร์ 4 ทิศทาง', '#10b981', 'bi-camera-video-fill'],
-                ['R03', 'ห้องประชุมวิทยพัฒน์ (วิชาการ)', 'อาคาร 3', 'ชั้น 2', 40, 'Smart TV 75 นิ้ว, โต๊ะประชุม U-Shape, ไวท์บอร์ดแก้ว, ระบบประชุมทางไกล', '#8b5cf6', 'bi-mortarboard-fill'],
-                ['R04', 'ห้องประชุมอาคารเรียนรวม (ชั้นล่าง)', 'อาคารเรียนรวม', 'ชั้น 1', 150, 'พัดลมระบายอากาศ, เวที, เครื่องเสียงกลางแจ้ง, ไมค์สาย/ไร้สาย', '#f59e0b', 'bi-people-fill'],
-                ['R05', 'ห้องปฏิบัติการคอมพิวเตอร์ 1', 'อาคาร 2', 'ชั้น 2', 45, 'คอมพิวเตอร์ 40 เครื่อง, จอฉายโปรเจกเตอร์, เครือข่าย Fiber Optic, แอร์', '#06b6d4', 'bi-laptop-fill']
-            ];
-            $stmt = $pdo->prepare("
-                INSERT INTO rb_rooms (room_code, room_name, building, floor, capacity, facilities, color_code, is_active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-            ");
-            foreach ($defaultRooms as $r) {
-                $stmt->execute([$r[0], $r[1], $r[2], $r[3], $r[4], $r[5], $r[6]]);
-            }
-        }
+        // เพิ่มข้อมูลห้องเริ่มต้นของโรงเรียน และซิงก์ 7 ห้องหลัก
+        syncSchoolRooms($pdo);
 
         // 2. ตารางการจองห้องประชุม rb_bookings
         $pdo->exec("
@@ -129,5 +113,134 @@ function ensureRoomBookingTables(PDO $pdo): void {
         $ensured = true;
     } catch (\Throwable $e) {
         error_log('[RoomBooking ensureRoomBookingTables] ' . $e->getMessage());
+    }
+}
+
+/**
+ * ปรับปรุงและซิงก์ข้อมูล 7 ห้องประชุมหลักของโรงเรียนละลมวิทยา
+ */
+function syncSchoolRooms(PDO $pdo): void {
+    $targetRooms = [
+        [
+            'code' => 'R01',
+            'name' => 'ห้องประชุม 30 ปี',
+            'building' => 'อาคาร 30 ปี',
+            'floor' => 'ชั้น 2',
+            'capacity' => 120,
+            'facilities' => 'เครื่องปรับอากาศ, โปรเจกเตอร์, จอ LED, เครื่องเสียง, ไมค์ลอย 4 ตัว, โพเดียม',
+            'color' => '#2563eb'
+        ],
+        [
+            'code' => 'R02',
+            'name' => 'ห้องประชุมเจียละออ',
+            'building' => 'อาคารเรียน',
+            'floor' => 'ชั้น 1',
+            'capacity' => 60,
+            'facilities' => 'เครื่องปรับอากาศ, Smart TV / จอฉาย, ระบบเครื่องเสียง, ไมค์ลอย',
+            'color' => '#059669'
+        ],
+        [
+            'code' => 'R03',
+            'name' => 'ห้องประชุมราชพฤกษ์',
+            'building' => 'อาคารราชพฤกษ์',
+            'floor' => 'ชั้น 2',
+            'capacity' => 50,
+            'facilities' => 'เครื่องปรับอากาศ, โต๊ะประชุม U-Shape, โปรเจกเตอร์, เครื่องเสียง',
+            'color' => '#d97706'
+        ],
+        [
+            'code' => 'R04',
+            'name' => 'ห้องทูบี',
+            'building' => 'ศูนย์เพื่อนใจ TO BE NUMBER ONE',
+            'floor' => 'ชั้น 1',
+            'capacity' => 40,
+            'facilities' => 'เครื่องปรับอากาศ, เครื่องเสียง, ชุดรับแขก, บอร์ดกิจกรรม, เก้าอี้ประชุม',
+            'color' => '#e11d48'
+        ],
+        [
+            'code' => 'R05',
+            'name' => 'ห้องคอมพิวเตอร์1',
+            'building' => 'อาคารปฏิบัติการ',
+            'floor' => 'ชั้น 2',
+            'capacity' => 45,
+            'facilities' => 'เครื่องคอมพิวเตอร์ 40 เครื่อง, จอฉายโปรเจกเตอร์, เครือข่าย Fiber Optic, แอร์',
+            'color' => '#0284c7'
+        ],
+        [
+            'code' => 'R06',
+            'name' => 'ห้องคอมพิวเตอร์2',
+            'building' => 'อาคารปฏิบัติการ',
+            'floor' => 'ชั้น 2',
+            'capacity' => 45,
+            'facilities' => 'เครื่องคอมพิวเตอร์ 40 เครื่อง, จอฉายโปรเจกเตอร์, เครือข่าย Fiber Optic, แอร์',
+            'color' => '#7c3aed'
+        ],
+        [
+            'code' => 'R07',
+            'name' => 'โดมอเนกประสงค์',
+            'building' => 'ลานโดมกิจกรรม',
+            'floor' => 'ชั้นล่าง',
+            'capacity' => 500,
+            'facilities' => 'เวทีกิจกรรม, ระบบเครื่องเสียงกลางแจ้ง, ไมค์สาย/ไร้สาย, อัฒจันทร์, พัดลมระบายอากาศ',
+            'color' => '#ea580c'
+        ],
+    ];
+
+    try {
+        foreach ($targetRooms as $r) {
+            // ตรวจสอบห้องตามชื่อห้องที่ตรงกัน
+            $stmtCheck = $pdo->prepare("SELECT id FROM rb_rooms WHERE room_name = ?");
+            $stmtCheck->execute([$r['name']]);
+            $existing = $stmtCheck->fetch();
+
+            if ($existing) {
+                $pdo->prepare("
+                    UPDATE rb_rooms SET 
+                        room_code = ?, building = ?, floor = ?, capacity = ?, 
+                        facilities = ?, color_code = ?, is_active = 1 
+                    WHERE id = ?
+                ")->execute([$r['code'], $r['building'], $r['floor'], $r['capacity'], $r['facilities'], $r['color'], $existing['id']]);
+            } else {
+                // ตรวจสอบว่ามีห้องรหัสเดียวกันแต่เป็นชื่อตัวอย่างเดิมที่ไม่มีประวัติการจองหรือไม่
+                $stmtCode = $pdo->prepare("SELECT id, room_name FROM rb_rooms WHERE room_code = ?");
+                $stmtCode->execute([$r['code']]);
+                $byCode = $stmtCode->fetch();
+
+                if ($byCode) {
+                    $bCount = (int)$pdo->query("SELECT COUNT(*) FROM rb_bookings WHERE room_id = {$byCode['id']}")->fetchColumn();
+                    if ($bCount === 0) {
+                        $pdo->prepare("
+                            UPDATE rb_rooms SET 
+                                room_name = ?, building = ?, floor = ?, capacity = ?, 
+                                facilities = ?, color_code = ?, is_active = 1 
+                            WHERE id = ?
+                        ")->execute([$r['name'], $r['building'], $r['floor'], $r['capacity'], $r['facilities'], $r['color'], $byCode['id']]);
+                        continue;
+                    }
+                }
+
+                // เพิ่มห้องใหม่
+                $pdo->prepare("
+                    INSERT INTO rb_rooms (room_code, room_name, building, floor, capacity, facilities, color_code, is_active)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                ")->execute([$r['code'], $r['name'], $r['building'], $r['floor'], $r['capacity'], $r['facilities'], $r['color']]);
+            }
+        }
+
+        // ล้างห้องตัวอย่างเดิมที่ไม่ได้อยู่ใน 7 ห้องนี้และไม่มีประวัติการจอง
+        $targetNames = array_column($targetRooms, 'name');
+        $inClause = "'" . implode("','", array_map('addslashes', $targetNames)) . "'";
+        $oldRooms = $pdo->query("
+            SELECT id FROM rb_rooms 
+            WHERE room_name NOT IN ($inClause)
+              AND (SELECT COUNT(*) FROM rb_bookings WHERE rb_bookings.room_id = rb_rooms.id) = 0
+        ")->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($oldRooms)) {
+            $delIds = implode(',', array_map('intval', $oldRooms));
+            $pdo->exec("DELETE FROM rb_rooms WHERE id IN ($delIds)");
+        }
+    } catch (\Throwable $e) {
+        error_log('[RoomBooking syncSchoolRooms] ' . $e->getMessage());
     }
 }
