@@ -294,24 +294,28 @@ class BudgetController extends Controller
 
         // Items
         $itemNames = (array)$this->request->input('item_name', []);
-        $itemQuantities = (array)$this->request->input('item_quantity', []);
-        $itemUnits = (array)$this->request->input('item_unit', []);
-        $itemUnitPrices = (array)$this->request->input('item_unit_price', []);
+        $itemQuantities = (array)($this->request->input('quantity') ?: $this->request->input('item_quantity', []));
+        $itemUnits = (array)($this->request->input('unit') ?: $this->request->input('item_unit', []));
+        $itemUnitPrices = (array)($this->request->input('unit_price') ?: $this->request->input('item_unit_price', []));
         $itemAmounts = (array)$this->request->input('item_amount', []);
 
         $items = [];
         $calculatedTotal = 0;
         for ($i = 0; $i < count($itemNames); $i++) {
-            if (!empty(trim($itemNames[$i]))) {
+            $name = trim((string)($itemNames[$i] ?? ''));
+            if ($name !== '') {
                 $qty = (float)($itemQuantities[$i] ?? 1);
                 $unit = trim((string)($itemUnits[$i] ?? ''));
                 $price = (float)($itemUnitPrices[$i] ?? 0);
                 $amt = (float)($itemAmounts[$i] ?? ($qty * $price));
+                if ($amt <= 0 && $price > 0) {
+                    $amt = $qty * $price;
+                }
                 $calculatedTotal += $amt;
                 $items[] = [
-                    'item_name'  => $itemNames[$i],
+                    'item_name'  => $name,
                     'quantity'   => $qty,
-                    'unit'       => $unit,
+                    'unit'       => $unit ?: 'หน่วย',
                     'unit_price' => $price,
                     'amount'     => $amt
                 ];
@@ -319,6 +323,14 @@ class BudgetController extends Controller
         }
         if ($totalAmount <= 0 && $calculatedTotal > 0) {
             $totalAmount = $calculatedTotal;
+        } elseif ($totalAmount > 0 && empty($items)) {
+            $items[] = [
+                'item_name'  => $objective ?: 'เพื่อใช้ในการดำเนินกิจกรรมตามแผนปฏิบัติราชการ',
+                'quantity'   => 1,
+                'unit'       => 'งาน',
+                'unit_price' => $totalAmount,
+                'amount'     => $totalAmount
+            ];
         }
 
         // Specs

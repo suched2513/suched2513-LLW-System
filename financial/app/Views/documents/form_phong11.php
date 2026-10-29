@@ -18,6 +18,7 @@ $preBudget = $preBudget ?? null;
 
 <form method="POST" action="<?= $baseUrl ?>/budgets/phong11/preview" target="_blank" id="phong11Form">
     <input type="hidden" name="_token" value="<?= e($csrfToken) ?>">
+    <input type="hidden" name="total_amount" id="totalAmountInput" value="0">
 
     <div class="row g-4">
         <!-- 1. ข้อมูลหัวบันทึกข้อความ -->
@@ -291,6 +292,7 @@ function calcTotal() {
 
     document.getElementById('grandTotal').textContent = grand.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ฿';
     document.getElementById('cardRequesting').textContent = grand.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ฿';
+    document.getElementById('totalAmountInput').value = grand;
 
     const bSelect = document.getElementById('budgetSelect');
     if (bSelect && bSelect.selectedIndex > 0) {
