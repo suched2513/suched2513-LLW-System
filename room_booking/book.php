@@ -10,6 +10,7 @@ $pageTitle = 'แบบฟอร์มขอจองห้องประชุ
 require_once __DIR__ . '/includes/header.php';
 
 $pdo = getRoomBookingPdo();
+syncSchoolRooms($pdo);
 
 // ดึงรายการห้องประชุมทั้งหมด
 $rooms = $pdo->query("SELECT * FROM rb_rooms WHERE is_active = 1 ORDER BY id ASC")->fetchAll();

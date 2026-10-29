@@ -19,6 +19,7 @@ function getRoomBookingPdo(): PDO {
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         ensureRoomBookingTables($pdo);
+        syncSchoolRooms($pdo);
     }
     return $pdo;
 }
@@ -49,9 +50,6 @@ function ensureRoomBookingTables(PDO $pdo): void {
                 INDEX `idx_rb_rooms_active` (`is_active`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
-
-        // เพิ่มข้อมูลห้องเริ่มต้นของโรงเรียน และซิงก์ 7 ห้องหลัก
-        syncSchoolRooms($pdo);
 
         // 2. ตารางการจองห้องประชุม rb_bookings
         $pdo->exec("
@@ -120,6 +118,9 @@ function ensureRoomBookingTables(PDO $pdo): void {
  * ปรับปรุงและซิงก์ข้อมูล 7 ห้องประชุมหลักของโรงเรียนละลมวิทยา
  */
 function syncSchoolRooms(PDO $pdo): void {
+    static $synced = false;
+    if ($synced) return;
+
     $targetRooms = [
         [
             'code' => 'R01',
@@ -187,59 +188,49 @@ function syncSchoolRooms(PDO $pdo): void {
     ];
 
     try {
-        foreach ($targetRooms as $r) {
-            // ตรวจสอบห้องตามชื่อห้องที่ตรงกัน
-            $stmtCheck = $pdo->prepare("SELECT id FROM rb_rooms WHERE room_name = ?");
-            $stmtCheck->execute([$r['name']]);
-            $existing = $stmtCheck->fetch();
+        // ตรวจสอบว่ามีประวัติการจองจริงในระบบหรือไม่
+        $hasBookings = false;
+        try {
+            $hasBookings = (int)$pdo->query("SELECT COUNT(*) FROM rb_bookings")->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            $hasBookings = false;
+        }
 
-            if ($existing) {
-                $pdo->prepare("
-                    UPDATE rb_rooms SET 
-                        room_code = ?, building = ?, floor = ?, capacity = ?, 
-                        facilities = ?, color_code = ?, is_active = 1 
-                    WHERE id = ?
-                ")->execute([$r['code'], $r['building'], $r['floor'], $r['capacity'], $r['facilities'], $r['color'], $existing['id']]);
-            } else {
-                // ตรวจสอบว่ามีห้องรหัสเดียวกันแต่เป็นชื่อตัวอย่างเดิมที่ไม่มีประวัติการจองหรือไม่
-                $stmtCode = $pdo->prepare("SELECT id, room_name FROM rb_rooms WHERE room_code = ?");
-                $stmtCode->execute([$r['code']]);
-                $byCode = $stmtCode->fetch();
+        if (!$hasBookings) {
+            // หากยังไม่มีประวัติการจองจริง ให้รีเซ็ตตาราง rb_rooms และนำเข้า 7 ห้องหลักที่ถูกต้อง 100%
+            $pdo->exec("DELETE FROM rb_rooms");
+            try { $pdo->exec("ALTER TABLE rb_rooms AUTO_INCREMENT = 1"); } catch (\Throwable $e) {}
 
-                if ($byCode) {
-                    $bCount = (int)$pdo->query("SELECT COUNT(*) FROM rb_bookings WHERE room_id = {$byCode['id']}")->fetchColumn();
-                    if ($bCount === 0) {
-                        $pdo->prepare("
-                            UPDATE rb_rooms SET 
-                                room_name = ?, building = ?, floor = ?, capacity = ?, 
-                                facilities = ?, color_code = ?, is_active = 1 
-                            WHERE id = ?
-                        ")->execute([$r['name'], $r['building'], $r['floor'], $r['capacity'], $r['facilities'], $r['color'], $byCode['id']]);
-                        continue;
-                    }
+            $stmtIns = $pdo->prepare("
+                INSERT INTO rb_rooms (room_code, room_name, building, floor, capacity, facilities, color_code, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+            ");
+            foreach ($targetRooms as $r) {
+                $stmtIns->execute([$r['code'], $r['name'], $r['building'], $r['floor'], $r['capacity'], $r['facilities'], $r['color']]);
+            }
+        } else {
+            // กรณีมีประวัติการจองอยู่แล้ว ให้ใช้วิธี UPDATE หรือ INSERT ทีละห้องเพื่อรักษา Foreign Key
+            foreach ($targetRooms as $r) {
+                $check = $pdo->prepare("SELECT id FROM rb_rooms WHERE room_code = ? OR room_name = ? LIMIT 1");
+                $check->execute([$r['code'], $r['name']]);
+                $existing = $check->fetch();
+
+                if ($existing) {
+                    $pdo->prepare("
+                        UPDATE rb_rooms SET 
+                            room_code = ?, room_name = ?, building = ?, floor = ?, 
+                            capacity = ?, facilities = ?, color_code = ?, is_active = 1 
+                        WHERE id = ?
+                    ")->execute([$r['code'], $r['name'], $r['building'], $r['floor'], $r['capacity'], $r['facilities'], $r['color'], $existing['id']]);
+                } else {
+                    $pdo->prepare("
+                        INSERT INTO rb_rooms (room_code, room_name, building, floor, capacity, facilities, color_code, is_active)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                    ")->execute([$r['code'], $r['name'], $r['building'], $r['floor'], $r['capacity'], $r['facilities'], $r['color']]);
                 }
-
-                // เพิ่มห้องใหม่
-                $pdo->prepare("
-                    INSERT INTO rb_rooms (room_code, room_name, building, floor, capacity, facilities, color_code, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-                ")->execute([$r['code'], $r['name'], $r['building'], $r['floor'], $r['capacity'], $r['facilities'], $r['color']]);
             }
         }
-
-        // ล้างห้องตัวอย่างเดิมที่ไม่ได้อยู่ใน 7 ห้องนี้และไม่มีประวัติการจอง
-        $targetNames = array_column($targetRooms, 'name');
-        $inClause = "'" . implode("','", array_map('addslashes', $targetNames)) . "'";
-        $oldRooms = $pdo->query("
-            SELECT id FROM rb_rooms 
-            WHERE room_name NOT IN ($inClause)
-              AND (SELECT COUNT(*) FROM rb_bookings WHERE rb_bookings.room_id = rb_rooms.id) = 0
-        ")->fetchAll(PDO::FETCH_COLUMN);
-
-        if (!empty($oldRooms)) {
-            $delIds = implode(',', array_map('intval', $oldRooms));
-            $pdo->exec("DELETE FROM rb_rooms WHERE id IN ($delIds)");
-        }
+        $synced = true;
     } catch (\Throwable $e) {
         error_log('[RoomBooking syncSchoolRooms] ' . $e->getMessage());
     }

@@ -12,6 +12,7 @@ require_once __DIR__ . '/../includes/functions.php';
 requireRoomAdmin();
 
 $pdo = getRoomBookingPdo();
+syncSchoolRooms($pdo);
 
 // ประมวลผลการเพิ่ม / แก้ไข / ปิดใช้งาน
 $msg = '';

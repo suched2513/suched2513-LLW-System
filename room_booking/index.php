@@ -10,6 +10,7 @@ $pageTitle = 'ปฏิทินการใช้ห้องประชุม
 require_once __DIR__ . '/includes/header.php';
 
 $pdo = getRoomBookingPdo();
+syncSchoolRooms($pdo);
 
 // ดึงรายการห้องประชุมที่เปิดใช้งาน
 $roomsStmt = $pdo->query("SELECT * FROM rb_rooms WHERE is_active = 1 ORDER BY id ASC");
