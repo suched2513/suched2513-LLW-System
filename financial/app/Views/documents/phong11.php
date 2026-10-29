@@ -527,11 +527,11 @@ $specs = $doc['specs'] ?? [];
             </tfoot>
         </table>
 
-        <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
-            <div style="width: 50%; text-align: center;">
-                <div>ลงชื่อ....................................................ผู้ขอใช้ / ผู้กำหนดรายละเอียด</div>
-                <div style="margin-top: 4px;">( <?= e($requesterName) ?> )</div>
-                <div style="color: #475569; font-size: 11pt;"><?= e($requesterPosition) ?></div>
+        <div style="margin-top: 25px; display: flex; justify-content: flex-end;">
+            <div style="text-align: center; white-space: nowrap;">
+                <div style="white-space: nowrap; font-size: 13.5pt;">ลงชื่อ................................................ผู้ขอใช้ / ผู้กำหนดรายละเอียด</div>
+                <div style="margin-top: 5px; font-size: 13pt;">( <?= e($requesterName) ?> )</div>
+                <div style="color: #475569; font-size: 11.5pt;"><?= e($requesterPosition) ?></div>
             </div>
         </div>
     </div>
@@ -572,10 +572,10 @@ $specs = $doc['specs'] ?? [];
         </table>
 
         <div style="margin-top: 25px; display: flex; justify-content: flex-end;">
-            <div style="width: 50%; text-align: center;">
-                <div>ลงชื่อ....................................................ผู้กำหนดคุณลักษณะเฉพาะ</div>
-                <div style="margin-top: 4px;">( <?= e($requesterName) ?> )</div>
-                <div style="color: #475569; font-size: 11pt;"><?= e($requesterPosition) ?></div>
+            <div style="text-align: center; white-space: nowrap;">
+                <div style="white-space: nowrap; font-size: 13.5pt;">ลงชื่อ................................................ผู้กำหนดคุณลักษณะเฉพาะ</div>
+                <div style="margin-top: 5px; font-size: 13pt;">( <?= e($requesterName) ?> )</div>
+                <div style="color: #475569; font-size: 11.5pt;"><?= e($requesterPosition) ?></div>
             </div>
         </div>
     </div>
