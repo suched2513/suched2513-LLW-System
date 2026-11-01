@@ -477,33 +477,37 @@ class MasterDataService
      */
     public function saveSubject(array $data): int
     {
+        $desc = isset($data['description']) ? trim((string)$data['description']) : null;
         if (!empty($data['id'])) {
             $stmt = $this->pdo->prepare("
                 UPDATE `pp5_subjects`
-                SET `code` = ?, `name` = ?, `department_id` = ?, `type` = ?, `credit` = ?, `hours` = ?, `grade_level` = ?
+                SET `code` = ?, `name` = ?, `department_id` = ?, `type` = ?, `credit` = ?, `hours` = ?, `grade_level` = ?, `description` = ?
                 WHERE `id` = ?
             ");
             $stmt->execute([
                 $data['code'], $data['name'], $data['department_id'],
                 $data['type'], $data['credit'], $data['hours'], $data['grade_level'],
+                $desc,
                 $data['id'],
             ]);
             $id = (int)$data['id'];
         } else {
             $stmt = $this->pdo->prepare("
-                INSERT INTO `pp5_subjects` (`code`, `name`, `department_id`, `type`, `credit`, `hours`, `grade_level`)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO `pp5_subjects` (`code`, `name`, `department_id`, `type`, `credit`, `hours`, `grade_level`, `description`)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     `name`          = VALUES(`name`),
                     `department_id` = VALUES(`department_id`),
                     `type`          = VALUES(`type`),
                     `credit`        = VALUES(`credit`),
                     `hours`         = VALUES(`hours`),
-                    `grade_level`   = VALUES(`grade_level`)
+                    `grade_level`   = VALUES(`grade_level`),
+                    `description`   = VALUES(`description`)
             ");
             $stmt->execute([
                 $data['code'], $data['name'], $data['department_id'],
                 $data['type'], $data['credit'], $data['hours'], $data['grade_level'],
+                $desc,
             ]);
             $id = (int)$this->pdo->lastInsertId();
             if ($id === 0) {

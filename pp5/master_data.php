@@ -777,6 +777,15 @@ function resetStudentForm() {
                     </div>
                 </div>
 
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">
+                        คำอธิบายรายวิชา (Course Description)
+                    </label>
+                    <textarea name="description" id="subj_desc" rows="3"
+                              placeholder="พิมพ์หรือคัดลอกคำอธิบายรายวิชาตามหลักสูตร... (ห้องที่เปิดสอนวิชานี้จะดึงไปใช้อัตโนมัติ)"
+                              class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs outline-none focus:ring-2 focus:ring-blue-500 transition-all"></textarea>
+                </div>
+
                 <button type="submit" class="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
                     <i class="bi bi-save2-fill"></i> บันทึกรายวิชา
                 </button>
@@ -895,6 +904,7 @@ function fillSubjectForm(sb) {
     document.getElementById('subj_credit').value = sb.credit || 1.5;
     document.getElementById('subj_hours').value = sb.hours || 60;
     document.getElementById('subj_grade').value = sb.grade_level || 1;
+    document.getElementById('subj_desc').value = sb.description || '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 </script>

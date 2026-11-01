@@ -133,6 +133,7 @@ class MasterDataRequest
         $credit = (float)($input['credit'] ?? 1.5);
         $hours  = (int)($input['hours'] ?? 60);
         $grade  = (int)($input['grade_level'] ?? 1);
+        $desc   = trim((string)($input['description'] ?? ''));
 
         if ($code === '') {
             $errors[] = 'กรุณาระบุรหัสวิชา (เช่น ค21101)';
@@ -170,6 +171,7 @@ class MasterDataRequest
                 'credit'        => $credit,
                 'hours'         => $hours,
                 'grade_level'   => $grade,
+                'description'   => $desc,
             ],
         ];
     }
