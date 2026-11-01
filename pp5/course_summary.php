@@ -11,6 +11,8 @@ use PP5\App\Services\Pp5ReportService;
 
 pp5_require_login();
 
+try {
+
 $policy        = new Pp5Policy($pdo);
 $masterService = new MasterDataService($pdo);
 $reportService = new Pp5ReportService($pdo);
@@ -297,39 +299,70 @@ echo pp5_render_course_nav($course, $policy, 'summary');
     </div>
 </div>
 
-<!-- กล่องสั่งพิมพ์ / ดาวน์โหลดเล่ม ปพ.5 ขนาด A4 (ครบ 5 ส่วน) -->
-<div class="bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200/60 mb-6">
-    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+<!-- กล่องสั่งพิมพ์ / ดาวน์โหลดเล่ม ปพ.5 (ชีต ปกน(p) วิชาการ & ชีต sgs(p) SGS-ONLINE) -->
+<div class="bg-gradient-to-r from-indigo-700 via-blue-700 to-indigo-800 rounded-3xl p-6 text-white shadow-xl shadow-indigo-200/60 mb-6">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
         <div>
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-xs font-black mb-2">
-                <i class="bi bi-printer-fill"></i> เอกสาร ปพ.5 มาตรฐานกระทรวงศึกษาธิการ (A4 • TH Sarabun New)
+                <i class="bi bi-printer-fill"></i> แบบฟอร์มทางการโรงเรียนละลมวิทยา (A4 แนวนอน • TH Sarabun New)
             </div>
-            <h3 class="text-lg sm:text-xl font-black">พิมพ์ / ดาวน์โหลดแบบบันทึกผลการพัฒนาคุณภาพผู้เรียน (ปพ.5)</h3>
+            <h3 class="text-xl sm:text-2xl font-black">พิมพ์เอกสาร ปพ.5 ส่งงานวิชาการและวัดผล</h3>
             <p class="text-xs sm:text-sm text-indigo-100 mt-1">
-                ประกอบด้วย 5 ส่วนครบถ้วน: ปกหน้าสรุปผลและลายเซ็น • เวลาเรียน • คะแนนรายตัวชี้วัดและเกรด • คุณลักษณะฯ 8 ข้อ • อ่านคิดเขียนและสมรรถนะ
+                ตรงตามรูปแบบชีต <strong>ปกน(p)</strong> และชีต <strong>sgs(p)</strong> ของโรงเรียน 100% พร้อมลายเซ็นครบ 4 ลำดับขั้น
             </p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-            <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>" target="_blank"
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=all" target="_blank"
                class="px-5 py-3 rounded-2xl bg-white text-indigo-700 hover:bg-indigo-50 text-xs sm:text-sm font-black shadow-lg transition-all flex items-center gap-2">
-                <i class="bi bi-file-earmark-pdf-fill text-rose-600 text-base"></i> เปิดดู / พิมพ์ ปพ.5 ครบทั้ง 5 ส่วน (A4)
+                <i class="bi bi-collection-fill text-indigo-600"></i> เปิดดู / พิมพ์ รวมทุกชีต (A4)
             </a>
-            <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&download=1"
+            <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=all&download=1"
                class="px-4 py-3 rounded-2xl bg-indigo-900/60 hover:bg-indigo-900 text-white border border-white/25 text-xs font-bold transition-all flex items-center gap-1.5">
-                <i class="bi bi-download"></i> ดาวน์โหลดไฟล์เล่มนี้
+                <i class="bi bi-download"></i> ดาวน์โหลด HTML
             </a>
         </div>
     </div>
 
-    <!-- ปุ่มลัดเลือกพิมพ์เฉพาะส่วน -->
-    <div class="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-white/15 text-xs">
-        <span class="font-bold text-indigo-100">เลือกพิมพ์เฉพาะส่วน:</span>
-        <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&sections=1" target="_blank" class="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 font-bold transition-all">ส่วนที่ 1: ปกหน้า</a>
-        <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&sections=2" target="_blank" class="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 font-bold transition-all">ส่วนที่ 2: เวลาเรียน</a>
-        <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&sections=3" target="_blank" class="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 font-bold transition-all">ส่วนที่ 3: คะแนนและเกรด</a>
-        <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&sections=4" target="_blank" class="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 font-bold transition-all">ส่วนที่ 4: คุณลักษณะฯ 8 ข้อ</a>
-        <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&sections=5" target="_blank" class="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 font-bold transition-all">ส่วนที่ 5: อ่านคิดเขียน & สมรรถนะ</a>
+    <!-- แถบ 2 ปุ่มหลักที่วิชาการกำหนด: ชีต ปกน(p) และ ชีต sgs(p) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-white/15">
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 flex flex-col justify-between gap-3 hover:bg-white/15 transition-all">
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs font-black uppercase tracking-wider text-blue-200">ชีตหลักที่ 1</span>
+                    <span class="px-2 py-0.5 rounded-md bg-blue-500/40 text-[11px] font-bold">ปพ.5-พ</span>
+                </div>
+                <h4 class="text-base font-black text-white flex items-center gap-2">
+                    <i class="bi bi-file-earmark-text-fill text-blue-300"></i> ชีต ปกน(p) (หน้าปก & สรุปผลการประเมิน)
+                </h4>
+                <p class="text-xs text-indigo-100 mt-1 leading-relaxed">
+                    ตารางสรุปผล 14 ระดับคะแนน (4.0–0.0, ร, มส, ผ, มผ) • สรุปอ่านคิดเขียน • คุณลักษณะอันพึงประสงค์ • ลายเซ็นครูผู้สอน หัวหน้ากลุ่ม งานวัดผล ฝ่ายวิชาการ และ ผอ.
+                </p>
+            </div>
+            <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=pok" target="_blank"
+               class="w-full py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-black text-xs text-center shadow transition-all flex items-center justify-center gap-2">
+                <i class="bi bi-printer-fill"></i> พิมพ์ใบปก ปพ.5-พ (ชีต ปกน(p))
+            </a>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 flex flex-col justify-between gap-3 hover:bg-white/15 transition-all">
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs font-black uppercase tracking-wider text-cyan-200">ชีตหลักที่ 2</span>
+                    <span class="px-2 py-0.5 rounded-md bg-cyan-500/40 text-[11px] font-bold">SGS-ONLINE</span>
+                </div>
+                <h4 class="text-base font-black text-white flex items-center gap-2">
+                    <i class="bi bi-table text-cyan-300"></i> ชีต sgs(p) (ตารางบันทึกคะแนน 43 คอลัมน์)
+                </h4>
+                <p class="text-xs text-indigo-100 mt-1 leading-relaxed">
+                    ตารางคะแนน 43 คอลัมน์ตรงตาม SGS: หน่วย 1–6, กลางภาค, หน่วย 7–12, ปลายภาค, รวม, เกรด, คุณลักษณะฯ 1–8+ผล, อ่านคิดเขียน 1–5+ผล, เวลาเรียน (สาย ป่วย กิจ ขาด ร้อยละ)
+                </p>
+            </div>
+            <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=sgs" target="_blank"
+               class="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-black text-xs text-center shadow transition-all flex items-center justify-center gap-2">
+                <i class="bi bi-printer-fill"></i> พิมพ์แบบบันทึกคะแนน SGS (ชีต sgs(p))
+            </a>
+        </div>
     </div>
 </div>
 
@@ -954,4 +987,32 @@ async function openRemedialModal(studentId, studentName, currentGrade) {
 }
 </script>
 
-<?php require_once __DIR__ . '/../components/layout_end.php'; ?>
+<?php
+require_once __DIR__ . '/../components/layout_end.php';
+} catch (\Throwable $e) {
+    error_log('[PP5 course_summary] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    $pageTitle = 'เกิดข้อผิดพลาดในการโหลดหน้าสรุป ปพ.5';
+    $pageSubtitle = htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+    $activeSystem = 'pp5';
+    require_once __DIR__ . '/../components/layout_start.php';
+    ?>
+    <div class="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-rose-800 m-6 shadow-sm">
+        <h3 class="text-base font-black flex items-center gap-2 mb-2">
+            <i class="bi bi-exclamation-octagon-fill text-rose-600 text-xl"></i> ไม่สามารถโหลดหน้าสรุป ปพ.5 ได้
+        </h3>
+        <p class="text-xs text-rose-700 leading-relaxed font-semibold">
+            ข้อผิดพลาด: <?= htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') ?>
+        </p>
+        <div class="mt-4 flex items-center gap-2">
+            <a href="/pp5/index.php" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-all">
+                กลับแดชบอร์ด ปพ.5
+            </a>
+            <a href="/pp5/course_scores.php?course_id=<?= (int)($_GET['course_id'] ?? 0) ?>" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition-all">
+                ไปหน้ากรอกคะแนน
+            </a>
+        </div>
+    </div>
+    <?php
+    require_once __DIR__ . '/../components/layout_end.php';
+}
+

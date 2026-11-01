@@ -36,12 +36,18 @@ class CourseService
                    s.`type` AS `subject_type`, s.`credit`, s.`hours`, s.`department_id`, s.`grade_level` AS `subject_grade_level`,
                    d.`name` AS `department_name`, d.`code` AS `department_code`, d.`head_user_id`,
                    c.`classroom_name`, c.`grade_level`, c.`room_no`, c.`study_plan`, c.`advisor_user_id`, c.`co_advisor_user_id`,
-                   TRIM(CONCAT(COALESCE(u.`prefix`, ''), COALESCE(u.`firstname`, ''), ' ', COALESCE(u.`lastname`, ''))) AS `teacher_name`
+                   TRIM(CONCAT(COALESCE(u.`prefix`, ''), COALESCE(u.`firstname`, ''), ' ', COALESCE(u.`lastname`, ''))) AS `teacher_name`,
+                   TRIM(CONCAT(COALESCE(adv.`prefix`, ''), COALESCE(adv.`firstname`, ''), ' ', COALESCE(adv.`lastname`, ''))) AS `advisor_name`,
+                   TRIM(CONCAT(COALESCE(coadv.`prefix`, ''), COALESCE(coadv.`firstname`, ''), ' ', COALESCE(coadv.`lastname`, ''))) AS `co_advisor_name`,
+                   TRIM(CONCAT(COALESCE(hd.`prefix`, ''), COALESCE(hd.`firstname`, ''), ' ', COALESCE(hd.`lastname`, ''))) AS `head_name`
             FROM `pp5_courses` cr
             INNER JOIN `pp5_subjects` s ON s.`id` = cr.`subject_id`
             INNER JOIN `pp5_departments` d ON d.`id` = s.`department_id`
             INNER JOIN `pp5_classrooms` c ON c.`id` = cr.`classroom_id`
             LEFT JOIN `llw_users` u ON u.`user_id` = cr.`teacher_user_id`
+            LEFT JOIN `llw_users` adv ON adv.`user_id` = c.`advisor_user_id`
+            LEFT JOIN `llw_users` coadv ON coadv.`user_id` = c.`co_advisor_user_id`
+            LEFT JOIN `llw_users` hd ON hd.`user_id` = d.`head_user_id`
             WHERE cr.`id` = ?
             LIMIT 1
         ");
