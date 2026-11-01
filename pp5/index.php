@@ -210,16 +210,19 @@ require_once __DIR__ . '/../components/layout_start.php';
             <?php endif; ?>
         </div>
 
-        <?php if ($policy->isAdmin()): ?>
-            <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="/pp5/user_guide.php" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold shadow-md shadow-amber-200 transition-all flex items-center gap-1.5">
+                <i class="bi bi-book-half"></i> คู่มือการใช้งาน (1-2-3)
+            </a>
+            <?php if ($policy->isAdmin()): ?>
                 <a href="/pp5/master_data.php?tab=courses" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-md shadow-blue-200 hover:bg-blue-700 transition-all flex items-center gap-1.5">
                     <i class="bi bi-plus-circle-fill"></i> จัดวิชาเปิดสอน ปพ.5
                 </a>
                 <a href="/pp5/import_data.php" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-200 hover:bg-emerald-700 transition-all flex items-center gap-1.5">
                     <i class="bi bi-file-earmark-excel-fill"></i> นำเข้าด้วย Excel
                 </a>
-            </div>
-        <?php endif; ?>
+            <?php endif; ?>
+        </div>
     </div>
 
     <!-- ฟอร์มกรองรายวิชา -->
