@@ -238,7 +238,7 @@ class AttendanceService
     /**
      * ซิงค์ข้อมูลการเช็คชื่อจากระบบเช็คชื่อรายคาบ (att_attendance) เข้าสู่ ปพ.5 อัตโนมัติ
      */
-    public function syncFromLlwAttendance(int $courseId, int $academicYear, int $semester): int
+    public function syncFromLlwAttendance(int $courseId, ?int $academicYear = null, ?int $semester = null): array
     {
         $stmtCourse = $this->pdo->prepare("
             SELECT cr.*, s.`code` AS `subject_code`, c.`classroom_name`
@@ -250,8 +250,11 @@ class AttendanceService
         $stmtCourse->execute([$courseId]);
         $course = $stmtCourse->fetch(PDO::FETCH_ASSOC);
         if (!$course) {
-            return 0;
+            return ['synced_sessions' => 0, 'synced_records' => 0];
         }
+
+        $academicYear = ($academicYear !== null && $academicYear > 2500) ? $academicYear : (int)($course['academic_year'] ?? 2569);
+        $semester     = ($semester !== null && $semester >= 1 && $semester <= 3) ? $semester : (int)($course['semester'] ?? 2);
 
         $attSubjectId = (int)($course['att_subject_id'] ?? 0);
         if ($attSubjectId <= 0) {
@@ -266,7 +269,7 @@ class AttendanceService
         }
 
         if ($attSubjectId <= 0) {
-            return 0;
+            return ['synced_sessions' => 0, 'synced_records' => 0];
         }
 
         $termDates = function_exists('llw_get_term_dates')
@@ -282,7 +285,7 @@ class AttendanceService
         $stmtRaw->execute([$attSubjectId, $termDates['start_date'], $termDates['end_date']]);
         $rows = $stmtRaw->fetchAll(PDO::FETCH_ASSOC);
         if (empty($rows)) {
-            return 0;
+            return ['synced_sessions' => 0, 'synced_records' => 0];
         }
 
         $statusMap = [
@@ -316,6 +319,6 @@ class AttendanceService
             $syncedSessions++;
         }
 
-        return $syncedSessions;
+        return ['synced_sessions' => $syncedSessions, 'synced_records' => count($rows)];
     }
 }

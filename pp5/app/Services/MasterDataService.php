@@ -530,10 +530,21 @@ class MasterDataService
     }
 
     /**
-     * บันทึกตัวชี้วัดของรายวิชา
+     * บันทึกตัวชี้วัดของรายวิชา (รองรับทั้งแบบส่ง parameters แยก หรือส่งเป็น array ข้อมูล)
      */
-    public function saveIndicator(int $subjectId, string $code, string $description, int $sortOrder = 1): void
+    public function saveIndicator($subjectIdOrData, ?string $code = null, ?string $description = null, int $sortOrder = 1): void
     {
+        if (is_array($subjectIdOrData)) {
+            $subjectId   = (int)($subjectIdOrData['subject_id'] ?? 0);
+            $code        = (string)($subjectIdOrData['code'] ?? '');
+            $description = (string)($subjectIdOrData['description'] ?? '');
+            $sortOrder   = (int)($subjectIdOrData['sort_order'] ?? 1);
+        } else {
+            $subjectId   = (int)$subjectIdOrData;
+            $code        = (string)$code;
+            $description = (string)$description;
+        }
+
         $stmt = $this->pdo->prepare("
             INSERT INTO `pp5_indicators` (`subject_id`, `code`, `description`, `sort_order`)
             VALUES (?, ?, ?, ?)
@@ -542,7 +553,9 @@ class MasterDataService
                 `sort_order`  = VALUES(`sort_order`)
         ");
         $stmt->execute([$subjectId, trim($code), trim($description), $sortOrder]);
-        $this->logger->log('indicator.save', "บันทึกตัวชี้วัด {$code} ของวิชา #{$subjectId}", 'pp5_indicators', $subjectId);
+        if ($this->logger) {
+            $this->logger->log('indicator.save', "บันทึกตัวชี้วัด {$code} ของวิชา #{$subjectId}", 'pp5_indicators', $subjectId);
+        }
     }
 
     /**

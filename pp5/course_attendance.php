@@ -51,6 +51,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!is_array($statuses)) {
                         $statuses = [];
                     }
+                    $remarks = $_POST['remarks'] ?? [];
+                    if (!is_array($remarks)) {
+                        $remarks = [];
+                    }
                     $attendanceService->saveSessionAttendance(
                         $courseId,
                         $val['data']['session_date'],
@@ -58,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $val['data']['hours'],
                         $val['data']['topic'],
                         $statuses,
-                        $studentIds,
+                        $remarks,
                         $policy->getUserId()
                     );
                     $courseService->recalculateCourseGrades($courseId);
@@ -74,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $flashType = 'error';
                 }
             } elseif ($action === 'sync_from_llw') {
-                $syncRes = $attendanceService->syncFromLlwAttendance($courseId, $policy->getUserId());
+                $syncRes = $attendanceService->syncFromLlwAttendance($courseId, (int)$termCtx['year'], (int)$termCtx['sem']);
                 if ($syncRes['synced_sessions'] > 0) {
                     $courseService->recalculateCourseGrades($courseId);
                     $flashMsg = "ซิงค์ข้อมูลเช็กชื่อจากระบบเช็กชื่อ LLW สำเร็จ {$syncRes['synced_sessions']} คาบเรียน ({$syncRes['synced_records']} รายการ)";
