@@ -236,6 +236,100 @@ class AttendanceService
     }
 
     /**
+     * ดึงการตั้งค่าเกณฑ์การนับเวลาเรียนและการติด มส (< 80%)
+     */
+    public function getCountingRules(): array
+    {
+        $defaults = [
+            'min_attendance_percent' => 80.0,
+            'count_late_as_present'  => true,
+            'count_leave_as_present' => false,
+            'count_sick_as_present'  => false,
+        ];
+
+        try {
+            if ($this->pdo) {
+                $stmt = $this->pdo->query("SELECT * FROM `pp5_school_settings` LIMIT 1");
+                $row  = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
+                if ($row) {
+                    return [
+                        'min_attendance_percent' => isset($row['min_attendance_percent']) ? (float)$row['min_attendance_percent'] : 80.0,
+                        'count_late_as_present'  => !empty($row['count_late_as_present']),
+                        'count_leave_as_present' => !empty($row['count_leave_as_present']),
+                        'count_sick_as_present'  => !empty($row['count_sick_as_present']),
+                    ];
+                }
+            }
+        } catch (Throwable $e) {
+            // fallback to defaults
+        }
+
+        return $defaults;
+    }
+
+    /**
+     * ดึงสรุปเวลาเรียนของนักเรียนทุกคนในรายวิชา
+     *
+     * @param int $courseId
+     * @param int[] $studentIds
+     * @return array<int, array>
+     */
+    public function getCourseStudentsAttendanceSummary(int $courseId, array $studentIds): array
+    {
+        $rules    = $this->getCountingRules();
+        $sessions = $this->getCourseSessions($courseId);
+        $totalCourseHours = 0.0;
+        foreach ($sessions as $s) {
+            $totalCourseHours += (float)($s['hours'] ?? 1.0);
+        }
+
+        $recordsByStudent = [];
+        foreach ($studentIds as $sid) {
+            $recordsByStudent[(int)$sid] = [];
+        }
+
+        if (!empty($sessions) && !empty($studentIds) && $this->pdo) {
+            $sessionIds = array_map(fn($s) => (int)$s['id'], $sessions);
+            $sessionHoursMap = [];
+            foreach ($sessions as $s) {
+                $sessionHoursMap[(int)$s['id']] = (float)($s['hours'] ?? 1.0);
+            }
+
+            $inSessions = implode(',', array_fill(0, count($sessionIds), '?'));
+            $inStudents = implode(',', array_fill(0, count($studentIds), '?'));
+            $stmt = $this->pdo->prepare("
+                SELECT `session_id`, `student_id`, `status`
+                FROM `pp5_attendances`
+                WHERE `session_id` IN ({$inSessions})
+                  AND `student_id` IN ({$inStudents})
+            ");
+            $params = array_merge($sessionIds, array_map('intval', $studentIds));
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($rows as $r) {
+                $sid    = (int)$r['student_id'];
+                $sessId = (int)$r['session_id'];
+                $hrs    = $sessionHoursMap[$sessId] ?? 1.0;
+                $recordsByStudent[$sid][] = [
+                    'session_id' => $sessId,
+                    'status'     => $r['status'],
+                    'hours'      => $hrs,
+                ];
+            }
+        }
+
+        $summaryMap = [];
+        foreach ($studentIds as $sid) {
+            $sid  = (int)$sid;
+            $recs = $recordsByStudent[$sid] ?? [];
+            $summaryMap[$sid] = $this->calculateStudentAttendanceSummary($recs, $totalCourseHours, $rules);
+        }
+
+        return $summaryMap;
+    }
+
+    /**
      * ซิงค์ข้อมูลการเช็คชื่อจากระบบเช็คชื่อรายคาบ (att_attendance) เข้าสู่ ปพ.5 อัตโนมัติ
      */
     public function syncFromLlwAttendance(int $courseId, ?int $academicYear = null, ?int $semester = null): array

@@ -530,6 +530,14 @@ class MasterDataService
     }
 
     /**
+     * ดึงตัวชี้วัดทั้งหมดของรายวิชา (alias ของ getSubjectIndicators)
+     */
+    public function getIndicators(int $subjectId): array
+    {
+        return $this->getSubjectIndicators($subjectId);
+    }
+
+    /**
      * บันทึกตัวชี้วัดของรายวิชา (รองรับทั้งแบบส่ง parameters แยก หรือส่งเป็น array ข้อมูล)
      */
     public function saveIndicator($subjectIdOrData, ?string $code = null, ?string $description = null, int $sortOrder = 1): void
