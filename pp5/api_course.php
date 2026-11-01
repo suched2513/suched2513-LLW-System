@@ -341,7 +341,10 @@ try {
     http_response_code(400);
     echo json_encode(['status' => 'error', 'message' => 'ไม่รู้จักคำสั่ง (action) ที่ร้องขอ'], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
-    error_log('[PP5 api_course] ' . $e->getMessage());
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    error_log('[PP5 api_course] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
     http_response_code(500);
-    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาดในการประมวลผล กรุณาลองใหม่อีกครั้ง'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['status' => 'error', 'message' => 'เกิดข้อผิดพลาดในการประมวลผล: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }

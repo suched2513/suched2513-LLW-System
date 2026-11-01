@@ -256,14 +256,13 @@ class AssessmentService
 
         if ($savedCount > 0) {
             $this->logger->log(
-                $actorId,
-                'save_assessments_' . $type,
+                'assessment.save_' . $type,
+                "บันทึกผลประเมิน ({$type}) จำนวน {$savedCount} ช่อง",
                 $table,
                 $courseId,
-                "บันทึกผลประเมิน ({$type}) จำนวน {$savedCount} ช่อง",
+                $courseId,
                 null,
-                ['type' => $type, 'saved_count' => $savedCount],
-                $courseId
+                ['type' => $type, 'saved_count' => $savedCount]
             );
         }
 
