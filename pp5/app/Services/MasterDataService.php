@@ -712,35 +712,60 @@ class MasterDataService
     {
         $this->pdo->beginTransaction();
         try {
-            $stmt = $this->pdo->prepare("
-                INSERT INTO `pp5_courses` (
-                    `academic_year`, `semester`, `subject_id`, `classroom_id`,
-                    `teacher_user_id`, `ratio_collect`, `ratio_final`, `status`
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft')
-                ON DUPLICATE KEY UPDATE
-                    `teacher_user_id` = VALUES(`teacher_user_id`),
-                    `ratio_collect`   = VALUES(`ratio_collect`),
-                    `ratio_final`     = VALUES(`ratio_final`)
-            ");
-            $stmt->execute([
-                $data['academic_year'],
-                $data['semester'],
-                $data['subject_id'],
-                $data['classroom_id'],
-                $data['teacher_user_id'],
-                $data['ratio_collect'],
-                $data['ratio_final'],
-            ]);
-
-            $courseId = (int)$this->pdo->lastInsertId();
-            if ($courseId === 0) {
-                $st = $this->pdo->prepare("
-                    SELECT `id` FROM `pp5_courses`
-                    WHERE `academic_year` = ? AND `semester` = ? AND `subject_id` = ? AND `classroom_id` = ?
-                    LIMIT 1
+            $courseId = (int)($data['id'] ?? 0);
+            if ($courseId > 0) {
+                $stmt = $this->pdo->prepare("
+                    UPDATE `pp5_courses`
+                    SET `academic_year`   = ?,
+                        `semester`        = ?,
+                        `subject_id`      = ?,
+                        `classroom_id`    = ?,
+                        `teacher_user_id` = ?,
+                        `ratio_collect`   = ?,
+                        `ratio_final`     = ?
+                    WHERE `id` = ?
                 ");
-                $st->execute([$data['academic_year'], $data['semester'], $data['subject_id'], $data['classroom_id']]);
-                $courseId = (int)$st->fetchColumn();
+                $stmt->execute([
+                    $data['academic_year'],
+                    $data['semester'],
+                    $data['subject_id'],
+                    $data['classroom_id'],
+                    $data['teacher_user_id'],
+                    $data['ratio_collect'],
+                    $data['ratio_final'],
+                    $courseId,
+                ]);
+            } else {
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO `pp5_courses` (
+                        `academic_year`, `semester`, `subject_id`, `classroom_id`,
+                        `teacher_user_id`, `ratio_collect`, `ratio_final`, `status`
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft')
+                    ON DUPLICATE KEY UPDATE
+                        `teacher_user_id` = VALUES(`teacher_user_id`),
+                        `ratio_collect`   = VALUES(`ratio_collect`),
+                        `ratio_final`     = VALUES(`ratio_final`)
+                ");
+                $stmt->execute([
+                    $data['academic_year'],
+                    $data['semester'],
+                    $data['subject_id'],
+                    $data['classroom_id'],
+                    $data['teacher_user_id'],
+                    $data['ratio_collect'],
+                    $data['ratio_final'],
+                ]);
+
+                $courseId = (int)$this->pdo->lastInsertId();
+                if ($courseId === 0) {
+                    $st = $this->pdo->prepare("
+                        SELECT `id` FROM `pp5_courses`
+                        WHERE `academic_year` = ? AND `semester` = ? AND `subject_id` = ? AND `classroom_id` = ?
+                        LIMIT 1
+                    ");
+                    $st->execute([$data['academic_year'], $data['semester'], $data['subject_id'], $data['classroom_id']]);
+                    $courseId = (int)$st->fetchColumn();
+                }
             }
 
             if ($courseId > 0) {
@@ -761,6 +786,38 @@ class MasterDataService
             }
             throw $e;
         }
+    }
+
+    /**
+     * ลบรายวิชาที่เปิดสอน (pp5_courses) พร้อมลบประวัติคะแนนและการเข้าเรียน (Cascade)
+     */
+    public function deleteCourse(int $courseId, ?int $actorId = null): bool
+    {
+        $stmtGet = $this->pdo->prepare("
+            SELECT cr.`id`, s.`code` AS `subject_code`, s.`name` AS `subject_name`, c.`classroom_name`
+            FROM `pp5_courses` cr
+            INNER JOIN `pp5_subjects` s ON s.`id` = cr.`subject_id`
+            INNER JOIN `pp5_classrooms` c ON c.`id` = cr.`classroom_id`
+            WHERE cr.`id` = ? LIMIT 1
+        ");
+        $stmtGet->execute([$courseId]);
+        $row = $stmtGet->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return false;
+        }
+
+        $stmtDel = $this->pdo->prepare("DELETE FROM `pp5_courses` WHERE `id` = ?");
+        $stmtDel->execute([$courseId]);
+
+        $this->logger->log(
+            'course.delete',
+            "ลบรายวิชาเปิดสอน {$row['subject_code']} {$row['subject_name']} ห้อง {$row['classroom_name']} (#{$courseId})",
+            'pp5_courses',
+            $courseId,
+            $courseId,
+            $row
+        );
+        return true;
     }
 
     /**

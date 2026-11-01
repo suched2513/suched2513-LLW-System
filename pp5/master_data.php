@@ -130,6 +130,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $masterService->saveCourse($val['data']);
                 $msg = 'บันทึกการจัดวิชาเปิดสอน ปพ.5 เรียบร้อยแล้ว';
             }
+        } elseif ($action === 'delete_course') {
+            $tab      = 'courses';
+            $courseId = (int)($_POST['course_id'] ?? 0);
+            if ($courseId > 0) {
+                $masterService->deleteCourse($courseId, $policy->getUserId());
+                $msg = 'ลบรายวิชาเปิดสอน ปพ.5 เรียบร้อยแล้ว';
+            } else {
+                $msg = 'ไม่พบรหัสรายวิชาที่ต้องการลบ';
+                $msgType = 'error';
+            }
         } elseif ($action === 'unlock_course') {
             $tab      = 'courses';
             $courseId = (int)($_POST['course_id'] ?? 0);
@@ -917,16 +927,22 @@ function fillSubjectForm(sb) {
     <div class="space-y-6">
         <!-- ฟอร์มจัดครูผู้สอน ปพ.5 -->
         <div class="bg-white rounded-2xl shadow-xl shadow-blue-100/50 p-6 border border-slate-100">
-            <h3 class="text-base font-black text-slate-800 flex items-center gap-2 mb-4">
-                <i class="bi bi-journal-plus text-blue-600"></i> จัดวิชาเปิดสอน ปพ.5 (<?= $curSem ?>/<?= $curYear ?>)
+            <h3 class="text-base font-black text-slate-800 flex items-center justify-between gap-2 mb-4">
+                <span class="flex items-center gap-2" id="course_form_title">
+                    <i class="bi bi-journal-plus text-blue-600"></i> จัดวิชาเปิดสอน ปพ.5 (<?= $curSem ?>/<?= $curYear ?>)
+                </span>
+                <button type="button" id="btn_cancel_course" onclick="resetCourseForm()" class="hidden px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-bold transition-all">
+                    ยกเลิก
+                </button>
             </h3>
             <form method="POST" class="space-y-3">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="save_course">
+                <input type="hidden" name="id" id="course_id" value="0">
 
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">รายวิชา</label>
-                    <select name="subject_id" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
+                    <select name="subject_id" id="course_subject" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
                         <option value="">— เลือกรายวิชา —</option>
                         <?php foreach ($subjects as $sb): ?>
                             <option value="<?= (int)$sb['id'] ?>"><?= htmlspecialchars($sb['code'] . ' — ' . $sb['name'], ENT_QUOTES, 'UTF-8') ?></option>
@@ -936,7 +952,8 @@ function fillSubjectForm(sb) {
 
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">ห้องเรียน (1 วิชา × 1 ห้อง = 1 ปพ.5)</label>
-                    <select name="classroom_id" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
+                    <select name="classroom_id" id="course_classroom" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
+                        <option value="">— เลือกห้องเรียน —</option>
                         <?php foreach ($classrooms as $cl): ?>
                             <option value="<?= (int)$cl['id'] ?>"><?= htmlspecialchars($cl['classroom_name'], ENT_QUOTES, 'UTF-8') ?> (<?= (int)$cl['student_count'] ?> คน)</option>
                         <?php endforeach; ?>
@@ -945,7 +962,8 @@ function fillSubjectForm(sb) {
 
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">ครูผู้สอนหลัก</label>
-                    <select name="teacher_user_id" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
+                    <select name="teacher_user_id" id="course_teacher" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
+                        <option value="">— เลือกครูผู้สอน —</option>
                         <?php foreach ($teachers as $t): ?>
                             <option value="<?= (int)$t['user_id'] ?>"><?= htmlspecialchars($t['full_name'] ?: $t['username'], ENT_QUOTES, 'UTF-8') ?> (<?= htmlspecialchars($t['username'], ENT_QUOTES, 'UTF-8') ?>)</option>
                         <?php endforeach; ?>
@@ -954,7 +972,7 @@ function fillSubjectForm(sb) {
 
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">ครูสอนร่วม (ถ้ามี)</label>
-                    <select name="co_teacher_user_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
+                    <select name="co_teacher_user_id" id="course_co_teacher" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
                         <option value="0">— ไม่มีครูสอนร่วม —</option>
                         <?php foreach ($teachers as $t): ?>
                             <option value="<?= (int)$t['user_id'] ?>"><?= htmlspecialchars($t['full_name'] ?: $t['username'], ENT_QUOTES, 'UTF-8') ?></option>
@@ -965,15 +983,15 @@ function fillSubjectForm(sb) {
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">คะแนนเก็บ (%)</label>
-                        <input type="number" name="ratio_collect" value="70" min="0" max="100" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
+                        <input type="number" name="ratio_collect" id="course_ratio_collect" value="70" min="0" max="100" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">คะแนนปลายภาค (%)</label>
-                        <input type="number" name="ratio_final" value="30" min="0" max="100" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
+                        <input type="number" name="ratio_final" id="course_ratio_final" value="30" min="0" max="100" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold">
                     </div>
                 </div>
 
-                <button type="submit" class="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
+                <button type="submit" id="course_submit_btn" class="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
                     <i class="bi bi-plus-circle-fill"></i> บันทึกการจัดวิชาเปิดสอน
                 </button>
             </form>
@@ -1014,12 +1032,12 @@ function fillSubjectForm(sb) {
                         <th class="text-xs font-bold text-slate-400 uppercase px-4 py-3">ครูผู้สอน</th>
                         <th class="text-xs font-bold text-slate-400 uppercase px-4 py-3 text-center">สัดส่วน</th>
                         <th class="text-xs font-bold text-slate-400 uppercase px-4 py-3 text-center">สถานะ</th>
-                        <th class="text-xs font-bold text-slate-400 uppercase px-4 py-3 text-right">ปลดล็อก</th>
+                        <th class="text-xs font-bold text-slate-400 uppercase px-4 py-3 text-right">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-xs sm:text-sm">
                     <?php foreach ($courses as $cr): ?>
-                        <tr class="hover:bg-slate-50/80">
+                        <tr class="hover:bg-slate-50/80" id="course_row_<?= (int)$cr['id'] ?>">
                             <td class="px-4 py-3">
                                 <span class="font-black text-indigo-700"><?= htmlspecialchars($cr['subject_code'], ENT_QUOTES, 'UTF-8') ?></span>
                                 <span class="block text-xs font-bold text-slate-700"><?= htmlspecialchars($cr['subject_name'], ENT_QUOTES, 'UTF-8') ?></span>
@@ -1032,15 +1050,28 @@ function fillSubjectForm(sb) {
                                     <?= htmlspecialchars($cr['status'], ENT_QUOTES, 'UTF-8') ?>
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-right">
-                                <?php if ($cr['status'] !== 'draft'): ?>
-                                    <button type="button" onclick="promptUnlockCourse(<?= (int)$cr['id'] ?>, '<?= htmlspecialchars($cr['subject_code'] . ' ' . $cr['classroom_name'], ENT_QUOTES, 'UTF-8') ?>')"
-                                            class="px-3 py-1 rounded-xl bg-rose-500 text-white text-xs font-bold hover:bg-rose-600 transition-all">
-                                        <i class="bi bi-unlock-fill"></i> ปลดล็อก
+                            <td class="px-4 py-3 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center gap-1.5">
+                                    <button type="button"
+                                            onclick='fillCourseForm(<?= json_encode($cr, JSON_UNESCAPED_UNICODE) ?>)'
+                                            class="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 text-xs font-bold transition-all"
+                                            title="แก้ไขครูผู้สอน / ห้องเรียน / สัดส่วนคะแนน">
+                                        <i class="bi bi-pencil-square"></i> แก้ไข
                                     </button>
-                                <?php else: ?>
-                                    <span class="text-[11px] text-slate-400">เปิดแก้ไขอยู่</span>
-                                <?php endif; ?>
+                                    <button type="button"
+                                            onclick="confirmDeleteCourse(<?= (int)$cr['id'] ?>, '<?= htmlspecialchars(addslashes($cr['subject_code'] . ' ' . $cr['subject_name'] . ' (ห้อง ' . $cr['classroom_name'] . ')'), ENT_QUOTES, 'UTF-8') ?>')"
+                                            class="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold transition-all"
+                                            title="ลบรายวิชานี้ (กรณีจัดสอนผิดห้อง/ผิดวิชา)">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                    <?php if ($cr['status'] !== 'draft'): ?>
+                                        <button type="button" onclick="promptUnlockCourse(<?= (int)$cr['id'] ?>, '<?= htmlspecialchars($cr['subject_code'] . ' ' . $cr['classroom_name'], ENT_QUOTES, 'UTF-8') ?>')"
+                                                class="px-2.5 py-1 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-all"
+                                                title="ปลดล็อก ปพ.5">
+                                            <i class="bi bi-unlock-fill"></i>
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -1050,14 +1081,64 @@ function fillSubjectForm(sb) {
     </div>
 </div>
 
-<!-- ฟอร์มซ่อนสำหรับปลดล็อก ปพ.5 -->
+<!-- ฟอร์มซ่อนสำหรับปลดล็อก และ ลบรายวิชา ปพ.5 -->
 <form method="POST" id="unlockCourseForm" class="hidden">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="unlock_course">
     <input type="hidden" name="course_id" id="unlock_course_id" value="0">
     <input type="hidden" name="reason" id="unlock_reason" value="">
 </form>
+
+<form method="POST" id="deleteCourseForm" class="hidden">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="delete_course">
+    <input type="hidden" name="course_id" id="delete_course_id" value="0">
+</form>
+
 <script>
+function fillCourseForm(cr) {
+    document.getElementById('course_id').value = cr.id || 0;
+    document.getElementById('course_subject').value = cr.subject_id || '';
+    document.getElementById('course_classroom').value = cr.classroom_id || '';
+    document.getElementById('course_teacher').value = cr.teacher_user_id || '';
+    if (document.getElementById('course_co_teacher')) {
+        document.getElementById('course_co_teacher').value = cr.co_teacher_user_id || '0';
+    }
+    document.getElementById('course_ratio_collect').value = cr.ratio_collect || 70;
+    document.getElementById('course_ratio_final').value = cr.ratio_final || 30;
+    document.getElementById('course_form_title').innerHTML = '<i class="bi bi-pencil-square text-amber-500"></i> แก้ไขวิชาเปิดสอน #' + cr.id;
+    document.getElementById('course_submit_btn').innerHTML = '<i class="bi bi-save2-fill"></i> บันทึกการแก้ไขวิชาเปิดสอน';
+    document.getElementById('btn_cancel_course').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetCourseForm() {
+    document.getElementById('course_id').value = 0;
+    document.getElementById('course_subject').value = '';
+    document.getElementById('course_classroom').value = '';
+    document.getElementById('course_form_title').innerHTML = '<i class="bi bi-journal-plus text-blue-600"></i> จัดวิชาเปิดสอน ปพ.5 (<?= $curSem ?>/<?= $curYear ?>)';
+    document.getElementById('course_submit_btn').innerHTML = '<i class="bi bi-plus-circle-fill"></i> บันทึกการจัดวิชาเปิดสอน';
+    document.getElementById('btn_cancel_course').classList.add('hidden');
+}
+
+function confirmDeleteCourse(courseId, label) {
+    Swal.fire({
+        icon: 'warning',
+        title: 'ยืนยันการลบรายวิชานี้?',
+        html: 'คุณกำลังจะลบ <b>' + label + '</b> ออกจากระบบ ปพ.5<br><span class="text-rose-600 text-xs font-bold mt-2 inline-block">⚠️ ข้อมูลรายการคะแนน เวลาเรียน และผลการประเมินทั้งหมดในวิชานี้จะถูกลบไปด้วย</span>',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="bi bi-trash-fill"></i> ใช่, ลบรายวิชา',
+        cancelButtonText: 'ยกเลิก'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById('delete_course_id').value = courseId;
+            document.getElementById('deleteCourseForm').submit();
+        }
+    });
+}
+
 function promptUnlockCourse(courseId, label) {
     Swal.fire({
         title: 'ปลดล็อกเล่ม ปพ.5 (' + label + ')',
@@ -1081,6 +1162,21 @@ function promptUnlockCourse(courseId, label) {
         }
     });
 }
+
+<?php $editCourseId = (int)($_GET['edit_course_id'] ?? 0); ?>
+<?php if ($editCourseId > 0): ?>
+document.addEventListener('DOMContentLoaded', () => {
+    const allCourses = <?= json_encode($courses, JSON_UNESCAPED_UNICODE) ?>;
+    const target = allCourses.find(c => parseInt(c.id, 10) === <?= $editCourseId ?>);
+    if (target) {
+        fillCourseForm(target);
+        const row = document.getElementById('course_row_' + target.id);
+        if (row) {
+            row.classList.add('bg-amber-50');
+        }
+    }
+});
+<?php endif; ?>
 </script>
 <?php endif; ?>
 

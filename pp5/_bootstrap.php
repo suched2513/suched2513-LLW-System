@@ -321,6 +321,13 @@ if (!function_exists('pp5_render_course_nav')) {
                 </div>
 
                 <div class="flex flex-wrap items-center gap-2">
+                    <?php if ($policy->isAdmin()): ?>
+                        <a href="/pp5/master_data.php?tab=courses&edit_course_id=<?= $courseId ?>"
+                           class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 border border-slate-200 text-xs font-bold transition-all flex items-center gap-1.5"
+                           title="เปลี่ยนครูผู้สอน / จัดการห้องเรียนของวิชานี้">
+                            <i class="bi bi-gear-fill text-indigo-500"></i> จัดการวิชาสอน
+                        </a>
+                    <?php endif; ?>
                     <span class="px-3 py-1.5 rounded-full border text-xs font-bold flex items-center gap-1.5 <?= $st['class'] ?>">
                         <i class="bi <?= $st['icon'] ?>"></i> <?= $st['label'] ?>
                     </span>
