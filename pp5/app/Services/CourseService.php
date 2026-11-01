@@ -52,11 +52,23 @@ class CourseService
 
     /**
      * ดึงรายชื่อนักเรียนที่เรียนในรายวิชา ปพ.5 นี้ เรียงตามเลขที่ในห้องเรียน
+     * รองรับทั้งการส่ง array ข้อมูลวิชา ($course) หรือ int ($classroomId)
      */
-    public function getCourseStudents(array $course): array
+    public function getCourseStudents($courseOrClassroomId): array
     {
-        $classroomId   = (int)$course['classroom_id'];
-        $classroomName = (string)$course['classroom_name'];
+        if (is_array($courseOrClassroomId)) {
+            $classroomId   = (int)($courseOrClassroomId['classroom_id'] ?? 0);
+            $classroomName = (string)($courseOrClassroomId['classroom_name'] ?? '');
+        } else {
+            $classroomId   = (int)$courseOrClassroomId;
+            $classroomName = '';
+        }
+
+        if ($classroomId > 0 && $classroomName === '') {
+            $stCls = $this->pdo->prepare("SELECT `classroom_name` FROM `pp5_classrooms` WHERE `id` = ? LIMIT 1");
+            $stCls->execute([$classroomId]);
+            $classroomName = (string)($stCls->fetchColumn() ?: '');
+        }
 
         $stmt = $this->pdo->prepare("
             SELECT s.`id`, s.`student_id` AS `student_code`, s.`prefix`, s.`first_name`, s.`last_name`,
@@ -72,7 +84,7 @@ class CourseService
             ORDER BY COALESCE(cs.`student_number`, s.`student_number`, 999) ASC, s.`student_id` ASC
         ");
         $stmt->execute([$classroomId, $classroomName]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     /**
@@ -609,5 +621,72 @@ class CourseService
         }
 
         return $resultGrades;
+    }
+
+    /**
+     * บันทึกผลการสอบแก้ตัว (0 / ร / มส / มผ) สำหรับนักเรียนรายบุคคล
+     * ตามกฎข้อที่ 7: บันทึก original_grade เดิม และจำกัดผลการสอบแก้ 0/ร/มส ได้ไม่เกินเกรด "1"
+     */
+    public function saveStudentRemedialGrade(int $courseId, int $studentId, string $newGrade, string $remedialDate, int $userId): array
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM `pp5_grades` WHERE `course_id` = ? AND `student_id` = ? LIMIT 1");
+        $stmt->execute([$courseId, $studentId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return ['ok' => false, 'message' => 'ไม่พบข้อมูลผลการเรียนของนักเรียนในรายวิชานี้'];
+        }
+
+        $currentGrade = (string)$row['grade'];
+        $origGrade    = (!empty($row['original_grade'])) ? (string)$row['original_grade'] : $currentGrade;
+
+        if (!in_array($origGrade, ['0', 'ร', 'มส', 'มผ'], true) && (int)$row['is_remedial'] === 0) {
+            return ['ok' => false, 'message' => "นักเรียนมีผลการเรียน {$currentGrade} ซึ่งไม่ได้อยู่ในเกณฑ์ที่ต้องสอบแก้ตัว (0, ร, มส, มผ)"];
+        }
+
+        $remResult = $this->gradeCalculator->applyRemedialGrade($currentGrade, $origGrade, $newGrade, $remedialDate);
+
+        $this->pdo->beginTransaction();
+        try {
+            $upd = $this->pdo->prepare("
+                UPDATE `pp5_grades`
+                SET `grade`          = ?,
+                    `original_grade` = ?,
+                    `is_remedial`    = 1,
+                    `remedial_date`  = ?
+                WHERE `course_id` = ? AND `student_id` = ?
+            ");
+            $upd->execute([
+                $remResult['grade'],
+                $remResult['original_grade'],
+                $remedialDate,
+                $courseId,
+                $studentId,
+            ]);
+
+            $this->pdo->commit();
+
+            $this->logger->log(
+                'grade.remedial',
+                "บันทึกผลสอบแก้ตัว นักเรียน #{$studentId} ในวิชา #{$courseId} จากเกรดเดิม {$remResult['original_grade']} เป็นเกรดใหม่ {$remResult['grade']} (วันที่ {$remedialDate})",
+                'pp5_grades',
+                (int)$row['id'],
+                $courseId,
+                ['grade' => $currentGrade, 'original_grade' => $row['original_grade']],
+                ['grade' => $remResult['grade'], 'original_grade' => $remResult['original_grade'], 'remedial_date' => $remedialDate]
+            );
+
+            return [
+                'ok'             => true,
+                'grade'          => $remResult['grade'],
+                'original_grade' => $remResult['original_grade'],
+                'remedial_date'  => $remedialDate,
+                'message'        => "บันทึกผลการสอบแก้ตัวสำเร็จ! (เกรดเดิม: {$remResult['original_grade']} -> เกรดใหม่: {$remResult['grade']})",
+            ];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
     }
 }

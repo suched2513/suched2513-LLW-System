@@ -27,7 +27,7 @@ if (!$course || !$policy->canViewCourse($course)) {
 }
 
 $canEdit    = $policy->canEditCourse($course);
-$students   = $courseService->getCourseStudents((int)$course['classroom_id']);
+$students   = $courseService->getCourseStudents($course);
 $scoreItems = $courseService->getCourseScoreItems($courseId);
 $scoresGrid = $courseService->getCourseScoresGrid($courseId);
 

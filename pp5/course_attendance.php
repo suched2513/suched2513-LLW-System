@@ -26,7 +26,7 @@ if (!$course || !$policy->canViewCourse($course)) {
 }
 
 $canEdit   = $policy->canEditCourse($course);
-$students  = $courseService->getCourseStudents((int)$course['classroom_id']);
+$students  = $courseService->getCourseStudents($course);
 $studentIds = array_map(fn($s) => (int)$s['id'], $students);
 
 $flashMsg  = '';

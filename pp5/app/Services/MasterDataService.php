@@ -673,6 +673,277 @@ class MasterDataService
     }
 
     /**
+     * ส่งตรวจเล่ม ปพ.5 (ครูผู้สอนส่งให้หัวหน้ากลุ่มสาระตรวจสอบ)
+     */
+    public function submitCourse(int $courseId, int $userId): array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT c.*, s.subject_code, s.subject_name, s.department_id, d.head_user_id
+            FROM `pp5_courses` c
+            JOIN `pp5_subjects` s ON c.subject_id = s.id
+            LEFT JOIN `pp5_departments` d ON s.department_id = d.id
+            WHERE c.id = ? LIMIT 1
+        ");
+        $stmt->execute([$courseId]);
+        $course = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$course) {
+            return ['ok' => false, 'message' => 'ไม่พบข้อมูลรายวิชา ปพ.5'];
+        }
+
+        if ($course['status'] !== 'draft') {
+            return ['ok' => false, 'message' => 'รายวิชานี้ถูกส่งตรวจหรืออนุมัติไปแล้ว ไม่สามารถส่งซ้ำได้'];
+        }
+
+        // ตรวจสอบความพร้อมของเล่ม ปพ.5
+        $reportService = new Pp5ReportService($this->pdo);
+        $data = $reportService->compileCourseReportData($courseId);
+        if ($data && !empty($data['readiness']) && !$data['readiness']['all_ready']) {
+            return [
+                'ok'      => false,
+                'message' => 'ข้อมูลยังไม่ครบถ้วนตามรายการตรวจสอบความพร้อม กรุณากรอกคะแนน/เวลาเรียน/คุณลักษณะให้ครบทุกช่องก่อนส่งตรวจ',
+            ];
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            $upd = $this->pdo->prepare("
+                UPDATE `pp5_courses`
+                SET `status` = 'submitted', `submitted_at` = NOW(), `rejected_reason` = NULL, `rejected_by` = NULL
+                WHERE `id` = ?
+            ");
+            $upd->execute([$courseId]);
+
+            $app = $this->pdo->prepare("
+                INSERT INTO `pp5_approvals` (`course_id`, `step`, `approver_id`, `action`, `comment`)
+                VALUES (?, 'teacher_submit', ?, 'submit', 'ส่งตรวจเล่ม ปพ.5 ต่อหัวหน้ากลุ่มสาระการเรียนรู้')
+            ");
+            $app->execute([$courseId, $userId]);
+
+            $this->pdo->commit();
+
+            $this->logger->log(
+                'course.submit',
+                "ส่งตรวจเล่ม ปพ.5 Course #{$courseId} ({$course['subject_code']}) ให้หัวหน้ากลุ่มสาระตรวจ",
+                'pp5_courses',
+                $courseId,
+                $courseId,
+                ['status' => 'draft'],
+                ['status' => 'submitted']
+            );
+
+            // แจ้งเตือนหัวหน้ากลุ่มสาระ
+            if (!empty($course['head_user_id'])) {
+                $this->logger->notify(
+                    (int)$course['head_user_id'],
+                    'มีเล่ม ปพ.5 ส่งมาให้ตรวจสอบ',
+                    "ครูผู้สอนได้ส่งเล่ม ปพ.5 รายวิชา {$course['subject_code']} ({$course['subject_name']}) ให้ตรวจสอบความถูกต้อง",
+                    'info',
+                    "/pp5/course_summary.php?course_id={$courseId}",
+                    $courseId
+                );
+            }
+
+            return ['ok' => true, 'message' => 'ส่งตรวจเล่ม ปพ.5 เรียบร้อยแล้ว (สถานะ: รอหัวหน้ากลุ่มสาระตรวจ)'];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * อนุมัติเล่ม ปพ.5 ตามลำดับขั้น (head -> deputy -> director)
+     */
+    public function approveCourse(int $courseId, int $userId, string $step, ?string $comment = null): array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT c.*, s.subject_code, s.subject_name
+            FROM `pp5_courses` c
+            JOIN `pp5_subjects` s ON c.subject_id = s.id
+            WHERE c.id = ? LIMIT 1
+        ");
+        $stmt->execute([$courseId]);
+        $course = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$course) {
+            return ['ok' => false, 'message' => 'ไม่พบข้อมูลรายวิชา ปพ.5'];
+        }
+
+        $oldStatus = $course['status'];
+        $cleanComment = trim((string)$comment);
+
+        $this->pdo->beginTransaction();
+        try {
+            if ($step === 'head') {
+                if ($oldStatus !== 'submitted') {
+                    $this->pdo->rollBack();
+                    return ['ok' => false, 'message' => 'สถานะปัจจุบันต้องเป็น "รอหัวหน้ากลุ่มสาระตรวจ" จึงจะให้ความเห็นชอบได้'];
+                }
+                $upd = $this->pdo->prepare("UPDATE `pp5_courses` SET `status` = 'head_approved', `head_approved_at` = NOW() WHERE `id` = ?");
+                $upd->execute([$courseId]);
+
+                $appStep = 'head_review';
+                $appAction = 'approve';
+                $defaultNote = 'ตรวจสอบแล้วถูกต้องครบถ้วน เห็นควรส่งต่อฝ่ายวิชาการ';
+                $newStatus = 'head_approved';
+                $notifyMsg = "หัวหน้ากลุ่มสาระฯ ได้ตรวจสอบและให้ความเห็นชอบเล่ม ปพ.5 รายวิชา {$course['subject_code']} แล้ว";
+            } elseif ($step === 'deputy') {
+                if (!in_array($oldStatus, ['head_approved', 'submitted'], true)) {
+                    $this->pdo->rollBack();
+                    return ['ok' => false, 'message' => 'สถานะปัจจุบันไม่ถูกต้องสำหรับการตรวจเห็นชอบของฝ่ายวิชาการ'];
+                }
+                $upd = $this->pdo->prepare("UPDATE `pp5_courses` SET `status` = 'deputy_approved', `deputy_approved_at` = NOW() WHERE `id` = ?");
+                $upd->execute([$courseId]);
+
+                $appStep = 'deputy_review';
+                $appAction = 'approve';
+                $defaultNote = 'ตรวจสอบแล้วเห็นควรอนุมัติ เสนอผู้อำนวยการสถานศึกษา';
+                $newStatus = 'deputy_approved';
+                $notifyMsg = "รองผู้อำนวยการกลุ่มบริหารวิชาการ ได้เห็นควรอนุมัติเล่ม ปพ.5 รายวิชา {$course['subject_code']} แล้ว";
+            } elseif ($step === 'director') {
+                if (!in_array($oldStatus, ['deputy_approved', 'head_approved', 'submitted'], true)) {
+                    $this->pdo->rollBack();
+                    return ['ok' => false, 'message' => 'สถานะปัจจุบันไม่ถูกต้องสำหรับการอนุมัติขั้นสุดท้าย'];
+                }
+                $upd = $this->pdo->prepare("UPDATE `pp5_courses` SET `status` = 'approved', `approved_at` = NOW(), `locked_at` = NOW() WHERE `id` = ?");
+                $upd->execute([$courseId]);
+
+                $appStep = 'director_review';
+                $appAction = 'approve';
+                $defaultNote = 'อนุมัติผลการเรียนและล็อกเล่ม ปพ.5 สมบูรณ์';
+                $newStatus = 'approved';
+                $notifyMsg = "ผู้อำนวยการสถานศึกษา ได้อนุมัติผลการเรียนเล่ม ปพ.5 รายวิชา {$course['subject_code']} เรียบร้อยแล้ว (ล็อกเล่มสมบูรณ์)";
+            } else {
+                $this->pdo->rollBack();
+                return ['ok' => false, 'message' => 'ขั้นตอนการอนุมัติไม่ถูกต้อง'];
+            }
+
+            $app = $this->pdo->prepare("
+                INSERT INTO `pp5_approvals` (`course_id`, `step`, `approver_id`, `action`, `comment`)
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            $app->execute([$courseId, $appStep, $userId, $appAction, $cleanComment !== '' ? $cleanComment : $defaultNote]);
+
+            $this->pdo->commit();
+
+            $this->logger->log(
+                "course.{$appStep}",
+                "อนุมัติเล่ม ปพ.5 Course #{$courseId} ({$course['subject_code']}) โดยผู้ใช้ #{$userId} สถานะใหม่: {$newStatus}",
+                'pp5_courses',
+                $courseId,
+                $courseId,
+                ['status' => $oldStatus],
+                ['status' => $newStatus, 'comment' => $cleanComment]
+            );
+
+            // แจ้งเตือนครูผู้สอน
+            $this->logger->notify(
+                (int)$course['teacher_user_id'],
+                'อัปเดตผลการอนุมัติ ปพ.5',
+                $notifyMsg,
+                $step === 'director' ? 'success' : 'info',
+                "/pp5/course_summary.php?course_id={$courseId}",
+                $courseId
+            );
+
+            return ['ok' => true, 'message' => 'บันทึกการอนุมัติเล่ม ปพ.5 เรียบร้อยแล้ว'];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * ตีกลับเล่ม ปพ.5 ให้ครูผู้สอนแก้ไข (Reject with Reason)
+     */
+    public function rejectCourse(int $courseId, int $userId, string $step, string $reason): array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT c.*, s.subject_code, s.subject_name
+            FROM `pp5_courses` c
+            JOIN `pp5_subjects` s ON c.subject_id = s.id
+            WHERE c.id = ? LIMIT 1
+        ");
+        $stmt->execute([$courseId]);
+        $course = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$course) {
+            return ['ok' => false, 'message' => 'ไม่พบข้อมูลรายวิชา ปพ.5'];
+        }
+
+        $cleanReason = trim($reason);
+        if ($cleanReason === '') {
+            return ['ok' => false, 'message' => 'กรุณาระบุเหตุผลการตีกลับให้ครูผู้สอนแก้ไข'];
+        }
+
+        $oldStatus = $course['status'];
+        if (in_array($oldStatus, ['draft', 'locked'], true)) {
+            return ['ok' => false, 'message' => 'ไม่สามารถตีกลับเล่ม ปพ.5 ในสถานะนี้ได้'];
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            $upd = $this->pdo->prepare("
+                UPDATE `pp5_courses`
+                SET `status` = 'draft', `rejected_reason` = ?, `rejected_by` = ?, `locked_at` = NULL
+                WHERE `id` = ?
+            ");
+            $upd->execute([$cleanReason, $userId, $courseId]);
+
+            $app = $this->pdo->prepare("
+                INSERT INTO `pp5_approvals` (`course_id`, `step`, `approver_id`, `action`, `comment`)
+                VALUES (?, ?, ?, 'reject', ?)
+            ");
+            $app->execute([$courseId, $step . '_reject', $userId, $cleanReason]);
+
+            $this->pdo->commit();
+
+            $this->logger->log(
+                'course.reject',
+                "ตีกลับเล่ม ปพ.5 Course #{$courseId} ({$course['subject_code']}) ให้ครูแก้ไข เหตุผล: {$cleanReason}",
+                'pp5_courses',
+                $courseId,
+                $courseId,
+                ['status' => $oldStatus],
+                ['status' => 'draft', 'rejected_reason' => $cleanReason]
+            );
+
+            $this->logger->notify(
+                (int)$course['teacher_user_id'],
+                'เล่ม ปพ.5 ถูกส่งกลับเพื่อแก้ไข',
+                "เล่ม ปพ.5 รายวิชา {$course['subject_code']} ถูกส่งกลับแก้ไขโดยผู้ตรวจสอบ เหตุผล: {$cleanReason}",
+                'warning',
+                "/pp5/course_summary.php?course_id={$courseId}",
+                $courseId
+            );
+
+            return ['ok' => true, 'message' => 'ส่งกลับเล่ม ปพ.5 ให้ครูผู้สอนแก้ไขเรียบร้อยแล้ว (สถานะเปลี่ยนเป็น: ฉบับร่าง)'];
+        } catch (Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * ดึงประวัติการส่งตรวจ / อนุมัติ / ตีกลับ / ปลดล็อก ของรายวิชา ปพ.5
+     */
+    public function getCourseApprovals(int $courseId): array
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT a.*, u.firstname, u.lastname, u.role AS user_role
+            FROM `pp5_approvals` a
+            LEFT JOIN `llw_users` u ON a.approver_id = u.user_id
+            WHERE a.course_id = ?
+            ORDER BY a.created_at ASC, a.id ASC
+        ");
+        $stmt->execute([$courseId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
      * ปลดล็อก ปพ.5 ที่อยู่ในสถานะ locked หรือส่งอนุมัติแล้ว ให้กลับมาเป็น draft (เฉพาะงานทะเบียนและวัดผล)
      * พร้อมบันทึกประวัติการปลดล็อกทุกครั้ง
      */

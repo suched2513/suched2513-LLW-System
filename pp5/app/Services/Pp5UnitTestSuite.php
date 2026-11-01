@@ -2,6 +2,7 @@
 namespace PP5\App\Services;
 
 use PDO;
+use PP5\App\Policies\Pp5Policy;
 
 /**
  * Pp5UnitTestSuite — ชุดทดสอบอัตโนมัติ (Unit Tests) ครอบคลุมกฎการคำนวณ ปพ.5 ทั้ง 9 ข้อ
@@ -62,9 +63,9 @@ class Pp5UnitTestSuite
         $assert(
             'กฎข้อที่ 1: การรวมคะแนนและปัดเศษ',
             'คะแนนดิบ 79.50 (เก็บ 59.5 + ปลายภาค 20.0) ปัดครึ่งขึ้นเป็น 80 ได้เกรด 4',
-            $calc1['total_score'] === 80 && $calc1['grade'] === '4',
+            $calc1['total'] === 80 && $calc1['grade'] === '4',
             'total=80, grade=4',
-            "total={$calc1['total_score']}, grade={$calc1['grade']}"
+            "total={$calc1['total']}, grade={$calc1['grade']}"
         );
 
         $calc2 = $this->gradeCalc->calculateStudentGrade(
@@ -76,9 +77,9 @@ class Pp5UnitTestSuite
         $assert(
             'กฎข้อที่ 1: การรวมคะแนนและปัดเศษ',
             'คะแนนดิบ 79.40 ปัดลงเป็น 79 ได้เกรด 3.5',
-            $calc2['total_score'] === 79 && $calc2['grade'] === '3.5',
+            $calc2['total'] === 79 && $calc2['grade'] === '3.5',
             'total=79, grade=3.5',
-            "total={$calc2['total_score']}, grade={$calc2['grade']}"
+            "total={$calc2['total']}, grade={$calc2['grade']}"
         );
 
         // ─── กฎข้อที่ 2: แจ้งเตือนเมื่อคะแนนเต็มรวมของ score_items ไม่ตรงกับสัดส่วน (รวมต้องได้ 100) ───
@@ -172,15 +173,14 @@ class Pp5UnitTestSuite
         );
 
         $sessionsSample = [
-            ['id' => 1, 'hours' => 10], // มา
-            ['id' => 2, 'hours' => 4],  // สาย
-            ['id' => 3, 'hours' => 4],  // ลาป่วย
-            ['id' => 4, 'hours' => 2],  // ขาด
+            ['hours' => 10.0, 'status' => 'present'], // มา
+            ['hours' => 4.0,  'status' => 'late'],    // สาย
+            ['hours' => 4.0,  'status' => 'sick'],    // ลาป่วย
+            ['hours' => 2.0,  'status' => 'absent'],  // ขาด
         ];
-        $statusSample = [1 => 'present', 2 => 'late', 3 => 'sick', 4 => 'absent'];
 
         // กรณีค่าเริ่มต้น: นับ present + late + leave + sick เป็นมาเรียน (18/20 ชม. = 90% ไม่ติด มส)
-        $attDefault = $this->attendanceService->calculateStudentAttendanceSummary($sessionsSample, $statusSample, [
+        $attDefault = $this->attendanceService->calculateStudentAttendanceSummary($sessionsSample, 20.0, [
             'count_late_as_present'  => true,
             'count_leave_as_present' => true,
             'count_sick_as_present'  => true,
@@ -194,7 +194,7 @@ class Pp5UnitTestSuite
         );
 
         // กรณี Admin ตั้งค่าไม่นับสายและลาป่วยเป็นเวลาเรียน (เหลือมาเรียน 10/20 ชม. = 50% ติด มส)
-        $attStrict = $this->attendanceService->calculateStudentAttendanceSummary($sessionsSample, $statusSample, [
+        $attStrict = $this->attendanceService->calculateStudentAttendanceSummary($sessionsSample, 20.0, [
             'count_late_as_present'  => false,
             'count_leave_as_present' => false,
             'count_sick_as_present'  => false,
@@ -218,8 +218,8 @@ class Pp5UnitTestSuite
             'กฎข้อที่ 5: การตัดสิน "ร" เมื่อคะแนนเป็น NULL',
             'เมื่อเวลาเรียนผ่าน (92%) แต่มีรายการคะแนนเป็น NULL 1 ช่อง ต้องได้ผลเป็น "ร"',
             $rCalc['grade'] === 'ร' && $rCalc['has_missing_score'] === true,
-            'grade=ร, missing_count=1',
-            "grade={$rCalc['grade']}, missing_count={$rCalc['missing_count']}"
+            'grade=ร, has_missing_score=true',
+            "grade={$rCalc['grade']}, has_missing_score=" . ($rCalc['has_missing_score'] ? 'true' : 'false')
         );
 
         // ─── กฎข้อที่ 6: วิชากิจกรรมพัฒนาผู้เรียน (type = activity) ใช้ผล "ผ" หรือ "มผ" ───
@@ -244,7 +244,7 @@ class Pp5UnitTestSuite
         );
 
         // ─── กฎข้อที่ 7: การแก้ 0 / ร / มส เก็บ original_grade และแก้ 0/ร ได้ไม่เกิน 1 ───
-        $remZero = $this->gradeCalc->applyRemedialGrade('0', '3', '2026-10-15');
+        $remZero = $this->gradeCalc->applyRemedialGrade('0', '0', '3', '2026-10-15');
         $assert(
             'กฎข้อที่ 7: การแก้ 0 / ร / มส และเพดานเกรด',
             'แก้ "0" แม้คะแนนใหม่จะได้เกรด 3 ต้องถูกจำกัดผลลัพธ์ไม่เกินเกรด "1" และเก็บ original_grade="0"',
@@ -253,7 +253,7 @@ class Pp5UnitTestSuite
             "grade={$remZero['grade']}, original_grade={$remZero['original_grade']}, is_remedial={$remZero['is_remedial']}"
         );
 
-        $remR = $this->gradeCalc->applyRemedialGrade('ร', '4', '2026-10-16');
+        $remR = $this->gradeCalc->applyRemedialGrade('ร', 'ร', '4', '2026-10-16');
         $assert(
             'กฎข้อที่ 7: การแก้ 0 / ร / มส และเพดานเกรด',
             'แก้ "ร" แม้คะแนนรวมหลังส่งงานจะได้เกรด 4 ต้องได้ผลหลังแก้ไม่เกินเกรด "1" และเก็บ original_grade="ร"',
@@ -263,30 +263,30 @@ class Pp5UnitTestSuite
         );
 
         // ─── กฎข้อที่ 8: คุณลักษณะอันพึงประสงค์ / อ่านคิดเขียน / สมรรถนะ (0–3) สรุปด้วย Mode / Mean ───
-        $modeTieSummary = $this->gradeCalc->summarizeAssessmentLevels([3, 3, 2, 2, 1], 'mode', true);
+        $modeTieSummary = $this->gradeCalc->summarizeAssessmentLevels([3, 3, 2, 2, 1], ['assessment_summary_mode' => 'mode', 'zero_item_forces_fail' => true]);
         $assert(
             'กฎข้อที่ 8: การสรุปผลประเมินคุณลักษณะ/อ่านคิดเขียน/สมรรถนะ (0–3)',
             'สรุปด้วยฐานนิยม (Mode): กรณีความถี่เท่ากัน ([3,3,2,2,1]) เลือกระดับที่สูงกว่าได้ 3 (ดีเยี่ยม)',
-            $modeTieSummary === 3 && $this->gradeCalc->levelToText($modeTieSummary) === 'ดีเยี่ยม',
-            'level=3 (ดีเยี่ยม)',
+            $modeTieSummary === 3 && $this->gradeCalc->levelToText($modeTieSummary) === 'ดีเยี่ยม (3)',
+            'level=3 (ดีเยี่ยม (3))',
             "level={$modeTieSummary} (" . $this->gradeCalc->levelToText($modeTieSummary) . ')'
         );
 
-        $zeroFailSummary = $this->gradeCalc->summarizeAssessmentLevels([3, 3, 3, 0, 3], 'mode', true);
+        $zeroFailSummary = $this->gradeCalc->summarizeAssessmentLevels([3, 3, 3, 0, 3], ['assessment_summary_mode' => 'mode', 'zero_item_forces_fail' => true]);
         $assert(
             'กฎข้อที่ 8: การสรุปผลประเมินคุณลักษณะ/อ่านคิดเขียน/สมรรถนะ (0–3)',
             'กฎ zero_item_forces_fail: หากมีข้อใดได้ 0 (ไม่ผ่าน) ผลสรุปรวมต้องเป็น 0 (ไม่ผ่าน) ทันที',
-            $zeroFailSummary === 0 && $this->gradeCalc->levelToText($zeroFailSummary) === 'ไม่ผ่าน',
-            'level=0 (ไม่ผ่าน)',
+            $zeroFailSummary === 0 && $this->gradeCalc->levelToText($zeroFailSummary) === 'ไม่ผ่าน (0)',
+            'level=0 (ไม่ผ่าน (0))',
             "level={$zeroFailSummary} (" . $this->gradeCalc->levelToText($zeroFailSummary) . ')'
         );
 
-        $meanSummary = $this->gradeCalc->summarizeAssessmentLevels([3, 2, 2, 2, 2], 'mean', true);
+        $meanSummary = $this->gradeCalc->summarizeAssessmentLevels([3, 2, 2, 2, 2], ['assessment_summary_mode' => 'mean', 'zero_item_forces_fail' => true]);
         $assert(
             'กฎข้อที่ 8: การสรุปผลประเมินคุณลักษณะ/อ่านคิดเขียน/สมรรถนะ (0–3)',
             'รองรับโหมดค่าเฉลี่ยปัดเศษ (Mean): [3,2,2,2,2] เฉลี่ย 2.2 ปัดเป็นระดับ 2 (ดี)',
-            $meanSummary === 2 && $this->gradeCalc->levelToText($meanSummary) === 'ดี',
-            'level=2 (ดี)',
+            $meanSummary === 2 && $this->gradeCalc->levelToText($meanSummary) === 'ดี (2)',
+            'level=2 (ดี (2))',
             "level={$meanSummary} (" . $this->gradeCalc->levelToText($meanSummary) . ')'
         );
 
@@ -298,9 +298,36 @@ class Pp5UnitTestSuite
         $assert(
             'กฎข้อที่ 9: ความปลอดภัยข้อมูลส่วนบุคคล PDPA (Encrypted Citizen ID)',
             'เข้ารหัส AES-256-CBC + HMAC-SHA256 และถอดรหัสกลับได้ตรงกัน พร้อม Masking สำหรับแสดงผล',
-            $cipher !== $sampleCid && $plain === $sampleCid && $masked === '1-3304-XXXXX-56-6',
-            'plain=1330400123456, masked=1-3304-XXXXX-56-6',
+            $cipher !== $sampleCid && $plain === $sampleCid && $masked === '1-3304-XXXXX-45-6',
+            'plain=1330400123456, masked=1-3304-XXXXX-45-6',
             "plain={$plain}, masked={$masked}"
+        );
+
+        // ─── กฎข้อที่ 10: ลำดับขั้นตอนการอนุมัติ 4 ขั้น (Approval Workflow & Locking) ───
+        $sampleDraftCourse = ['status' => 'draft', 'teacher_user_id' => 10, 'department_id' => 1];
+        $sampleSubmittedCourse = ['status' => 'submitted', 'teacher_user_id' => 10, 'department_id' => 1];
+        $sampleApprovedCourse = ['status' => 'approved', 'teacher_user_id' => 10, 'department_id' => 1];
+
+        // ทดสอบว่าเมื่อเป็น approved หรือ locked จะไม่สามารถแก้คะแนนได้ (canEditCourse = false)
+        $policyMock = new Pp5Policy($this->pdo, 10, 'att_teacher');
+        $canEditDraft = $policyMock->canEditCourse($sampleDraftCourse);
+        $canEditApproved = $policyMock->canEditCourse($sampleApprovedCourse);
+        $assert(
+            'กฎข้อที่ 10: ระบบตรวจอนุมัติและล็อกเล่ม (Approval Workflow)',
+            'เมื่ออยู่ในสถานะ draft ครูแก้ไขได้ แต่เมื่อเป็น approved/locked จะล็อกป้องกันการแก้ไข',
+            $canEditDraft === true && $canEditApproved === false,
+            'draft=true, approved=false',
+            "draft=" . ($canEditDraft ? 'true' : 'false') . ", approved=" . ($canEditApproved ? 'true' : 'false')
+        );
+
+        // ทดสอบการสอบแก้ตัวของวิชากิจกรรมพัฒนาผู้เรียน (มผ -> ผ)
+        $remAct = $this->gradeCalc->applyRemedialGrade('มผ', 'มผ', 'ผ', '2026-10-20');
+        $assert(
+            'กฎข้อที่ 7: การแก้ 0 / ร / มส / มผ',
+            'วิชากิจกรรมพัฒนาผู้เรียน แก้ มผ เมื่อผ่านเกณฑ์ได้ผลใหม่เป็น "ผ" และเก็บ original_grade="มผ"',
+            $remAct['grade'] === 'ผ' && $remAct['original_grade'] === 'มผ' && $remAct['is_remedial'] === 1,
+            'grade=ผ, original_grade=มผ, is_remedial=1',
+            "grade={$remAct['grade']}, original_grade={$remAct['original_grade']}, is_remedial={$remAct['is_remedial']}"
         );
 
         return [

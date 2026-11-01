@@ -236,6 +236,9 @@ if (!function_exists('pp5_render_top_bar')) {
                                 <span class="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-black"><?= $unreadCnt ?></span>
                             <?php endif; ?>
                         </a>
+                        <a href="/pp5/batch_zip.php" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 <?= $activeTab === 'batch_zip' ? 'bg-rose-600 text-white shadow-md shadow-rose-200' : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-600' ?>">
+                            <i class="bi bi-file-earmark-zip-fill"></i> ดาวน์โหลด .ZIP
+                        </a>
                         <?php if ($policy->isAdmin()): ?>
                             <a href="/pp5/master_data.php" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 <?= $activeTab === 'master' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600' ?>">
                                 <i class="bi bi-database-fill-gear"></i> จัดการข้อมูลพื้นฐาน
@@ -342,6 +345,18 @@ if (!function_exists('pp5_render_course_nav')) {
                 <a href="/pp5/course_scores.php?course_id=<?= $courseId ?>"
                    class="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 <?= $activeCourseTab === 'scores' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600' ?>">
                     <i class="bi bi-table"></i> 3. กรอกคะแนน & ตัดเกรด (Excel Grid)
+                </a>
+                <a href="/pp5/course_assessments.php?course_id=<?= $courseId ?>"
+                   class="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 <?= $activeCourseTab === 'assessments' ? 'bg-violet-600 text-white shadow-md shadow-violet-200' : 'bg-slate-100 text-slate-600 hover:bg-violet-50 hover:text-violet-600' ?>">
+                    <i class="bi bi-heart-pulse-fill"></i> 4. คุณลักษณะ / อ่านคิดเขียน / สมรรถนะ
+                </a>
+                <a href="/pp5/course_summary.php?course_id=<?= $courseId ?>"
+                   class="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 <?= $activeCourseTab === 'summary' ? 'bg-rose-600 text-white shadow-md shadow-rose-200' : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-600' ?>">
+                    <i class="bi bi-clipboard2-data-fill"></i> 5. สรุปผล & พิมพ์เล่ม ปพ.5 (A4)
+                </a>
+                <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>" target="_blank"
+                   class="ml-auto px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all flex items-center gap-1.5">
+                    <i class="bi bi-printer-fill text-amber-400"></i> พิมพ์ ปพ.5 (ครบ 5 ส่วน)
                 </a>
             </div>
         </div>

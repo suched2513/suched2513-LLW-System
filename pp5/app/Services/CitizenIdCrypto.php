@@ -108,14 +108,14 @@ class CitizenIdCrypto
     }
 
     /**
-     * จัดรูปแบบเลขบัตรประชาชนแบบปิดบัง PDPA (เช่น 1-3399-xxxxx-74-1)
+     * จัดรูปแบบเลขบัตรประชาชนแบบปิดบัง PDPA (เช่น 1-3399-XXXXX-74-1)
      */
     public static function formatMasked(?string $digitsOrMasked): string
     {
         $clean = preg_replace('/[^0-9]/', '', (string)$digitsOrMasked);
         if (strlen($clean) === 13) {
             return sprintf(
-                '%s-%s-xxxxx-%s-%s',
+                '%s-%s-XXXXX-%s-%s',
                 substr($clean, 0, 1),
                 substr($clean, 1, 4),
                 substr($clean, 10, 2),
@@ -123,5 +123,13 @@ class CitizenIdCrypto
             );
         }
         return $digitsOrMasked ? htmlspecialchars($digitsOrMasked, ENT_QUOTES, 'UTF-8') : '-';
+    }
+
+    /**
+     * Alias สำหรับ formatMasked
+     */
+    public static function mask(?string $digitsOrMasked): string
+    {
+        return self::formatMasked($digitsOrMasked);
     }
 }

@@ -401,6 +401,16 @@ require_once __DIR__ . '/../components/layout_start.php';
                                        title="กรอกคะแนนและตัดเกรดแบบ Excel">
                                         <i class="bi bi-table"></i> กรอกคะแนน
                                     </a>
+                                    <a href="/pp5/course_assessments.php?course_id=<?= (int)$cr['id'] ?>"
+                                       class="px-2.5 py-1.5 rounded-xl bg-violet-50 text-violet-700 hover:bg-violet-100 text-xs font-bold transition-all"
+                                       title="ประเมินคุณลักษณะอันพึงประสงค์ อ่านคิดเขียน และสมรรถนะ">
+                                        <i class="bi bi-heart-pulse-fill"></i> คุณลักษณะฯ
+                                    </a>
+                                    <a href="/pp5/course_summary.php?course_id=<?= (int)$cr['id'] ?>"
+                                       class="px-2.5 py-1.5 rounded-xl bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold transition-all"
+                                       title="สรุปผลและพิมพ์เล่ม ปพ.5 ขนาด A4 ครบ 5 ส่วน">
+                                        <i class="bi bi-printer-fill"></i> พิมพ์ ปพ.5
+                                    </a>
                                 </div>
                             </td>
                         </tr>

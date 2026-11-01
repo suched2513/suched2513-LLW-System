@@ -252,6 +252,64 @@ class Pp5Policy
     }
 
     /**
+     * สิทธิ์กดส่งตรวจ ปพ.5 (เฉพาะครูผู้สอนวิชา หรือ Admin และสถานะต้องเป็น draft)
+     */
+    public function canSubmitCourse(array $course): bool
+    {
+        $status = (string)($course['status'] ?? 'draft');
+        if ($status !== 'draft') {
+            return false;
+        }
+        if ($this->isAdmin()) {
+            return true;
+        }
+        return (int)($course['teacher_user_id'] ?? 0) === $this->userId;
+    }
+
+    /**
+     * สิทธิ์การอนุมัติ ปพ.5 ตามลำดับขั้น
+     * - 'head': หัวหน้ากลุ่มสาระ (สถานะ submitted)
+     * - 'deputy': รองฯ วิชาการ (สถานะ head_approved หรือ submitted สำหรับ deputy/admin)
+     * - 'director': ผู้อำนวยการ (สถานะ deputy_approved หรือ submitted/head_approved สำหรับ director/admin)
+     */
+    public function canApproveCourse(array $course, ?string $step = null): bool
+    {
+        $status = (string)($course['status'] ?? 'draft');
+        $deptId = (int)($course['department_id'] ?? 0);
+
+        if ($step === 'head' || $step === null) {
+            if ($status === 'submitted' && ($this->isAdmin() || $this->isDepartmentHead($deptId))) {
+                return true;
+            }
+        }
+        if ($step === 'deputy' || $step === null) {
+            if (in_array($status, ['head_approved', 'submitted'], true) && ($this->isAdmin() || $this->isDeputy())) {
+                return true;
+            }
+        }
+        if ($step === 'director' || $step === null) {
+            if (in_array($status, ['deputy_approved', 'head_approved', 'submitted'], true) && ($this->isAdmin() || $this->isDirector())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * สิทธิ์ส่งกลับให้ครูแก้ไข (Reject with Reason)
+     */
+    public function canRejectCourse(array $course): bool
+    {
+        $status = (string)($course['status'] ?? 'draft');
+        if (in_array($status, ['draft', 'approved', 'locked'], true)) {
+            return false;
+        }
+        $deptId = (int)($course['department_id'] ?? 0);
+        return $this->isAdmin() || $this->isDirector() || $this->isDeputy() || $this->isDepartmentHead($deptId);
+    }
+
+    /**
      * ตรวจสอบสิทธิ์ปลดล็อก ปพ.5 ที่สถานะ locked หรืออนุมัติไปแล้ว (เฉพาะ Admin งานทะเบียนและวัดผล)
      */
     public function canUnlockCourse(): bool

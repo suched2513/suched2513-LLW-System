@@ -189,6 +189,7 @@ $subMenus = [
     ],
     'pp5' => [
         ['icon' => 'fas fa-tachometer-alt',  'label' => 'แดชบอร์ด ปพ.5',        'url' => $base_path . '/pp5/index.php'],
+        ['icon' => 'fas fa-file-archive',    'label' => 'ดาวน์โหลดเล่ม ปพ.5 (.ZIP)', 'url' => $base_path . '/pp5/batch_zip.php'],
         ['icon' => 'fas fa-database',        'label' => 'จัดการข้อมูลพื้นฐาน',   'url' => $base_path . '/pp5/master_data.php', 'roles' => ['super_admin', 'academic_admin']],
         ['icon' => 'fas fa-file-excel',      'label' => 'นำเข้า/ส่งออก Excel',   'url' => $base_path . '/pp5/import_data.php', 'roles' => ['super_admin', 'academic_admin']],
         ['icon' => 'fas fa-shield-alt',      'label' => 'ประวัติการแก้ไขข้อมูล',  'url' => $base_path . '/pp5/activity_logs.php', 'roles' => ['super_admin', 'academic_admin']],

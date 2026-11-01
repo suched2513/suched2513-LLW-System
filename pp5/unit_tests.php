@@ -42,7 +42,7 @@ if ($isCli) {
 
 $termCtx      = pp5_get_term_context($pdo);
 $pageTitle    = 'Unit Tests — ตรวจสอบกฎการคำนวณ ปพ.5 ออนไลน์';
-$pageSubtitle = 'ชุดทดสอบอัตโนมัติ (GradeCalculator, AttendanceService, CitizenIdCrypto) ครอบคลุมกฎการคำนวณทั้ง 9 ข้อ';
+$pageSubtitle = 'ชุดทดสอบอัตโนมัติ (GradeCalculator, AttendanceService, CitizenIdCrypto, Workflow, Remedial) 19 กรณีทดสอบ';
 $activeSystem = 'pp5';
 
 require_once __DIR__ . '/../components/layout_start.php';
