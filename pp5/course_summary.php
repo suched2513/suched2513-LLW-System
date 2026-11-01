@@ -324,43 +324,85 @@ echo pp5_render_course_nav($course, $policy, 'summary');
         </div>
     </div>
 
-    <!-- แถบ 2 ปุ่มหลักที่วิชาการกำหนด: ชีต ปกน(p) และ ชีต sgs(p) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-white/15">
+    <!-- แถบ 4 ชีตหลักตามแบบฟอร์ม ปพ.5 โรงเรียนละลมวิทยา: ชีต ปกน(p), คำอธิบาย, ตัวชี้วัด, และ sgs(p) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-white/15">
+        <!-- ชีตที่ 1: ปกน(p) -->
         <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 flex flex-col justify-between gap-3 hover:bg-white/15 transition-all">
             <div>
                 <div class="flex items-center justify-between mb-1">
-                    <span class="text-xs font-black uppercase tracking-wider text-blue-200">ชีตหลักที่ 1</span>
-                    <span class="px-2 py-0.5 rounded-md bg-blue-500/40 text-[11px] font-bold">ปพ.5-พ</span>
+                    <span class="text-[11px] font-black uppercase tracking-wider text-blue-200">ชีตที่ 1 (หน้า 1)</span>
+                    <span class="px-2 py-0.5 rounded-md bg-blue-500/40 text-[10px] font-bold">ปพ.5-พ</span>
                 </div>
-                <h4 class="text-base font-black text-white flex items-center gap-2">
-                    <i class="bi bi-file-earmark-text-fill text-blue-300"></i> ชีต ปกน(p) (หน้าปก & สรุปผลการประเมิน)
+                <h4 class="text-sm font-black text-white flex items-center gap-1.5">
+                    <i class="bi bi-file-earmark-text-fill text-blue-300"></i> ชีต ปกน(p)
                 </h4>
-                <p class="text-xs text-indigo-100 mt-1 leading-relaxed">
-                    ตารางสรุปผล 14 ระดับคะแนน (4.0–0.0, ร, มส, ผ, มผ) • สรุปอ่านคิดเขียน • คุณลักษณะอันพึงประสงค์ • ลายเซ็นครูผู้สอน หัวหน้ากลุ่ม งานวัดผล ฝ่ายวิชาการ และ ผอ.
+                <p class="text-[11px] text-indigo-100 mt-1 leading-relaxed">
+                    หน้าปก & ตารางสรุป 14 ระดับคะแนน, สรุปคุณลักษณะฯ, อ่านคิดเขียน และลายเซ็นอนุมัติ 4 ฝ่าย
                 </p>
             </div>
             <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=pok" target="_blank"
-               class="w-full py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-black text-xs text-center shadow transition-all flex items-center justify-center gap-2">
-                <i class="bi bi-printer-fill"></i> พิมพ์ใบปก ปพ.5-พ (ชีต ปกน(p))
+               class="w-full py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-black text-xs text-center shadow transition-all flex items-center justify-center gap-1.5">
+                <i class="bi bi-printer-fill"></i> พิมพ์ชีต ปกน(p)
             </a>
         </div>
 
+        <!-- ชีตที่ 2: คำอธิบาย -->
         <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 flex flex-col justify-between gap-3 hover:bg-white/15 transition-all">
             <div>
                 <div class="flex items-center justify-between mb-1">
-                    <span class="text-xs font-black uppercase tracking-wider text-cyan-200">ชีตหลักที่ 2</span>
-                    <span class="px-2 py-0.5 rounded-md bg-cyan-500/40 text-[11px] font-bold">SGS-ONLINE</span>
+                    <span class="text-[11px] font-black uppercase tracking-wider text-purple-200">ชีตที่ 2 (หน้า 2)</span>
+                    <span class="px-2 py-0.5 rounded-md bg-purple-500/40 text-[10px] font-bold">หลักสูตร</span>
                 </div>
-                <h4 class="text-base font-black text-white flex items-center gap-2">
-                    <i class="bi bi-table text-cyan-300"></i> ชีต sgs(p) (ตารางบันทึกคะแนน 43 คอลัมน์)
+                <h4 class="text-sm font-black text-white flex items-center gap-1.5">
+                    <i class="bi bi-card-text text-purple-300"></i> ชีต คำอธิบาย
                 </h4>
-                <p class="text-xs text-indigo-100 mt-1 leading-relaxed">
-                    ตารางคะแนน 43 คอลัมน์ตรงตาม SGS: หน่วย 1–6, กลางภาค, หน่วย 7–12, ปลายภาค, รวม, เกรด, คุณลักษณะฯ 1–8+ผล, อ่านคิดเขียน 1–5+ผล, เวลาเรียน (สาย ป่วย กิจ ขาด ร้อยละ)
+                <p class="text-[11px] text-indigo-100 mt-1 leading-relaxed">
+                    คำอธิบายรายวิชา (Course Description) จัดพิมพ์แบบทางการระบุรหัสวิชา ระดับชั้น และจำนวนชั่วโมง
+                </p>
+            </div>
+            <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=desc" target="_blank"
+               class="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs text-center shadow transition-all flex items-center justify-center gap-1.5">
+                <i class="bi bi-printer-fill"></i> พิมพ์ชีต คำอธิบาย
+            </a>
+        </div>
+
+        <!-- ชีตที่ 3: ตัวชี้วัด -->
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 flex flex-col justify-between gap-3 hover:bg-white/15 transition-all">
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-[11px] font-black uppercase tracking-wider text-emerald-200">ชีตที่ 3 (หน้า 3)</span>
+                    <span class="px-2 py-0.5 rounded-md bg-emerald-500/40 text-[10px] font-bold">แผนวัดผล</span>
+                </div>
+                <h4 class="text-sm font-black text-white flex items-center gap-1.5">
+                    <i class="bi bi-check2-square text-emerald-300"></i> ชีต ตัวชี้วัด
+                </h4>
+                <p class="text-[11px] text-indigo-100 mt-1 leading-relaxed">
+                    ตารางแผนการวัดและประเมินผลแจงคะแนน K (ความรู้), P (ทักษะ), A (เจตคติ), กลางภาค และปลายภาค (100 คะแนน)
+                </p>
+            </div>
+            <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=plan" target="_blank"
+               class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs text-center shadow transition-all flex items-center justify-center gap-1.5">
+                <i class="bi bi-printer-fill"></i> พิมพ์ชีต ตัวชี้วัด
+            </a>
+        </div>
+
+        <!-- ชีตที่ 4: sgs(p) -->
+        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 flex flex-col justify-between gap-3 hover:bg-white/15 transition-all">
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-[11px] font-black uppercase tracking-wider text-cyan-200">ชีตที่ 4 (หน้า 4+)</span>
+                    <span class="px-2 py-0.5 rounded-md bg-cyan-500/40 text-[10px] font-bold">SGS-ONLINE</span>
+                </div>
+                <h4 class="text-sm font-black text-white flex items-center gap-1.5">
+                    <i class="bi bi-table text-cyan-300"></i> ชีต sgs(p)
+                </h4>
+                <p class="text-[11px] text-indigo-100 mt-1 leading-relaxed">
+                    ตารางคะแนน 43 คอลัมน์ตรงตาม SGS: หน่วย 1–12, กลางภาค, ปลายภาค, เกรด, คุณลักษณะฯ, อ่านคิดเขียน และเวลาเรียน
                 </p>
             </div>
             <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=sgs" target="_blank"
-               class="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-black text-xs text-center shadow transition-all flex items-center justify-center gap-2">
-                <i class="bi bi-printer-fill"></i> พิมพ์แบบบันทึกคะแนน SGS (ชีต sgs(p))
+               class="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-black text-xs text-center shadow transition-all flex items-center justify-center gap-1.5">
+                <i class="bi bi-printer-fill"></i> พิมพ์ชีต sgs(p)
             </a>
         </div>
     </div>

@@ -592,6 +592,58 @@ class MasterDataService
     }
 
     /**
+     * บันทึกคำอธิบายรายวิชา (บันทึกทั้งระดับห้องเรียน และสำรองไว้ที่ระดับรายวิชาแม่)
+     */
+    public function saveCourseDescription(int $courseId, int $subjectId, string $description, ?int $actorId = null): void
+    {
+        $desc = trim($description);
+        $stmt = $this->pdo->prepare("UPDATE `pp5_courses` SET `description` = ? WHERE `id` = ?");
+        $stmt->execute([$desc, $courseId]);
+
+        // ถ้าที่รายวิชาแม่ยังไม่มี ให้บันทึกลง pp5_subjects ด้วย
+        if ($subjectId > 0 && $desc !== '') {
+            $stmtSubj = $this->pdo->prepare("UPDATE `pp5_subjects` SET `description` = ? WHERE `id` = ? AND (`description` IS NULL OR `description` = '')");
+            $stmtSubj->execute([$desc, $subjectId]);
+        }
+
+        if ($this->logger) {
+            $this->logger->log('course.save_description', "บันทึกคำอธิบายรายวิชา ปพ.5 #{$courseId}", 'pp5_courses', $courseId, $courseId, null, ['description_length' => mb_strlen($desc)]);
+        }
+    }
+
+    /**
+     * บันทึกแผนการวัดและประเมินผลตัวชี้วัด (K, P, A, กลางภาค, ปลายภาค) แบบกลุ่ม
+     */
+    public function saveIndicatorKpaBatch(int $subjectId, array $items, ?int $actorId = null): void
+    {
+        $stmt = $this->pdo->prepare("
+            UPDATE `pp5_indicators`
+            SET `score_k`       = ?,
+                `score_p`       = ?,
+                `score_a`       = ?,
+                `score_midterm` = ?,
+                `score_final`   = ?
+            WHERE `id` = ? AND `subject_id` = ?
+        ");
+
+        foreach ($items as $item) {
+            $indId = (int)($item['id'] ?? 0);
+            if ($indId <= 0) continue;
+            $k   = max(0.0, (float)($item['score_k'] ?? 0.0));
+            $p   = max(0.0, (float)($item['score_p'] ?? 0.0));
+            $a   = max(0.0, (float)($item['score_a'] ?? 0.0));
+            $mid = max(0.0, (float)($item['score_midterm'] ?? 0.0));
+            $fin = max(0.0, (float)($item['score_final'] ?? 0.0));
+
+            $stmt->execute([$k, $p, $a, $mid, $fin, $indId, $subjectId]);
+        }
+
+        if ($this->logger) {
+            $this->logger->log('indicator.save_kpa', "บันทึกแผนการวัดผลประเมินผลตัวชี้วัด (K-P-A) วิชา #{$subjectId}", 'pp5_indicators', $subjectId, null, null, ['items_count' => count($items)]);
+        }
+    }
+
+    /**
      * ดึงรายการ ปพ.5 (pp5_courses: 1 วิชา × 1 ห้อง = 1 ปพ.5) ประจำภาคเรียน
      */
     public function getCourses(

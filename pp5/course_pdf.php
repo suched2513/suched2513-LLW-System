@@ -29,14 +29,20 @@ if (!$data || !$policy->canViewCourse($data['course'])) {
 
 $course = $data['course'];
 
-// โหมดการแสดงผล (pok | sgs | all)
+// โหมดการแสดงผล (pok | desc | plan | sgs | all)
 $mode = (string)($_GET['mode'] ?? '');
 $rawSections = trim((string)($_GET['sections'] ?? ''));
 
 if ($mode === 'pok' || $rawSections === '1' || $rawSections === 'pok') {
     $mode = 'pok';
     $sections = ['pok'];
-} elseif ($mode === 'sgs' || $rawSections === '3' || $rawSections === 'sgs') {
+} elseif ($mode === 'desc' || $rawSections === '2' || $rawSections === 'desc') {
+    $mode = 'desc';
+    $sections = ['desc'];
+} elseif ($mode === 'plan' || $rawSections === '3' || $rawSections === 'plan') {
+    $mode = 'plan';
+    $sections = ['plan'];
+} elseif ($mode === 'sgs' || $rawSections === '4' || $rawSections === 'sgs') {
     $mode = 'sgs';
     $sections = ['sgs'];
 } else {
@@ -49,13 +55,23 @@ $safeRoom   = str_replace(['/', '\\'], '-', (string)$course['classroom_name']);
 
 // กรณีดาวน์โหลดเป็นไฟล์เอกสาร ปพ.5 พร้อมพิมพ์
 if ($isDownload) {
-    $prefixName = ($mode === 'pok') ? 'POK' : (($mode === 'sgs') ? 'SGS' : 'PP5');
+    $prefixMap  = ['pok' => 'POK', 'desc' => 'DESC', 'plan' => 'PLAN', 'sgs' => 'SGS', 'all' => 'PP5'];
+    $prefixName = $prefixMap[$mode] ?? 'PP5';
     $fileName   = "{$prefixName}_{$course['academic_year']}_{$course['semester']}_{$course['subject_code']}_ห้อง_{$safeRoom}.html";
     header('Content-Type: text/html; charset=utf-8');
     header('Content-Disposition: attachment; filename="' . $fileName . '"');
     echo $reportService->renderReportHtml($data, $sections, true, $mode);
     exit;
 }
+
+$titleMap = [
+    'pok'  => 'ชีต ปกน(p) (ปพ.5-พ)',
+    'desc' => 'ชีต คำอธิบายรายวิชา',
+    'plan' => 'ชีต แผนการวัดผล (ตชว.)',
+    'sgs'  => 'ชีต sgs(p) (SGS-ONLINE)',
+    'all'  => 'ปพ.5 ครบชุด',
+];
+$pageTitle = ($titleMap[$mode] ?? 'ปพ.5') . ' — ' . htmlspecialchars($course['subject_code'] . ' ' . $course['subject_name'] . ' (' . $course['classroom_name'] . ')', ENT_QUOTES, 'UTF-8');
 
 $innerPagesHtml = $reportService->renderReportHtml($data, $sections, false, $mode);
 ?>
@@ -64,7 +80,7 @@ $innerPagesHtml = $reportService->renderReportHtml($data, $sections, false, $mod
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $mode === 'pok' ? 'ใบปก ปพ.5-พ' : ($mode === 'sgs' ? 'แบบบันทึกคะแนน SGS' : 'ปพ.5 ฉบับเต็ม') ?> — <?= htmlspecialchars($course['subject_code'] . ' ' . $course['subject_name'] . ' (' . $course['classroom_name'] . ')', ENT_QUOTES, 'UTF-8') ?></title>
+    <title><?= $pageTitle ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
@@ -202,17 +218,27 @@ $innerPagesHtml = $reportService->renderReportHtml($data, $sections, false, $mod
             </div>
         </div>
 
-        <div style="display:flex; align-items:center; gap:6px;">
-            <!-- สลับโหมดพิมพ์ ชีต ปกน(p) / ชีต sgs(p) / ครบชุด -->
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <!-- สลับโหมดพิมพ์ ชีต ปกน(p) / คำอธิบาย / ตัวชี้วัด (แผนวัดผล) / sgs(p) / ครบชุด -->
             <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=pok"
                class="toolbar-btn"
                style="<?= $mode === 'pok' ? 'background:#2563eb; color:#fff;' : 'background:#1e293b; color:#cbd5e1;' ?>">
-                <i class="bi bi-file-earmark-text"></i> ชีต ปกน(p) (ปพ.5-พ)
+                <i class="bi bi-file-earmark-text"></i> ชีต ปกน(p)
+            </a>
+            <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=desc"
+               class="toolbar-btn"
+               style="<?= $mode === 'desc' ? 'background:#8b5cf6; color:#fff;' : 'background:#1e293b; color:#cbd5e1;' ?>">
+                <i class="bi bi-card-text"></i> ชีต คำอธิบาย
+            </a>
+            <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=plan"
+               class="toolbar-btn"
+               style="<?= $mode === 'plan' ? 'background:#059669; color:#fff;' : 'background:#1e293b; color:#cbd5e1;' ?>">
+                <i class="bi bi-check2-square"></i> ชีต ตัวชี้วัด
             </a>
             <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=sgs"
                class="toolbar-btn"
                style="<?= $mode === 'sgs' ? 'background:#0891b2; color:#fff;' : 'background:#1e293b; color:#cbd5e1;' ?>">
-                <i class="bi bi-table"></i> ชีต sgs(p) (SGS-ONLINE)
+                <i class="bi bi-table"></i> ชีต sgs(p)
             </a>
             <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=all"
                class="toolbar-btn"

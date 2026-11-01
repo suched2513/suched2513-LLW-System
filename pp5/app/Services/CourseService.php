@@ -34,6 +34,7 @@ class CourseService
             SELECT cr.*,
                    s.`code` AS `subject_code`, s.`name` AS `subject_name`,
                    s.`type` AS `subject_type`, s.`credit`, s.`hours`, s.`department_id`, s.`grade_level` AS `subject_grade_level`,
+                   COALESCE(NULLIF(cr.`description`, ''), s.`description`, '') AS `course_description`,
                    d.`name` AS `department_name`, d.`code` AS `department_code`, d.`head_user_id`,
                    c.`classroom_name`, c.`grade_level`, c.`room_no`, c.`study_plan`, c.`advisor_user_id`, c.`co_advisor_user_id`,
                    TRIM(CONCAT(COALESCE(u.`prefix`, ''), COALESCE(u.`firstname`, ''), ' ', COALESCE(u.`lastname`, ''))) AS `teacher_name`,

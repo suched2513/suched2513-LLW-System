@@ -902,16 +902,258 @@ class Pp5ReportService
     }
 
     /**
+     * ชีต "คำอธิบาย" — คำอธิบายรายวิชา (A4 Landscape)
+     * รูปแบบตรงตามแบบฟอร์ม ปพ.5 ของโรงเรียนละลมวิทยา 100%
+     */
+    public function renderDescriptionPageHtml(array $data, bool $standalone = false): string
+    {
+        $course        = $data['course'];
+        $classroomName = (string)($course['classroom_name'] ?? '');
+        $parts         = explode('/', $classroomName);
+        $levelGrade    = $course['grade_level'] ?? ($parts[0] ?? '');
+        $roomNo        = $course['room_no'] ?? ($parts[1] ?? '1');
+        $desc          = trim((string)($course['course_description'] ?? ($course['description'] ?? '')));
+
+        ob_start();
+        if ($standalone): ?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>คำอธิบายรายวิชา — <?= htmlspecialchars($course['subject_code'] . ' ' . $course['subject_name'], ENT_QUOTES, 'UTF-8') ?></title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        @page { size: A4 landscape; margin: 8mm 12mm; }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        body { font-family: 'TH Sarabun New', 'THSarabunNew', 'Sarabun', sans-serif; font-size: 14pt; line-height: 1.6; color: #000; margin: 0; padding: 0; background: #fff; }
+        .pp5-page-desc { width: 297mm; min-height: 210mm; margin: 0 auto; padding: 12mm 18mm; background: #fff; box-sizing: border-box; }
+        @media print { .pp5-page-desc { width: 100% !important; min-height: auto !important; margin: 0 !important; padding: 0 !important; } }
+    </style>
+</head>
+<body>
+        <?php endif; ?>
+
+        <div class="pp5-page-landscape pp5-page-desc" style="display: flex; flex-direction: column; min-height: 200mm;">
+            <!-- วงกลมเลขหน้าด้านบน (หน้า 2) -->
+            <div style="text-align: center; margin-bottom: 8px;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1.5px solid #000; border-radius: 50%; font-size: 13pt; font-weight: bold;">
+                    2
+                </div>
+            </div>
+
+            <!-- หัวข้อหลัก -->
+            <div style="text-align: center; font-size: 18pt; font-weight: bold; margin-bottom: 16px;">
+                คำอธิบายรายวิชา
+            </div>
+
+            <!-- ตารางข้อมูลหัวข้อวิชา -->
+            <table style="width: 100%; border-collapse: collapse; font-size: 14pt; margin-bottom: 18px; border-bottom: 1.5px solid #000; padding-bottom: 8px;">
+                <tr>
+                    <td style="width: 55%; padding: 4px 0; font-weight: bold;">
+                        วิชา&nbsp;&nbsp;<span style="font-weight: normal;"><?= htmlspecialchars($course['subject_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                    </td>
+                    <td style="width: 45%; padding: 4px 0; text-align: right; font-weight: bold;">
+                        ชั้นมัธยมศึกษาปีที่&nbsp;&nbsp;<span style="font-weight: normal;"><?= htmlspecialchars($levelGrade . '/' . $roomNo, ENT_QUOTES, 'UTF-8') ?></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px 0; font-weight: bold;">
+                        รหัสวิชา&nbsp;&nbsp;<span style="font-weight: normal;"><?= htmlspecialchars($course['subject_code'], ENT_QUOTES, 'UTF-8') ?></span>
+                    </td>
+                    <td style="padding: 4px 0; text-align: right; font-weight: bold;">
+                        เวลา&nbsp;&nbsp;<span style="font-weight: normal;"><?= (int)$course['hours'] ?></span>&nbsp;&nbsp;ชั่วโมง&nbsp;&nbsp;(<?= (float)$course['credit'] ?>&nbsp;หน่วยกิต)
+                    </td>
+                </tr>
+            </table>
+
+            <!-- เนื้อหาคำอธิบายรายวิชา -->
+            <div style="flex: 1; font-size: 14pt; line-height: 1.8; text-align: justify; text-indent: 3em; white-space: pre-wrap; padding: 4px 2px;">
+                <?php if ($desc !== ''): ?>
+                    <?= htmlspecialchars($desc, ENT_QUOTES, 'UTF-8') ?>
+                <?php else: ?>
+                    <span style="color: #94a3b8; font-style: italic;">(ยังไม่ได้ระบุคำอธิบายรายวิชา สามารถพิมพ์หรือคัดลอกคำอธิบายรายวิชาได้ที่เมนู "1. ตั้งค่ารายวิชา & ชิ้นงาน")</span>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <?php if ($standalone): ?>
+</body>
+</html>
+        <?php endif;
+
+        return (string)ob_get_clean();
+    }
+
+    /**
+     * ชีต "ตัวชี้วัด" — แผนการวัดและประเมินผล (K-P-A, กลางภาค, ปลายภาค) (A4 Landscape)
+     * รูปแบบตรงตามแบบฟอร์ม ปพ.5 ของโรงเรียนละลมวิทยา 100%
+     */
+    public function renderIndicatorPlanPageHtml(array $data, bool $standalone = false): string
+    {
+        $course        = $data['course'];
+        $indicators    = $data['indicators'] ?? [];
+        $classroomName = (string)($course['classroom_name'] ?? '');
+        $parts         = explode('/', $classroomName);
+        $levelGrade    = $course['grade_level'] ?? ($parts[0] ?? '');
+        $roomNo        = $course['room_no'] ?? ($parts[1] ?? '1');
+
+        $sumK   = 0.0;
+        $sumP   = 0.0;
+        $sumA   = 0.0;
+        $sumMid = 0.0;
+        $sumFin = 0.0;
+
+        foreach ($indicators as $ind) {
+            $sumK   += (float)($ind['score_k'] ?? 0);
+            $sumP   += (float)($ind['score_p'] ?? 0);
+            $sumA   += (float)($ind['score_a'] ?? 0);
+            $sumMid += (float)($ind['score_midterm'] ?? 0);
+            $sumFin += (float)($ind['score_final'] ?? 0);
+        }
+        $sumAll = $sumK + $sumP + $sumA + $sumMid + $sumFin;
+
+        ob_start();
+        if ($standalone): ?>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>แผนการวัดและประเมินผล — <?= htmlspecialchars($course['subject_code'] . ' ' . $course['subject_name'], ENT_QUOTES, 'UTF-8') ?></title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        @page { size: A4 landscape; margin: 8mm 12mm; }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        body { font-family: 'TH Sarabun New', 'THSarabunNew', 'Sarabun', sans-serif; font-size: 13pt; line-height: 1.35; color: #000; margin: 0; padding: 0; background: #fff; }
+        .pp5-page-plan { width: 297mm; min-height: 210mm; margin: 0 auto; padding: 8mm 14mm; background: #fff; box-sizing: border-box; }
+        @media print { .pp5-page-plan { width: 100% !important; min-height: auto !important; margin: 0 !important; padding: 0 !important; } }
+        table.pp5-kpa-print-table { width: 100%; border-collapse: collapse; font-size: 11.5pt; table-layout: fixed; }
+        table.pp5-kpa-print-table th, table.pp5-kpa-print-table td { border: 1px solid #000; padding: 3px 2px; text-align: center; vertical-align: middle; }
+        table.pp5-kpa-print-table th { font-weight: bold; background: #fff; }
+    </style>
+</head>
+<body>
+        <?php endif; ?>
+
+        <div class="pp5-page-landscape pp5-page-plan">
+            <!-- วงกลมเลขหน้า 3 -->
+            <div style="text-align: center; margin-bottom: 4px;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1.5px solid #000; border-radius: 50%; font-size: 13pt; font-weight: bold;">
+                    3
+                </div>
+            </div>
+
+            <!-- หัวข้อหลัก -->
+            <div style="text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 4px;">
+                แผนการวัดและประเมินผล
+            </div>
+            <div style="text-align: center; font-size: 12pt; margin-bottom: 10px;">
+                วิชา <?= htmlspecialchars($course['subject_code'] . ' ' . $course['subject_name'], ENT_QUOTES, 'UTF-8') ?>
+                ชั้นมัธยมศึกษาปีที่ <?= htmlspecialchars($levelGrade . '/' . $roomNo, ENT_QUOTES, 'UTF-8') ?>
+                ภาคเรียนที่ <?= (int)$course['semester'] ?> ปีการศึกษา <?= (int)$course['academic_year'] ?>
+            </div>
+
+            <!-- ตารางแผนการวัดและประเมินผล 7 คอลัมน์ตามชีต ตัวชี้วัด -->
+            <table class="pp5-kpa-print-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2" style="width: 50%; padding: 6px 4px;">ตัวชี้วัด/ผลการเรียนรู้</th>
+                        <th colspan="3" style="width: 21%; padding: 4px;">ประเมินระหว่างเรียน</th>
+                        <th rowspan="2" style="width: 9%; padding: 4px;">ประเมิน<br>กลางภาค</th>
+                        <th rowspan="2" style="width: 9%; padding: 4px;">ประเมิน<br>ปลายภาค</th>
+                        <th rowspan="2" style="width: 11%; padding: 4px;">รวม</th>
+                    </tr>
+                    <tr>
+                        <th style="width: 7%; padding: 3px;">K</th>
+                        <th style="width: 7%; padding: 3px;">P</th>
+                        <th style="width: 7%; padding: 3px;">A</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($indicators)): ?>
+                        <?php for ($r = 1; $r <= 8; $r++): ?>
+                            <tr>
+                                <td style="text-align: left; padding-left: 6px;">&nbsp;</td>
+                                <td></td><td></td><td></td><td></td><td></td><td></td>
+                            </tr>
+                        <?php endfor; ?>
+                    <?php else: ?>
+                        <?php 
+                        $rowCount = 0;
+                        foreach ($indicators as $ind): 
+                            $rowCount++;
+                            $k   = (float)($ind['score_k'] ?? 0);
+                            $p   = (float)($ind['score_p'] ?? 0);
+                            $a   = (float)($ind['score_a'] ?? 0);
+                            $mid = (float)($ind['score_midterm'] ?? 0);
+                            $fin = (float)($ind['score_final'] ?? 0);
+                            $rTot = $k + $p + $a + $mid + $fin;
+                        ?>
+                            <tr>
+                                <td style="text-align: left; padding: 4px 8px; line-height: 1.3;">
+                                    <strong><?= htmlspecialchars($ind['code'], ENT_QUOTES, 'UTF-8') ?></strong>
+                                    <?= htmlspecialchars($ind['description'], ENT_QUOTES, 'UTF-8') ?>
+                                </td>
+                                <td><?= $k > 0 ? (float)$k : '' ?></td>
+                                <td><?= $p > 0 ? (float)$p : '' ?></td>
+                                <td><?= $a > 0 ? (float)$a : '' ?></td>
+                                <td><?= $mid > 0 ? (float)$mid : '' ?></td>
+                                <td><?= $fin > 0 ? (float)$fin : '' ?></td>
+                                <td style="font-weight: bold;"><?= $rTot > 0 ? (float)$rTot : '' ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        <?php 
+                        // ถ้าแถวน้อยกว่า 7 ให้เติมแถวว่างให้เต็มหน้ากระดาษอย่างสวยงาม
+                        for ($pad = $rowCount; $pad < 7; $pad++): ?>
+                            <tr>
+                                <td style="text-align: left; padding-left: 6px;">&nbsp;</td>
+                                <td></td><td></td><td></td><td></td><td></td><td></td>
+                            </tr>
+                        <?php endfor; ?>
+                    <?php endif; ?>
+                </tbody>
+                <tfoot>
+                    <tr style="font-weight: bold; background: #fff;">
+                        <td style="text-align: center; padding: 6px;">รวม</td>
+                        <td><?= $sumK > 0 ? (float)$sumK : '0' ?></td>
+                        <td><?= $sumP > 0 ? (float)$sumP : '0' ?></td>
+                        <td><?= $sumA > 0 ? (float)$sumA : '0' ?></td>
+                        <td><?= $sumMid > 0 ? (float)$sumMid : '0' ?></td>
+                        <td><?= $sumFin > 0 ? (float)$sumFin : '0' ?></td>
+                        <td style="font-weight: bold;"><?= $sumAll > 0 ? (float)$sumAll : '0' ?></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <?php if ($standalone): ?>
+</body>
+</html>
+        <?php endif;
+
+        return (string)ob_get_clean();
+    }
+
+    /**
      * สร้าง HTML ฉบับสมบูรณ์สำหรับพิมพ์/ส่งออก PDF รายงาน ปพ.5
      * รองรับโหมด:
-     * - $template = 'pok' : พิมพ์เฉพาะใบปก ปพ.5-พ (ชีต ปกน(p))
-     * - $template = 'sgs' : พิมพ์เฉพาะแบบบันทึกคะแนน SGS-ONLINE (ชีต sgs(p))
+     * - $template = 'pok'  : พิมพ์เฉพาะใบปก ปพ.5-พ (ชีต ปกน(p))
+     * - $template = 'desc' : พิมพ์เฉพาะคำอธิบายรายวิชา (ชีต คำอธิบาย)
+     * - $template = 'plan' : พิมพ์เฉพาะแผนการวัดและประเมินผล (ชีต ตัวชี้วัด)
+     * - $template = 'sgs'  : พิมพ์เฉพาะแบบบันทึกคะแนน SGS-ONLINE (ชีต sgs(p))
      * - $template = 'default' | 'all' : รวมเล่ม ปพ.5 ครบชุดตามที่เลือกใน $sections
      */
     public function renderReportHtml(array $data, array $sections = [1, 2, 3, 4, 5], bool $standalone = true, string $template = 'default'): string
     {
         if ($template === 'pok' || $sections === [1] || $sections === ['pok']) {
             return $this->renderPokPageHtml($data, $standalone);
+        }
+
+        if ($template === 'desc' || $sections === ['desc']) {
+            return $this->renderDescriptionPageHtml($data, $standalone);
+        }
+
+        if ($template === 'plan' || $sections === ['plan']) {
+            return $this->renderIndicatorPlanPageHtml($data, $standalone);
         }
 
         if ($template === 'sgs' || $sections === ['sgs'] || $sections === [3] && count($sections) === 1 && !empty($_GET['sgs_only'])) {
@@ -1032,12 +1274,22 @@ class Pp5ReportService
         <?php endif;
 
         // 1. หน้าปก ปพ.5-พ (ชีต ปกน(p))
-        if (in_array(1, $sections, true) || in_array('pok', $sections, true)) {
+        if (in_array(1, $sections, true) || in_array('pok', $sections, true) || in_array('all', $sections, true)) {
             echo $this->renderPokPageHtml($data, false);
         }
 
-        // 2. แบบบันทึกคะแนน SGS-ONLINE (ชีต sgs(p))
-        if (in_array(3, $sections, true) || in_array('sgs', $sections, true)) {
+        // 2. คำอธิบายรายวิชา (ชีต คำอธิบาย)
+        if (in_array(2, $sections, true) || in_array('desc', $sections, true) || in_array('all', $sections, true)) {
+            echo $this->renderDescriptionPageHtml($data, false);
+        }
+
+        // 3. แผนการวัดและประเมินผลตัวชี้วัด (ชีต ตัวชี้วัด)
+        if (in_array(3, $sections, true) || in_array('plan', $sections, true) || in_array('all', $sections, true)) {
+            echo $this->renderIndicatorPlanPageHtml($data, false);
+        }
+
+        // 4. แบบบันทึกคะแนน SGS-ONLINE (ชีต sgs(p))
+        if (in_array(4, $sections, true) || in_array(5, $sections, true) || in_array('sgs', $sections, true) || in_array('all', $sections, true)) {
             echo $this->renderSgsPageHtml($data, false);
         }
 

@@ -125,6 +125,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $masterService->deleteIndicator($indId);
                     $flashMsg = 'ลบตัวชี้วัดเรียบร้อยแล้ว';
                 }
+            } elseif ($action === 'save_course_description') {
+                $desc = trim((string)($_POST['course_description'] ?? ''));
+                $masterService->saveCourseDescription($courseId, (int)$course['subject_id'], $desc, $policy->getUserId());
+                $course = $courseService->getCourseById($courseId);
+                $flashMsg = 'บันทึกคำอธิบายรายวิชาเรียบร้อยแล้ว';
+            } elseif ($action === 'save_indicator_kpa') {
+                $kpaItems = $_POST['kpa'] ?? [];
+                if (is_array($kpaItems)) {
+                    $masterService->saveIndicatorKpaBatch((int)$course['subject_id'], $kpaItems, $policy->getUserId());
+                    $flashMsg = 'บันทึกแผนการวัดและประเมินผลตัวชี้วัด (K-P-A) เรียบร้อยแล้ว';
+                }
             }
         } catch (Throwable $e) {
             error_log('[PP5 course_setup] ' . $e->getMessage());
@@ -556,6 +567,53 @@ echo pp5_render_course_nav($course, $policy, 'setup');
     </div>
 </div>
 
+<!-- ส่วนจัดการคำอธิบายรายวิชา (สำหรับพิมพ์ ปพ.5 หน้า 2 / ชีต คำอธิบาย) -->
+<div class="bg-white rounded-2xl shadow-xl shadow-blue-100/50 border border-slate-100 p-6 mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <div>
+            <h3 class="text-base font-black text-slate-800 flex items-center gap-2">
+                <i class="bi bi-file-earmark-text-fill text-indigo-600"></i>
+                คำอธิบายรายวิชา (Course Description)
+            </h3>
+            <p class="text-xs text-slate-500">
+                สำหรับแสดงและพิมพ์ในแบบ ปพ.5 หน้าที่ 2 (ชีต "คำอธิบาย") ส่งฝ่ายวิชาการ
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=desc" target="_blank"
+               class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 text-xs font-bold transition-all flex items-center gap-1.5">
+                <i class="bi bi-printer-fill"></i> ดูตัวอย่างหน้าพิมพ์ (ชีต คำอธิบาย)
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" class="space-y-4">
+        <input type="hidden" name="form_action" value="save_course_description">
+        <input type="hidden" name="course_id" value="<?= $courseId ?>">
+
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span><strong>วิชา:</strong> <?= htmlspecialchars($course['subject_name'], ENT_QUOTES, 'UTF-8') ?></span>
+            <span><strong>รหัสวิชา:</strong> <?= htmlspecialchars($course['subject_code'], ENT_QUOTES, 'UTF-8') ?></span>
+            <span><strong>ระดับชั้น:</strong> มัธยมศึกษาปีที่ <?= htmlspecialchars($course['grade_level'] . '/' . ($course['room_no'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
+            <span><strong>เวลา:</strong> <?= (int)$course['hours'] ?> ชั่วโมง (<?= (float)$course['credit'] ?> หน่วยกิต)</span>
+        </div>
+
+        <div>
+            <textarea name="course_description" rows="5" <?= !$canEdit ? 'disabled' : '' ?>
+                      placeholder="พิมพ์หรือคัดลอกข้อความคำอธิบายรายวิชาตามหลักสูตรแกนกลางฯ หรือของโรงเรียนมาวางที่นี่..."
+                      class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-800 leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500 transition-all"><?= htmlspecialchars($course['course_description'] ?? ($course['description'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
+        </div>
+
+        <?php if ($canEdit): ?>
+            <div class="flex justify-end">
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-200 transition-all flex items-center gap-2">
+                    <i class="bi bi-save-fill"></i> บันทึกคำอธิบายรายวิชา
+                </button>
+            </div>
+        <?php endif; ?>
+    </form>
+</div>
+
 <!-- ส่วนจัดการตัวชี้วัด / ผลการเรียนรู้ประจำรายวิชา -->
 <div class="bg-white rounded-2xl shadow-xl shadow-blue-100/50 border border-slate-100 p-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
@@ -639,6 +697,119 @@ echo pp5_render_course_nav($course, $policy, 'setup');
             </div>
         <?php endif; ?>
     </div>
+
+    <!-- แผนการวัดและประเมินผลตัวชี้วัด (K-P-A) -->
+    <?php if (!empty($indicators)): ?>
+    <div class="mt-8 pt-6 border-t border-slate-100">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-3">
+            <div>
+                <h4 class="text-sm font-black text-slate-800 flex items-center gap-2">
+                    <i class="bi bi-table text-indigo-600"></i>
+                    แผนการวัดและประเมินผลรายตัวชี้วัด (แจงคะแนน K - P - A - กลางภาค - ปลายภาค)
+                </h4>
+                <p class="text-[11px] text-slate-500">
+                    สำหรับแสดงในแบบ ปพ.5 หน้าที่ 3 (ชีต "ตัวชี้วัด") โดยคะแนนรวมของทุกตัวชี้วัดต้องรวมได้ 100 คะแนน
+                </p>
+            </div>
+            <div>
+                <a href="/pp5/course_pdf.php?course_id=<?= $courseId ?>&mode=plan" target="_blank"
+                   class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 text-xs font-bold transition-all flex items-center gap-1.5">
+                    <i class="bi bi-printer-fill"></i> ดูตัวอย่างหน้าพิมพ์ (ชีต ตัวชี้วัด)
+                </a>
+            </div>
+        </div>
+
+        <form method="POST">
+            <input type="hidden" name="form_action" value="save_indicator_kpa">
+            <input type="hidden" name="course_id" value="<?= $courseId ?>">
+
+            <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left border-collapse" id="kpaTable">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                                <th rowspan="2" class="p-3 border-r border-slate-200 min-w-[200px]">ตัวชี้วัด / ผลการเรียนรู้</th>
+                                <th colspan="3" class="p-2 border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-900">ประเมินระหว่างเรียน</th>
+                                <th rowspan="2" class="p-2 border-r border-slate-200 text-center min-w-[70px]">กลางภาค</th>
+                                <th rowspan="2" class="p-2 border-r border-slate-200 text-center min-w-[70px]">ปลายภาค</th>
+                                <th rowspan="2" class="p-2 text-center min-w-[70px] bg-slate-200/50">รวม</th>
+                            </tr>
+                            <tr class="bg-indigo-50/30 text-indigo-800 font-bold border-b border-slate-200 text-center">
+                                <th class="p-2 border-r border-slate-200 min-w-[65px]">K (ความรู้)</th>
+                                <th class="p-2 border-r border-slate-200 min-w-[65px]">P (ทักษะ)</th>
+                                <th class="p-2 border-r border-slate-200 min-w-[65px]">A (เจตคติ)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 bg-white">
+                            <?php foreach ($indicators as $idx => $ind): 
+                                $kVal   = (float)($ind['score_k'] ?? 0);
+                                $pVal   = (float)($ind['score_p'] ?? 0);
+                                $aVal   = (float)($ind['score_a'] ?? 0);
+                                $midVal = (float)($ind['score_midterm'] ?? 0);
+                                $finVal = (float)($ind['score_final'] ?? 0);
+                                $rowTot = $kVal + $pVal + $aVal + $midVal + $finVal;
+                            ?>
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="p-2.5 border-r border-slate-200">
+                                        <input type="hidden" name="kpa[<?= $idx ?>][id]" value="<?= (int)$ind['id'] ?>">
+                                        <div class="font-bold text-indigo-700"><?= htmlspecialchars($ind['code'], ENT_QUOTES, 'UTF-8') ?></div>
+                                        <div class="text-[11px] text-slate-500 line-clamp-1"><?= htmlspecialchars($ind['description'], ENT_QUOTES, 'UTF-8') ?></div>
+                                    </td>
+                                    <td class="p-1.5 border-r border-slate-200 text-center">
+                                        <input type="number" step="0.5" min="0" max="100" name="kpa[<?= $idx ?>][score_k]" value="<?= $kVal > 0 ? $kVal : '' ?>" placeholder="0"
+                                               oninput="recalcKpaRow(this)" class="kpa-k w-16 text-center border border-slate-200 rounded-lg py-1 px-1 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500">
+                                    </td>
+                                    <td class="p-1.5 border-r border-slate-200 text-center">
+                                        <input type="number" step="0.5" min="0" max="100" name="kpa[<?= $idx ?>][score_p]" value="<?= $pVal > 0 ? $pVal : '' ?>" placeholder="0"
+                                               oninput="recalcKpaRow(this)" class="kpa-p w-16 text-center border border-slate-200 rounded-lg py-1 px-1 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500">
+                                    </td>
+                                    <td class="p-1.5 border-r border-slate-200 text-center">
+                                        <input type="number" step="0.5" min="0" max="100" name="kpa[<?= $idx ?>][score_a]" value="<?= $aVal > 0 ? $aVal : '' ?>" placeholder="0"
+                                               oninput="recalcKpaRow(this)" class="kpa-a w-16 text-center border border-slate-200 rounded-lg py-1 px-1 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500">
+                                    </td>
+                                    <td class="p-1.5 border-r border-slate-200 text-center">
+                                        <input type="number" step="0.5" min="0" max="100" name="kpa[<?= $idx ?>][score_midterm]" value="<?= $midVal > 0 ? $midVal : '' ?>" placeholder="0"
+                                               oninput="recalcKpaRow(this)" class="kpa-mid w-16 text-center border border-slate-200 rounded-lg py-1 px-1 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500">
+                                    </td>
+                                    <td class="p-1.5 border-r border-slate-200 text-center">
+                                        <input type="number" step="0.5" min="0" max="100" name="kpa[<?= $idx ?>][score_final]" value="<?= $finVal > 0 ? $finVal : '' ?>" placeholder="0"
+                                               oninput="recalcKpaRow(this)" class="kpa-fin w-16 text-center border border-slate-200 rounded-lg py-1 px-1 text-xs font-bold text-slate-800 outline-none focus:border-indigo-500">
+                                    </td>
+                                    <td class="p-2 text-center font-black text-indigo-700 bg-slate-50 kpa-row-total">
+                                        <?= $rowTot > 0 ? $rowTot : '0' ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-slate-100 font-black border-t-2 border-slate-300 text-slate-800">
+                                <td class="p-2.5 border-r border-slate-200 text-right pr-4">รวมคะแนนทั้งหมด</td>
+                                <td class="p-2 border-r border-slate-200 text-center text-indigo-700" id="kpaSumK">0</td>
+                                <td class="p-2 border-r border-slate-200 text-center text-indigo-700" id="kpaSumP">0</td>
+                                <td class="p-2 border-r border-slate-200 text-center text-indigo-700" id="kpaSumA">0</td>
+                                <td class="p-2 border-r border-slate-200 text-center text-indigo-700" id="kpaSumMid">0</td>
+                                <td class="p-2 border-r border-slate-200 text-center text-indigo-700" id="kpaSumFin">0</td>
+                                <td class="p-2 text-center text-base font-black bg-indigo-50 text-indigo-800" id="kpaSumAll">0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <?php if ($canEdit): ?>
+                <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div class="text-xs font-semibold text-slate-500 flex items-center gap-2">
+                        <span id="kpaStatusBadge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700">กำลังตรวจสอบ...</span>
+                        <span>(คะแนนรวมทุกช่องต้องเท่ากับ 100 คะแนน)</span>
+                    </div>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-200 transition-all flex items-center gap-2">
+                        <i class="bi bi-save-fill"></i> บันทึกแผนการวัดและประเมินผล (K-P-A)
+                    </button>
+                </div>
+            <?php endif; ?>
+        </form>
+    </div>
+    <?php endif; ?>
 </div>
 
 <script>
@@ -703,6 +874,64 @@ function resetIndicatorForm() {
     if (submitTextEl) submitTextEl.textContent = 'บันทึกตัวชี้วัด';
     if (resetBtn) resetBtn.classList.add('hidden');
 }
+
+function recalcKpaTable() {
+    var rows = document.querySelectorAll('#kpaTable tbody tr');
+    var sumK = 0, sumP = 0, sumA = 0, sumMid = 0, sumFin = 0;
+
+    rows.forEach(function(row) {
+        var k = parseFloat(row.querySelector('.kpa-k')?.value || 0) || 0;
+        var p = parseFloat(row.querySelector('.kpa-p')?.value || 0) || 0;
+        var a = parseFloat(row.querySelector('.kpa-a')?.value || 0) || 0;
+        var mid = parseFloat(row.querySelector('.kpa-mid')?.value || 0) || 0;
+        var fin = parseFloat(row.querySelector('.kpa-fin')?.value || 0) || 0;
+        var rTot = k + p + a + mid + fin;
+
+        var totEl = row.querySelector('.kpa-row-total');
+        if (totEl) totEl.textContent = rTot > 0 ? (rTot % 1 === 0 ? rTot : rTot.toFixed(1)) : '0';
+
+        sumK += k;
+        sumP += p;
+        sumA += a;
+        sumMid += mid;
+        sumFin += fin;
+    });
+
+    var sumAll = sumK + sumP + sumA + sumMid + sumFin;
+
+    var elK = document.getElementById('kpaSumK');
+    var elP = document.getElementById('kpaSumP');
+    var elA = document.getElementById('kpaSumA');
+    var elMid = document.getElementById('kpaSumMid');
+    var elFin = document.getElementById('kpaSumFin');
+    var elAll = document.getElementById('kpaSumAll');
+    var badge = document.getElementById('kpaStatusBadge');
+
+    if (elK) elK.textContent = sumK % 1 === 0 ? sumK : sumK.toFixed(1);
+    if (elP) elP.textContent = sumP % 1 === 0 ? sumP : sumP.toFixed(1);
+    if (elA) elA.textContent = sumA % 1 === 0 ? sumA : sumA.toFixed(1);
+    if (elMid) elMid.textContent = sumMid % 1 === 0 ? sumMid : sumMid.toFixed(1);
+    if (elFin) elFin.textContent = sumFin % 1 === 0 ? sumFin : sumFin.toFixed(1);
+    if (elAll) elAll.textContent = sumAll % 1 === 0 ? sumAll : sumAll.toFixed(1);
+
+    if (badge) {
+        if (Math.abs(sumAll - 100) < 0.01) {
+            badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
+            badge.innerHTML = '<i class="bi bi-check-circle-fill"></i> คะแนนรวมครบ 100 คะแนนถูกต้อง';
+        } else {
+            badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200';
+            badge.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> คะแนนรวมปัจจุบัน: ' + (sumAll % 1 === 0 ? sumAll : sumAll.toFixed(1)) + ' / 100 คะแนน';
+        }
+    }
+}
+
+function recalcKpaRow(input) {
+    recalcKpaTable();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    recalcKpaTable();
+});
 </script>
 
 
