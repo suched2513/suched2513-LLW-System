@@ -87,12 +87,20 @@ class GradeCalculator
         }
 
         return [
-            'is_valid'    => empty($warnings),
-            'warnings'    => $warnings,
-            'phase_max'   => $phaseMax,
-            'collect_max' => $collectMax,
-            'final_max'   => $finalMax,
-            'total_max'   => $totalMax,
+            'is_valid'         => empty($warnings),
+            'warnings'         => $warnings,
+            'phase_max'        => $phaseMax,
+            'collect_max'      => $collectMax,
+            'final_max'        => $finalMax,
+            'total_max'        => $totalMax,
+            'sum_before_mid'   => (float)$phaseMax['before_mid'],
+            'sum_midterm'      => (float)$phaseMax['midterm'],
+            'sum_after_mid'    => (float)$phaseMax['after_mid'],
+            'sum_collect'      => (float)$collectMax,
+            'sum_final'        => (float)$finalMax,
+            'sum_total'        => (float)$totalMax,
+            'expected_collect' => (float)$ratioCollect,
+            'expected_final'   => (float)$ratioFinal,
         ];
     }
 

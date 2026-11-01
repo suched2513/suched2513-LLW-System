@@ -524,9 +524,14 @@ class MasterDataService
      */
     public function getSubjectIndicators(int $subjectId): array
     {
-        $stmt = $this->pdo->prepare("SELECT * FROM `pp5_indicators` WHERE `subject_id` = ? ORDER BY `sort_order` ASC, `id` ASC");
-        $stmt->execute([$subjectId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->pdo->prepare("SELECT * FROM `pp5_indicators` WHERE `subject_id` = ? ORDER BY `sort_order` ASC, `id` ASC");
+            $stmt->execute([$subjectId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            error_log('[PP5 getSubjectIndicators] ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**

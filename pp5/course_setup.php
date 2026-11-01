@@ -13,6 +13,8 @@ use PP5\App\Services\MasterDataService;
 
 pp5_require_login();
 
+try {
+
 $policy        = new Pp5Policy($pdo);
 $courseService = new CourseService($pdo);
 $gradeCalc     = new GradeCalculator($pdo);
@@ -126,15 +128,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$scoreItems     = $courseService->getCourseScoreItems($courseId);
-$indicators     = $masterService->getIndicators((int)$course['subject_id']);
-$siblingCourses = $courseService->getSiblingCoursesForCopy($course);
-$ratioCheck     = $gradeCalc->validateScoreItemsRatio(
-    $scoreItems,
-    (int)$course['ratio_collect'],
-    (int)$course['ratio_final'],
-    (string)$course['subject_type']
-);
+try {
+    $scoreItems     = $courseService->getCourseScoreItems($courseId);
+} catch (\Throwable $e) {
+    error_log('[PP5 course_setup getCourseScoreItems] ' . $e->getMessage());
+    $scoreItems = [];
+}
+
+try {
+    $indicators     = $masterService->getIndicators((int)$course['subject_id']);
+} catch (\Throwable $e) {
+    error_log('[PP5 course_setup getIndicators] ' . $e->getMessage());
+    $indicators = [];
+}
+
+try {
+    $siblingCourses = $courseService->getSiblingCoursesForCopy($course);
+} catch (\Throwable $e) {
+    error_log('[PP5 course_setup getSiblingCoursesForCopy] ' . $e->getMessage());
+    $siblingCourses = [];
+}
+
+try {
+    $ratioCheck = $gradeCalc->validateScoreItemsRatio(
+        $scoreItems,
+        (int)($course['ratio_collect'] ?? 70),
+        (int)($course['ratio_final'] ?? 30),
+        (string)($course['subject_type'] ?? 'basic')
+    );
+} catch (\Throwable $e) {
+    error_log('[PP5 course_setup validateRatio] ' . $e->getMessage());
+    $ratioCheck = [
+        'is_valid'         => false,
+        'warnings'         => ['ยังไม่ได้กำหนดรายการคะแนนหรือสัดส่วนไม่ถูกต้อง'],
+        'sum_collect'      => 0,
+        'sum_final'        => 0,
+        'sum_total'        => 0,
+        'sum_before_mid'   => 0,
+        'sum_midterm'      => 0,
+        'sum_after_mid'    => 0,
+        'expected_collect' => (int)($course['ratio_collect'] ?? 70),
+        'expected_final'   => (int)($course['ratio_final'] ?? 30),
+    ];
+}
 
 $phasesMeta = [
     'before_mid' => ['label' => '1. คะแนนเก็บก่อนกลางภาค', 'badge' => 'bg-indigo-50 text-indigo-700 border-indigo-200', 'icon' => 'bi-1-circle-fill text-indigo-600'],
@@ -194,7 +230,7 @@ echo pp5_render_course_nav($course, $policy, 'setup');
                         </ul>
                     <?php else: ?>
                         <p class="text-xs text-emerald-700 mt-0.5 font-semibold">
-                            คะแนนเก็บ (ก่อนกลางภาค <?= $ratioCheck['sum_before_mid'] ?> + กลางภาค <?= $ratioCheck['sum_midterm'] ?> + หลังกลางภาค <?= $ratioCheck['sum_after_mid'] ?> = <?= $ratioCheck['sum_collect'] ?> คะแนน) + ปลายภาค (<?= $ratioCheck['sum_final'] ?> คะแนน) = รวม <?= $ratioCheck['sum_total'] ?> คะแนน
+                            คะแนนเก็บ (ก่อนกลางภาค <?= $ratioCheck['sum_before_mid'] ?? 0 ?> + กลางภาค <?= $ratioCheck['sum_midterm'] ?? 0 ?> + หลังกลางภาค <?= $ratioCheck['sum_after_mid'] ?? 0 ?> = <?= $ratioCheck['sum_collect'] ?? 0 ?> คะแนน) + ปลายภาค (<?= $ratioCheck['sum_final'] ?? 0 ?> คะแนน) = รวม <?= $ratioCheck['sum_total'] ?? 0 ?> คะแนน
                         </p>
                     <?php endif; ?>
                 </div>
@@ -204,20 +240,20 @@ echo pp5_render_course_nav($course, $policy, 'setup');
             <div class="grid grid-cols-3 gap-2 shrink-0">
                 <div class="bg-white/90 rounded-xl px-3.5 py-2 border border-slate-200 text-center">
                     <div class="text-[10px] font-black text-slate-400 uppercase">คะแนนเก็บรวม</div>
-                    <div class="text-sm font-black <?= abs($ratioCheck['sum_collect'] - $ratioCheck['expected_collect']) < 0.01 ? 'text-emerald-600' : 'text-amber-600' ?>">
-                        <?= $ratioCheck['sum_collect'] ?> / <?= $ratioCheck['expected_collect'] ?>
+                    <div class="text-sm font-black <?= abs(($ratioCheck['sum_collect'] ?? 0) - ($ratioCheck['expected_collect'] ?? (int)$course['ratio_collect'])) < 0.01 ? 'text-emerald-600' : 'text-amber-600' ?>">
+                        <?= $ratioCheck['sum_collect'] ?? 0 ?> / <?= $ratioCheck['expected_collect'] ?? (int)$course['ratio_collect'] ?>
                     </div>
                 </div>
                 <div class="bg-white/90 rounded-xl px-3.5 py-2 border border-slate-200 text-center">
                     <div class="text-[10px] font-black text-slate-400 uppercase">สอบปลายภาค</div>
-                    <div class="text-sm font-black <?= abs($ratioCheck['sum_final'] - $ratioCheck['expected_final']) < 0.01 ? 'text-emerald-600' : 'text-amber-600' ?>">
-                        <?= $ratioCheck['sum_final'] ?> / <?= $ratioCheck['expected_final'] ?>
+                    <div class="text-sm font-black <?= abs(($ratioCheck['sum_final'] ?? 0) - ($ratioCheck['expected_final'] ?? (int)$course['ratio_final'])) < 0.01 ? 'text-emerald-600' : 'text-amber-600' ?>">
+                        <?= $ratioCheck['sum_final'] ?? 0 ?> / <?= $ratioCheck['expected_final'] ?? (int)$course['ratio_final'] ?>
                     </div>
                 </div>
                 <div class="bg-white/90 rounded-xl px-3.5 py-2 border border-slate-200 text-center">
                     <div class="text-[10px] font-black text-slate-400 uppercase">รวมทั้งหมด</div>
-                    <div class="text-sm font-black <?= abs($ratioCheck['sum_total'] - 100) < 0.01 ? 'text-indigo-600' : 'text-rose-600' ?>">
-                        <?= $ratioCheck['sum_total'] ?> / 100
+                    <div class="text-sm font-black <?= abs(($ratioCheck['sum_total'] ?? 0) - 100) < 0.01 ? 'text-indigo-600' : 'text-rose-600' ?>">
+                        <?= $ratioCheck['sum_total'] ?? 0 ?> / 100
                     </div>
                 </div>
             </div>
@@ -600,4 +636,32 @@ function resetScoreItemForm() {
 }
 </script>
 
-<?php require_once __DIR__ . '/../components/layout_end.php'; ?>
+
+<?php
+require_once __DIR__ . '/../components/layout_end.php';
+} catch (\Throwable $e) {
+    error_log('[PP5 course_setup] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    $pageTitle = 'เกิดข้อผิดพลาดในการโหลดหน้าตั้งค่ารายวิชา';
+    $pageSubtitle = htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+    $activeSystem = 'pp5';
+    require_once __DIR__ . '/../components/layout_start.php';
+    ?>
+    <div class="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-rose-800 m-6 shadow-sm">
+        <h3 class="text-base font-black flex items-center gap-2 mb-2">
+            <i class="bi bi-exclamation-octagon-fill text-rose-600 text-xl"></i> ไม่สามารถโหลดหน้าตั้งค่ารายวิชาได้
+        </h3>
+        <p class="text-xs text-rose-700 leading-relaxed font-semibold">
+            ข้อผิดพลาด: <?= htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') ?>
+        </p>
+        <div class="mt-4 flex items-center gap-2">
+            <a href="/pp5/index.php" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-all">
+                กลับแดชบอร์ด ปพ.5
+            </a>
+            <a href="/pp5/course_scores.php?course_id=<?= (int)($_GET['course_id'] ?? 0) ?>" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition-all">
+                ไปหน้ากรอกคะแนน
+            </a>
+        </div>
+    </div>
+    <?php
+    require_once __DIR__ . '/../components/layout_end.php';
+}

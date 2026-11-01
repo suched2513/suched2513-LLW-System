@@ -254,21 +254,26 @@ class CourseService
      */
     public function getSiblingCoursesForCopy(array $course): array
     {
-        $stmt = $this->pdo->prepare("
-            SELECT cr.`id`, cr.`academic_year`, cr.`semester`, cr.`ratio_collect`, cr.`ratio_final`,
-                   c.`classroom_name`,
-                   TRIM(CONCAT(COALESCE(u.`prefix`, ''), COALESCE(u.`firstname`, ''), ' ', COALESCE(u.`lastname`, ''))) AS `teacher_name`,
-                   (SELECT COUNT(*) FROM `pp5_score_items` si WHERE si.`course_id` = cr.`id`) AS `item_count`
-            FROM `pp5_courses` cr
-            INNER JOIN `pp5_classrooms` c ON c.`id` = cr.`classroom_id`
-            LEFT JOIN `llw_users` u ON u.`user_id` = cr.`teacher_user_id`
-            WHERE cr.`subject_id` = ?
-              AND cr.`id` != ?
-              AND EXISTS (SELECT 1 FROM `pp5_score_items` si2 WHERE si2.`course_id` = cr.`id`)
-            ORDER BY cr.`academic_year` DESC, cr.`semester` DESC, c.`grade_level` ASC, c.`room_no` ASC
-        ");
-        $stmt->execute([(int)$course['subject_id'], (int)$course['id']]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT cr.`id`, cr.`academic_year`, cr.`semester`, cr.`ratio_collect`, cr.`ratio_final`,
+                       c.`classroom_name`,
+                       TRIM(CONCAT(COALESCE(u.`prefix`, ''), COALESCE(u.`firstname`, ''), ' ', COALESCE(u.`lastname`, ''))) AS `teacher_name`,
+                       (SELECT COUNT(*) FROM `pp5_score_items` si WHERE si.`course_id` = cr.`id`) AS `item_count`
+                FROM `pp5_courses` cr
+                INNER JOIN `pp5_classrooms` c ON c.`id` = cr.`classroom_id`
+                LEFT JOIN `llw_users` u ON u.`user_id` = cr.`teacher_user_id`
+                WHERE cr.`subject_id` = ?
+                  AND cr.`id` != ?
+                  AND EXISTS (SELECT 1 FROM `pp5_score_items` si2 WHERE si2.`course_id` = cr.`id`)
+                ORDER BY cr.`academic_year` DESC, cr.`semester` DESC, c.`grade_level` ASC, c.`room_no` ASC
+            ");
+            $stmt->execute([(int)$course['subject_id'], (int)$course['id']]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            error_log('[PP5 getSiblingCoursesForCopy] ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
