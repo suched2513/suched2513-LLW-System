@@ -19,6 +19,8 @@ $ROLE_CATALOG = [
     'super_admin'      => ['label' => 'Super Admin',       'desc' => 'สิทธิ์สูงสุดทุกระบบ',         'color' => 'bg-purple-100 text-purple-700 border-purple-200',     'group' => 'admin'],
     'director'         => ['label' => 'Director',          'desc' => 'ผู้อำนวยการ — ลงนามขั้นสุดท้าย',   'color' => 'bg-violet-100 text-violet-700 border-violet-200',     'group' => 'exec'],
     'deputy_director'  => ['label' => 'Deputy Director',   'desc' => 'รองผู้อำนวยการ',                 'color' => 'bg-indigo-100 text-indigo-700 border-indigo-200',     'group' => 'exec'],
+    'academic_admin'   => ['label' => 'งานทะเบียนและวัดผล',  'desc' => 'ดูแลระบบ ปพ.5 ออนไลน์ / ปลดล็อกเล่ม', 'color' => 'bg-blue-100 text-blue-700 border-blue-200',       'group' => 'admin'],
+    'department_head'  => ['label' => 'หัวหน้ากลุ่มสาระ',    'desc' => 'ตรวจและอนุมัติ ปพ.5 ในกลุ่มสาระ',  'color' => 'bg-teal-100 text-teal-700 border-teal-200',           'group' => 'exec'],
     'wfh_admin'        => ['label' => 'WFH Admin',         'desc' => 'ตรวจสอบใบลา / WFH',              'color' => 'bg-blue-100 text-blue-700 border-blue-200',           'group' => 'admin'],
     'finance_head'     => ['label' => 'Finance Head',      'desc' => 'หัวหน้าการเงิน — ลงนาม',          'color' => 'bg-emerald-100 text-emerald-700 border-emerald-200', 'group' => 'finance'],
     'procurement_head' => ['label' => 'Procurement Head',  'desc' => 'หัวหน้าพัสดุ — ลงนาม',             'color' => 'bg-teal-100 text-teal-700 border-teal-200',           'group' => 'finance'],

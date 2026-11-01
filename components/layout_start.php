@@ -30,6 +30,7 @@ $systemLabels = [
     'lms'           => 'LMS',
     'health'        => 'สุขภาวะนักเรียน',
     'parent_meeting'=> 'ประชุมผู้ปกครอง',
+    'pp5'           => 'ระบบ ปพ.5 ออนไลน์',
 ];
 if (isset($activeSystem) && $activeSystem !== 'portal') {
     $breadcrumbs[] = ['label' => $systemLabels[$activeSystem] ?? $activeSystem];
@@ -61,6 +62,7 @@ $headerBg = [
     'lms'           => 'linear-gradient(135deg,#7c3aed 0%,#8B5CF6 100%)',
     'health'        => 'linear-gradient(135deg,#059669 0%,#10B981 100%)',
     'parent_meeting'=> 'linear-gradient(135deg,#2563eb 0%,#4338ca 100%)',
+    'pp5'           => 'linear-gradient(135deg,#4f46e5 0%,#1d4ed8 100%)',
 ];
 $headerIcons = [
     'portal'        => 'fas fa-th-large',
@@ -84,6 +86,7 @@ $headerIcons = [
     'lms'           => 'fas fa-chalkboard',
     'health'        => 'fas fa-heartbeat',
     'parent_meeting'=> 'fas fa-handshake',
+    'pp5'           => 'fas fa-book-open',
 ];
 $bgStyle = $headerBg[$activeSystem]    ?? $headerBg['portal'];
 $hdrIcon = $headerIcons[$activeSystem] ?? 'fas fa-cog';

@@ -30,6 +30,7 @@ elseif (strpos($full_url, '/sar/') !== false)             $activeSystem = 'sar';
 elseif (strpos($full_url, '/learning_media/') !== false)  $activeSystem = 'learning_media';
 elseif (strpos($full_url, '/health/') !== false)           $activeSystem = 'health';
 elseif (strpos($full_url, '/parent_meeting/') !== false)   $activeSystem = 'parent_meeting';
+elseif (strpos($full_url, '/pp5/') !== false)              $activeSystem = 'pp5';
 elseif (basename($full_url) === 'central_dashboard.php' || basename($full_url) === 'index.php')   $activeSystem = 'portal';
 
 /**
@@ -185,6 +186,13 @@ $subMenus = [
     'learning_media' => [
         ['icon' => 'fas fa-photo-video', 'label' => 'คลังสื่อการเรียนรู้', 'url' => $base_path . '/learning_media/index.php'],
         ['icon' => 'fas fa-chart-pie',   'label' => 'สรุปสถิติสิ้นภาคเรียน', 'url' => $base_path . '/learning_media/report_semester.php'],
+    ],
+    'pp5' => [
+        ['icon' => 'fas fa-tachometer-alt',  'label' => 'แดชบอร์ด ปพ.5',        'url' => $base_path . '/pp5/index.php'],
+        ['icon' => 'fas fa-database',        'label' => 'จัดการข้อมูลพื้นฐาน',   'url' => $base_path . '/pp5/master_data.php', 'roles' => ['super_admin', 'academic_admin']],
+        ['icon' => 'fas fa-file-excel',      'label' => 'นำเข้า/ส่งออก Excel',   'url' => $base_path . '/pp5/import_data.php', 'roles' => ['super_admin', 'academic_admin']],
+        ['icon' => 'fas fa-shield-alt',      'label' => 'ประวัติการแก้ไขข้อมูล',  'url' => $base_path . '/pp5/activity_logs.php', 'roles' => ['super_admin', 'academic_admin']],
+        ['icon' => 'fas fa-vial',            'label' => 'ทดสอบระบบ (Unit Tests)', 'url' => $base_path . '/pp5/unit_tests.php', 'roles' => ['super_admin', 'academic_admin']],
     ],
 ];
 
@@ -469,6 +477,26 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
 
                 <!-- 3. ACADEMIC & TEACHING -->
                 <li class="nav-header">งานวิชาการและการสอน</li>
+
+                <!-- PP5 Online (ระบบ ปพ.5 ออนไลน์) -->
+                <li class="nav-item <?= $activeSystem === 'pp5' ? 'menu-open' : '' ?>">
+                    <a href="#" class="nav-link <?= $activeSystem === 'pp5' ? 'active' : '' ?>">
+                        <i class="nav-icon fas fa-book-open" style="color:#6366f1"></i>
+                        <p style="color:<?= $activeSystem === 'pp5' ? '#fff' : '#a5b4fc' ?>">ระบบ ปพ.5 ออนไลน์ <i class="nav-arrow fas fa-angle-left"></i></p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <?php foreach ($subMenus['pp5'] as $sub):
+                            if (isset($sub['roles']) && !in_array($userRole, $sub['roles'])) continue;
+                        ?>
+                        <li class="nav-item">
+                            <a href="<?= $sub['url'] ?>" class="nav-link <?= isLinkActive($sub['url']) ? 'active' : '' ?>">
+                                <i class="nav-icon <?= $sub['icon'] ?>"></i>
+                                <p><?= $sub['label'] ?></p>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </li>
                 
                 <!-- Class Attendance -->
                 <li class="nav-item <?= $activeSystem === 'attendance' ? 'menu-open' : '' ?>">

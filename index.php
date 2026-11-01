@@ -50,6 +50,7 @@ if ($isLoggedIn) {
         case 'super_admin':
             $quickAccess = [
                 ['url' => 'central_dashboard.php',            'icon' => 'bi-shield-lock-fill',   'label' => 'Admin Panel',    'color' => 'blue'],
+                ['url' => 'pp5/index.php',                    'icon' => 'bi-journal-bookmark-fill','label'=> 'ปพ.5 ออนไลน์',  'color' => 'indigo'],
                 ['url' => 'admin/dashboard.php',              'icon' => 'bi-speedometer2',        'label' => 'WFH Admin',      'color' => 'emerald'],
                 ['url' => 'supervision.php',                  'icon' => 'bi-mortarboard-fill',    'label' => 'นิเทศการสอน',   'color' => 'indigo'],
                 ['url' => 'teacher_leave/index.php',          'icon' => 'bi-calendar-check-fill', 'label' => 'ใบลาออนไลน์',  'color' => 'rose'],
@@ -79,6 +80,7 @@ if ($isLoggedIn) {
             break;
         case 'att_teacher':
             $quickAccess = [
+                ['url' => 'pp5/index.php',                   'icon' => 'bi-journal-bookmark-fill','label'=> 'ปพ.5 ออนไลน์',  'color' => 'indigo'],
                 ['url' => 'assembly/dashboard.php',          'icon' => 'bi-people-fill',         'label' => 'เช็คชื่อเข้าแถว','color'=> 'amber'],
                 ['url' => 'attendance_system/dashboard.php', 'icon' => 'bi-person-check-fill',   'label' => 'เช็คชื่อในคาบ', 'color' => 'indigo'],
                 ['url' => 'supervision.php',                 'icon' => 'bi-mortarboard-fill',    'label' => 'รายงานนิเทศ',   'color' => 'rose'],
