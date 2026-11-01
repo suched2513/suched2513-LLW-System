@@ -42,6 +42,15 @@ if (!function_exists('pp5_ensure_schema')) {
 
         try {
             $hasTable = (bool)$pdo->query("SHOW TABLES LIKE 'pp5_school_settings'")->fetchColumn();
+            if ($hasTable && (int)$pdo->query("SELECT COUNT(*) FROM `pp5_departments`")->fetchColumn() === 0) {
+                $seedFileInit = __DIR__ . '/../database/seeds/13_pp5_initial_seed.php';
+                if (file_exists($seedFileInit)) {
+                    $seedInit = require $seedFileInit;
+                    if (is_array($seedInit) && isset($seedInit['run'])) {
+                        $seedInit['run']($pdo);
+                    }
+                }
+            }
             if (!$hasTable) {
                 $migFile  = __DIR__ . '/../database/migrations/2026_11_01_000001_create_pp5_online_tables.php';
                 $seedFile = __DIR__ . '/../database/seeds/13_pp5_initial_seed.php';
