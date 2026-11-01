@@ -547,7 +547,9 @@ class MasterDataService
      */
     public function saveIndicator($subjectIdOrData, ?string $code = null, ?string $description = null, int $sortOrder = 1): void
     {
+        $id = 0;
         if (is_array($subjectIdOrData)) {
+            $id          = (int)($subjectIdOrData['id'] ?? 0);
             $subjectId   = (int)($subjectIdOrData['subject_id'] ?? 0);
             $code        = (string)($subjectIdOrData['code'] ?? '');
             $description = (string)($subjectIdOrData['description'] ?? '');
@@ -558,14 +560,24 @@ class MasterDataService
             $description = (string)$description;
         }
 
-        $stmt = $this->pdo->prepare("
-            INSERT INTO `pp5_indicators` (`subject_id`, `code`, `description`, `sort_order`)
-            VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                `description` = VALUES(`description`),
-                `sort_order`  = VALUES(`sort_order`)
-        ");
-        $stmt->execute([$subjectId, trim($code), trim($description), $sortOrder]);
+        if ($id > 0) {
+            $stmt = $this->pdo->prepare("
+                UPDATE `pp5_indicators`
+                SET `code` = ?, `description` = ?, `sort_order` = ?
+                WHERE `id` = ? AND `subject_id` = ?
+            ");
+            $stmt->execute([trim($code), trim($description), $sortOrder, $id, $subjectId]);
+        } else {
+            $stmt = $this->pdo->prepare("
+                INSERT INTO `pp5_indicators` (`subject_id`, `code`, `description`, `sort_order`)
+                VALUES (?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    `description` = VALUES(`description`),
+                    `sort_order`  = VALUES(`sort_order`)
+            ");
+            $stmt->execute([$subjectId, trim($code), trim($description), $sortOrder]);
+        }
+
         if ($this->logger) {
             $this->logger->log('indicator.save', "บันทึกตัวชี้วัด {$code} ของวิชา #{$subjectId}", 'pp5_indicators', $subjectId);
         }

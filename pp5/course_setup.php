@@ -119,6 +119,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ], $policy->getUserId());
                     $flashMsg = 'บันทึกตัวชี้วัด/ผลการเรียนรู้เรียบร้อยแล้ว';
                 }
+            } elseif ($action === 'delete_indicator') {
+                $indId = (int)($_POST['indicator_id'] ?? 0);
+                if ($indId > 0) {
+                    $masterService->deleteIndicator($indId);
+                    $flashMsg = 'ลบตัวชี้วัดเรียบร้อยแล้ว';
+                }
             }
         } catch (Throwable $e) {
             error_log('[PP5 course_setup] ' . $e->getMessage());
@@ -571,13 +577,31 @@ echo pp5_render_course_nav($course, $policy, 'setup');
             <?php else: ?>
                 <div class="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-72 overflow-y-auto">
                     <?php foreach ($indicators as $ind): ?>
-                        <div class="px-4 py-2.5 flex items-start gap-3 text-xs">
-                            <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-black shrink-0">
-                                <?= htmlspecialchars($ind['code'], ENT_QUOTES, 'UTF-8') ?>
-                            </span>
-                            <span class="text-slate-700 font-medium">
-                                <?= htmlspecialchars($ind['description'], ENT_QUOTES, 'UTF-8') ?>
-                            </span>
+                        <div class="px-4 py-2.5 flex items-center justify-between gap-3 text-xs hover:bg-slate-50 transition-colors">
+                            <div class="flex items-start gap-3 flex-1 min-w-0">
+                                <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-black shrink-0">
+                                    <?= htmlspecialchars($ind['code'], ENT_QUOTES, 'UTF-8') ?>
+                                </span>
+                                <span class="text-slate-700 font-medium">
+                                    <?= htmlspecialchars($ind['description'], ENT_QUOTES, 'UTF-8') ?>
+                                </span>
+                            </div>
+                            <?php if ($canEdit): ?>
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <button type="button" onclick="editIndicator(<?= htmlspecialchars(json_encode($ind), ENT_QUOTES, 'UTF-8') ?>)"
+                                            class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="แก้ไขตัวชี้วัดนี้">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </button>
+                                    <form method="POST" class="inline" onsubmit="return confirm('ยืนยันลบตัวชี้วัด <?= htmlspecialchars($ind['code'], ENT_QUOTES, 'UTF-8') ?> หรือไม่?')">
+                                        <input type="hidden" name="form_action" value="delete_indicator">
+                                        <input type="hidden" name="course_id" value="<?= $courseId ?>">
+                                        <input type="hidden" name="indicator_id" value="<?= (int)$ind['id'] ?>">
+                                        <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="ลบตัวชี้วัดนี้">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -586,24 +610,30 @@ echo pp5_render_course_nav($course, $policy, 'setup');
 
         <?php if ($canEdit): ?>
             <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                <h4 class="text-xs font-black text-slate-700 uppercase tracking-wider mb-3">เพิ่มตัวชี้วัด / ผลการเรียนรู้</h4>
+                <div class="flex items-center justify-between mb-3">
+                    <h4 id="indFormTitle" class="text-xs font-black text-slate-700 uppercase tracking-wider">เพิ่มตัวชี้วัด / ผลการเรียนรู้</h4>
+                    <button type="button" id="indResetBtn" onclick="resetIndicatorForm()" class="hidden text-[11px] text-slate-500 hover:text-slate-800 font-semibold">
+                        <i class="bi bi-x-circle"></i> ยกเลิก
+                    </button>
+                </div>
                 <form method="POST" class="space-y-2.5">
                     <input type="hidden" name="form_action" value="save_indicator">
                     <input type="hidden" name="course_id" value="<?= $courseId ?>">
+                    <input type="hidden" name="indicator_id" id="form_ind_id" value="0">
                     <div class="grid grid-cols-3 gap-2">
                         <div class="col-span-2">
-                            <input type="text" name="indicator_code" placeholder="รหัส เช่น ท 1.1 ม.1/1" required
+                            <input type="text" name="indicator_code" id="form_ind_code" placeholder="รหัส เช่น ท 1.1 ม.2/1" required
                                    class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500">
                         </div>
                         <div>
-                            <input type="number" name="sort_order" value="<?= count($indicators) + 1 ?>" min="1"
+                            <input type="number" name="sort_order" id="form_ind_sort" value="<?= count($indicators) + 1 ?>" min="1"
                                    class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none">
                         </div>
                     </div>
-                    <textarea name="indicator_desc" rows="2" placeholder="คำอธิบายตัวชี้วัดหรือผลการเรียนรู้..." required
+                    <textarea name="indicator_desc" id="form_ind_desc" rows="2" placeholder="คำอธิบายตัวชี้วัดหรือผลการเรียนรู้..." required
                               class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-xl text-xs font-bold transition-all">
-                        <i class="bi bi-plus-lg"></i> บันทึกตัวชี้วัด
+                    <button type="submit" id="indSubmitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5">
+                        <i class="bi bi-plus-lg"></i> <span id="indSubmitText">บันทึกตัวชี้วัด</span>
                     </button>
                 </form>
             </div>
@@ -634,15 +664,54 @@ function resetScoreItemForm() {
     document.getElementById('scoreItemSubmitText').textContent = 'เพิ่มรายการคะแนน';
     document.getElementById('scoreItemResetBtn').classList.add('hidden');
 }
+
+function editIndicator(ind) {
+    var idEl = document.getElementById('form_ind_id');
+    var codeEl = document.getElementById('form_ind_code');
+    var sortEl = document.getElementById('form_ind_sort');
+    var descEl = document.getElementById('form_ind_desc');
+    var titleEl = document.getElementById('indFormTitle');
+    var submitTextEl = document.getElementById('indSubmitText');
+    var resetBtn = document.getElementById('indResetBtn');
+
+    if (!idEl || !codeEl) return;
+
+    idEl.value = ind.id || 0;
+    codeEl.value = ind.code || '';
+    sortEl.value = ind.sort_order || 1;
+    descEl.value = ind.description || '';
+    if (titleEl) titleEl.textContent = 'แก้ไขตัวชี้วัด ' + (ind.code || '');
+    if (submitTextEl) submitTextEl.textContent = 'บันทึกการแก้ไข';
+    if (resetBtn) resetBtn.classList.remove('hidden');
+    codeEl.focus();
+}
+
+function resetIndicatorForm() {
+    var idEl = document.getElementById('form_ind_id');
+    var codeEl = document.getElementById('form_ind_code');
+    var sortEl = document.getElementById('form_ind_sort');
+    var descEl = document.getElementById('form_ind_desc');
+    var titleEl = document.getElementById('indFormTitle');
+    var submitTextEl = document.getElementById('indSubmitText');
+    var resetBtn = document.getElementById('indResetBtn');
+
+    if (idEl) idEl.value = '0';
+    if (codeEl) codeEl.value = '';
+    if (sortEl) sortEl.value = '<?= count($indicators) + 1 ?>';
+    if (descEl) descEl.value = '';
+    if (titleEl) titleEl.textContent = 'เพิ่มตัวชี้วัด / ผลการเรียนรู้';
+    if (submitTextEl) submitTextEl.textContent = 'บันทึกตัวชี้วัด';
+    if (resetBtn) resetBtn.classList.add('hidden');
+}
 </script>
 
 
 <?php
 require_once __DIR__ . '/../components/layout_end.php';
-} catch (\Throwable $e) {
-    error_log('[PP5 course_setup] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+} catch (\Throwable $_page_err) {
+    error_log('[PP5 course_setup] ' . $_page_err->getMessage() . ' in ' . $_page_err->getFile() . ':' . $_page_err->getLine());
     $pageTitle = 'เกิดข้อผิดพลาดในการโหลดหน้าตั้งค่ารายวิชา';
-    $pageSubtitle = htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+    $pageSubtitle = htmlspecialchars($_page_err->getMessage(), ENT_QUOTES, 'UTF-8');
     $activeSystem = 'pp5';
     require_once __DIR__ . '/../components/layout_start.php';
     ?>
@@ -651,7 +720,7 @@ require_once __DIR__ . '/../components/layout_end.php';
             <i class="bi bi-exclamation-octagon-fill text-rose-600 text-xl"></i> ไม่สามารถโหลดหน้าตั้งค่ารายวิชาได้
         </h3>
         <p class="text-xs text-rose-700 leading-relaxed font-semibold">
-            ข้อผิดพลาด: <?= htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') ?>
+            ข้อผิดพลาด: <?= htmlspecialchars($_page_err->getMessage(), ENT_QUOTES, 'UTF-8') ?>
         </p>
         <div class="mt-4 flex items-center gap-2">
             <a href="/pp5/index.php" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-all">
