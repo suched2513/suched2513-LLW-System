@@ -296,10 +296,11 @@ class GradeCalculator
      * ระดับคะแนน: 3 = ดีเยี่ยม, 2 = ดี, 1 = ผ่าน, 0 = ไม่ผ่าน
      *
      * @param int[] $itemLevels รายการระดับคะแนนของแต่ละข้อย่อย เช่น [3, 3, 2, 3, 2, 3, 3, 3]
-     * @param array $settings   ['assessment_summary_mode' => 'mode'|'mean', 'zero_item_forces_fail' => 1|0, ...]
+     * @param array|string $settings ['assessment_summary_mode' => 'mode'|'mean', 'zero_item_forces_fail' => 1|0, ...] หรือระบุ string 'mode'|'mean' โดยตรง
+     * @param bool $fallbackZeroForcesFail กรณีส่ง $settings เป็น string จะใช้ค่านี้
      * @return int ระดับสรุปรวม (0, 1, 2, หรือ 3)
      */
-    public function summarizeAssessmentLevels(array $itemLevels, array $settings = []): int
+    public function summarizeAssessmentLevels(array $itemLevels, array|string $settings = [], bool $fallbackZeroForcesFail = true): int
     {
         if (empty($itemLevels)) {
             return 3;
@@ -311,18 +312,26 @@ class GradeCalculator
             $cleanLevels[] = $v;
         }
 
-        $zeroForcesFail = isset($settings['zero_item_forces_fail']) ? (bool)$settings['zero_item_forces_fail'] : true;
+        if (is_string($settings)) {
+            $modeType       = $settings;
+            $zeroForcesFail = $fallbackZeroForcesFail;
+            $minEx          = 2.50;
+            $minGood        = 1.50;
+            $minPass        = 1.00;
+        } else {
+            $zeroForcesFail = isset($settings['zero_item_forces_fail']) ? (bool)$settings['zero_item_forces_fail'] : true;
+            $modeType       = (string)($settings['assessment_summary_mode'] ?? ($settings['method'] ?? 'mode'));
+            $minEx          = isset($settings['mean_min_excellent']) ? (float)$settings['mean_min_excellent'] : 2.50;
+            $minGood        = isset($settings['mean_min_good']) ? (float)$settings['mean_min_good'] : 1.50;
+            $minPass        = isset($settings['mean_min_pass']) ? (float)$settings['mean_min_pass'] : 1.00;
+        }
+
         if ($zeroForcesFail && in_array(0, $cleanLevels, true)) {
             return 0;
         }
 
-        $modeType = (string)($settings['assessment_summary_mode'] ?? 'mode');
         if ($modeType === 'mean') {
-            $avg      = array_sum($cleanLevels) / count($cleanLevels);
-            $minEx    = isset($settings['mean_min_excellent']) ? (float)$settings['mean_min_excellent'] : 2.50;
-            $minGood  = isset($settings['mean_min_good']) ? (float)$settings['mean_min_good'] : 1.50;
-            $minPass  = isset($settings['mean_min_pass']) ? (float)$settings['mean_min_pass'] : 1.00;
-
+            $avg = array_sum($cleanLevels) / count($cleanLevels);
             if ($avg >= $minEx) {
                 return 3;
             }

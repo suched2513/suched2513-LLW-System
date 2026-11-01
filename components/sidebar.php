@@ -222,7 +222,7 @@ if (in_array($userRole, ['super_admin', 'att_teacher'])) {
         ");
         $_st2->execute([$_sCurSem, $_sCurYr, $_sCurYr]);
         $_sidebar_badges['lms_essay_pending'] = (int)$_st2->fetchColumn();
-    } catch (\Throwable $e) { error_log('[LLW Sidebar] ' . $e->getMessage()); /* ไม่แสดง error ใน sidebar */ }
+    } catch (\Throwable $_sidebar_err) { error_log('[LLW Sidebar] ' . $_sidebar_err->getMessage()); /* ไม่แสดง error ใน sidebar */ }
 }
 ?>
 

@@ -561,10 +561,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <?php
 require_once __DIR__ . '/../components/layout_end.php';
-} catch (\Throwable $e) {
-    error_log('[PP5 course_assessments] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+} catch (\Throwable $_page_err) {
+    error_log('[PP5 course_assessments] ' . $_page_err->getMessage() . ' in ' . $_page_err->getFile() . ':' . $_page_err->getLine());
     $pageTitle = 'เกิดข้อผิดพลาดในการโหลดหน้าประเมินคุณลักษณะ';
-    $pageSubtitle = htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+    $pageSubtitle = htmlspecialchars($_page_err->getMessage(), ENT_QUOTES, 'UTF-8');
     $activeSystem = 'pp5';
     require_once __DIR__ . '/../components/layout_start.php';
     ?>
@@ -573,7 +573,7 @@ require_once __DIR__ . '/../components/layout_end.php';
             <i class="bi bi-exclamation-octagon-fill text-rose-600 text-xl"></i> ไม่สามารถโหลดหน้าประเมินคุณลักษณะได้
         </h3>
         <p class="text-xs text-rose-700 leading-relaxed font-semibold">
-            ข้อผิดพลาด: <?= htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') ?>
+            ข้อผิดพลาด: <?= htmlspecialchars($_page_err->getMessage(), ENT_QUOTES, 'UTF-8') ?>
         </p>
         <div class="mt-4 flex items-center gap-2">
             <a href="/pp5/index.php" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-all">

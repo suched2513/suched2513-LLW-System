@@ -148,6 +148,11 @@ class AssessmentService
         $summaries = [];
         $dist      = [3 => 0, 2 => 0, 1 => 0, 0 => 0, 'incomplete' => 0];
 
+        $calcSettings = [
+            'assessment_summary_mode' => $settings['method'] ?? 'mode',
+            'zero_item_forces_fail'   => $settings['zero_item_forces_fail'] ?? true,
+        ];
+
         foreach ($studentIds as $sid) {
             $sid    = (int)$sid;
             $levels = $grid[$sid] ?? [];
@@ -156,7 +161,7 @@ class AssessmentService
             if (count($filled) < $itemCount) {
                 // หากยังประเมินไม่ครบทุกข้อ ให้คำนวณผลเบื้องต้นจากข้อที่กรอกแล้วแต่ระบุว่ายังไม่ครบ
                 $partialLevel = !empty($filled)
-                    ? $this->gradeCalc->summarizeAssessmentLevels($filled, $settings['method'], $settings['zero_item_forces_fail'])
+                    ? $this->gradeCalc->summarizeAssessmentLevels($filled, $calcSettings)
                     : null;
                 $summaries[$sid] = [
                     'level'        => $partialLevel,
@@ -167,7 +172,7 @@ class AssessmentService
                 ];
                 $dist['incomplete']++;
             } else {
-                $finalLevel = $this->gradeCalc->summarizeAssessmentLevels($levels, $settings['method'], $settings['zero_item_forces_fail']);
+                $finalLevel = $this->gradeCalc->summarizeAssessmentLevels($levels, $calcSettings);
                 $summaries[$sid] = [
                     'level'        => $finalLevel,
                     'text'         => $this->gradeCalc->levelToText($finalLevel),
