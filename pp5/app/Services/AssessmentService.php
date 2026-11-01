@@ -88,15 +88,20 @@ class AssessmentService
      */
     public function getAssessmentSettings(): array
     {
-        $stmt = $this->pdo->query("
-            SELECT `assessment_summary_method`, `zero_item_forces_fail`
-            FROM `pp5_school_settings`
-            ORDER BY `id` ASC LIMIT 1
-        ");
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->pdo->query("
+                SELECT `assessment_summary_mode`, `zero_item_forces_fail`
+                FROM `pp5_school_settings`
+                ORDER BY `id` ASC LIMIT 1
+            ");
+            $row = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : false;
+        } catch (\Throwable $e) {
+            $row = false;
+        }
+
         return [
-            'method'                => ($row['assessment_summary_method'] ?? 'mode') === 'mean' ? 'mean' : 'mode',
-            'zero_item_forces_fail' => isset($row['zero_item_forces_fail']) ? ((int)$row['zero_item_forces_fail'] === 1) : true,
+            'method'                => ($row && ($row['assessment_summary_mode'] ?? 'mode') === 'mean') ? 'mean' : 'mode',
+            'zero_item_forces_fail' => $row ? ((int)($row['zero_item_forces_fail'] ?? 1) === 1) : true,
         ];
     }
 
@@ -201,11 +206,10 @@ class AssessmentService
         $this->pdo->beginTransaction();
         try {
             $stmtUpsert = $this->pdo->prepare("
-                INSERT INTO `{$table}` (`course_id`, `student_id`, `item_no`, `level`, `updated_by`)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO `{$table}` (`course_id`, `student_id`, `item_no`, `level`)
+                VALUES (?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     `level`      = VALUES(`level`),
-                    `updated_by` = VALUES(`updated_by`),
                     `updated_at` = CURRENT_TIMESTAMP
             ");
             $stmtDelete = $this->pdo->prepare("
@@ -233,7 +237,7 @@ class AssessmentService
                     continue;
                 }
 
-                $stmtUpsert->execute([$courseId, $studentId, $itemNo, (int)$rawLevel, $actorId]);
+                $stmtUpsert->execute([$courseId, $studentId, $itemNo, (int)$rawLevel]);
                 $savedCount++;
             }
 
