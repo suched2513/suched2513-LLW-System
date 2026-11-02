@@ -90,8 +90,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         } catch (Throwable $e) {
-            error_log('[PP5 course_attendance] ' . $e->getMessage());
-            $flashMsg  = 'เกิดข้อผิดพลาดในการบันทึกเวลาเรียน';
+            error_log('[PP5 course_attendance] ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            $flashMsg  = 'เกิดข้อผิดพลาดในการบันทึกเวลาเรียน: ' . $e->getMessage();
             $flashType = 'error';
         }
     }
@@ -143,6 +143,18 @@ echo pp5_render_course_nav($course, $policy, 'attendance');
 ?>
 
 <?php if ($flashMsg !== ''): ?>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: '<?= $flashType === "error" ? "error" : ($flashType === "warning" ? "warning" : "success") ?>',
+                title: '<?= $flashType === "error" ? "ไม่สามารถบันทึกได้" : ($flashType === "warning" ? "แจ้งเตือน" : "บันทึกเวลาเรียนสำเร็จ") ?>',
+                text: <?= json_encode($flashMsg, JSON_UNESCAPED_UNICODE) ?>,
+                confirmButtonColor: '#2563eb'
+            });
+        }
+    });
+    </script>
     <div class="mb-6 rounded-2xl p-4 border flex items-center gap-3 <?= $flashType === 'error' ? 'bg-rose-50 border-rose-200 text-rose-700' : ($flashType === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700') ?>">
         <i class="bi <?= $flashType === 'error' ? 'bi-exclamation-octagon-fill' : ($flashType === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill') ?> text-xl"></i>
         <span class="text-sm font-bold"><?= htmlspecialchars($flashMsg, ENT_QUOTES, 'UTF-8') ?></span>
@@ -222,7 +234,7 @@ echo pp5_render_course_nav($course, $policy, 'attendance');
             <?php endif; ?>
         </div>
 
-        <form method="POST" class="p-5 space-y-5">
+        <form method="POST" action="/pp5/course_attendance.php?course_id=<?= $courseId ?><?= $editingSession ? '&session_id=' . (int)$editingSession['id'] : '' ?>" class="p-5 space-y-5">
             <input type="hidden" name="form_action" value="save_session">
             <input type="hidden" name="course_id" value="<?= $courseId ?>">
 

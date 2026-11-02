@@ -137,6 +137,23 @@ class CourseRequest
         $statuses    = is_array($input['statuses'] ?? null) ? $input['statuses'] : [];
         $remarks     = is_array($input['remarks'] ?? null) ? $input['remarks'] : [];
 
+        // ตรวจสอบและแปลงรูปแบบวันที่ให้เป็น YYYY-MM-DD มาตรฐาน (รองรับ พ.ศ. และ DD/MM/YYYY)
+        if ($sessionDate === '') {
+            $sessionDate = date('Y-m-d');
+        } elseif (preg_match('/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/', $sessionDate, $dm)) {
+            $year = (int)$dm[3];
+            if ($year > 2400) {
+                $year -= 543;
+            }
+            $sessionDate = sprintf('%04d-%02d-%02d', $year, (int)$dm[2], (int)$dm[1]);
+        } elseif (preg_match('/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/', $sessionDate, $ym)) {
+            $year = (int)$ym[1];
+            if ($year > 2400) {
+                $year -= 543;
+            }
+            $sessionDate = sprintf('%04d-%02d-%02d', $year, (int)$ym[2], (int)$ym[3]);
+        }
+
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $sessionDate)) {
             $errors[] = 'กรุณาเลือกวันที่สอนให้ถูกต้อง';
         }

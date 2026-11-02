@@ -52,6 +52,14 @@ class AttendanceService
             'absent'  => 0,
         ];
 
+        $statusHours = [
+            'present' => 0.0,
+            'late'    => 0.0,
+            'leave'   => 0.0,
+            'sick'    => 0.0,
+            'absent'  => 0.0,
+        ];
+
         $recordedTotalHours = 0.0;
         $attendedHours      = 0.0;
 
@@ -63,7 +71,8 @@ class AttendanceService
             }
 
             $counts[$status]++;
-            $recordedTotalHours += $hrs;
+            $statusHours[$status] += $hrs;
+            $recordedTotalHours   += $hrs;
 
             $isCounted = false;
             if ($status === 'present') {
@@ -85,11 +94,17 @@ class AttendanceService
         if (empty($sessionRecords) || $recordedTotalHours <= 0.0) {
             $baseHours = $totalCourseHours > 0.0 ? $totalCourseHours : 0.0;
             return [
-                'attended_hours'     => $baseHours,
-                'total_hours'        => $baseHours,
-                'attendance_percent' => 100.00,
-                'is_ms'              => false,
-                'counts'             => $counts,
+                'attended_hours'       => 0.0,
+                'total_hours'          => $baseHours,
+                'total_recorded_hours' => 0.0,
+                'present_hours'        => 0.0,
+                'late_hours'           => 0.0,
+                'leave_hours'          => 0.0,
+                'sick_hours'           => 0.0,
+                'absent_hours'         => 0.0,
+                'attendance_percent'   => 100.00,
+                'is_ms'                => false,
+                'counts'               => $counts,
             ];
         }
 
@@ -104,11 +119,17 @@ class AttendanceService
         $isMs = ($percent + 0.0001) < $minPercent;
 
         return [
-            'attended_hours'     => round($attendedHours, 1),
-            'total_hours'        => round($effectiveTotalHours, 1),
-            'attendance_percent' => $percent,
-            'is_ms'              => $isMs,
-            'counts'             => $counts,
+            'attended_hours'       => round($attendedHours, 1),
+            'total_hours'          => round($effectiveTotalHours, 1),
+            'total_recorded_hours' => round($recordedTotalHours, 1),
+            'present_hours'        => round($statusHours['present'], 1),
+            'late_hours'           => round($statusHours['late'], 1),
+            'leave_hours'          => round($statusHours['leave'], 1),
+            'sick_hours'           => round($statusHours['sick'], 1),
+            'absent_hours'         => round($statusHours['absent'], 1),
+            'attendance_percent'   => $percent,
+            'is_ms'                => $isMs,
+            'counts'               => $counts,
         ];
     }
 
@@ -163,22 +184,45 @@ class AttendanceService
     ): int {
         $this->pdo->beginTransaction();
         try {
+            $validUserId = ($userId !== null && $userId > 0) ? $userId : null;
             $stmtSess = $this->pdo->prepare("
                 INSERT INTO `pp5_attendance_sessions` (`course_id`, `session_date`, `period`, `hours`, `topic`, `created_by`)
                 VALUES (?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
+                    `id`    = LAST_INSERT_ID(`id`),
                     `hours` = VALUES(`hours`),
                     `topic` = VALUES(`topic`)
             ");
-            $stmtSess->execute([$courseId, $sessionDate, $period, $hours, $topic, $userId]);
+            $stmtSess->execute([$courseId, $sessionDate, $period, $hours, $topic, $validUserId]);
 
-            $stmtGetId = $this->pdo->prepare("
-                SELECT `id` FROM `pp5_attendance_sessions`
-                WHERE `course_id` = ? AND `session_date` = ? AND `period` = ?
-                LIMIT 1
-            ");
-            $stmtGetId->execute([$courseId, $sessionDate, $period]);
-            $sessionId = (int)$stmtGetId->fetchColumn();
+            $sessionId = (int)$this->pdo->lastInsertId();
+            if ($sessionId <= 0) {
+                $stmtGetId = $this->pdo->prepare("
+                    SELECT `id` FROM `pp5_attendance_sessions`
+                    WHERE `course_id` = ? AND `session_date` = ? AND `period` = ?
+                    LIMIT 1
+                ");
+                $stmtGetId->execute([$courseId, $sessionDate, $period]);
+                $sessionId = (int)$stmtGetId->fetchColumn();
+            }
+
+            if ($sessionId <= 0) {
+                throw new \RuntimeException("ไม่สามารถสร้างหรือค้นหารหัสคาบเรียน (Session ID) ในระบบได้");
+            }
+
+            // ถ้าไม่มี studentStatuses ส่งมา ให้ดึงนักเรียนทุกคนในห้องเรียนมาเป็น present อัตโนมัติ
+            if (empty($studentStatuses)) {
+                $stStd = $this->pdo->prepare("
+                    SELECT s.`id` FROM `att_students` s
+                    INNER JOIN `pp5_courses` cr ON cr.`id` = ?
+                    INNER JOIN `pp5_classrooms` cl ON cl.`id` = cr.`classroom_id`
+                    WHERE s.`classroom` = cl.`classroom_name` AND s.`status` = 'active'
+                ");
+                $stStd->execute([$courseId]);
+                foreach ($stStd->fetchAll(PDO::FETCH_COLUMN) as $sid) {
+                    $studentStatuses[(int)$sid] = 'present';
+                }
+            }
 
             $stmtAtt = $this->pdo->prepare("
                 INSERT INTO `pp5_attendances` (`session_id`, `student_id`, `status`, `remark`)

@@ -78,7 +78,7 @@ class CourseService
         }
 
         $stmt = $this->pdo->prepare("
-            SELECT s.`id`, s.`student_id` AS `student_code`, s.`prefix`, s.`first_name`, s.`last_name`,
+            SELECT s.`id`, s.`student_id`, s.`student_id` AS `student_code`, s.`prefix`, s.`first_name`, s.`last_name`,
                    s.`name`, s.`gender`,
                    COALESCE(cs.`student_number`, s.`student_number`, 1) AS `student_number`,
                    COALESCE(cs.`status`, s.`status`, 'active') AS `student_status`
