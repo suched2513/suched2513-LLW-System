@@ -49,8 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             if ($action === 'update_ratio') {
                 $val = CourseRequest::validateCourseRatio($_POST, (string)$course['subject_type']);
-                if (!$val['ok']) {
-                    $flashMsg  = implode(' ', $val['errors']);
+                if (!($val['ok'] ?? $val['valid'] ?? false)) {
+                    $flashMsg  = !empty($val['errors']) ? implode(' ', $val['errors']) : 'สัดส่วนคะแนนไม่ถูกต้อง';
                     $flashType = 'error';
                 } else {
                     $courseService->updateCourseRatio(
@@ -65,8 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } elseif ($action === 'save_score_item') {
                 $val = CourseRequest::validateScoreItem($_POST);
-                if (!$val['ok']) {
-                    $flashMsg  = implode(' ', $val['errors']);
+                if (!($val['ok'] ?? $val['valid'] ?? false)) {
+                    $flashMsg  = !empty($val['errors']) ? implode(' ', $val['errors']) : 'ข้อมูลชิ้นงานไม่ถูกต้อง';
                     $flashType = 'error';
                 } else {
                     $courseService->saveScoreItem($courseId, $val['data'], $policy->getUserId());

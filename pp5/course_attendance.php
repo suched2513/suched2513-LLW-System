@@ -45,8 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             if ($action === 'save_session') {
                 $val = CourseRequest::validateAttendanceSession($_POST);
-                if (!$val['ok']) {
-                    $flashMsg  = implode(' ', $val['errors']);
+                if (!($val['ok'] ?? $val['valid'] ?? false)) {
+                    $flashMsg  = !empty($val['errors']) ? implode(' ', $val['errors']) : 'ข้อมูลการเช็กชื่อไม่ถูกต้อง กรุณาตรวจสอบ';
                     $flashType = 'error';
                 } else {
                     $statuses = $_POST['statuses'] ?? [];
@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } elseif ($action === 'delete_session') {
                 $sessionId = (int)($_POST['session_id'] ?? 0);
-                if ($attendanceService->deleteSession($courseId, $sessionId, $policy->getUserId())) {
+                if ($attendanceService->deleteSession($courseId, $sessionId)) {
                     $courseService->recalculateCourseGrades($courseId);
                     $flashMsg = 'ลบคาบเรียนเรียบร้อยแล้ว';
                 } else {
@@ -279,7 +279,8 @@ echo pp5_render_course_nav($course, $policy, 'attendance');
                     $sid = (int)$std['id'];
                     $currentSt = 'present';
                     if ($editingSession && isset($attendanceMap[(int)$editingSession['id']][$sid])) {
-                        $currentSt = $attendanceMap[(int)$editingSession['id']][$sid];
+                        $rawSt = $attendanceMap[(int)$editingSession['id']][$sid];
+                        $currentSt = is_array($rawSt) ? ($rawSt['status'] ?? 'present') : (string)$rawSt;
                     }
                 ?>
                     <div class="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 hover:bg-slate-50/80 transition-all" data-student-row="<?= $sid ?>">
@@ -349,7 +350,8 @@ echo pp5_render_course_nav($course, $policy, 'attendance');
                     $ssMap = $attendanceMap[$ssId] ?? [];
                     $cnts  = ['present' => 0, 'late' => 0, 'leave' => 0, 'sick' => 0, 'absent' => 0];
                     foreach ($students as $stRow) {
-                        $stVal = $ssMap[(int)$stRow['id']] ?? 'present';
+                        $rawVal = $ssMap[(int)$stRow['id']] ?? 'present';
+                        $stVal  = is_array($rawVal) ? ($rawVal['status'] ?? 'present') : (string)$rawVal;
                         if (isset($cnts[$stVal])) {
                             $cnts[$stVal]++;
                         }

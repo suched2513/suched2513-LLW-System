@@ -226,13 +226,15 @@ class AttendanceService
     /**
      * ลบคาบเรียนที่บันทึกไว้
      */
-    public function deleteSession(int $courseId, int $sessionId): void
+    public function deleteSession(int $courseId, int $sessionId): bool
     {
         $stmt = $this->pdo->prepare("DELETE FROM `pp5_attendance_sessions` WHERE `id` = ? AND `course_id` = ?");
         $stmt->execute([$sessionId, $courseId]);
-        if ($this->logger) {
+        $deleted = $stmt->rowCount() > 0;
+        if ($deleted && $this->logger) {
             $this->logger->log('attendance.delete', "ลบคาบเรียน #{$sessionId}", 'pp5_attendance_sessions', $sessionId, $courseId);
         }
+        return $deleted;
     }
 
     /**

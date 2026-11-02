@@ -26,6 +26,7 @@ class CourseRequest
         }
 
         return [
+            'ok'     => empty($errors),
             'valid'  => empty($errors),
             'errors' => $errors,
             'data'   => [
@@ -59,6 +60,7 @@ class CourseRequest
         }
 
         return [
+            'ok'     => empty($errors),
             'valid'  => empty($errors),
             'errors' => $errors,
             'data'   => [
@@ -79,6 +81,7 @@ class CourseRequest
     {
         if ($rawScore === null || trim((string)$rawScore) === '' || strtoupper(trim((string)$rawScore)) === 'ร') {
             return [
+                'ok'    => true,
                 'valid' => true,
                 'error' => null,
                 'score' => null,
@@ -88,6 +91,7 @@ class CourseRequest
         $str = trim((string)$rawScore);
         if (!is_numeric($str)) {
             return [
+                'ok'    => false,
                 'valid' => false,
                 'error' => "ค่าคะแนน '{$str}' ต้องเป็นตัวเลข หรือเว้นว่างไว้กรณีติด ร",
                 'score' => null,
@@ -97,6 +101,7 @@ class CourseRequest
         $val = round((float)$str, 2);
         if ($val < 0.0) {
             return [
+                'ok'    => false,
                 'valid' => false,
                 'error' => 'ห้ามกรอกคะแนนติดลบ',
                 'score' => null,
@@ -104,6 +109,7 @@ class CourseRequest
         }
         if ($val > ($maxScore + 0.0001)) {
             return [
+                'ok'    => false,
                 'valid' => false,
                 'error' => "ห้ามกรอกเกินคะแนนเต็ม ({$maxScore} คะแนน)",
                 'score' => null,
@@ -111,6 +117,7 @@ class CourseRequest
         }
 
         return [
+            'ok'    => true,
             'valid' => true,
             'error' => null,
             'score' => $val,
@@ -141,6 +148,7 @@ class CourseRequest
         }
 
         return [
+            'ok'     => empty($errors),
             'valid'  => empty($errors),
             'errors' => $errors,
             'data'   => [
