@@ -19,6 +19,8 @@ $stmtUnreg = $pdo->prepare("
     SELECT s.student_id, s.name, s.classroom
     FROM att_students s
     WHERE s.classroom REGEXP '^ม\\.[1-6]/'
+      AND s.status = 'active'
+      AND s.student_id REGEXP '^[0-9]+$'
       AND s.student_id NOT IN (
           SELECT student_id FROM club_registrations WHERE semester = ? AND year = ?
       )

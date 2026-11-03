@@ -68,7 +68,7 @@ try {
 
     $totalStudents = (int)$pdo->query("
         SELECT COUNT(*) FROM att_students
-        WHERE classroom REGEXP '^ม\\.[1-6]/' AND status = 'active'
+        WHERE classroom REGEXP '^ม\\.[1-6]/' AND status = 'active' AND student_id REGEXP '^[0-9]+$'
     ")->fetchColumn();
 
     // Query distinct terms from groups & settings

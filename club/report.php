@@ -54,6 +54,8 @@ $stmtUnreg = $pdo->prepare("
     SELECT s.student_id, s.name, s.classroom
     FROM att_students s
     WHERE s.classroom REGEXP '^ม\\.[1-6]/'
+      AND s.status = 'active'
+      AND s.student_id REGEXP '^[0-9]+$'
       AND s.student_id NOT IN (
           SELECT student_id FROM club_registrations WHERE semester = ? AND year = ?
       )
@@ -71,6 +73,8 @@ $stmtByClass = $pdo->prepare("
     LEFT JOIN club_registrations cr ON cr.student_id = s.student_id
                                     AND cr.semester = ? AND cr.year = ?
     WHERE s.classroom REGEXP '^ม\\.[1-6]/'
+      AND s.status = 'active'
+      AND s.student_id REGEXP '^[0-9]+$'
     GROUP BY s.classroom
     ORDER BY s.classroom
 ");

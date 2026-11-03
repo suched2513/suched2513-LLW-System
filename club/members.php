@@ -54,7 +54,7 @@ $members = $pdo->prepare("
     LEFT JOIN club_sessions cs ON cs.club_id = cr.club_id AND cs.status = 'done'
     LEFT JOIN club_attendance ca ON ca.session_id = cs.id AND ca.student_id = s.student_id
     LEFT JOIN club_results cr2 ON cr2.student_id = s.student_id AND cr2.club_id = cr.club_id
-    WHERE cr.club_id = ?
+    WHERE cr.club_id = ? AND s.status = 'active'
     GROUP BY s.student_id, s.name, s.classroom, cr.registered_at, cr2.result, cr2.attendance_pct
     ORDER BY s.classroom, s.name
 ");

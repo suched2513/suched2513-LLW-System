@@ -62,7 +62,7 @@ try {
     $totalSessions = (int)$stmt->fetchColumn();
 
     // Get all registered students for this club/semester/year
-    $stmt = $pdo->prepare("SELECT student_id FROM club_registrations WHERE club_id = ? AND semester = ? AND year = ?");
+    $stmt = $pdo->prepare("SELECT cr.student_id FROM club_registrations cr JOIN att_students s ON s.student_id = cr.student_id AND s.status = 'active' WHERE cr.club_id = ? AND cr.semester = ? AND cr.year = ?");
     $stmt->execute([$club_id, $semester, $year]);
     $students = $stmt->fetchAll(PDO::FETCH_COLUMN);
 

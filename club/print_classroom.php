@@ -26,6 +26,8 @@ $stmt = $pdo->prepare("
                                     AND cr.semester = ? AND cr.year = ?
     LEFT JOIN club_groups cg ON cg.id = cr.club_id
     WHERE s.classroom = ?
+      AND s.status = 'active'
+      AND s.student_id REGEXP '^[0-9]+$'
     ORDER BY s.student_id
 ");
 $stmt->execute([$semester, $year, $classroom]);
