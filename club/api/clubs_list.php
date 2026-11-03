@@ -86,10 +86,44 @@ try {
         ORDER BY year DESC, semester DESC
     ")->fetchAll(PDO::FETCH_ASSOC);
 
+    // Class registration statistics
+    $stmtByClass = $pdo->prepare("
+        SELECT s.classroom,
+               COUNT(s.student_id) AS total,
+               COUNT(cr.id) AS registered
+        FROM att_students s
+        LEFT JOIN club_registrations cr ON cr.student_id = s.student_id
+                                        AND cr.semester = ? AND cr.year = ?
+        WHERE s.classroom REGEXP '^ม\\.[1-6]/'
+          AND s.status = 'active'
+          AND s.student_id REGEXP '^[0-9]+$'
+        GROUP BY s.classroom
+        ORDER BY s.classroom
+    ");
+    $stmtByClass->execute([$semester, $year]);
+    $byClass = $stmtByClass->fetchAll(PDO::FETCH_ASSOC);
+
+    // Unregistered students list
+    $stmtUnreg = $pdo->prepare("
+        SELECT s.student_id, s.name, s.classroom
+        FROM att_students s
+        WHERE s.classroom REGEXP '^ม\\.[1-6]/'
+          AND s.status = 'active'
+          AND s.student_id REGEXP '^[0-9]+$'
+          AND s.student_id NOT IN (
+              SELECT student_id FROM club_registrations WHERE semester = ? AND year = ?
+          )
+        ORDER BY s.classroom, s.student_id
+    ");
+    $stmtUnreg->execute([$semester, $year]);
+    $unregStudents = $stmtUnreg->fetchAll(PDO::FETCH_ASSOC);
+
     echo json_encode([
         'status' => 'success',
         'data' => $clubs,
         'total_students' => $totalStudents,
+        'by_class' => $byClass,
+        'unregistered_list' => $unregStudents,
         'filter_semester' => $semester,
         'filter_year' => $year,
         'active_semester' => $activeSem,
