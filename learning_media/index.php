@@ -36,6 +36,47 @@ if ($isLoggedIn) {
         --card-hover-shadow: 0 20px 30px -10px rgba(2, 132, 199, 0.20), 0 10px 15px -5px rgba(2, 132, 199, 0.10);
     }
 
+    .kpi-card {
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    .kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 24px -6px rgba(0,0,0,0.18);
+    }
+    .kpi-icon-bubble {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+    }
+    .chart-card {
+        background: #ffffff;
+        border-radius: 1.25rem;
+        box-shadow: 0 4px 18px 0 rgba(226, 232, 240, 0.6);
+        border: 1px solid #f1f5f9;
+    }
+    .quick-btn {
+        transition: all 0.2s ease;
+    }
+    .quick-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px -4px rgba(0,0,0,0.1);
+    }
+    .donut-center-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        pointer-events: none;
+    }
+
     .media-card {
         border-radius: 1.5rem;
         background: #ffffff;
@@ -264,6 +305,344 @@ if ($isLoggedIn) {
 </nav>
 <div class="container pb-5">
 <?php endif; ?>
+
+<div class="space-y-6 mb-6">
+
+    <!-- 1. Top Header & Real-time Clock Bar -->
+    <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-100 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center shadow-md shadow-sky-500/20 shrink-0">
+                <i class="bi bi-journal-bookmark-fill text-2xl"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">คลังสื่อนวัตกรรมและแหล่งเรียนรู้ดิจิทัล</h1>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200">
+                        โรงเรียนละลมวิทยา
+                    </span>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-500 font-medium">ศูนย์กลางสื่อการจัดการเรียนรู้ แผนการสอน นวัตกรรม และงานวิจัยในชั้นเรียน</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3 flex-wrap w-full lg:w-auto justify-between lg:justify-end">
+            <!-- Live Date & Clock -->
+            <div class="flex items-center gap-2 bg-slate-50 text-slate-700 px-3.5 py-2 rounded-xl border border-slate-200 shadow-sm text-xs font-semibold">
+                <i class="bi bi-calendar-event text-sky-600 text-sm"></i>
+                <span id="live_date" class="hidden sm:inline">กำลังโหลด...</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                <i class="bi bi-clock-fill text-sky-600 text-sm"></i>
+                <span id="live_clock" class="font-mono text-xs sm:text-sm font-black text-slate-800">--:--:--</span>
+            </div>
+
+            <!-- Fullscreen Button -->
+            <button type="button" onclick="toggleFullScreen()" title="เต็มจอ" class="w-9 h-9 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center transition-all">
+                <i class="bi bi-fullscreen text-sm"></i>
+            </button>
+
+            <?php if ($canManage): ?>
+            <button type="button" onclick="openAddModal()" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white shadow-md shadow-sky-500/20 transition-all flex items-center gap-1.5">
+                <i class="bi bi-plus-circle-fill"></i> เพิ่มสื่อใหม่
+            </button>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- 2. KPI Stat Cards (6 Vibrant Gradient Cards exactly like the sample) -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4" id="lm_kpi_row">
+        <!-- 1. Total Media -->
+        <div class="kpi-card bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-600/20">
+            <div class="flex items-center justify-between">
+                <div class="kpi-icon-bubble">
+                    <i class="bi bi-collection-play-fill text-xl"></i>
+                </div>
+                <span class="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">ทั้งหมด</span>
+            </div>
+            <div class="mt-3">
+                <p class="text-xs font-bold opacity-80">สื่อทั้งหมดในคลัง</p>
+                <p class="text-2xl sm:text-3xl font-black tracking-tight mt-0.5" id="kpi_media_total">0</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+                <span class="opacity-75">พร้อมใช้งาน</span>
+                <span class="font-bold">100%</span>
+            </div>
+            <div class="w-full bg-black/20 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                <div class="bg-white h-full rounded-full" style="width: 100%"></div>
+            </div>
+        </div>
+
+        <!-- 2. Slides & Documents -->
+        <div class="kpi-card bg-gradient-to-br from-emerald-500 to-teal-700 rounded-2xl p-4 text-white shadow-lg shadow-emerald-500/20">
+            <div class="flex items-center justify-between">
+                <div class="kpi-icon-bubble">
+                    <i class="bi bi-file-earmark-ppt-fill text-xl"></i>
+                </div>
+                <span class="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">สไลด์/Canva</span>
+            </div>
+            <div class="mt-3">
+                <p class="text-xs font-bold opacity-80">สไลด์ & เอกสาร</p>
+                <p class="text-2xl sm:text-3xl font-black tracking-tight mt-0.5" id="kpi_media_slides">0</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+                <span class="opacity-75">สัดส่วน</span>
+                <span class="font-bold" id="kpi_slides_pct">0%</span>
+            </div>
+            <div class="w-full bg-black/20 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                <div id="kpi_slides_bar" class="bg-white h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- 3. Videos & Multimedia -->
+        <div class="kpi-card bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-4 text-white shadow-lg shadow-amber-500/20">
+            <div class="flex items-center justify-between">
+                <div class="kpi-icon-bubble">
+                    <i class="bi bi-play-circle-fill text-xl"></i>
+                </div>
+                <span class="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">วิดีโอคลิป</span>
+            </div>
+            <div class="mt-3">
+                <p class="text-xs font-bold opacity-80">วิดีโอ & คลิปสอน</p>
+                <p class="text-2xl sm:text-3xl font-black tracking-tight mt-0.5" id="kpi_media_videos">0</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+                <span class="opacity-75">สัดส่วน</span>
+                <span class="font-bold" id="kpi_videos_pct">0%</span>
+            </div>
+            <div class="w-full bg-black/20 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                <div id="kpi_videos_bar" class="bg-white h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- 4. Total Views -->
+        <div class="kpi-card bg-gradient-to-br from-purple-600 to-indigo-800 rounded-2xl p-4 text-white shadow-lg shadow-purple-600/20">
+            <div class="flex items-center justify-between">
+                <div class="kpi-icon-bubble">
+                    <i class="bi bi-eye-fill text-xl"></i>
+                </div>
+                <span class="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">ยอดนิยม</span>
+            </div>
+            <div class="mt-3">
+                <p class="text-xs font-bold opacity-80">ยอดเปิดดูรวม</p>
+                <p class="text-2xl sm:text-3xl font-black tracking-tight mt-0.5" id="kpi_media_views">0</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+                <span class="opacity-75">การเข้าถึงสื่อ</span>
+                <span class="font-bold">ครั้ง</span>
+            </div>
+            <div class="w-full bg-black/20 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                <div class="bg-white h-full rounded-full" style="width: 85%"></div>
+            </div>
+        </div>
+
+        <!-- 5. Average Rating -->
+        <div class="kpi-card bg-gradient-to-br from-cyan-600 to-blue-700 rounded-2xl p-4 text-white shadow-lg shadow-cyan-600/20">
+            <div class="flex items-center justify-between">
+                <div class="kpi-icon-bubble">
+                    <i class="bi bi-star-fill text-xl"></i>
+                </div>
+                <span class="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">ความพอใจ</span>
+            </div>
+            <div class="mt-3">
+                <p class="text-xs font-bold opacity-80">คะแนนประเมินเฉลี่ย</p>
+                <p class="text-2xl sm:text-3xl font-black tracking-tight mt-0.5" id="kpi_media_rating">0.0</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+                <span class="opacity-75">เต็ม 5.0 ดาว</span>
+                <span class="font-bold" id="kpi_rating_pct">100%</span>
+            </div>
+            <div class="w-full bg-black/20 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                <div id="kpi_rating_bar" class="bg-white h-full rounded-full transition-all duration-500" style="width: 100%"></div>
+            </div>
+        </div>
+
+        <!-- 6. Pending Approval -->
+        <div class="kpi-card bg-gradient-to-br from-rose-500 to-pink-700 rounded-2xl p-4 text-white shadow-lg shadow-rose-600/20">
+            <div class="flex items-center justify-between">
+                <div class="kpi-icon-bubble">
+                    <i class="bi bi-clipboard-check-fill text-xl"></i>
+                </div>
+                <span class="text-[10px] font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">ฝ่ายวิชาการ</span>
+            </div>
+            <div class="mt-3">
+                <p class="text-xs font-bold opacity-80">อนุมัติแล้ว</p>
+                <p class="text-2xl sm:text-3xl font-black tracking-tight mt-0.5" id="kpi_media_approved">0</p>
+            </div>
+            <div class="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+                <span class="opacity-75">การรับรองสื่อ</span>
+                <span class="font-bold" id="kpi_approved_pct">0%</span>
+            </div>
+            <div class="w-full bg-black/20 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                <div id="kpi_approved_bar" class="bg-white h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Interactive Charts & Contributor Rankings Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Chart 1: Media By 8 Subjects (Col 6) -->
+        <div class="lg:col-span-6 chart-card p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                        <i class="bi bi-bar-chart-fill"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800">จำนวนสื่อแยกตาม 8 กลุ่มสาระการเรียนรู้</h3>
+                        <p class="text-xs text-slate-400">สถิติการสร้างและพัฒนาสื่อการจัดการเรียนรู้</p>
+                    </div>
+                </div>
+            </div>
+            <div class="relative" style="height: 220px;">
+                <canvas id="chartLmSubjects"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart 2: Media By Types Donut (Col 3) -->
+        <div class="lg:col-span-3 chart-card p-5 flex flex-col justify-between">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                    <i class="bi bi-pie-chart-fill"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black text-slate-800">สัดส่วนตามรูปแบบสื่อ</h3>
+                    <p class="text-xs text-slate-400">สไลด์, วิดีโอ, ใบงาน ฯลฯ</p>
+                </div>
+            </div>
+            <div class="relative flex items-center justify-center my-auto" style="height: 180px;">
+                <canvas id="chartLmTypes"></canvas>
+                <div class="donut-center-text">
+                    <div class="text-xl font-black text-slate-800" id="donut_lm_total">0</div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">สื่อในระบบ</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-center text-xs">
+                <div class="bg-indigo-50 text-indigo-700 py-1.5 rounded-lg font-bold">
+                    สไลด์: <span id="donut_lm_slides">0</span>
+                </div>
+                <div class="bg-rose-50 text-rose-700 py-1.5 rounded-lg font-bold">
+                    วิดีโอ: <span id="donut_lm_videos">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 3: Top Teachers / Contributors Ranking (Col 3) -->
+        <div class="lg:col-span-3 chart-card p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                            <i class="bi bi-trophy-fill"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-slate-800">ครูผู้สร้างสรรค์สื่อยอดเยี่ยม</h3>
+                            <p class="text-xs text-slate-400">Top 5 คุณครูผู้แบ่งปันสื่อนวัตกรรม</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="lm_contributors_list" class="space-y-3 my-2">
+                    <div class="text-center py-6 text-xs text-slate-400">กำลังประมวลผลอันดับ...</div>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 mt-2 flex items-center justify-between text-xs">
+                <span class="text-slate-400 font-medium">ผลงานนวัตกรรม ว.PA</span>
+                <span class="text-amber-600 font-bold">★★★★★</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Quick Action Menu (⚡ เมนูด่วน) -->
+    <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-100">
+        <div class="flex items-center gap-2 mb-3">
+            <span class="px-3 py-1 rounded-xl bg-sky-600 text-white text-xs font-black flex items-center gap-1.5 shadow-sm shadow-sky-500/20">
+                <i class="bi bi-lightning-charge-fill"></i> เมนูด่วน
+            </span>
+            <span class="text-xs text-slate-400 font-medium">เข้าถึงฟังก์ชันสำคัญในคลิกเดียว</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <!-- 1. Add Media -->
+            <?php if ($canManage): ?>
+            <div onclick="openAddModal()" class="quick-btn p-3.5 rounded-2xl bg-rose-50/80 hover:bg-rose-100/90 text-rose-800 border border-rose-200/60 flex flex-col items-center text-center gap-2 cursor-pointer">
+                <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-md shadow-rose-500/20">
+                    <i class="bi bi-cloud-arrow-up-fill text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-800">เพิ่มสื่อใหม่</div>
+                    <div class="text-[10px] text-slate-500">อัปโหลดสื่อนวัตกรรม</div>
+                </div>
+            </div>
+            <?php else: ?>
+            <a href="/login.php?redirect=/learning_media/index.php" class="quick-btn p-3.5 rounded-2xl bg-rose-50/80 hover:bg-rose-100/90 text-rose-800 border border-rose-200/60 flex flex-col items-center text-center gap-2">
+                <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-md shadow-rose-500/20">
+                    <i class="bi bi-box-arrow-in-right text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-800">เข้าสู่ระบบครู</div>
+                    <div class="text-[10px] text-slate-500">เพื่อเพิ่มสื่อการสอน</div>
+                </div>
+            </a>
+            <?php endif; ?>
+
+            <!-- 2. Slides & Docs -->
+            <div onclick="selectType('slide')" class="quick-btn p-3.5 rounded-2xl bg-indigo-50/80 hover:bg-indigo-100/90 text-indigo-800 border border-indigo-200/60 flex flex-col items-center text-center gap-2 cursor-pointer">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/20">
+                    <i class="bi bi-file-earmark-slides-fill text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-800">สไลด์ & Canva</div>
+                    <div class="text-[10px] text-slate-500">เอกสารประกอบการสอน</div>
+                </div>
+            </div>
+
+            <!-- 3. Videos -->
+            <div onclick="selectType('video')" class="quick-btn p-3.5 rounded-2xl bg-amber-50/80 hover:bg-amber-100/90 text-amber-800 border border-amber-200/60 flex flex-col items-center text-center gap-2 cursor-pointer">
+                <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
+                    <i class="bi bi-play-btn-fill text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-800">คลังวิดีโอบทเรียน</div>
+                    <div class="text-[10px] text-slate-500">คลิปสอนออนไลน์</div>
+                </div>
+            </div>
+
+            <!-- 4. Worksheets -->
+            <div onclick="selectType('worksheet')" class="quick-btn p-3.5 rounded-2xl bg-emerald-50/80 hover:bg-emerald-100/90 text-emerald-800 border border-emerald-200/60 flex flex-col items-center text-center gap-2 cursor-pointer">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+                    <i class="bi bi-file-text-fill text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-800">ใบงาน & แบบฝึกหัด</div>
+                    <div class="text-[10px] text-slate-500">เอกสารแบบทดสอบ</div>
+                </div>
+            </div>
+
+            <!-- 5. Semester Report -->
+            <a href="report_semester.php" target="_blank" class="quick-btn p-3.5 rounded-2xl bg-purple-50/80 hover:bg-purple-100/90 text-purple-800 border border-purple-200/60 flex flex-col items-center text-center gap-2">
+                <div class="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center shadow-md shadow-purple-500/20">
+                    <i class="bi bi-pie-chart-fill text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-800">สรุปสถิติสิ้นเทอม</div>
+                    <div class="text-[10px] text-slate-500">รายงานวิชาการ</div>
+                </div>
+            </a>
+
+            <!-- 6. Print Memo -->
+            <a href="print_memo.php" target="_blank" class="quick-btn p-3.5 rounded-2xl bg-cyan-50/80 hover:bg-cyan-100/90 text-cyan-800 border border-cyan-200/60 flex flex-col items-center text-center gap-2">
+                <div class="w-10 h-10 rounded-xl bg-cyan-600 text-white flex items-center justify-center shadow-md shadow-cyan-600/20">
+                    <i class="bi bi-printer-fill text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-bold text-slate-800">พิมพ์บันทึกขออนุมัติ</div>
+                    <div class="text-[10px] text-slate-500">เสนอ ผอ. อนุมัติสื่อ</div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+</div>
 
 <!-- ── Filter & Search Section ── -->
 <div class="bg-white rounded-3xl p-5 mb-5 shadow-sm border border-slate-100">
@@ -695,6 +1074,9 @@ const currentUserRole = '<?= htmlspecialchars($userRole) ?>';
 const currentUserName = '<?= htmlspecialchars($userName) ?>';
 const canManage = <?= $canManage ? 'true' : 'false' ?>;
 
+let chartLmSubjectsInstance = null;
+let chartLmTypesInstance = null;
+
 // ── Media Type Metadata ──
 const MEDIA_TYPES = {
     slide:     { label: 'สไลด์/เอกสาร', icon: 'fa-file-powerpoint', color: 'indigo' },
@@ -704,6 +1086,211 @@ const MEDIA_TYPES = {
     website:   { label: 'เว็บไซต์/LMS',  icon: 'fa-globe',             color: 'sky' },
     other:     { label: 'สื่ออื่นๆ',     icon: 'fa-shapes',            color: 'slate' }
 };
+
+// ── Live Clock & Fullscreen ──
+function startLiveClock() {
+    const update = () => {
+        const now = new Date();
+        const dateEl = document.getElementById('live_date');
+        const clockEl = document.getElementById('live_clock');
+        if (dateEl) {
+            dateEl.textContent = now.toLocaleDateString('th-TH', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+        if (clockEl) {
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            clockEl.textContent = `${h}:${m}:${s} น.`;
+        }
+    };
+    update();
+    setInterval(update, 1000);
+}
+
+function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
+}
+
+// ── Render Command Center KPIs ──
+function renderLmKpis(mediaList, totalViews) {
+    const total = mediaList.length;
+    const slides = mediaList.filter(m => m.mediaType === 'slide').length;
+    const videos = mediaList.filter(m => m.mediaType === 'video').length;
+    const approved = mediaList.filter(m => parseInt(m.academicHeadApproved) === 1 || parseInt(m.directorApproved) === 1).length;
+
+    const rated = mediaList.filter(m => parseFloat(m.ratingAvg) > 0);
+    const avgRating = rated.length > 0 
+        ? (rated.reduce((acc, m) => acc + parseFloat(m.ratingAvg), 0) / rated.length).toFixed(1)
+        : '5.0';
+
+    document.getElementById('kpi_media_total').textContent = total;
+    document.getElementById('kpi_media_slides').textContent = slides;
+    document.getElementById('kpi_media_videos').textContent = videos;
+    document.getElementById('kpi_media_views').textContent = totalViews ? totalViews.toLocaleString() : '0';
+    document.getElementById('kpi_media_rating').textContent = avgRating;
+    document.getElementById('kpi_media_approved').textContent = approved;
+
+    const slidesPct = total > 0 ? Math.round((slides / total) * 100) : 0;
+    const videosPct = total > 0 ? Math.round((videos / total) * 100) : 0;
+    const approvedPct = total > 0 ? Math.round((approved / total) * 100) : 0;
+
+    document.getElementById('kpi_slides_pct').textContent = `${slidesPct}%`;
+    document.getElementById('kpi_videos_pct').textContent = `${videosPct}%`;
+    document.getElementById('kpi_approved_pct').textContent = `${approvedPct}%`;
+
+    document.getElementById('kpi_slides_bar').style.width = `${slidesPct}%`;
+    document.getElementById('kpi_videos_bar').style.width = `${videosPct}%`;
+    document.getElementById('kpi_approved_bar').style.width = `${approvedPct}%`;
+}
+
+// ── Render Command Center Charts ──
+function renderLmCharts(mediaList, subjectsCount, typesCount) {
+    const ctxSubjects = document.getElementById('chartLmSubjects');
+    if (ctxSubjects) {
+        if (chartLmSubjectsInstance) chartLmSubjectsInstance.destroy();
+
+        const subjects = [
+            'ภาษาไทย', 'คณิตศาสตร์', 'วิทยาศาสตร์และเทคโนโลยี',
+            'สังคมศึกษา', 'สุขศึกษา', 'ศิลปะ', 'การงานอาชีพ', 'ภาษาต่างประเทศ'
+        ];
+        const counts = subjects.map(s => subjectsCount[s] || mediaList.filter(m => m.subject === s).length);
+
+        chartLmSubjectsInstance = new Chart(ctxSubjects, {
+            type: 'bar',
+            data: {
+                labels: subjects,
+                datasets: [{
+                    label: 'จำนวนสื่อ (รายการ)',
+                    data: counts,
+                    backgroundColor: [
+                        '#3b82f6', '#10b981', '#6366f1', '#f59e0b',
+                        '#ec4899', '#8b5cf6', '#14b8a6', '#06b6d4'
+                    ],
+                    borderRadius: 8,
+                    barPercentage: 0.65
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        titleFont: { family: 'Prompt' },
+                        bodyFont: { family: 'Prompt' }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Prompt', size: 10 } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f1f5f9' },
+                        ticks: { font: { family: 'Prompt', size: 10 }, stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+
+    const ctxTypes = document.getElementById('chartLmTypes');
+    if (ctxTypes) {
+        if (chartLmTypesInstance) chartLmTypesInstance.destroy();
+
+        const typeLabels = ['สไลด์/เอกสาร', 'วิดีโอคลิป', 'ใบงาน/แบบฝึก', 'เกม/Interactive', 'เว็บไซต์/LMS'];
+        const typeKeys = ['slide', 'video', 'worksheet', 'game', 'website'];
+        const typeData = typeKeys.map(k => typesCount[k] || mediaList.filter(m => m.mediaType === k).length);
+
+        document.getElementById('donut_lm_total').textContent = mediaList.length;
+        document.getElementById('donut_lm_slides').textContent = typesCount['slide'] || 0;
+        document.getElementById('donut_lm_videos').textContent = typesCount['video'] || 0;
+
+        chartLmTypesInstance = new Chart(ctxTypes, {
+            type: 'doughnut',
+            data: {
+                labels: typeLabels,
+                datasets: [{
+                    data: typeData,
+                    backgroundColor: ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#0ea5e9'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        titleFont: { family: 'Prompt' },
+                        bodyFont: { family: 'Prompt' }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// ── Render Top Contributors Ranking ──
+function renderLmTopContributors(mediaList) {
+    const list = document.getElementById('lm_contributors_list');
+    if (!list) return;
+
+    if (!mediaList || !mediaList.length) {
+        list.innerHTML = `<div class="text-center py-6 text-xs text-slate-400">ยังไม่มีข้อมูลผู้สร้างสรรค์สื่อ</div>`;
+        return;
+    }
+
+    const authorMap = {};
+    mediaList.forEach(m => {
+        const a = (m.author || 'ไม่ระบุชื่อ').trim();
+        authorMap[a] = (authorMap[a] || 0) + 1;
+    });
+
+    const sorted = Object.entries(authorMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+    const maxCount = sorted.length > 0 ? sorted[0][1] : 1;
+    const colors = [
+        { bg: 'bg-emerald-500', text: 'text-emerald-700' },
+        { bg: 'bg-blue-500',    text: 'text-blue-700' },
+        { bg: 'bg-indigo-500',  text: 'text-indigo-700' },
+        { bg: 'bg-amber-500',   text: 'text-amber-700' },
+        { bg: 'bg-cyan-500',    text: 'text-cyan-700' }
+    ];
+
+    list.innerHTML = sorted.map(([author, count], idx) => {
+        const pct = Math.min(100, Math.round((count / maxCount) * 100));
+        const col = colors[idx % colors.length];
+
+        return `
+            <div>
+                <div class="flex items-center justify-between text-xs font-bold mb-1">
+                    <span class="text-slate-700 truncate max-w-[130px]">${escapeHtml(author)}</span>
+                    <span class="${col.text}">${count} สื่อ (${pct}%)</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div class="${col.bg} h-full rounded-full transition-all duration-700" style="width: ${pct}%"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
 // ── Fetch Media List from API ──
 async function loadMediaList() {
@@ -719,6 +1306,9 @@ async function loadMediaList() {
         }
 
         allMediaList = json.data || [];
+        renderLmKpis(allMediaList, json.totalViews || 0);
+        renderLmCharts(allMediaList, json.subjectsCount || {}, json.typesCount || {});
+        renderLmTopContributors(allMediaList);
         renderSubjectFilter(json.subjectsCount || {});
         filterAndRender();
     } catch (err) {
@@ -1169,7 +1759,10 @@ function escapeHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
-document.addEventListener('DOMContentLoaded', loadMediaList);
+document.addEventListener('DOMContentLoaded', () => {
+    startLiveClock();
+    loadMediaList();
+});
 </script>
 <?php if (!$isLoggedIn): ?>
 </div> <!-- end app-wrapper -->
