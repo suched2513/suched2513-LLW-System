@@ -2,6 +2,8 @@
 $schoolName = \App\Services\SettingService::get('school_name', 'โรงเรียนละลมวิทยา');
 $affiliation = \App\Services\SettingService::get('affiliation', 'สังกัดสำนักงานเขตพื้นที่การศึกษามัธยมศึกษาศรีสะเกษ ยโสธร');
 $baseUrl = defined('BASE_URL') ? BASE_URL : '';
+// URL หน้าเมนูหลัก LLW (ตัด /financial หรือ /financial/public ออกจาก baseUrl)
+$llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.php';
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -110,16 +112,10 @@ $baseUrl = defined('BASE_URL') ? BASE_URL : '';
             </div>
         </form>
 
-        <div class="border-top pt-3 mt-4">
-            <div class="small fw-semibold text-muted mb-2"><i class="bi bi-info-circle me-1"></i> บัญชีทดสอบเริ่มต้น (Password: <code>Password123!</code>):</div>
-            <div class="small text-muted d-flex flex-wrap gap-1">
-                <span class="badge bg-light text-dark border">admin</span>
-                <span class="badge bg-light text-dark border">finance</span>
-                <span class="badge bg-light text-dark border">accountant</span>
-                <span class="badge bg-light text-dark border">inventory</span>
-                <span class="badge bg-light text-dark border">teacher1</span>
-                <span class="badge bg-light text-dark border">director</span>
-            </div>
+        <div class="d-grid">
+            <a href="<?= e($llwHomeUrl) ?>" class="btn btn-outline-secondary">
+                <i class="bi bi-house-door me-1"></i> กลับเมนูหลัก LLW
+            </a>
         </div>
     </div>
 </div>
