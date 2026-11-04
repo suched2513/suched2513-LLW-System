@@ -1,5 +1,6 @@
 <?php
 $baseUrl = defined('BASE_URL') ? BASE_URL : '';
+$llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.php';
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -44,7 +45,10 @@ $baseUrl = defined('BASE_URL') ? BASE_URL : '';
     <?php if (!empty($message)): ?>
         <p class="text-muted mb-4"><?= e($message) ?></p>
     <?php endif; ?>
-    <div class="d-flex justify-content-center gap-2">
+    <div class="d-flex justify-content-center flex-wrap gap-2">
+        <a href="<?= e($llwHomeUrl) ?>" class="btn btn-outline-secondary">
+            <i class="bi bi-house-door me-1"></i> เมนูหลัก LLW
+        </a>
         <a href="javascript:history.back()" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-1"></i> ย้อนกลับ
         </a>

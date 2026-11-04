@@ -119,7 +119,12 @@ $llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.ph
                 </div>
             </div>
 
-            <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2 gap-sm-3">
+                <a href="<?= e($llwHomeUrl) ?>" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 text-decoration-none" title="กลับเมนูหลัก LLW">
+                    <i class="bi bi-house-door"></i>
+                    <span class="d-none d-sm-inline" style="font-size: 0.85rem;">เมนูหลัก LLW</span>
+                </a>
+
                 <div class="dropdown">
                     <a href="#" class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                         <div class="avatar-circle bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 34px; height: 34px; font-weight: 600;">
