@@ -99,7 +99,7 @@ $llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.ph
         </div>
 
         <div class="border-top py-2" style="border-color: rgba(255, 255, 255, 0.1) !important;">
-            <a href="<?= $baseUrl ?>/manual" class="nav-link <?= str_contains($currentRoute, ''/manual'') ? ''active'' : '' ?>">
+            <a href="<?= $baseUrl ?>/manual" class="nav-link <?= str_contains($currentRoute, '/manual') ? 'active' : '' ?>">
                 <i class="bi bi-journal-bookmark-fill text-warning"></i> คู่มือการใช้งานระบบ
             </a>
             <a href="<?= e($llwHomeUrl) ?>" class="nav-link">
