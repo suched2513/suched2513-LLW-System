@@ -4,6 +4,9 @@ $schoolLogo = \App\Services\SettingService::get('school_logo_path', '');
 $activeFyBe = $activeFiscalYear['year_be'] ?? thai_fiscal_year();
 $currentRoute = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
 $baseUrl = defined('BASE_URL') ? BASE_URL : '';
+// URL หน้าเมนูหลัก LLW (ตัด /financial หรือ /financial/public ออกจาก baseUrl)
+// production: /financial → /index.php | localhost: /llw/financial/public → /llw/index.php
+$llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.php';
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -94,6 +97,12 @@ $baseUrl = defined('BASE_URL') ? BASE_URL : '';
                 <i class="bi bi-gear"></i> ตั้งค่าสถานศึกษา
             </a>
         </div>
+
+        <div class="border-top py-2" style="border-color: rgba(255, 255, 255, 0.1) !important;">
+            <a href="<?= e($llwHomeUrl) ?>" class="nav-link">
+                <i class="bi bi-house-door"></i> กลับเมนูหลัก LLW
+            </a>
+        </div>
     </nav>
 
     <!-- Main Content -->
@@ -125,6 +134,7 @@ $baseUrl = defined('BASE_URL') ? BASE_URL : '';
                         <li><a class="dropdown-item" href="<?= $baseUrl ?>/profile"><i class="bi bi-person me-2"></i> ข้อมูลส่วนตัว</a></li>
                         <li><a class="dropdown-item" href="<?= $baseUrl ?>/settings"><i class="bi bi-gear me-2"></i> ตั้งค่าระบบ</a></li>
                         <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="<?= e($llwHomeUrl) ?>"><i class="bi bi-house-door me-2"></i> กลับเมนูหลัก LLW</a></li>
                         <li><a class="dropdown-item text-danger" href="<?= $baseUrl ?>/logout"><i class="bi bi-box-arrow-right me-2"></i> ออกจากระบบ</a></li>
                     </ul>
                 </div>
