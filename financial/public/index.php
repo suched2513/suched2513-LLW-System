@@ -127,6 +127,7 @@ $router->get('/logout', [AuthController::class, 'logout']);
 
 // --- Authenticated User Routes ---
 $router->get('/dashboard', [DashboardController::class, 'index'], ['auth']);
+$router->get('/manual', [DashboardController::class, 'manual'], ['auth']);
 $router->get('/profile', [AuthController::class, 'profile'], ['auth']);
 $router->post('/profile/password', [AuthController::class, 'updatePassword'], ['auth', 'csrf']);
 

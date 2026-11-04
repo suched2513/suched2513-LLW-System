@@ -99,6 +99,9 @@ $llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.ph
         </div>
 
         <div class="border-top py-2" style="border-color: rgba(255, 255, 255, 0.1) !important;">
+            <a href="<?= $baseUrl ?>/manual" class="nav-link <?= str_contains($currentRoute, ''/manual'') ? ''active'' : '' ?>">
+                <i class="bi bi-journal-bookmark-fill text-warning"></i> คู่มือการใช้งานระบบ
+            </a>
             <a href="<?= e($llwHomeUrl) ?>" class="nav-link">
                 <i class="bi bi-house-door"></i> กลับเมนูหลัก LLW
             </a>
@@ -120,6 +123,10 @@ $llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.ph
             </div>
 
             <div class="d-flex align-items-center gap-2 gap-sm-3">
+                <a href="<?= $baseUrl ?>/manual" class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1 text-decoration-none fw-semibold" title="คู่มือการใช้งานระบบ">
+                    <i class="bi bi-journal-text text-warning-emphasis"></i>
+                    <span class="d-none d-md-inline" style="font-size: 0.85rem; color: #b45309;">คู่มือการใช้งาน</span>
+                </a>
                 <a href="<?= e($llwHomeUrl) ?>" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 text-decoration-none" title="กลับเมนูหลัก LLW">
                     <i class="bi bi-house-door"></i>
                     <span class="d-none d-sm-inline" style="font-size: 0.85rem;">เมนูหลัก LLW</span>
@@ -138,6 +145,7 @@ $llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.ph
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="<?= $baseUrl ?>/profile"><i class="bi bi-person me-2"></i> ข้อมูลส่วนตัว</a></li>
                         <li><a class="dropdown-item" href="<?= $baseUrl ?>/settings"><i class="bi bi-gear me-2"></i> ตั้งค่าระบบ</a></li>
+                        <li><a class="dropdown-item" href="<?= $baseUrl ?>/manual"><i class="bi bi-journal-text me-2 text-warning"></i> คู่มือการใช้งานระบบ</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="<?= e($llwHomeUrl) ?>"><i class="bi bi-house-door me-2"></i> กลับเมนูหลัก LLW</a></li>
                         <li><a class="dropdown-item text-danger" href="<?= $baseUrl ?>/logout"><i class="bi bi-box-arrow-right me-2"></i> ออกจากระบบ</a></li>

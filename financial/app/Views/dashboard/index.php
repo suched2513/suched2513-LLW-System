@@ -285,6 +285,9 @@ $rem = max(0, (float)($budgetSummary['total_remaining'] ?? 0));
             </div>
 
             <!-- Action Buttons -->
+            <a href="<?= $baseUrl ?>/manual" class="btn btn-warning btn-sm rounded-pill px-3 fw-bold shadow-sm text-dark">
+                <i class="bi bi-journal-bookmark-fill me-1"></i> คู่มือการใช้งาน
+            </a>
             <a href="<?= $baseUrl ?>/reports" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-semibold">
                 <i class="bi bi-file-earmark-bar-graph me-1"></i> รายงานการเงิน
             </a>

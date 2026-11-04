@@ -158,4 +158,14 @@ class DashboardController extends Controller
             'monthlyExpense'            => $monthlyExpense,
         ]);
     }
+
+    /**
+     * หน้าคู่มือขั้นตอนการใช้งานระบบบริหารการเงินและบัญชี
+     */
+    public function manual(): void
+    {
+        $this->render('manual/index', [
+            'pageTitle' => 'คู่มือการใช้งานระบบบริหารการเงินและบัญชีสถานศึกษา',
+        ]);
+    }
 }
