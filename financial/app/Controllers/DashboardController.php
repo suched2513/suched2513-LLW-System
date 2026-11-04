@@ -81,16 +81,42 @@ class DashboardController extends Controller
             $pendingApprovals = (int)$stmt->fetchColumn();
         } catch (\Throwable $e) {}
 
-        // 4. สัญญายืมเงินค้างชำระ / เกินกำหนด
+        // 4. สัญญายืมเงินค้างชำระ / เกินกำหนด / รอตรวจล้าง
         $outstandingAdvancesCount = 0;
         $outstandingAdvancesAmount = 0.00;
+        $overdueAdvancesCount = 0;
+        $pendingClearingCount = 0;
         try {
-            $stmtAdv = $pdo->query("SELECT COUNT(*), COALESCE(SUM(remaining_amount), 0) FROM fin_advances WHERE status IN ('disbursed', 'overdue')");
+            $stmtAdv = $pdo->query("
+                SELECT 
+                    COUNT(*), 
+                    COALESCE(SUM(amount - cleared_amount), 0),
+                    COALESCE(SUM(CASE WHEN status = 'overdue' OR (status = 'disbursed' AND due_date < CURDATE()) THEN 1 ELSE 0 END), 0),
+                    COALESCE(SUM(CASE WHEN status = 'clearing_pending' THEN 1 ELSE 0 END), 0)
+                FROM fin_advances 
+                WHERE status IN ('disbursed', 'overdue', 'clearing_pending')
+            ");
             $advRow = $stmtAdv->fetch(PDO::FETCH_NUM);
             if ($advRow) {
-                $outstandingAdvancesCount = (int)$advRow[0];
+                $outstandingAdvancesCount  = (int)$advRow[0];
                 $outstandingAdvancesAmount = (float)$advRow[1];
+                $overdueAdvancesCount      = (int)$advRow[2];
+                $pendingClearingCount      = (int)$advRow[3];
             }
+        } catch (\Throwable $e) {}
+
+        // 5. รายการเบิกจ่ายล่าสุด 5 รายการ
+        $recentDisbursements = [];
+        try {
+            $stmtRecent = $pdo->query("
+                SELECT d.id, d.disbursement_no, d.title, d.net_amount, d.status, d.created_at,
+                       u.full_name as requester_name
+                FROM fin_disbursements d
+                LEFT JOIN fin_users u ON d.requester_id = u.id
+                ORDER BY d.id DESC
+                LIMIT 5
+            ");
+            $recentDisbursements = $stmtRecent->fetchAll();
         } catch (\Throwable $e) {}
 
         // 5. รายรับและรายจ่ายประจำเดือนปัจจุบัน
@@ -125,6 +151,9 @@ class DashboardController extends Controller
             'pendingApprovals'          => $pendingApprovals,
             'outstandingAdvancesCount'  => $outstandingAdvancesCount,
             'outstandingAdvancesAmount' => $outstandingAdvancesAmount,
+            'overdueAdvancesCount'      => $overdueAdvancesCount,
+            'pendingClearingCount'      => $pendingClearingCount,
+            'recentDisbursements'       => $recentDisbursements,
             'monthlyIncome'             => $monthlyIncome,
             'monthlyExpense'            => $monthlyExpense,
         ]);
