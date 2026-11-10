@@ -35,7 +35,7 @@ if (!$rep) { http_response_code(404); exit('ไม่พบรายการ');
 $attStudentName = null;
 $attClassroom   = null;
 if ($rep['borrower_type'] === 'Student' && $rep['borrower_id']) {
-    $curYear = llw_current_academic_year($pdo);
+    $curYear = llw_current_academic_year();
     $stmtS = $pdo->prepare("
         SELECT name, classroom FROM att_students
         WHERE student_id = LPAD(?, 5, '0') AND academic_year = ? LIMIT 1

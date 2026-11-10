@@ -27,7 +27,7 @@ if ($type === 'Teacher') {
     ");
     $stmt->execute();
 } else {
-    $curYear = llw_current_academic_year($pdo);
+    $curYear = llw_current_academic_year();
     $stmt = $pdo->prepare("
         SELECT b.entry_id, b.borrower_type, b.borrower_id, b.class_name,
                b.chromebook_id, b.chromebook_serial, b.status, b.date_borrowed, b.date_returned,

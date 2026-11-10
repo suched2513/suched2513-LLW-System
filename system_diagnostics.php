@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 
 // ─── System Health Checks ──────────────────────────────────────────────
-$curYear = llw_current_academic_year($pdo);
+$curYear = llw_current_academic_year();
 $curSem  = llw_current_semester($pdo);
 
 // 1. Check Error Logs Table & Counts
