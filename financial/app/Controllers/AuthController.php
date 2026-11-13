@@ -19,6 +19,11 @@ class AuthController extends Controller
             $this->redirect('/dashboard');
         }
 
+        // SSO: ถ้าล็อกอินระบบกลางไว้และมีบัญชีการเงินที่ผูกไว้ ให้เข้าเลย (ข้ามได้ด้วย ?sso=0)
+        if ($this->request->query('sso', '1') !== '0' && AuthService::ssoLogin()) {
+            $this->redirect('/dashboard');
+        }
+
         $this->render('auth/login', [
             'pageTitle' => 'เข้าสู่ระบบ - ระบบบริหารการเงินและบัญชีสถานศึกษา'
         ], null); // No layout
@@ -49,7 +54,7 @@ class AuthController extends Controller
     {
         AuthService::logout();
         $this->setFlash('info', 'ออกจากระบบเรียบร้อยแล้ว');
-        $this->redirect('/login');
+        $this->redirect('/login?sso=0');
     }
 
     public function profile(): void

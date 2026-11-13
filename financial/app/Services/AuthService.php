@@ -43,6 +43,41 @@ class AuthService
             return ['success' => false, 'message' => 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'];
         }
 
+        self::establishSession($user);
+        AuditTrailService::log('auth', 'login_success', 'fin_users', (int)$user['id'], null, null, 'เข้าสู่ระบบสำเร็จ');
+
+        return ['success' => true, 'message' => 'เข้าสู่ระบบสำเร็จ'];
+    }
+
+    /**
+     * เข้าสู่ระบบอัตโนมัติ (SSO) จากเซสชันของระบบกลาง LLW
+     * ต้องมีบัญชี fin_users ที่ผูก llw_user_id ไว้ และบัญชีต้องเปิดใช้งาน
+     */
+    public static function ssoLogin(): bool
+    {
+        self::startSession();
+        $llwUserId = (int)($_SESSION['user_id'] ?? 0);
+        if ($llwUserId <= 0) {
+            return false;
+        }
+
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT * FROM fin_users WHERE llw_user_id = ? AND is_active = 1 LIMIT 1");
+        $stmt->execute([$llwUserId]);
+        $user = $stmt->fetch();
+        if (!$user) {
+            return false;
+        }
+
+        self::establishSession($user);
+        AuditTrailService::log('auth', 'login_success', 'fin_users', (int)$user['id'], null, null, 'เข้าสู่ระบบอัตโนมัติผ่านระบบกลาง (SSO)');
+        return true;
+    }
+
+    private static function establishSession(array $user): void
+    {
+        $pdo = Database::getConnection();
+
         // ดึงบทบาทของผู้ใช้
         $stmtRoles = $pdo->prepare("
             SELECT r.id, r.role_code, r.role_name
@@ -95,11 +130,6 @@ class AuthService
             'year_ce' => thai_fiscal_year() - 543,
             'is_current' => 1
         ];
-
-        // บันทึกประวัติการเข้าสู่ระบบ
-        AuditTrailService::log('auth', 'login_success', 'fin_users', (int)$user['id'], null, null, 'เข้าสู่ระบบสำเร็จ');
-
-        return ['success' => true, 'message' => 'เข้าสู่ระบบสำเร็จ'];
     }
 
     public static function logout(): void

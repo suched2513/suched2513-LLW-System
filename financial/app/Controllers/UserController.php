@@ -76,11 +76,26 @@ class UserController extends Controller
         $pdo = Database::getConnection();
         $roles = $pdo->query("SELECT * FROM fin_roles ORDER BY id ASC")->fetchAll();
 
+        // ครู/บุคลากรจากระบบกลางที่ยังไม่ได้ผูกกับบัญชีการเงิน
+        $centralUsers = [];
+        try {
+            $centralUsers = $pdo->query("
+                SELECT u.user_id, u.username, u.firstname, u.lastname
+                FROM llw_users u
+                WHERE u.status = 'active'
+                  AND u.user_id NOT IN (SELECT llw_user_id FROM fin_users WHERE llw_user_id IS NOT NULL)
+                ORDER BY u.firstname, u.lastname
+            ")->fetchAll();
+        } catch (\Throwable $e) {
+            error_log('[UserController::create] ' . $e->getMessage());
+        }
+
         $this->render('users/form', [
             'pageTitle' => 'เพิ่มผู้ใช้งานใหม่',
             'user'      => null,
             'userRoles' => [],
-            'roles'     => $roles
+            'roles'     => $roles,
+            'centralUsers' => $centralUsers
         ]);
     }
 
@@ -89,11 +104,36 @@ class UserController extends Controller
         $this->checkPermission('users', 'create');
         $pdo = Database::getConnection();
 
-        $username = trim((string)$this->request->input('username', ''));
-        $password = (string)$this->request->input('password', '');
-        $fullName = trim((string)$this->request->input('full_name', ''));
-        $email = trim((string)$this->request->input('email', ''));
+        $llwUserId = (int)$this->request->input('llw_user_id', 0);
         $selectedRoles = (array)$this->request->input('roles', []);
+
+        // กรณีเลือกจากระบบกลาง: ดึงชื่อ/username จาก llw_users และไม่ใช้รหัสผ่านของระบบการเงิน
+        if ($llwUserId > 0) {
+            $stmtC = $pdo->prepare("SELECT user_id, username, firstname, lastname FROM llw_users WHERE user_id = ? AND status = 'active'");
+            $stmtC->execute([$llwUserId]);
+            $central = $stmtC->fetch();
+            if (!$central) {
+                $this->setFlash('danger', 'ไม่พบผู้ใช้ในระบบกลาง หรือบัญชีถูกระงับ');
+                $this->redirect('/users/create');
+            }
+            $stmtDup = $pdo->prepare("SELECT id FROM fin_users WHERE llw_user_id = ? OR username = ?");
+            $stmtDup->execute([$llwUserId, $central['username']]);
+            if ($stmtDup->fetch()) {
+                $this->setFlash('danger', 'ผู้ใช้นี้มีบัญชีในระบบการเงินแล้ว');
+                $this->redirect('/users/create');
+            }
+
+            $username = $central['username'];
+            $fullName = trim($central['firstname'] . ' ' . $central['lastname']);
+            $email = trim((string)$this->request->input('email', ''));
+            // รหัสผ่านสุ่มที่ไม่มีใครทราบ: ผู้ใช้เข้าผ่าน SSO จากระบบกลางเท่านั้น
+            $password = bin2hex(random_bytes(16));
+        } else {
+            $username = trim((string)$this->request->input('username', ''));
+            $password = (string)$this->request->input('password', '');
+            $fullName = trim((string)$this->request->input('full_name', ''));
+            $email = trim((string)$this->request->input('email', ''));
+        }
 
         if (empty($username) || empty($password) || empty($fullName)) {
             $this->setFlash('danger', 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
@@ -112,8 +152,8 @@ class UserController extends Controller
 
         $pdo->beginTransaction();
         try {
-            $stmtInsert = $pdo->prepare("INSERT INTO fin_users (username, password_hash, full_name, email, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, 1, NOW(), NOW())");
-            $stmtInsert->execute([$username, $passwordHash, $fullName, $email]);
+            $stmtInsert = $pdo->prepare("INSERT INTO fin_users (username, password_hash, full_name, email, llw_user_id, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())");
+            $stmtInsert->execute([$username, $passwordHash, $fullName, $email, $llwUserId > 0 ? $llwUserId : null]);
             $userId = (int)$pdo->lastInsertId();
 
             if (!empty($selectedRoles)) {

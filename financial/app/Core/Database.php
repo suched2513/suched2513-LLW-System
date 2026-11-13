@@ -232,6 +232,12 @@ class Database
             }
                     // 7. ตาราง fin_budget_requests สำหรับแบบ ผง 1/1 และ ผง 1/2
             self::ensureBudgetRequestsTable($pdo);
+
+            // 8. ผูกบัญชีผู้ใช้การเงินกับผู้ใช้ระบบกลาง (llw_users.user_id)
+            if ($pdo->query("SHOW TABLES LIKE 'fin_users'")->rowCount() > 0 && !$hasColumn('fin_users', 'llw_user_id')) {
+                $pdo->exec("ALTER TABLE fin_users ADD COLUMN llw_user_id INT NULL DEFAULT NULL");
+                $pdo->exec("ALTER TABLE fin_users ADD UNIQUE KEY uq_fin_users_llw_user_id (llw_user_id)");
+            }
         } catch (\Throwable $e) {
             error_log('[Financial DB patchDatabaseSchema] ' . $e->getMessage());
         }

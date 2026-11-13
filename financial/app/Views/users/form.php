@@ -25,23 +25,50 @@ $actionUrl = $isEdit ? "{$baseUrl}/users/update/{$user['id']}" : "{$baseUrl}/use
                     <span><i class="bi bi-person me-2"></i> ข้อมูลบัญชีผู้ใช้งาน</span>
                 </div>
                 <div class="card-body">
+                    <?php if (!$isEdit): ?>
+                    <div class="mb-3 p-3 border rounded bg-light">
+                        <label class="form-label fw-semibold"><i class="bi bi-people me-1"></i> เลือกจากระบบกลาง (แนะนำ)</label>
+                        <select class="form-select" name="llw_user_id" id="llwUserSelect">
+                            <option value="">— สร้างบัญชีใหม่ด้วยตนเอง —</option>
+                            <?php foreach (($centralUsers ?? []) as $cu): ?>
+                                <option value="<?= (int)$cu['user_id'] ?>"><?= e(trim($cu['firstname'] . ' ' . $cu['lastname'])) ?> (<?= e($cu['username']) ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="form-text small">เมื่อเลือกจากระบบกลาง จะใช้ชื่อและบัญชีเดียวกัน เข้าสู่ระบบการเงินอัตโนมัติ (SSO) โดยไม่ต้องตั้งรหัสผ่านแยก</div>
+                    </div>
+                    <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        var sel = document.getElementById('llwUserSelect');
+                        var manual = document.querySelectorAll('[data-manual]');
+                        function sync() {
+                            var linked = sel.value !== '';
+                            manual.forEach(function (el) {
+                                el.disabled = linked;
+                                if (el.dataset.required === '1') el.required = !linked;
+                            });
+                        }
+                        sel.addEventListener('change', sync);
+                        sync();
+                    });
+                    </script>
+                    <?php endif; ?>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">ชื่อผู้ใช้งาน (Username) <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="username" value="<?= e($user['username'] ?? '') ?>" <?= $isEdit ? 'readonly' : 'required' ?> placeholder="เช่น somchai_k">
+                            <input type="text" class="form-control" name="username" value="<?= e($user['username'] ?? '') ?>" <?= $isEdit ? 'readonly' : 'required data-manual data-required="1"' ?> placeholder="เช่น somchai_k">
                             <?php if ($isEdit): ?>
-                                <div class="form-text small">ไม่สามารถแก้ไขชื่อผู้ใช้งานได้</div>
+                                <div class="form-text small">ไม่สามารถแก้ไขชื่อผู้ใช้งานได้<?= !empty($user['llw_user_id']) ? ' (ผูกกับระบบกลางแล้ว)' : '' ?></div>
                             <?php endif; ?>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold"><?= $isEdit ? 'เปลี่ยนรหัสผ่านใหม่ (เว้นว่างหากไม่เปลี่ยน)' : 'รหัสผ่านเริ่มต้น <span class="text-danger">*</span>' ?></label>
-                            <input type="password" class="form-control" name="password" <?= $isEdit ? '' : 'required' ?> placeholder="ความยาวอย่างน้อย 8 ตัวอักษร">
+                            <input type="password" class="form-control" name="password" <?= $isEdit ? '' : 'required data-manual data-required="1"' ?> placeholder="ความยาวอย่างน้อย 8 ตัวอักษร">
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">ชื่อ - นามสกุล <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="full_name" value="<?= e($user['full_name'] ?? '') ?>" required placeholder="เช่น นายสมชาย เก่งการเงิน">
+                            <input type="text" class="form-control" name="full_name" value="<?= e($user['full_name'] ?? '') ?>" required <?= $isEdit ? '' : 'data-manual data-required="1"' ?> placeholder="เช่น นายสมชาย เก่งการเงิน">
                         </div>
 
                         <div class="col-md-6">
