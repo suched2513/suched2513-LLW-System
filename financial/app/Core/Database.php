@@ -238,6 +238,16 @@ class Database
                 $pdo->exec("ALTER TABLE fin_users ADD COLUMN llw_user_id INT NULL DEFAULT NULL");
                 $pdo->exec("ALTER TABLE fin_users ADD UNIQUE KEY uq_fin_users_llw_user_id (llw_user_id)");
             }
+
+            // 9. fin_system_settings: เพิ่มคอลัมน์ group_name และ description สำหรับ SettingService
+            if ($pdo->query("SHOW TABLES LIKE 'fin_system_settings'")->rowCount() > 0) {
+                if (!$hasColumn('fin_system_settings', 'group_name')) {
+                    $pdo->exec("ALTER TABLE fin_system_settings ADD COLUMN group_name VARCHAR(50) NULL DEFAULT 'general' AFTER setting_value");
+                }
+                if (!$hasColumn('fin_system_settings', 'description')) {
+                    $pdo->exec("ALTER TABLE fin_system_settings ADD COLUMN description VARCHAR(255) NULL AFTER group_name");
+                }
+            }
         } catch (\Throwable $e) {
             error_log('[Financial DB patchDatabaseSchema] ' . $e->getMessage());
         }
