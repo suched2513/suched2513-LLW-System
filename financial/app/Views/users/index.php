@@ -75,6 +75,9 @@ $baseUrl = defined('BASE_URL') ? BASE_URL : '';
                             <td><?= $idx + 1 ?></td>
                             <td class="fw-bold">
                                 <code><?= e($u['username']) ?></code>
+                                <?php if (!empty($u['llw_user_id'])): ?>
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle ms-1" title="เชื่อมโยงบัญชีระบบกลาง (SSO)">SSO</span>
+                                <?php endif; ?>
                             </td>
                             <td><?= e($u['full_name']) ?></td>
                             <td><?= e($u['email'] ?? '-') ?></td>

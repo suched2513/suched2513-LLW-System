@@ -195,11 +195,31 @@ class UserController extends Controller
 
         $roles = $pdo->query("SELECT * FROM fin_roles ORDER BY id ASC")->fetchAll();
 
+        // ครู/บุคลากรจากระบบกลางที่ยังไม่ถูกผูก หรือผูกกับบัญชีนี้อยู่แล้ว
+        $centralUsers = [];
+        try {
+            $stmtC = $pdo->prepare("
+                SELECT u.user_id, u.username, u.firstname, u.lastname
+                FROM llw_users u
+                WHERE u.status = 'active'
+                  AND (
+                      u.user_id NOT IN (SELECT llw_user_id FROM fin_users WHERE llw_user_id IS NOT NULL)
+                      OR u.user_id = ?
+                  )
+                ORDER BY u.firstname, u.lastname
+            ");
+            $stmtC->execute([(int)($user['llw_user_id'] ?? 0)]);
+            $centralUsers = $stmtC->fetchAll();
+        } catch (\Throwable $e) {
+            error_log('[UserController::edit] ' . $e->getMessage());
+        }
+
         $this->render('users/form', [
-            'pageTitle' => "แก้ไขผู้ใช้งาน: {$user['full_name']}",
-            'user'      => $user,
-            'userRoles' => $userRoles,
-            'roles'     => $roles
+            'pageTitle'    => "แก้ไขผู้ใช้งาน: {$user['full_name']}",
+            'user'         => $user,
+            'userRoles'    => $userRoles,
+            'roles'        => $roles,
+            'centralUsers' => $centralUsers
         ]);
     }
 
@@ -209,9 +229,11 @@ class UserController extends Controller
         $pdo = Database::getConnection();
         $userId = (int)$id;
 
+        $username = trim((string)$this->request->input('username', ''));
         $fullName = trim((string)$this->request->input('full_name', ''));
         $email = trim((string)$this->request->input('email', ''));
         $password = (string)$this->request->input('password', '');
+        $llwUserId = (int)$this->request->input('llw_user_id', 0);
         $selectedRoles = (array)$this->request->input('roles', []);
 
         $stmt = $pdo->prepare("SELECT * FROM fin_users WHERE id = ?");
@@ -222,15 +244,39 @@ class UserController extends Controller
             $this->redirect('/users');
         }
 
+        if ($username === '' || $fullName === '') {
+            $this->setFlash('danger', 'กรุณากรอกชื่อผู้ใช้งานและชื่อ-นามสกุลให้ครบถ้วน');
+            $this->redirect("/users/edit/{$userId}");
+        }
+
+        // ตรวจสอบชื่อผู้ใช้งานซ้ำกับบัญชีอื่น
+        $stmtDup = $pdo->prepare("SELECT id FROM fin_users WHERE username = ? AND id != ?");
+        $stmtDup->execute([$username, $userId]);
+        if ($stmtDup->fetch()) {
+            $this->setFlash('danger', "ชื่อผู้ใช้ '{$username}' มีอยู่ในระบบแล้ว");
+            $this->redirect("/users/edit/{$userId}");
+        }
+
+        // ตรวจสอบการผูก llw_user_id ซ้ำกับบัญชีอื่น
+        $newLlwUserId = $llwUserId > 0 ? $llwUserId : null;
+        if ($newLlwUserId !== null) {
+            $stmtDupLlw = $pdo->prepare("SELECT id FROM fin_users WHERE llw_user_id = ? AND id != ?");
+            $stmtDupLlw->execute([$newLlwUserId, $userId]);
+            if ($stmtDupLlw->fetch()) {
+                $this->setFlash('danger', 'ผู้ใช้ระบบกลางที่เลือกถูกผูกกับบัญชีอื่นอยู่แล้ว');
+                $this->redirect("/users/edit/{$userId}");
+            }
+        }
+
         $pdo->beginTransaction();
         try {
             if (!empty($password)) {
                 $hash = password_hash($password, PASSWORD_BCRYPT);
-                $stmtUp = $pdo->prepare("UPDATE fin_users SET full_name = ?, email = ?, password_hash = ?, updated_at = NOW() WHERE id = ?");
-                $stmtUp->execute([$fullName, $email, $hash, $userId]);
+                $stmtUp = $pdo->prepare("UPDATE fin_users SET username = ?, full_name = ?, email = ?, llw_user_id = ?, password_hash = ?, updated_at = NOW() WHERE id = ?");
+                $stmtUp->execute([$username, $fullName, $email, $newLlwUserId, $hash, $userId]);
             } else {
-                $stmtUp = $pdo->prepare("UPDATE fin_users SET full_name = ?, email = ?, updated_at = NOW() WHERE id = ?");
-                $stmtUp->execute([$fullName, $email, $userId]);
+                $stmtUp = $pdo->prepare("UPDATE fin_users SET username = ?, full_name = ?, email = ?, llw_user_id = ?, updated_at = NOW() WHERE id = ?");
+                $stmtUp->execute([$username, $fullName, $email, $newLlwUserId, $userId]);
             }
 
             // Sync roles
@@ -243,7 +289,20 @@ class UserController extends Controller
             }
 
             $pdo->commit();
-            AuditTrailService::log('users', 'update', 'fin_users', $userId, $oldUser, ['full_name' => $fullName, 'email' => $email], "แก้ไขข้อมูลผู้ใช้ {$oldUser['username']}");
+
+            // อัปเดต session หากแก้ไขบัญชีของตัวเองที่กำลังล็อกอินอยู่
+            if (isset($_SESSION['fin_user']['id']) && (int)$_SESSION['fin_user']['id'] === $userId) {
+                $_SESSION['fin_user']['username'] = $username;
+                $_SESSION['fin_user']['full_name'] = $fullName;
+                $_SESSION['fin_user']['email'] = $email;
+            }
+
+            AuditTrailService::log('users', 'update', 'fin_users', $userId, $oldUser, [
+                'username' => $username,
+                'full_name' => $fullName,
+                'email' => $email,
+                'llw_user_id' => $newLlwUserId,
+            ], "แก้ไขข้อมูลผู้ใช้ {$oldUser['username']}");
 
             $this->setFlash('success', "ปรับปรุงข้อมูลผู้ใช้ '{$fullName}' เรียบร้อยแล้ว");
             $this->redirect('/users');

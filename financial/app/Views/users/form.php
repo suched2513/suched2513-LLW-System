@@ -51,13 +51,27 @@ $actionUrl = $isEdit ? "{$baseUrl}/users/update/{$user['id']}" : "{$baseUrl}/use
                         sync();
                     });
                     </script>
+                    <?php else: ?>
+                    <div class="mb-3 p-3 border rounded bg-light">
+                        <label class="form-label fw-semibold"><i class="bi bi-link-45deg me-1"></i> เชื่อมโยงกับระบบกลาง (SSO)</label>
+                        <select class="form-select" name="llw_user_id">
+                            <option value="">— ไม่ผูกกับระบบกลาง (ล็อกอินด้วยรหัสผ่านระบบการเงิน) —</option>
+                            <?php $currentLlwId = (int)($user['llw_user_id'] ?? 0); ?>
+                            <?php foreach (($centralUsers ?? []) as $cu): ?>
+                                <option value="<?= (int)$cu['user_id'] ?>" <?= $currentLlwId === (int)$cu['user_id'] ? 'selected' : '' ?>>
+                                    <?= e(trim($cu['firstname'] . ' ' . $cu['lastname'])) ?> (<?= e($cu['username']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="form-text small">เลือกครูจากระบบกลางเพื่อให้สามารถเข้าสู่ระบบการเงินอัตโนมัติ (SSO) ด้วยบัญชี LLW ได้</div>
+                    </div>
                     <?php endif; ?>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">ชื่อผู้ใช้งาน (Username) <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="username" value="<?= e($user['username'] ?? '') ?>" <?= $isEdit ? 'readonly' : 'required data-manual data-required="1"' ?> placeholder="เช่น somchai_k">
+                            <input type="text" class="form-control" name="username" value="<?= e($user['username'] ?? '') ?>" <?= $isEdit ? 'required' : 'required data-manual data-required="1"' ?> placeholder="เช่น somchai_k">
                             <?php if ($isEdit): ?>
-                                <div class="form-text small">ไม่สามารถแก้ไขชื่อผู้ใช้งานได้<?= !empty($user['llw_user_id']) ? ' (ผูกกับระบบกลางแล้ว)' : '' ?></div>
+                                <div class="form-text small">สามารถปรับแก้ไขชื่อผู้ใช้งานได้ (ต้องไม่ซ้ำกับบัญชีอื่น)</div>
                             <?php endif; ?>
                         </div>
 

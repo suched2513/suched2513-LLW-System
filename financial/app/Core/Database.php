@@ -248,6 +248,12 @@ class Database
                     $pdo->exec("ALTER TABLE fin_system_settings ADD COLUMN description VARCHAR(255) NULL AFTER group_name");
                 }
             }
+
+            // 10. fin_fiscal_years: เพิ่มคอลัมน์ year_ce สำหรับการสร้างปีงบประมาณใหม่
+            if ($pdo->query("SHOW TABLES LIKE 'fin_fiscal_years'")->rowCount() > 0 && !$hasColumn('fin_fiscal_years', 'year_ce')) {
+                $pdo->exec("ALTER TABLE fin_fiscal_years ADD COLUMN year_ce INT NULL AFTER year_be");
+                $pdo->exec("UPDATE fin_fiscal_years SET year_ce = year_be - 543 WHERE year_ce IS NULL");
+            }
         } catch (\Throwable $e) {
             error_log('[Financial DB patchDatabaseSchema] ' . $e->getMessage());
         }
