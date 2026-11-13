@@ -357,8 +357,8 @@ class DisbursementController extends Controller
             'budget_head_name'     => 'นางชลลัดดา มากนวล',
             'plan_head_name'       => 'นางชลลัดดา มากนวล',
             'procurement_head_name'=> 'นางบานเย็น ภูรักษา',
-            'finance_head_name'    => 'นางรัตนา หงษ์โสภา',
-            'director_name'        => 'นายสถาน ปรางมาศ',
+            'finance_head_name'    => (string)\App\Services\SettingService::get('finance_head_name', ''),
+            'director_name'        => (string)\App\Services\SettingService::get('principal_name', ''),
             'items'                => $items,
             'specs'                => []
         ];

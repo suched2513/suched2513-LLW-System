@@ -199,11 +199,11 @@ $preBudget = $preBudget ?? null;
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">หัวหน้างานการเงิน</label>
-                        <input type="text" name="finance_head_name" class="form-control form-control-sm" value="นางรัตนา หงษ์โสภา">
+                        <input type="text" name="finance_head_name" class="form-control form-control-sm" value="<?= e(\App\Services\SettingService::get('finance_head_name', '')) ?>">
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">ผู้อำนวยการโรงเรียนละลมวิทยา</label>
-                        <input type="text" name="director_name" class="form-control form-control-sm" value="นายสถาน ปรางมาศ">
+                        <input type="text" name="director_name" class="form-control form-control-sm" value="<?= e(\App\Services\SettingService::get('principal_name', '')) ?>">
                     </div>
                 </div>
             </div>

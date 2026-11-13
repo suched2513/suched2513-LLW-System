@@ -289,8 +289,8 @@ class BudgetController extends Controller
         $budgetHeadName = (string)$this->request->input('budget_head_name', 'นางชลลัดดา มากนวล');
         $planHeadName = (string)$this->request->input('plan_head_name', 'นางชลลัดดา มากนวล');
         $procurementHeadName = (string)$this->request->input('procurement_head_name', 'นางบานเย็น ภูรักษา');
-        $financeHeadName = (string)$this->request->input('finance_head_name', 'นางรัตนา หงษ์โสภา');
-        $directorName = (string)$this->request->input('director_name', 'นายสถาน ปรางมาศ');
+        $financeHeadName = (string)$this->request->input('finance_head_name', (string)\App\Services\SettingService::get('finance_head_name', ''));
+        $directorName = (string)$this->request->input('director_name', (string)\App\Services\SettingService::get('principal_name', ''));
 
         // Items
         $itemNames = (array)$this->request->input('item_name', []);
@@ -560,8 +560,8 @@ class BudgetController extends Controller
         $budgetHeadName = (string)$this->request->input('plan_head_name', 'นางชลลัดดา มากนวล');
         $planHeadName = (string)$this->request->input('plan_head_name', 'นางชลลัดดา มากนวล');
         $procurementHeadName = (string)$this->request->input('procurement_head_name', 'นางบานเย็น ภูรักษา');
-        $financeHeadName = (string)$this->request->input('finance_head_name', 'นางรัตนา หงษ์โสภา');
-        $directorName = (string)$this->request->input('director_name', 'นายสถาน ปรางมาศ');
+        $financeHeadName = (string)$this->request->input('finance_head_name', (string)\App\Services\SettingService::get('finance_head_name', ''));
+        $directorName = (string)$this->request->input('director_name', (string)\App\Services\SettingService::get('principal_name', ''));
 
         // Items
         $itemNames = (array)$this->request->input('item_name', []);

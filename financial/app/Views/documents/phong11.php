@@ -25,8 +25,8 @@ $activityLeaderName = $doc['activity_leader_name'] ?? $requesterName;
 $budgetHeadName = $doc['budget_head_name'] ?? 'นางชลลัดดา มากนวล';
 $planHeadName = $doc['plan_head_name'] ?? 'นางชลลัดดา มากนวล';
 $procurementHeadName = $doc['procurement_head_name'] ?? 'นางบานเย็น ภูรักษา';
-$financeHeadName = $doc['finance_head_name'] ?? 'นางรัตนา หงษ์โสภา';
-$directorName = $doc['director_name'] ?? 'นายสถาน ปรางมาศ';
+$financeHeadName = $doc['finance_head_name'] ?? \App\Services\SettingService::get('finance_head_name', '');
+$directorName = $doc['director_name'] ?? \App\Services\SettingService::get('principal_name', '');
 
 // ตัวเลขงบประมาณ
 $budgetAllocated = (float)($doc['budget_allocated'] ?? $totalAmount);
