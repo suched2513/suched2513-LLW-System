@@ -26,6 +26,42 @@ $s = $db->prepare($sql);
 $s->execute($params);
 $projects = $s->fetchAll();
 
+// ตัวเลือกฝ่ายที่มีอยู่ในรายการ และพารามิเตอร์ตัวกรอง
+$departments = [];
+foreach ($projects as $p) {
+    $departments[(int)$p['department_id']] = $p['dept_name'];
+}
+
+$filterQ         = trim((string)($_GET['q'] ?? ''));
+$filterDept      = (int)($_GET['dept_id'] ?? 0);
+$filterStatus    = trim((string)($_GET['status'] ?? ''));
+$filterHasBudget = (string)($_GET['has_budget'] ?? '');
+
+$filteredProjects = array_values(array_filter($projects, function ($p) use ($filterQ, $filterDept, $filterStatus, $filterHasBudget) {
+    $total = (float)$p['budget_subsidy'] + (float)$p['budget_quality'] + (float)$p['budget_revenue'] + (float)$p['budget_operation'] + (float)$p['budget_reserve'];
+    if ($filterQ !== '') {
+        $haystack = ($p['project_name'] ?? '') . ' ' . ($p['activity'] ?? '');
+        if (mb_stripos($haystack, $filterQ) === false) {
+            return false;
+        }
+    }
+    if ($filterDept > 0 && (int)$p['department_id'] !== $filterDept) {
+        return false;
+    }
+    if ($filterStatus !== '') {
+        if ($filterStatus === 'not_started') {
+            if (!empty($p['req_id'])) return false;
+        } else {
+            if (empty($p['req_id']) || ($p['req_status'] ?? '') !== $filterStatus) return false;
+        }
+    }
+    if ($filterHasBudget === '1' && $total <= 0) {
+        return false;
+    }
+    return true;
+}));
+$hasFilter = ($filterQ !== '' || $filterDept > 0 || $filterStatus !== '' || $filterHasBudget !== '');
+
 renderHead('โครงการของฉัน');
 echo '<div class="d-flex">';
 renderSidebar();
@@ -49,8 +85,58 @@ showFlash();
 </div>
 
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <span><i class="bi bi-folder2-open me-2"></i>รายการโครงการ ปีงบประมาณ <?= FISCAL_YEAR ?></span>
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <span>
+      <i class="bi bi-folder2-open me-2"></i>รายการโครงการ ปีงบประมาณ <?= FISCAL_YEAR ?>
+      <span class="badge bg-light text-dark border ms-2">
+        แสดง <?= count($filteredProjects) ?> จาก <?= count($projects) ?> รายการ
+      </span>
+    </span>
+  </div>
+  <div class="card-body border-bottom bg-light py-3">
+    <form method="GET" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small text-muted mb-1">ค้นหาโครงการ / กิจกรรม</label>
+        <input type="text" name="q" class="form-control form-control-sm" value="<?= h($filterQ) ?>" placeholder="พิมพ์คำค้นหา...">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small text-muted mb-1">ฝ่าย</label>
+        <select name="dept_id" class="form-select form-select-sm">
+          <option value="">-- ทุกฝ่าย --</option>
+          <?php foreach ($departments as $dId => $dName): ?>
+          <option value="<?= $dId ?>" <?= $filterDept === $dId ? 'selected' : '' ?>><?= h($dName) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-1">สถานะ</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">-- ทุกสถานะ --</option>
+          <option value="not_started" <?= $filterStatus === 'not_started' ? 'selected' : '' ?>>ยังไม่ดำเนินการ</option>
+          <option value="draft" <?= $filterStatus === 'draft' ? 'selected' : '' ?>>ร่าง</option>
+          <option value="submitted" <?= $filterStatus === 'submitted' ? 'selected' : '' ?>>รออนุมัติ</option>
+          <option value="approved" <?= $filterStatus === 'approved' ? 'selected' : '' ?>>อนุมัติแล้ว</option>
+          <option value="rejected" <?= $filterStatus === 'rejected' ? 'selected' : '' ?>>ไม่อนุมัติ</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-1">งบประมาณ</label>
+        <select name="has_budget" class="form-select form-select-sm">
+          <option value="">ทั้งหมด</option>
+          <option value="1" <?= $filterHasBudget === '1' ? 'selected' : '' ?>>เฉพาะมีงบ (> 0)</option>
+        </select>
+      </div>
+      <div class="col-md-1 d-flex gap-1">
+        <button type="submit" class="btn btn-sm btn-primary w-100" title="กรองข้อมูล">
+          <i class="bi bi-funnel"></i>
+        </button>
+        <?php if ($hasFilter): ?>
+        <a href="<?= BASE_URL ?>/teacher/my_projects.php" class="btn btn-sm btn-outline-secondary" title="ล้างตัวกรอง">
+          <i class="bi bi-x-lg"></i>
+        </a>
+        <?php endif; ?>
+      </div>
+    </form>
   </div>
   <div class="card-body p-0">
     <div class="table-responsive">
@@ -63,7 +149,7 @@ showFlash();
           <th class="text-center">ดำเนินการ</th>
         </tr></thead>
         <tbody>
-<?php foreach ($projects as $p): ?>
+<?php foreach ($filteredProjects as $p): ?>
         <tr>
           <td class="ps-4">
             <div style="font-weight:500;font-size:14px"><?= h($p['project_name']) ?></div>
@@ -86,9 +172,15 @@ showFlash();
           </td>
           <td class="text-center">
             <?php if (!$p['req_id']): ?>
-              <a href="<?= BASE_URL ?>/teacher/request_form.php?project_id=<?= $p['id'] ?>" class="btn btn-sm btn-primary">
-                <i class="bi bi-plus-circle me-1"></i>ขอดำเนินการ
-              </a>
+              <?php if ($total <= 0): ?>
+                <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="ไม่สามารถขอดำเนินการได้ เนื่องจากงบจัดสรรเป็น 0.00 บาท">
+                  <i class="bi bi-lock me-1"></i>ไม่มีงบจัดสรร
+                </button>
+              <?php else: ?>
+                <a href="<?= BASE_URL ?>/teacher/request_form.php?project_id=<?= $p['id'] ?>" class="btn btn-sm btn-primary">
+                  <i class="bi bi-plus-circle me-1"></i>ขอดำเนินการ
+                </a>
+              <?php endif; ?>
             <?php elseif ($p['req_status']==='draft'): ?>
               <a href="<?= BASE_URL ?>/teacher/request_form.php?req_id=<?= $p['req_id'] ?>" class="btn btn-sm btn-warning">
                 <i class="bi bi-pencil me-1"></i>แก้ไข
@@ -101,8 +193,8 @@ showFlash();
           </td>
         </tr>
 <?php endforeach; ?>
-        <?php if (empty($projects)): ?>
-        <tr><td colspan="5" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i>ไม่พบโครงการที่รับผิดชอบ</td></tr>
+        <?php if (empty($filteredProjects)): ?>
+        <tr><td colspan="5" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2"></i><?= $hasFilter ? 'ไม่พบโครงการที่ตรงกับเงื่อนไขตัวกรอง' : 'ไม่พบโครงการที่รับผิดชอบ' ?></td></tr>
         <?php endif; ?>
         </tbody>
       </table>
