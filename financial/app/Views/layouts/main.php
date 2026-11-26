@@ -7,6 +7,11 @@ $baseUrl = defined('BASE_URL') ? BASE_URL : '';
 // URL หน้าเมนูหลัก LLW (ตัด /financial หรือ /financial/public ออกจาก baseUrl)
 // production: /financial → /index.php | localhost: /llw/financial/public → /llw/index.php
 $llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.php';
+
+$canView = fn(string $mod): bool => \App\Services\AuthService::hasPermission($mod, 'view');
+$canFinanceGroup = $canView('receipts') || $canView('disbursements') || $canView('advances') || $canView('budgets') || $canView('bank_reconciliation') || $canView('special_programs');
+$canAccountGroup = $canView('accounts') || $canView('procurement') || $canView('inventory') || $canView('reports');
+$canAdminGroup = $canView('users') || $canView('settings') || $canView('audit_logs');
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -43,16 +48,24 @@ $llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.ph
                 <i class="bi bi-speedometer2"></i> แดชบอร์ด
             </a>
 
+            <?php if ($canFinanceGroup): ?>
             <div class="nav-header">การเงินและงบประมาณ</div>
+            <?php if ($canView('receipts')): ?>
             <a href="<?= $baseUrl ?>/receipts" class="nav-link <?= str_contains($currentRoute, '/receipts') ? 'active' : '' ?>">
                 <i class="bi bi-wallet2"></i> ระบบรับเงิน
             </a>
+            <?php endif; ?>
+            <?php if ($canView('disbursements')): ?>
             <a href="<?= $baseUrl ?>/disbursements" class="nav-link <?= str_contains($currentRoute, '/disbursements') ? 'active' : '' ?>">
                 <i class="bi bi-cash-stack"></i> เบิกจ่ายเงิน
             </a>
+            <?php endif; ?>
+            <?php if ($canView('advances')): ?>
             <a href="<?= $baseUrl ?>/advances" class="nav-link <?= str_contains($currentRoute, '/advances') ? 'active' : '' ?>">
                 <i class="bi bi-journal-arrow-up"></i> เงินยืมและล้างยืม
             </a>
+            <?php endif; ?>
+            <?php if ($canView('budgets')): ?>
             <a href="<?= $baseUrl ?>/budgets" class="nav-link <?= str_contains($currentRoute, '/budgets') ? 'active' : '' ?>">
                 <i class="bi bi-pie-chart"></i> บริหารงบประมาณ
             </a>
@@ -62,40 +75,66 @@ $llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.ph
             <a href="<?= $baseUrl ?>/funding-sources" class="nav-link <?= str_contains($currentRoute, '/funding-sources') ? 'active' : '' ?>">
                 <i class="bi bi-tags"></i> ประเภทการเงิน
             </a>
+            <?php endif; ?>
+            <?php if ($canView('bank_reconciliation')): ?>
             <a href="<?= $baseUrl ?>/banks" class="nav-link <?= str_contains($currentRoute, '/banks') ? 'active' : '' ?>">
                 <i class="bi bi-credit-card-2-front"></i> ธนาคารและกระทบยอด
             </a>
+            <?php endif; ?>
+            <?php if ($canView('special_programs')): ?>
             <a href="<?= $baseUrl ?>/special-programs" class="nav-link <?= str_contains($currentRoute, '/special-programs') ? 'active' : '' ?>">
                 <i class="bi bi-mortarboard"></i> ค่าบำรุงการศึกษา
             </a>
+            <?php endif; ?>
+            <?php endif; ?>
 
+            <?php if ($canAccountGroup): ?>
             <div class="nav-header">บัญชีและพัสดุ</div>
+            <?php if ($canView('accounts')): ?>
             <a href="<?= $baseUrl ?>/accounts" class="nav-link <?= str_contains($currentRoute, '/accounts') ? 'active' : '' ?>">
                 <i class="bi bi-book"></i> บัญชีและสมุดรายวัน
             </a>
+            <?php endif; ?>
+            <?php if ($canView('procurement')): ?>
             <a href="<?= $baseUrl ?>/procurement" class="nav-link <?= str_contains($currentRoute, '/procurement') ? 'active' : '' ?>">
                 <i class="bi bi-cart-check"></i> จัดซื้อจัดจ้าง
             </a>
+            <?php endif; ?>
+            <?php if ($canView('inventory')): ?>
             <a href="<?= $baseUrl ?>/inventory" class="nav-link <?= str_contains($currentRoute, '/inventory') ? 'active' : '' ?>">
                 <i class="bi bi-boxes"></i> พัสดุและครุภัณฑ์
             </a>
+            <?php endif; ?>
+            <?php if ($canView('reports')): ?>
             <a href="<?= $baseUrl ?>/reports" class="nav-link <?= str_contains($currentRoute, '/reports') ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-bar-graph"></i> เอกสารและ 28 รายงาน
             </a>
+            <?php endif; ?>
+            <?php endif; ?>
 
+            <?php if ($canAdminGroup): ?>
             <div class="nav-header">จัดการระบบ</div>
+            <?php if ($canView('users')): ?>
             <a href="<?= $baseUrl ?>/users" class="nav-link <?= str_contains($currentRoute, '/users') ? 'active' : '' ?>">
                 <i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์
             </a>
+            <?php endif; ?>
+            <?php if ($canView('settings')): ?>
             <a href="<?= $baseUrl ?>/fiscal-years" class="nav-link <?= str_contains($currentRoute, '/fiscal-years') ? 'active' : '' ?>">
                 <i class="bi bi-calendar-range"></i> ปีงบประมาณ/งวดบัญชี
             </a>
+            <?php endif; ?>
+            <?php if ($canView('audit_logs')): ?>
             <a href="<?= $baseUrl ?>/audit-logs" class="nav-link <?= str_contains($currentRoute, '/audit-logs') ? 'active' : '' ?>">
                 <i class="bi bi-clock-history"></i> ประวัติการใช้งาน
             </a>
+            <?php endif; ?>
+            <?php if ($canView('settings')): ?>
             <a href="<?= $baseUrl ?>/settings" class="nav-link <?= str_contains($currentRoute, '/settings') ? 'active' : '' ?>">
                 <i class="bi bi-gear"></i> ตั้งค่าสถานศึกษา
             </a>
+            <?php endif; ?>
+            <?php endif; ?>
         </div>
 
         <div class="border-top py-2" style="border-color: rgba(255, 255, 255, 0.1) !important;">
@@ -144,7 +183,9 @@ $llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.ph
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="<?= $baseUrl ?>/profile"><i class="bi bi-person me-2"></i> ข้อมูลส่วนตัว</a></li>
+                        <?php if ($canView('settings')): ?>
                         <li><a class="dropdown-item" href="<?= $baseUrl ?>/settings"><i class="bi bi-gear me-2"></i> ตั้งค่าระบบ</a></li>
+                        <?php endif; ?>
                         <li><a class="dropdown-item" href="<?= $baseUrl ?>/manual"><i class="bi bi-journal-text me-2 text-warning"></i> คู่มือการใช้งานระบบ</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="<?= e($llwHomeUrl) ?>"><i class="bi bi-house-door me-2"></i> กลับเมนูหลัก LLW</a></li>
