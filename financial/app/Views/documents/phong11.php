@@ -282,6 +282,82 @@ $specs = $doc['specs'] ?? [];
             background-color: #F8FAFC;
         }
 
+        /* Compact single-page Ph.Ng. 1/1 memo */
+        .page--memo-single {
+            padding: 12mm 16mm 10mm 20mm;
+        }
+        .page--memo-single .form-id-badge {
+            top: 10mm;
+            right: 16mm;
+            font-size: 12pt;
+            padding: 2px 8px;
+        }
+        .page--memo-single .memo-header {
+            min-height: 20mm;
+            margin-bottom: 2mm;
+        }
+        .page--memo-single .garuda-container {
+            width: 18mm;
+            height: 20mm;
+        }
+        .page--memo-single .garuda-img {
+            width: 17mm;
+            max-height: 20mm;
+        }
+        .page--memo-single .memo-title-container {
+            padding-top: 2mm;
+        }
+        .page--memo-single .memo-title {
+            font-size: 21pt;
+        }
+        .page--memo-single .memo-meta {
+            margin-top: 2px;
+            margin-bottom: 6px;
+            font-size: 13pt;
+        }
+        .page--memo-single .meta-line {
+            margin-bottom: 2px;
+        }
+        .page--memo-single .memo-body {
+            margin-bottom: 6px;
+        }
+        .page--memo-single .memo-p {
+            font-size: 13pt;
+            line-height: 1.28;
+        }
+        .page--memo-single .sig-col-triple {
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+        .page--memo-single .sig-block {
+            font-size: 11.5pt;
+            line-height: 1.22;
+        }
+        .page--memo-single .sig-line,
+        .page--memo-single .sig-name {
+            font-size: 11.5pt;
+        }
+        .page--memo-single .sig-role {
+            font-size: 10.5pt;
+        }
+        .page--memo-single .approval-table {
+            margin-top: 4px;
+            font-size: 11pt;
+        }
+        .page--memo-single .approval-table td {
+            padding: 5px 8px;
+            line-height: 1.2;
+        }
+        .page--memo-single .box-title {
+            margin-bottom: 3px;
+            font-size: 11.5pt;
+        }
+        .page--memo-single .checkbox-square {
+            width: 10px;
+            height: 10px;
+            margin-right: 4px;
+        }
+
         /* Print Media Style */
         @media print {
             body {
@@ -299,8 +375,15 @@ $specs = $doc['specs'] ?? [];
                 padding: 16mm 18mm 14mm 24mm !important;
                 page-break-after: always !important;
             }
+            .page.page--memo-single {
+                padding: 11mm 16mm 9mm 20mm !important;
+                font-size: 12.5pt !important;
+            }
             .page:last-child {
                 page-break-after: auto !important;
+            }
+            .attachment-table tr {
+                page-break-inside: avoid;
             }
         }
     </style>
@@ -324,8 +407,8 @@ $specs = $doc['specs'] ?? [];
     </div>
 </div>
 
-<!-- ================= PAGE 1: บันทึกข้อความ ขออนุมัติใช้เงินงบประมาณ ================= -->
-<div class="page">
+<!-- ================= PAGE 1: บันทึกข้อความ ขออนุมัติใช้เงินงบประมาณ (รวม 4 ช่องความเห็นในหน้าเดียว) ================= -->
+<div class="page page--memo-single">
     <div class="form-id-badge">
         แบบ ผง 1/1
     </div>
@@ -369,7 +452,7 @@ $specs = $doc['specs'] ?? [];
         <p class="memo-p">
             ด้วย ข้าพเจ้า <?= e($requesterName) ?> ตำแหน่ง <?= e($requesterPosition) ?> รับผิดชอบ<?= e($workSection) ?> <?= e($department) ?> มีความประสงค์ขอใช้เงินงบประมาณตามแผนปฏิบัติราชการ ประจำปีงบประมาณ พ.ศ. <?= e($fiscalYearBe) ?> ตามโครงการ<?= e($projectName) ?> กิจกรรม<?= e($activityName) ?> เพื่อ<?= e($objective) ?> เป็นจำนวนเงิน <?= money_format_th($totalAmount) ?> บาท (<?= e($totalAmountText) ?>) ตามรายละเอียดแนบท้าย และขอเสนอ <?= e($inspectorName) ?> เป็นผู้ตรวจรับพัสดุ
         </p>
-        <p class="memo-p" style="margin-top: 8px;">
+        <p class="memo-p" style="margin-top: 4px;">
             จึงเรียนมาเพื่อโปรดพิจารณา
         </p>
     </div>
@@ -393,13 +476,13 @@ $specs = $doc['specs'] ?? [];
         </div>
     </div>
 
-    <!-- ตารางความเห็นกล่อง 1 และ กล่อง 2 -->
+    <!-- ตารางความเห็น 2x2 (4 กล่องในหน้าเดียว) -->
     <table class="approval-table">
         <tr>
             <!-- กล่องที่ 1: แผนงาน -->
             <td>
                 <div class="box-title">ความเห็นของหัวหน้างานแผนงาน</div>
-                <div style="display: flex; gap: 15px; margin-bottom: 4px;">
+                <div style="display: flex; gap: 12px; margin-bottom: 3px;">
                     <span class="checkbox-item"><span class="checkbox-square"></span> อยู่ในแผน</span>
                     <span class="checkbox-item"><span class="checkbox-square"></span> ไม่อยู่นอกแผน</span>
                 </div>
@@ -408,78 +491,68 @@ $specs = $doc['specs'] ?? [];
                 <div>คงเหลือ <span style="float: right;"><?= money_format_th($budgetRemainingBefore) ?> บาท</span></div>
                 <div>ขอใช้ครั้งนี้ <span style="float: right; font-weight: bold;"><?= money_format_th($totalAmount) ?> บาท</span></div>
                 <div style="border-top: 1px solid #ccc; padding-top: 2px;">คงเหลือสุทธิ <span style="float: right; font-weight: bold; color: #188038;"><?= money_format_th($budgetRemainingAfter) ?> บาท</span></div>
-                <div style="margin-top: 4px;">เห็นควรดำเนินการ</div>
-                <div style="text-align: center; margin-top: 10px;">
-                    <div>ลงชื่อ....................................................</div>
-                    <div style="margin-top: 2px;">( <?= e($planHeadName) ?> )</div>
-                    <div style="font-size: 11pt; color: #475569;">หัวหน้างานแผนงาน</div>
+                <div style="margin-top: 3px;">เห็นควรดำเนินการ</div>
+                <div style="text-align: center; margin-top: 8px;">
+                    <div>ลงชื่อ..............................................</div>
+                    <div style="margin-top: 1px;">( <?= e($planHeadName) ?> )</div>
+                    <div style="font-size: 10pt; color: #475569;">หัวหน้างานแผนงาน</div>
                 </div>
             </td>
 
             <!-- กล่องที่ 2: พัสดุ -->
             <td>
                 <div class="box-title">การดำเนินงานของงานพัสดุ</div>
-                <div style="margin-top: 6px;">พัสดุตามรายการที่เสนอ เห็นควร:</div>
-                <div style="margin-top: 8px; margin-left: 8px;">
+                <div style="margin-top: 4px;">พัสดุตามรายการที่เสนอ เห็นควร:</div>
+                <div style="margin-top: 6px; margin-left: 8px;">
                     <div class="checkbox-item"><span class="checkbox-square"></span> จัดซื้อ/จัดจ้างได้</div>
-                    <div class="checkbox-item" style="margin-top: 6px;"><span class="checkbox-square"></span> ไม่สามารถจัดซื้อ/จัดจ้างได้</div>
+                    <div class="checkbox-item" style="margin-top: 4px;"><span class="checkbox-square"></span> ไม่สามารถจัดซื้อ/จัดจ้างได้</div>
                 </div>
-                <div style="text-align: center; margin-top: 45px;">
-                    <div>ลงชื่อ....................................................</div>
-                    <div style="margin-top: 2px;">( <?= e($procurementHeadName) ?> )</div>
-                    <div style="font-size: 11pt; color: #475569;">หัวหน้าเจ้าหน้าที่พัสดุ</div>
+                <div style="text-align: center; margin-top: 52px;">
+                    <div>ลงชื่อ..............................................</div>
+                    <div style="margin-top: 1px;">( <?= e($procurementHeadName) ?> )</div>
+                    <div style="font-size: 10pt; color: #475569;">หัวหน้าเจ้าหน้าที่พัสดุ</div>
                 </div>
             </td>
         </tr>
-    </table>
-</div>
-
-<!-- ================= PAGE 2: การตรวจสอบการเงิน และคำสั่งผู้อำนวยการ ================= -->
-<div class="page">
-    <div class="form-id-badge">
-        แบบ ผง 1/1 (ต่อ)
-    </div>
-
-    <table class="approval-table" style="margin-top: 10mm;">
         <tr>
             <!-- กล่องที่ 3: การเงิน -->
-            <td style="padding: 14px 12px; height: 145mm; vertical-align: top;">
-                <div class="box-title" style="font-size: 13.5pt;">การตรวจสอบและรับรอง</div>
-                <div style="margin-top: 10px; text-indent: 1.2cm; font-size: 13pt; line-height: 1.5;">
+            <td>
+                <div class="box-title">การตรวจสอบและรับรอง</div>
+                <div style="margin-top: 4px; text-indent: 0.8cm; line-height: 1.3;">
                     ได้ทำการตรวจสอบเอกสารหลักฐานแล้วถูกต้อง ไม่มีเงินยืมค้างและมีงบประมาณเพียงพอ เห็นควร:
                 </div>
-                <div style="margin-top: 16px; margin-left: 15px; font-size: 13pt; line-height: 1.7;">
+                <div style="margin-top: 6px; margin-left: 8px; line-height: 1.4;">
                     <div class="checkbox-item"><span class="checkbox-square"></span> อนุมัติ</div>
-                    <div class="checkbox-item" style="margin-top: 6px;"><span class="checkbox-square"></span> ไม่อนุมัติ ให้เบิกจ่ายตามโครงการ</div>
+                    <div class="checkbox-item" style="margin-top: 3px;"><span class="checkbox-square"></span> ไม่อนุมัติ ให้เบิกจ่ายตามโครงการ</div>
                 </div>
-                <div style="text-align: center; margin-top: 85px;">
-                    <div>ลงชื่อ....................................................</div>
-                    <div style="margin-top: 4px; font-size: 12.5pt;">( <?= e($financeHeadName) ?> )</div>
-                    <div style="font-size: 11.5pt; color: #475569; margin-top: 2px;">หัวหน้างานการเงิน</div>
+                <div style="text-align: center; margin-top: 34px;">
+                    <div>ลงชื่อ..............................................</div>
+                    <div style="margin-top: 1px;">( <?= e($financeHeadName) ?> )</div>
+                    <div style="font-size: 10pt; color: #475569;">หัวหน้างานการเงิน</div>
                 </div>
             </td>
 
             <!-- กล่องที่ 4: ผู้อำนวยการโรงเรียน -->
-            <td style="padding: 14px 12px; height: 145mm; vertical-align: top;">
-                <div class="box-title" style="font-size: 13.5pt;">ความเห็นของผู้อำนวยการโรงเรียน</div>
-                <div style="margin-top: 10px; text-indent: 1.2cm; font-size: 13pt; line-height: 1.5;">
+            <td>
+                <div class="box-title">ความเห็นของผู้อำนวยการโรงเรียน</div>
+                <div style="margin-top: 4px; text-indent: 0.8cm; line-height: 1.3;">
                     ได้ทำการตรวจสอบรายการตามเสนอแล้ว:
                 </div>
-                <div style="margin-top: 12px; margin-left: 15px; font-size: 13pt; line-height: 1.7;">
-                    <div class="checkbox-item"><span class="checkbox-square"></span> <strong>อนุมัติ</strong></div>
-                    <div class="checkbox-item" style="margin-top: 6px;"><span class="checkbox-square"></span> ไม่อนุมัติ</div>
+                <div style="display: flex; gap: 16px; margin-top: 5px; margin-left: 8px;">
+                    <span class="checkbox-item"><span class="checkbox-square"></span> <strong>อนุมัติ</strong></span>
+                    <span class="checkbox-item"><span class="checkbox-square"></span> ไม่อนุมัติ</span>
                 </div>
-                <div style="margin-top: 12px; font-weight: bold; font-size: 13pt;">โดยใช้เงิน:</div>
-                <div style="margin-left: 15px; margin-top: 6px; font-size: 13pt; line-height: 1.7;">
-                    <div class="checkbox-item"><span class="checkbox-square"></span> เงินอุดหนุนทั่วไป</div>
-                    <div class="checkbox-item"><span class="checkbox-square"></span> เงินรายได้สถานศึกษา</div>
-                    <div class="checkbox-item"><span class="checkbox-square"></span> เงินบริจาค</div>
-                    <div class="checkbox-item"><span class="checkbox-square"></span> เงินอื่น ๆ .....................................................</div>
+                <div style="margin-top: 5px; font-weight: bold;">โดยใช้เงิน:</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; margin-left: 8px; margin-top: 3px; line-height: 1.3;">
+                    <span class="checkbox-item"><span class="checkbox-square"></span> อุดหนุนทั่วไป</span>
+                    <span class="checkbox-item"><span class="checkbox-square"></span> รายได้สถานศึกษา</span>
+                    <span class="checkbox-item"><span class="checkbox-square"></span> เงินบริจาค</span>
+                    <span class="checkbox-item"><span class="checkbox-square"></span> อื่นๆ ..............</span>
                 </div>
-                <div style="text-align: center; margin-top: 45px;">
-                    <div>ลงชื่อ....................................................</div>
-                    <div style="margin-top: 4px; font-size: 12.5pt;">( <?= e($directorName) ?> )</div>
-                    <div style="font-size: 11.5pt; color: #475569; margin-top: 2px;">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
+                <div style="text-align: center; margin-top: 18px;">
+                    <div>ลงชื่อ..............................................</div>
+                    <div style="margin-top: 1px;">( <?= e($directorName) ?> )</div>
+                    <div style="font-size: 10pt; color: #475569;">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
                 </div>
             </td>
         </tr>
