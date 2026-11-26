@@ -116,17 +116,20 @@ class UserController extends Controller
                 $this->setFlash('danger', 'ไม่พบผู้ใช้ในระบบกลาง หรือบัญชีถูกระงับ');
                 $this->redirect('/users/create');
             }
+            $usernameInput = trim((string)$this->request->input('username', ''));
+            $fullNameInput = trim((string)$this->request->input('full_name', ''));
+            $username = $usernameInput !== '' ? $usernameInput : $central['username'];
+            $fullName = $fullNameInput !== '' ? $fullNameInput : trim($central['firstname'] . ' ' . $central['lastname']);
+            $email = trim((string)$this->request->input('email', ''));
+
             $stmtDup = $pdo->prepare("SELECT id FROM fin_users WHERE llw_user_id = ? OR username = ?");
-            $stmtDup->execute([$llwUserId, $central['username']]);
+            $stmtDup->execute([$llwUserId, $username]);
             if ($stmtDup->fetch()) {
-                $this->setFlash('danger', 'ผู้ใช้นี้มีบัญชีในระบบการเงินแล้ว');
+                $this->setFlash('danger', 'ผู้ใช้นี้หรือชื่อผู้ใช้งานนี้มีอยู่ในระบบการเงินแล้ว');
                 $this->redirect('/users/create');
             }
 
-            $username = $central['username'];
-            $fullName = trim($central['firstname'] . ' ' . $central['lastname']);
-            $email = trim((string)$this->request->input('email', ''));
-            // รหัสผ่านสุ่มที่ไม่มีใครทราบ: ผู้ใช้เข้าผ่าน SSO จากระบบกลางเท่านั้น
+            // รหัสผ่านสุ่มที่ไม่มีใครทราบ: ผู้ใช้เข้าผ่าน SSO หรือบัญชีระบบกลาง
             $password = bin2hex(random_bytes(16));
         } else {
             $username = trim((string)$this->request->input('username', ''));

@@ -31,21 +31,40 @@ $actionUrl = $isEdit ? "{$baseUrl}/users/update/{$user['id']}" : "{$baseUrl}/use
                         <select class="form-select" name="llw_user_id" id="llwUserSelect">
                             <option value="">— สร้างบัญชีใหม่ด้วยตนเอง —</option>
                             <?php foreach (($centralUsers ?? []) as $cu): ?>
-                                <option value="<?= (int)$cu['user_id'] ?>"><?= e(trim($cu['firstname'] . ' ' . $cu['lastname'])) ?> (<?= e($cu['username']) ?>)</option>
+                                <?php $cuName = trim($cu['firstname'] . ' ' . $cu['lastname']); ?>
+                                <option value="<?= (int)$cu['user_id'] ?>" data-username="<?= e($cu['username']) ?>" data-fullname="<?= e($cuName) ?>"><?= e($cuName) ?> (<?= e($cu['username']) ?>)</option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="form-text small">เมื่อเลือกจากระบบกลาง จะใช้ชื่อและบัญชีเดียวกัน เข้าสู่ระบบการเงินอัตโนมัติ (SSO) โดยไม่ต้องตั้งรหัสผ่านแยก</div>
+                        <div class="form-text small">เมื่อเลือกจากระบบกลาง ระบบจะเติมชื่อผู้ใช้และชื่อ-นามสกุลให้อัตโนมัติ (สามารถแก้ไขเพิ่มเติมได้) และใช้รหัสผ่านเดียวกับระบบกลาง</div>
                     </div>
                     <script>
                     document.addEventListener('DOMContentLoaded', function () {
                         var sel = document.getElementById('llwUserSelect');
-                        var manual = document.querySelectorAll('[data-manual]');
+                        var uInput = document.querySelector('input[name="username"]');
+                        var fInput = document.querySelector('input[name="full_name"]');
+                        var pInput = document.querySelector('input[name="password"]');
+                        var pNote = document.getElementById('ssoPasswordNote');
+
                         function sync() {
+                            var opt = sel.options[sel.selectedIndex];
                             var linked = sel.value !== '';
-                            manual.forEach(function (el) {
-                                el.disabled = linked;
-                                if (el.dataset.required === '1') el.required = !linked;
-                            });
+                            if (linked && opt) {
+                                uInput.value = opt.dataset.username || '';
+                                fInput.value = opt.dataset.fullname || '';
+                            } else if (!linked && uInput.dataset.fromSso === '1') {
+                                uInput.value = '';
+                                fInput.value = '';
+                            }
+                            uInput.dataset.fromSso = linked ? '1' : '0';
+
+                            if (pInput) {
+                                pInput.disabled = linked;
+                                pInput.required = !linked;
+                                if (linked) pInput.value = '';
+                            }
+                            if (pNote) {
+                                pNote.classList.toggle('d-none', !linked);
+                            }
                         }
                         sel.addEventListener('change', sync);
                         sync();
@@ -69,7 +88,7 @@ $actionUrl = $isEdit ? "{$baseUrl}/users/update/{$user['id']}" : "{$baseUrl}/use
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">ชื่อผู้ใช้งาน (Username) <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="username" value="<?= e($user['username'] ?? '') ?>" <?= $isEdit ? 'required' : 'required data-manual data-required="1"' ?> placeholder="เช่น somchai_k">
+                            <input type="text" class="form-control" name="username" value="<?= e($user['username'] ?? '') ?>" required autocomplete="off" placeholder="เช่น somchai_k">
                             <?php if ($isEdit): ?>
                                 <div class="form-text small">สามารถปรับแก้ไขชื่อผู้ใช้งานได้ (ต้องไม่ซ้ำกับบัญชีอื่น)</div>
                             <?php endif; ?>
@@ -77,12 +96,15 @@ $actionUrl = $isEdit ? "{$baseUrl}/users/update/{$user['id']}" : "{$baseUrl}/use
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold"><?= $isEdit ? 'เปลี่ยนรหัสผ่านใหม่ (เว้นว่างหากไม่เปลี่ยน)' : 'รหัสผ่านเริ่มต้น <span class="text-danger">*</span>' ?></label>
-                            <input type="password" class="form-control" name="password" <?= $isEdit ? '' : 'required data-manual data-required="1"' ?> placeholder="ความยาวอย่างน้อย 8 ตัวอักษร">
+                            <input type="password" class="form-control" name="password" <?= $isEdit ? '' : 'required' ?> autocomplete="new-password" placeholder="ความยาวอย่างน้อย 8 ตัวอักษร">
+                            <?php if (!$isEdit): ?>
+                                <div class="form-text small text-primary d-none" id="ssoPasswordNote">ใช้รหัสผ่านเดียวกับระบบกลาง LLW (ไม่ต้องตั้งรหัสผ่านแยก)</div>
+                            <?php endif; ?>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">ชื่อ - นามสกุล <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="full_name" value="<?= e($user['full_name'] ?? '') ?>" required <?= $isEdit ? '' : 'data-manual data-required="1"' ?> placeholder="เช่น นายสมชาย เก่งการเงิน">
+                            <input type="text" class="form-control" name="full_name" value="<?= e($user['full_name'] ?? '') ?>" required placeholder="เช่น นายสมชาย เก่งการเงิน">
                         </div>
 
                         <div class="col-md-6">
