@@ -102,6 +102,9 @@ $llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.ph
                 <div class="input-group">
                     <span class="input-group-text bg-light text-muted"><i class="bi bi-lock"></i></span>
                     <input type="password" class="form-control" id="password" name="password" required placeholder="กรอกรหัสผ่าน">
+                    <button type="button" class="btn btn-outline-secondary bg-light text-muted" id="togglePassword" aria-label="แสดงหรือซ่อนรหัสผ่าน" title="แสดง/ซ่อนรหัสผ่าน">
+                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                    </button>
                 </div>
             </div>
 
@@ -121,5 +124,16 @@ $llwHomeUrl = preg_replace('#/financial(/public)?$#', '', $baseUrl) . '/index.ph
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.getElementById('togglePassword')?.addEventListener('click', function () {
+    const input = document.getElementById('password');
+    const icon = document.getElementById('togglePasswordIcon');
+    if (!input || !icon) return;
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    icon.classList.toggle('bi-eye', !isHidden);
+    icon.classList.toggle('bi-eye-slash', isHidden);
+});
+</script>
 </body>
 </html>
