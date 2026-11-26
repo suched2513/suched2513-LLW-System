@@ -22,36 +22,41 @@ class AuthService
     {
         self::startSession();
         $pdo = Database::getConnection();
+        $cleanUsername = ltrim(trim($username), '@');
 
-        // ค้นหาผู้ใช้งาน
+        // 1. ค้นหาผู้ใช้งานใน fin_users
         $stmt = $pdo->prepare("SELECT * FROM fin_users WHERE username = ? LIMIT 1");
-        $stmt->execute([$username]);
+        $stmt->execute([$cleanUsername]);
         $user = $stmt->fetch();
 
-        if (!$user) {
-            AuditTrailService::log('auth', 'login_failed', 'fin_users', null, null, ['username' => $username], 'ชื่อผู้ใช้ไม่ถูกต้อง');
-            return ['success' => false, 'message' => 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'];
+        if ($user) {
+            if (!$user['is_active']) {
+                AuditTrailService::log('auth', 'login_blocked', 'fin_users', (int)$user['id'], null, null, 'บัญชีถูกระงับการใช้งาน');
+                return ['success' => false, 'message' => 'บัญชีผู้ใช้งานนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ'];
+            }
+
+            if (password_verify($password, $user['password_hash'])) {
+                self::establishSession($user);
+                AuditTrailService::log('auth', 'login_success', 'fin_users', (int)$user['id'], null, null, 'เข้าสู่ระบบสำเร็จ');
+                return ['success' => true, 'message' => 'เข้าสู่ระบบสำเร็จ'];
+            }
         }
 
-        if (!$user['is_active']) {
-            AuditTrailService::log('auth', 'login_blocked', 'fin_users', (int)$user['id'], null, null, 'บัญชีถูกระงับการใช้งาน');
-            return ['success' => false, 'message' => 'บัญชีผู้ใช้งานนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ'];
+        // 2. Fallback: ตรวจสอบกับบัญชีระบบกลาง LLW (สำหรับผู้ที่ผูก SSO แล้ว หรือ super_admin ระบบกลาง)
+        $centralUser = self::authenticateCentralUser($pdo, $cleanUsername, $password);
+        if ($centralUser) {
+            self::establishSession($centralUser);
+            AuditTrailService::log('auth', 'login_success', 'fin_users', (int)$centralUser['id'], null, null, 'เข้าสู่ระบบด้วยบัญชีระบบกลาง LLW');
+            return ['success' => true, 'message' => 'เข้าสู่ระบบสำเร็จ'];
         }
 
-        if (!password_verify($password, $user['password_hash'])) {
-            AuditTrailService::log('auth', 'login_failed', 'fin_users', (int)$user['id'], null, ['username' => $username], 'รหัสผ่านไม่ถูกต้อง');
-            return ['success' => false, 'message' => 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'];
-        }
-
-        self::establishSession($user);
-        AuditTrailService::log('auth', 'login_success', 'fin_users', (int)$user['id'], null, null, 'เข้าสู่ระบบสำเร็จ');
-
-        return ['success' => true, 'message' => 'เข้าสู่ระบบสำเร็จ'];
+        $logId = $user ? (int)$user['id'] : null;
+        AuditTrailService::log('auth', 'login_failed', 'fin_users', $logId, null, ['username' => $cleanUsername], 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+        return ['success' => false, 'message' => 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'];
     }
 
     /**
      * เข้าสู่ระบบอัตโนมัติ (SSO) จากเซสชันของระบบกลาง LLW
-     * ต้องมีบัญชี fin_users ที่ผูก llw_user_id ไว้ และบัญชีต้องเปิดใช้งาน
      */
     public static function ssoLogin(): bool
     {
@@ -62,16 +67,114 @@ class AuthService
         }
 
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT * FROM fin_users WHERE llw_user_id = ? AND is_active = 1 LIMIT 1");
+        $stmt = $pdo->prepare("SELECT * FROM fin_users WHERE llw_user_id = ? LIMIT 1");
         $stmt->execute([$llwUserId]);
         $user = $stmt->fetch();
-        if (!$user) {
+
+        if ($user && !$user['is_active']) {
             return false;
+        }
+
+        if (!$user) {
+            $llwRoles = (array)($_SESSION['llw_roles'] ?? []);
+            $primaryRole = (string)($_SESSION['llw_role'] ?? '');
+            if ($primaryRole !== '') {
+                $llwRoles[] = $primaryRole;
+            }
+            if (!in_array('super_admin', $llwRoles, true)) {
+                return false;
+            }
+            $user = self::provisionOrFetchSuperAdmin(
+                $pdo,
+                $llwUserId,
+                (string)($_SESSION['username'] ?? "llw_{$llwUserId}"),
+                (string)($_SESSION['fullname'] ?? 'ผู้ดูแลระบบกลาง')
+            );
+            if (!$user || !$user['is_active']) {
+                return false;
+            }
         }
 
         self::establishSession($user);
         AuditTrailService::log('auth', 'login_success', 'fin_users', (int)$user['id'], null, null, 'เข้าสู่ระบบอัตโนมัติผ่านระบบกลาง (SSO)');
         return true;
+    }
+
+    private static function authenticateCentralUser(PDO $pdo, string $username, string $password): ?array
+    {
+        try {
+            $stmtC = $pdo->prepare("SELECT user_id, username, password, firstname, lastname, role FROM llw_users WHERE username = ? AND status = 'active' LIMIT 1");
+            $stmtC->execute([$username]);
+            $llwUser = $stmtC->fetch();
+            if (!$llwUser || empty($llwUser['password']) || !password_verify($password, $llwUser['password'])) {
+                return null;
+            }
+
+            $llwUserId = (int)$llwUser['user_id'];
+            $stmtFin = $pdo->prepare("SELECT * FROM fin_users WHERE llw_user_id = ? LIMIT 1");
+            $stmtFin->execute([$llwUserId]);
+            $finUser = $stmtFin->fetch();
+            if ($finUser) {
+                return $finUser['is_active'] ? $finUser : null;
+            }
+
+            // ตรวจสอบว่าเป็น super_admin ในระบบกลางหรือไม่
+            $roles = [trim((string)($llwUser['role'] ?? ''))];
+            try {
+                $stmtR = $pdo->prepare("SELECT role FROM llw_user_roles WHERE user_id = ?");
+                $stmtR->execute([$llwUserId]);
+                $roles = array_merge($roles, $stmtR->fetchAll(PDO::FETCH_COLUMN));
+            } catch (\Throwable $e) {}
+
+            if (!in_array('super_admin', $roles, true)) {
+                return null;
+            }
+
+            $fullName = trim(($llwUser['firstname'] ?? '') . ' ' . ($llwUser['lastname'] ?? ''));
+            return self::provisionOrFetchSuperAdmin($pdo, $llwUserId, $llwUser['username'], $fullName ?: $llwUser['username']);
+        } catch (\Throwable $e) {
+            error_log('[AuthService::authenticateCentralUser] ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    private static function provisionOrFetchSuperAdmin(PDO $pdo, int $llwUserId, string $username, string $fullName): ?array
+    {
+        try {
+            $stmtCheck = $pdo->prepare("SELECT * FROM fin_users WHERE llw_user_id = ? LIMIT 1");
+            $stmtCheck->execute([$llwUserId]);
+            if ($row = $stmtCheck->fetch()) {
+                return $row;
+            }
+
+            // ถ้ามี username ตรงกันที่ยังไม่ได้ผูก llw_user_id ให้ผูกเข้ากับบัญชีนั้น
+            $stmtByUname = $pdo->prepare("SELECT * FROM fin_users WHERE username = ? LIMIT 1");
+            $stmtByUname->execute([$username]);
+            $existing = $stmtByUname->fetch();
+            if ($existing && empty($existing['llw_user_id'])) {
+                $pdo->prepare("UPDATE fin_users SET llw_user_id = ?, is_active = 1, updated_at = NOW() WHERE id = ?")->execute([$llwUserId, $existing['id']]);
+                $finUserId = (int)$existing['id'];
+            } else {
+                $finalUsername = $existing ? "{$username}_{$llwUserId}" : $username;
+                $hash = password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT);
+                $stmtIns = $pdo->prepare("INSERT INTO fin_users (username, password_hash, full_name, email, llw_user_id, is_active, created_at, updated_at) VALUES (?, ?, ?, '', ?, 1, NOW(), NOW())");
+                $stmtIns->execute([$finalUsername, $hash, $fullName, $llwUserId]);
+                $finUserId = (int)$pdo->lastInsertId();
+            }
+
+            // ตรวจสอบให้แน่ใจว่ามีบทบาท admin
+            $adminRoleId = (int)$pdo->query("SELECT id FROM fin_roles WHERE role_code = 'admin' LIMIT 1")->fetchColumn();
+            if ($adminRoleId > 0) {
+                $pdo->prepare("INSERT IGNORE INTO fin_user_roles (user_id, role_id) VALUES (?, ?)")->execute([$finUserId, $adminRoleId]);
+            }
+
+            $stmtReload = $pdo->prepare("SELECT * FROM fin_users WHERE id = ? LIMIT 1");
+            $stmtReload->execute([$finUserId]);
+            return $stmtReload->fetch() ?: null;
+        } catch (\Throwable $e) {
+            error_log('[AuthService::provisionOrFetchSuperAdmin] ' . $e->getMessage());
+            return null;
+        }
     }
 
     private static function establishSession(array $user): void
