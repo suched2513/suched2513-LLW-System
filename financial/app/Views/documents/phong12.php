@@ -271,6 +271,81 @@ $specs = $doc['specs'] ?? [];
             background-color: #F8FAFC;
         }
 
+        /* Compact single-page Ph.Ng. 1/2 memo */
+        .page--memo-single {
+            padding: 12mm 16mm 10mm 20mm;
+        }
+        .page--memo-single .form-id-badge {
+            top: 10mm;
+            right: 16mm;
+            font-size: 12pt;
+            padding: 2px 8px;
+        }
+        .page--memo-single .memo-header {
+            min-height: 20mm;
+            margin-bottom: 2mm;
+        }
+        .page--memo-single .garuda-container {
+            width: 18mm;
+            height: 20mm;
+        }
+        .page--memo-single .garuda-img {
+            width: 17mm;
+            max-height: 20mm;
+        }
+        .page--memo-single .memo-title-container {
+            padding-top: 2mm;
+        }
+        .page--memo-single .memo-title {
+            font-size: 21pt;
+        }
+        .page--memo-single .memo-meta {
+            margin-top: 2px;
+            margin-bottom: 6px;
+            font-size: 13.8pt;
+        }
+        .page--memo-single .meta-line {
+            margin-bottom: 2px;
+        }
+        .page--memo-single .memo-body {
+            margin-bottom: 6px;
+        }
+        .page--memo-single .memo-p {
+            font-size: 13.8pt;
+            line-height: 1.3;
+        }
+        .page--memo-single .sig-col-triple {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+            margin-bottom: 8px;
+        }
+        .page--memo-single .sig-block {
+            width: auto;
+            font-size: 12.5pt;
+            line-height: 1.25;
+        }
+        .page--memo-single .sig-line,
+        .page--memo-single .sig-name {
+            font-size: 12.5pt;
+        }
+        .page--memo-single .sig-role {
+            font-size: 11.5pt;
+        }
+        .page--memo-single .approval-table {
+            margin-top: 6px;
+            font-size: 12pt;
+        }
+        .page--memo-single .approval-table td {
+            padding: 8px 10px;
+            line-height: 1.25;
+        }
+        .page--memo-single .box-title {
+            margin-bottom: 4px;
+            font-size: 12.5pt;
+        }
+
         /* Print Media Style */
         @media print {
             body {
@@ -288,8 +363,15 @@ $specs = $doc['specs'] ?? [];
                 padding: 16mm 18mm 14mm 24mm !important;
                 page-break-after: always !important;
             }
+            .page.page--memo-single {
+                padding: 11mm 16mm 9mm 20mm !important;
+                font-size: 13pt !important;
+            }
             .page:last-child {
                 page-break-after: auto !important;
+            }
+            .attachment-table tr {
+                page-break-inside: avoid;
             }
         }
     </style>
@@ -313,8 +395,8 @@ $specs = $doc['specs'] ?? [];
     </div>
 </div>
 
-<!-- ================= PAGE 1: บันทึกข้อความ รายงานการใช้เงินงบประมาณ ================= -->
-<div class="page">
+<!-- ================= PAGE 1: บันทึกข้อความ รายงานการใช้เงินงบประมาณ (รวม 4 ช่องความเห็นในหน้าเดียว) ================= -->
+<div class="page page--memo-single">
     <div class="form-id-badge">
         แบบ ผง 1/2
     </div>
@@ -369,85 +451,75 @@ $specs = $doc['specs'] ?? [];
     <!-- ลายมือชื่อ 3 คน -->
     <div class="sig-col-triple">
         <div class="sig-block">
-            <div class="sig-line">ลงชื่อ..................................ผู้ขอใช้</div>
+            <div class="sig-line">ลงชื่อ..........................................</div>
             <div class="sig-name">( <?= e($requesterName) ?> )</div>
-            <div class="sig-role"><?= e($requesterPosition) ?></div>
+            <div class="sig-role">ผู้ขอใช้ / <?= e($requesterPosition) ?></div>
         </div>
         <div class="sig-block">
-            <div class="sig-line">ลงชื่อ......................ผู้รับผิดชอบกิจกรรม</div>
+            <div class="sig-line">ลงชื่อ..........................................</div>
             <div class="sig-name">( <?= e($activityLeaderName) ?> )</div>
             <div class="sig-role">ผู้รับผิดชอบกิจกรรม</div>
         </div>
         <div class="sig-block">
-            <div class="sig-line">ลงชื่อ......................หัวหน้าฝ่ายงบประมาณฯ</div>
+            <div class="sig-line">ลงชื่อ..........................................</div>
             <div class="sig-name">( <?= e($budgetHeadName) ?> )</div>
             <div class="sig-role">หัวหน้าฝ่ายงบประมาณฯ</div>
         </div>
     </div>
 
-    <!-- ตารางความเห็นกล่อง 1 และ กล่อง 2 -->
-    <table class="approval-table" style="margin-top: 15px;">
+    <!-- ตารางความเห็น 2x2 (4 กล่องในหน้าเดียว) -->
+    <table class="approval-table">
         <tr>
             <!-- กล่องที่ 1: แผนงาน -->
-            <td style="height: 60mm;">
+            <td>
                 <div class="box-title">ความเห็นของหัวหน้างานแผนงาน</div>
-                <div style="margin-top: 10px; line-height: 1.5;">
+                <div style="margin-top: 6px; line-height: 1.4;">
                     ได้ทำการตรวจสอบเอกสารหลักฐานแล้วถูกต้อง
                 </div>
-                <div style="text-align: center; margin-top: 45px;">
-                    <div>ลงชื่อ....................................................</div>
+                <div style="text-align: center; margin-top: 26px;">
+                    <div>ลงชื่อ..............................................</div>
                     <div style="margin-top: 2px;">( <?= e($planHeadName) ?> )</div>
-                    <div style="font-size: 11pt; color: #475569;">หัวหน้างานแผนงาน</div>
+                    <div style="font-size: 10.5pt; color: #475569;">หัวหน้างานแผนงาน</div>
                 </div>
             </td>
 
             <!-- กล่องที่ 2: พัสดุ -->
-            <td style="height: 60mm;">
+            <td>
                 <div class="box-title">การดำเนินงานของงานพัสดุ</div>
-                <div style="margin-top: 10px; line-height: 1.5;">
+                <div style="margin-top: 6px; line-height: 1.4;">
                     ได้ทำเอกสาร จัดซื้อ/จัดจ้าง เรียบร้อยแล้ว
                 </div>
-                <div style="text-align: center; margin-top: 45px;">
-                    <div>ลงชื่อ....................................................</div>
+                <div style="text-align: center; margin-top: 26px;">
+                    <div>ลงชื่อ..............................................</div>
                     <div style="margin-top: 2px;">( <?= e($procurementHeadName) ?> )</div>
-                    <div style="font-size: 11pt; color: #475569;">หัวหน้าเจ้าหน้าที่พัสดุ</div>
+                    <div style="font-size: 10.5pt; color: #475569;">หัวหน้าเจ้าหน้าที่พัสดุ</div>
                 </div>
             </td>
         </tr>
-    </table>
-</div>
-
-<!-- ================= PAGE 2: การตรวจสอบการเงิน และคำสั่งผู้อำนวยการ ================= -->
-<div class="page">
-    <div class="form-id-badge">
-        แบบ ผง 1/2 (ต่อ)
-    </div>
-
-    <table class="approval-table" style="margin-top: 10mm;">
         <tr>
             <!-- กล่องที่ 3: การเงิน -->
-            <td style="padding: 14px 12px; height: 145mm; vertical-align: top;">
-                <div class="box-title" style="font-size: 13.5pt;">การตรวจสอบและรับรอง</div>
-                <div style="margin-top: 15px; text-indent: 1.2cm; font-size: 13.5pt; line-height: 1.6;">
+            <td>
+                <div class="box-title">การตรวจสอบและรับรอง</div>
+                <div style="margin-top: 6px; text-indent: 0.8cm; line-height: 1.4;">
                     ได้ทำการตรวจสอบเอกสารหลักฐานแล้วถูกต้อง
                 </div>
-                <div style="text-align: center; margin-top: 140px;">
-                    <div>ลงชื่อ....................................................</div>
-                    <div style="margin-top: 4px; font-size: 12.5pt;">( <?= e($financeHeadName) ?> )</div>
-                    <div style="font-size: 11.5pt; color: #475569; margin-top: 2px;">หัวหน้างานการเงิน</div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <div>ลงชื่อ..............................................</div>
+                    <div style="margin-top: 2px;">( <?= e($financeHeadName) ?> )</div>
+                    <div style="font-size: 10.5pt; color: #475569;">หัวหน้างานการเงิน</div>
                 </div>
             </td>
 
             <!-- กล่องที่ 4: ผู้อำนวยการโรงเรียน -->
-            <td style="padding: 14px 12px; height: 145mm; vertical-align: top;">
-                <div class="box-title" style="font-size: 13.5pt;">ความเห็นของผู้อำนวยการโรงเรียน</div>
-                <div style="margin-top: 15px; text-indent: 1.2cm; font-size: 13.5pt; line-height: 1.6;">
+            <td>
+                <div class="box-title">ความเห็นของผู้อำนวยการโรงเรียน</div>
+                <div style="margin-top: 6px; text-indent: 0.8cm; line-height: 1.4;">
                     ได้ทำการตรวจสอบรายการแล้ว
                 </div>
-                <div style="text-align: center; margin-top: 140px;">
-                    <div>ลงชื่อ....................................................</div>
-                    <div style="margin-top: 4px; font-size: 12.5pt;">( <?= e($directorName) ?> )</div>
-                    <div style="font-size: 11.5pt; color: #475569; margin-top: 2px;">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <div>ลงชื่อ..............................................</div>
+                    <div style="margin-top: 2px;">( <?= e($directorName) ?> )</div>
+                    <div style="font-size: 10.5pt; color: #475569;">ผู้อำนวยการโรงเรียนละลมวิทยา</div>
                 </div>
             </td>
         </tr>

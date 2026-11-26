@@ -313,7 +313,7 @@ $specs = $doc['specs'] ?? [];
         .page--memo-single .memo-meta {
             margin-top: 2px;
             margin-bottom: 6px;
-            font-size: 13pt;
+            font-size: 13.8pt;
         }
         .page--memo-single .meta-line {
             margin-bottom: 2px;
@@ -322,35 +322,39 @@ $specs = $doc['specs'] ?? [];
             margin-bottom: 6px;
         }
         .page--memo-single .memo-p {
-            font-size: 13pt;
-            line-height: 1.28;
+            font-size: 13.8pt;
+            line-height: 1.3;
         }
         .page--memo-single .sig-col-triple {
-            margin-top: 8px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
             margin-bottom: 8px;
         }
         .page--memo-single .sig-block {
-            font-size: 11.5pt;
-            line-height: 1.22;
+            width: auto;
+            font-size: 12.5pt;
+            line-height: 1.25;
         }
         .page--memo-single .sig-line,
         .page--memo-single .sig-name {
-            font-size: 11.5pt;
+            font-size: 12.5pt;
         }
         .page--memo-single .sig-role {
-            font-size: 10.5pt;
+            font-size: 11.5pt;
         }
         .page--memo-single .approval-table {
             margin-top: 4px;
-            font-size: 11pt;
+            font-size: 11.5pt;
         }
         .page--memo-single .approval-table td {
             padding: 5px 8px;
-            line-height: 1.2;
+            line-height: 1.22;
         }
         .page--memo-single .box-title {
             margin-bottom: 3px;
-            font-size: 11.5pt;
+            font-size: 12pt;
         }
         .page--memo-single .checkbox-square {
             width: 10px;
@@ -460,17 +464,17 @@ $specs = $doc['specs'] ?? [];
     <!-- ลายมือชื่อ 3 คน -->
     <div class="sig-col-triple">
         <div class="sig-block">
-            <div class="sig-line">ลงชื่อ..................................ผู้ขอใช้</div>
+            <div class="sig-line">ลงชื่อ..........................................</div>
             <div class="sig-name">( <?= e($requesterName) ?> )</div>
-            <div class="sig-role"><?= e($requesterPosition) ?></div>
+            <div class="sig-role">ผู้ขอใช้ / <?= e($requesterPosition) ?></div>
         </div>
         <div class="sig-block">
-            <div class="sig-line">ลงชื่อ......................ผู้รับผิดชอบกิจกรรม</div>
+            <div class="sig-line">ลงชื่อ..........................................</div>
             <div class="sig-name">( <?= e($activityLeaderName) ?> )</div>
             <div class="sig-role">ผู้รับผิดชอบกิจกรรม</div>
         </div>
         <div class="sig-block">
-            <div class="sig-line">ลงชื่อ......................หัวหน้าฝ่ายงบประมาณฯ</div>
+            <div class="sig-line">ลงชื่อ..........................................</div>
             <div class="sig-name">( <?= e($budgetHeadName) ?> )</div>
             <div class="sig-role">หัวหน้าฝ่ายงบประมาณฯ</div>
         </div>
