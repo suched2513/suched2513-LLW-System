@@ -297,12 +297,12 @@ $specs = $doc['specs'] ?? [];
             padding-top: 2mm;
         }
         .page--memo-single .memo-title {
-            font-size: 21pt;
+            font-size: 24pt;
         }
         .page--memo-single .memo-meta {
             margin-top: 2px;
             margin-bottom: 6px;
-            font-size: 13.8pt;
+            font-size: 15.5pt;
         }
         .page--memo-single .meta-line {
             margin-bottom: 2px;
@@ -311,48 +311,53 @@ $specs = $doc['specs'] ?? [];
             margin-bottom: 6px;
         }
         .page--memo-single .memo-p {
-            font-size: 13.8pt;
-            line-height: 1.3;
+            font-size: 15.5pt;
+            line-height: 1.25;
+            text-indent: 2cm;
         }
         .page--memo-single .sig-col-triple {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
-            margin-top: 10px;
+            margin-top: 8px;
             margin-bottom: 8px;
         }
         .page--memo-single .sig-block {
             width: auto;
-            font-size: 12.5pt;
-            line-height: 1.25;
+            font-size: 14pt;
+            line-height: 1.2;
         }
         .page--memo-single .sig-line,
         .page--memo-single .sig-name {
-            font-size: 12.5pt;
+            font-size: 14pt;
         }
         .page--memo-single .sig-role {
-            font-size: 11.5pt;
+            font-size: 13pt;
         }
         .page--memo-single .approval-table {
             margin-top: 6px;
-            font-size: 12pt;
+            font-size: 13pt;
         }
         .page--memo-single .approval-table td {
-            padding: 8px 10px;
-            line-height: 1.25;
+            padding: 7px 9px;
+            line-height: 1.22;
         }
         .page--memo-single .box-title {
             margin-bottom: 4px;
-            font-size: 12.5pt;
+            font-size: 13.5pt;
         }
 
         /* Print Media Style */
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
         @media print {
             body {
                 background: none !important;
                 padding: 0 !important;
                 margin: 0 !important;
-                font-size: 14pt !important;
+                font-size: 15.5pt !important;
             }
             .action-bar {
                 display: none !important;
@@ -364,8 +369,9 @@ $specs = $doc['specs'] ?? [];
                 page-break-after: always !important;
             }
             .page.page--memo-single {
-                padding: 11mm 16mm 9mm 20mm !important;
-                font-size: 13pt !important;
+                padding: 12mm 16mm 10mm 20mm !important;
+                min-height: 296mm !important;
+                font-size: 15.5pt !important;
             }
             .page:last-child {
                 page-break-after: auto !important;
